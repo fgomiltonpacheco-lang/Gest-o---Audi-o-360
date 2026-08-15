@@ -1,0 +1,1552 @@
+{
+  "generatedAt": "2026-08-15T22:09:44.647Z",
+  "collections": [
+    {
+      "name": "users",
+      "type": "auth",
+      "apiRules": {
+        "list": "id = @request.auth.id",
+        "view": "id = @request.auth.id",
+        "create": "",
+        "update": "id = @request.auth.id",
+        "delete": "id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "avatar",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "role",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "crmCrfa",
+          "type": "text",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
+        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
+      ]
+    },
+    {
+      "name": "patients",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "cpf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "birthDate",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "gender",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mobile",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "email",
+          "type": "email",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cep",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "street",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "number",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "complement",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "neighborhood",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "city",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "state",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "planType",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "planName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cardNumber",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hasResponsible",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "responsible",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hearingLossType",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "previousHearingAid",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "previousAidBrand",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "previousAidModel",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "generalNotes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lastVisit",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_patients_cpf ON patients (cpf) WHERE cpf != ''"]
+    },
+    {
+      "name": "appointments",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "patientId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "patientName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "patientPhone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "time",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "duration",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "professionalName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_appointments_date ON appointments (date)"]
+    },
+    {
+      "name": "clinical_records",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "patientId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "patientName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mainComplaint",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "anamnesis",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hearingHistory",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "currentMedications",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "familyHistory",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "diagnosis",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "conduct",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "nextReturn",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_clinical_records_patient ON clinical_records (patientId)"
+      ]
+    },
+    {
+      "name": "evolutions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "patientId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "patientName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "professionalName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "audiometries",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "patientId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "patientName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "professionalName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "airOD",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "airOE",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "boneOD",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "boneOE",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "srtOD",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "srtOE",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "iprfOD",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "iprfOE",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lossDegree",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lossType",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "tympanometries",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "patientId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "patientName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "professionalName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tympanometryOD",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tympanometryOE",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reflexesOD",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reflexesOE",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "conclusion",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "beras",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "patientId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "patientName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "professionalName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "od",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "oe",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "classification",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "hearing_aids",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "patientId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "patientName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "brand",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "model",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "side",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "serialNumber",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "saleDate",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "saleValue",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "paymentMethod",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "warrantyMonths",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "warrantyEndDate",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "powerSource",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "earMold",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "earMoldType",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "maintenances",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "hearingAidId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "hearing_aids"
+        },
+        {
+          "name": "hearingAidLabel",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "responsible",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "adjustments",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "hearingAidId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "hearing_aids"
+        },
+        {
+          "name": "hearingAidLabel",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "professionalName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "budgets",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "patientId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "patientName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "number",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "items",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "discountPercent",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "totalValue",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "sales",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "patientId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "patientName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "number",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "itemsDescription",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "totalValue",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "paymentMethod",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "installmentsCount",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "interestPercent",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "firstDueDate",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "installments",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "saleId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "sales"
+        },
+        {
+          "name": "patientId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "patientName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "saleNumber",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "installmentNumber",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "totalInstallments",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dueDate",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "paidDate",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_installments_due ON installments (dueDate)"]
+    },
+    {
+      "name": "commissions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "saleId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "sales"
+        },
+        {
+          "name": "professionalName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "period",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "salesCount",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "totalSalesValue",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "commissionPercent",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "commissionValue",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "cash_flow",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "date",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "responsible",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "inventory",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "brand",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "model",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "color",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "batterySize",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "accessorySubcategory",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "minQuantity",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "currentQuantity",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "supplier",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "costPrice",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "salePrice",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "inventory_movements",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "itemId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "inventory"
+        },
+        {
+          "name": "item_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quantity",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "responsible",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "supplier",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "patientName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        }
+      ],
+      "indexes": []
+    }
+  ]
+}

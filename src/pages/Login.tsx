@@ -19,7 +19,7 @@ export default function Login() {
   const navigate = useNavigate()
 
   const [email, setEmail] = useState('admin@audicao360.com.br')
-  const [password, setPassword] = useState('admin123')
+  const [password, setPassword] = useState('Admin@123')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
   const [loading, setLoading] = useState(false)
@@ -38,23 +38,21 @@ export default function Login() {
       setErrorMessage('Por favor, informe um endereço de e-mail válido.')
       return
     }
-    if (!password || password.length < 3) {
-      setErrorMessage('A senha deve ter pelo menos 3 caracteres.')
+    if (!password || password.length < 8) {
+      setErrorMessage('A senha deve ter pelo menos 8 caracteres.')
       return
     }
 
     setLoading(true)
-    setTimeout(() => {
-      const success = login(email, password, rememberMe)
+    login(email, password, rememberMe).then((success) => {
       setLoading(false)
       if (success) {
         navigate('/')
       } else {
-        setErrorMessage('E-mail ou senha inválidos. Tente admin@audicao360.com.br / admin123')
+        setErrorMessage('E-mail ou senha inválidos. Tente admin@audicao360.com.br / Admin@123')
       }
-    }, 400)
+    })
   }
-
   const handleRecoverySubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!recoveryEmail || !recoveryEmail.includes('@')) return
@@ -198,7 +196,7 @@ export default function Login() {
               type="button"
               onClick={() => {
                 setEmail('admin@audicao360.com.br')
-                setPassword('admin123')
+                setPassword('Admin@123')
               }}
               className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all text-left"
             >
@@ -209,7 +207,7 @@ export default function Login() {
               type="button"
               onClick={() => {
                 setEmail('profissional@audicao360.com.br')
-                setPassword('prof123')
+                setPassword('Profissional@123')
               }}
               className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all text-left"
             >

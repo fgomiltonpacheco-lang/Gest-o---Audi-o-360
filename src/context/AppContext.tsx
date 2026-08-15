@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react'
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
 import {
   User,
   Patient,
   Appointment,
   HearingAid,
   StockItem,
+  StockMovement,
   Budget,
   Sale,
   Installment,
@@ -16,32 +17,300 @@ import {
   ClinicalRecord,
   ClinicalEvolution,
   SystemAlert,
+  AidMaintenance,
+  AidAdjustment,
 } from '@/types'
-import {
-  SEED_USERS,
-  SEED_PATIENTS,
-  SEED_APPOINTMENTS,
-  SEED_HEARING_AIDS,
-  SEED_STOCK_ITEMS,
-  SEED_BUDGETS,
-  SEED_SALES,
-  SEED_INSTALLMENTS,
-  SEED_COMMISSIONS,
-  SEED_CASH_MOVEMENTS,
-  SEED_CLINICAL_RECORDS,
-  SEED_EVOLUTIONS,
-  SEED_AUDIOMETRIES,
-  SEED_TYMPANOMETRIES,
-  SEED_BERAS,
-} from '@/data/seed'
 import { useToast } from '@/hooks/use-toast'
+import pb from '@/lib/pocketbase/client'
+
+// ============================================================
+// Helpers
+// ============================================================
+
+/** Converte um datetime/string do PocketBase para "YYYY-MM-DD". */
+function toDateStr(value?: string | null): string {
+  if (!value) return ''
+  const s = String(value)
+  // Aceita "2026-08-15 22:09:44.604Z" ou "2026-08-15T22:09:44.604Z" ou "2026-08-15"
+  return s.slice(0, 10)
+}
+
+function todayStr(): string {
+  return new Date().toISOString().split('T')[0]
+}
+
+function nowIso(): string {
+  return new Date().toISOString()
+}
+
+// ============================================================
+// Mappers: PocketBase record -> domínio TS
+// ============================================================
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+const mapPatient = (r: any): Patient => ({
+  id: r.id,
+  name: r.name || '',
+  cpf: r.cpf || '',
+  birthDate: r.birthDate || '',
+  gender: r.gender || 'Não informar',
+  phone: r.phone || '',
+  mobile: r.mobile || '',
+  email: r.email || '',
+  cep: r.cep || '',
+  street: r.street || '',
+  number: r.number || '',
+  complement: r.complement || '',
+  neighborhood: r.neighborhood || '',
+  city: r.city || '',
+  state: r.state || '',
+  planType: r.planType === 'Convênio' ? 'Convênio' : 'Particular',
+  planName: r.planName || '',
+  cardNumber: r.cardNumber || '',
+  hasResponsible: !!r.hasResponsible,
+  responsible: r.responsible || undefined,
+  hearingLossType: r.hearingLossType || 'Normal',
+  previousHearingAid: !!r.previousHearingAid,
+  previousAidBrand: r.previousAidBrand || '',
+  previousAidModel: r.previousAidModel || '',
+  generalNotes: r.generalNotes || '',
+  status: r.status || 'Ativo',
+  createdAt: toDateStr(r.created),
+  lastVisit: r.lastVisit || toDateStr(r.created),
+})
+
+const mapAppointment = (r: any): Appointment => ({
+  id: r.id,
+  patientId: r.patientId || '',
+  patientName: r.patientName || '',
+  patientPhone: r.patientPhone || '',
+  type: r.type || 'Avaliação auditiva',
+  date: r.date || '',
+  time: r.time || '',
+  duration: Number(r.duration) || 60,
+  professionalName: r.professionalName || '',
+  status: r.status || 'Agendado',
+  notes: r.notes || '',
+  createdAt: toDateStr(r.created),
+})
+
+const mapClinicalRecord = (r: any): ClinicalRecord => ({
+  patientId: r.patientId || '',
+  mainComplaint: r.mainComplaint || '',
+  anamnesis: r.anamnesis || '',
+  hearingHistory: r.hearingHistory || '',
+  currentMedications: r.currentMedications || '',
+  familyHistory: r.familyHistory || '',
+  diagnosis: r.diagnosis || '',
+  conduct: r.conduct || '',
+  nextReturn: r.nextReturn || '',
+  updatedAt: r.updatedAt || toDateStr(r.updated),
+})
+
+const mapEvolution = (r: any): ClinicalEvolution => ({
+  id: r.id,
+  patientId: r.patientId || '',
+  date: r.date || '',
+  professionalName: r.professionalName || '',
+  description: r.description || '',
+  createdAt: toDateStr(r.created),
+})
+
+const mapAudiometry = (r: any): AudiometryExam => ({
+  id: r.id,
+  patientId: r.patientId || '',
+  patientName: r.patientName || '',
+  date: r.date || '',
+  professionalName: r.professionalName || '',
+  airOD: r.airOD || {},
+  airOE: r.airOE || {},
+  boneOD: r.boneOD || {},
+  boneOE: r.boneOE || {},
+  srtOD: r.srtOD != null ? Number(r.srtOD) : undefined,
+  srtOE: r.srtOE != null ? Number(r.srtOE) : undefined,
+  iprfOD: r.iprfOD != null ? Number(r.iprfOD) : undefined,
+  iprfOE: r.iprfOE != null ? Number(r.iprfOE) : undefined,
+  lossDegree: r.lossDegree || 'Normal',
+  lossType: r.lossType || 'Neurossensorial',
+  notes: r.notes || '',
+})
+
+const mapTympanometry = (r: any): TympanometryExam => ({
+  id: r.id,
+  patientId: r.patientId || '',
+  patientName: r.patientName || '',
+  date: r.date || '',
+  professionalName: r.professionalName || '',
+  tympanometryOD: r.tympanometryOD || {},
+  tympanometryOE: r.tympanometryOE || {},
+  reflexesOD: r.reflexesOD || {},
+  reflexesOE: r.reflexesOE || {},
+  conclusion: r.conclusion || '',
+  notes: r.notes || '',
+})
+
+const mapBera = (r: any): BeraExam => ({
+  id: r.id,
+  patientId: r.patientId || '',
+  patientName: r.patientName || '',
+  date: r.date || '',
+  professionalName: r.professionalName || '',
+  od: r.od || {},
+  oe: r.oe || {},
+  classification: r.classification || 'Normal',
+  notes: r.notes || '',
+})
+
+const mapMaintenance = (r: any): AidMaintenance => ({
+  id: r.id,
+  hearingAidId: r.hearingAidId || '',
+  date: r.date || '',
+  description: r.description || '',
+  responsible: r.responsible || '',
+  createdAt: toDateStr(r.created),
+})
+
+const mapAdjustment = (r: any): AidAdjustment => ({
+  id: r.id,
+  hearingAidId: r.hearingAidId || '',
+  date: r.date || '',
+  description: r.description || '',
+  professionalName: r.professionalName || '',
+  createdAt: toDateStr(r.created),
+})
+
+const mapHearingAid = (r: any, maints: AidMaintenance[], adjs: AidAdjustment[]): HearingAid => ({
+  id: r.id,
+  brand: r.brand || '',
+  model: r.model || '',
+  type: r.type || 'RIC',
+  side: r.side || 'Bilateral',
+  serialNumber: r.serialNumber || '',
+  patientId: r.patientId || '',
+  patientName: r.patientName || '',
+  saleDate: r.saleDate || '',
+  saleValue: r.saleValue != null ? Number(r.saleValue) : undefined,
+  paymentMethod: r.paymentMethod || undefined,
+  warrantyMonths: Number(r.warrantyMonths) || 12,
+  warrantyEndDate: r.warrantyEndDate || '',
+  powerSource: r.powerSource === 'Recarregável' ? 'Recarregável' : 'Pilha',
+  earMold: !!r.earMold,
+  earMoldType: r.earMoldType || '',
+  notes: r.notes || '',
+  status: r.status || 'Em uso',
+  maintenances: maints,
+  adjustments: adjs,
+  createdAt: toDateStr(r.created),
+})
+
+const mapBudget = (r: any): Budget => ({
+  id: r.id,
+  number: Number(r.number) || 0,
+  patientId: r.patientId || '',
+  patientName: r.patientName || '',
+  date: r.date || '',
+  items: r.items || [],
+  discountPercent: Number(r.discountPercent) || 0,
+  totalValue: Number(r.totalValue) || 0,
+  status: r.status || 'Rascunho',
+  notes: r.notes || '',
+  createdAt: toDateStr(r.created),
+})
+
+const mapSale = (r: any): Sale => ({
+  id: r.id,
+  number: Number(r.number) || 0,
+  patientId: r.patientId || '',
+  patientName: r.patientName || '',
+  date: r.date || '',
+  itemsDescription: r.itemsDescription || '',
+  totalValue: Number(r.totalValue) || 0,
+  paymentMethod: r.paymentMethod || 'À vista',
+  installmentsCount: Number(r.installmentsCount) || 1,
+  interestPercent: Number(r.interestPercent) || 0,
+  firstDueDate: r.firstDueDate || '',
+  status: r.status || 'Concluída',
+  createdAt: toDateStr(r.created),
+})
+
+const mapInstallment = (r: any): Installment => ({
+  id: r.id,
+  saleId: r.saleId || '',
+  saleNumber: Number(r.saleNumber) || 0,
+  installmentNumber: Number(r.installmentNumber) || 1,
+  totalInstallments: Number(r.totalInstallments) || 1,
+  patientId: r.patientId || '',
+  patientName: r.patientName || '',
+  dueDate: r.dueDate || '',
+  value: Number(r.value) || 0,
+  status: r.status || 'Pendente',
+  paidDate: r.paidDate || undefined,
+})
+
+const mapCommission = (r: any): Commission => ({
+  id: r.id,
+  professionalName: r.professionalName || '',
+  period: r.period || '',
+  salesCount: Number(r.salesCount) || 0,
+  totalSalesValue: Number(r.totalSalesValue) || 0,
+  commissionPercent: Number(r.commissionPercent) || 0,
+  commissionValue: Number(r.commissionValue) || 0,
+})
+
+const mapCashMovement = (r: any): CashFlowMovement => ({
+  id: r.id,
+  date: r.date || '',
+  description: r.description || '',
+  type: r.type === 'Saída' ? 'Saída' : 'Entrada',
+  category: r.category || 'Outros',
+  value: Number(r.value) || 0,
+  responsible: r.responsible || '',
+  createdAt: toDateStr(r.created),
+})
+
+const mapStockItem = (r: any, movements: StockMovement[]): StockItem => ({
+  id: r.id,
+  name: r.name || '',
+  brand: r.brand || '',
+  model: r.model || '',
+  color: r.color || '',
+  category: r.category || 'Acessórios',
+  batterySize: r.batterySize || undefined,
+  accessorySubcategory: r.accessorySubcategory || undefined,
+  minQuantity: Number(r.minQuantity) || 0,
+  currentQuantity: Number(r.currentQuantity) || 0,
+  supplier: r.supplier || '',
+  costPrice: Number(r.costPrice) || 0,
+  salePrice: Number(r.salePrice) || 0,
+  notes: r.notes || '',
+  movements,
+  createdAt: toDateStr(r.created),
+})
+
+const mapStockMovement = (r: any): StockMovement => ({
+  id: r.id,
+  stockItemId: r.itemId || '',
+  date: r.date || '',
+  type: r.type === 'Saída' ? 'Saída' : 'Entrada',
+  quantity: Number(r.quantity) || 0,
+  responsible: r.responsible || '',
+  reason: r.reason || '',
+  supplier: r.supplier || '',
+  patientName: r.patientName || '',
+  createdAt: toDateStr(r.created),
+})
+
+// ============================================================
+// Context interface (mantida compatível com as páginas existentes)
+// ============================================================
 
 interface AppContextType {
   // Auth
   currentUser: User | null
-  login: (email: string, password: string, rememberMe?: boolean) => boolean
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>
   logout: () => void
   recoverPassword: (email: string) => boolean
+  dataLoading: boolean
 
   // Pacientes
   patients: Patient[]
@@ -143,168 +412,195 @@ interface AppContextType {
   alerts: SystemAlert[]
   unreadAlertsCount: number
 
-  // Utilitário para resetar dados aos padrões de seed
+  // Utilitário para recarregar dados do banco
   resetToSeedData: () => void
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
-const STORAGE_KEYS = {
-  USER: 'audicao360_user',
-  PATIENTS: 'audicao360_patients',
-  APPOINTMENTS: 'audicao360_appointments',
-  HEARING_AIDS: 'audicao360_hearing_aids',
-  STOCK: 'audicao360_stock',
-  BUDGETS: 'audicao360_budgets',
-  SALES: 'audicao360_sales',
-  INSTALLMENTS: 'audicao360_installments',
-  COMMISSIONS: 'audicao360_commissions',
-  CASH: 'audicao360_cash',
-  CLINICAL: 'audicao360_clinical',
-  EVOLUTIONS: 'audicao360_evolutions',
-  AUDIOMETRIES: 'audicao360_audiometries',
-  TYMPANOMETRIES: 'audicao360_tympanometries',
-  BERAS: 'audicao360_beras',
-}
-
-function loadFromStorage<T>(key: string, defaultValue: T): T {
-  try {
-    const data = localStorage.getItem(key)
-    return data ? JSON.parse(data) : defaultValue
-  } catch (err) {
-    console.error(`Erro ao carregar chave ${key}:`, err)
-    return defaultValue
-  }
-}
-
-function saveToStorage<T>(key: string, value: T): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch (err) {
-    console.error(`Erro ao salvar chave ${key}:`, err)
-  }
-}
+// ============================================================
+// Provider
+// ============================================================
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { toast } = useToast()
 
-  // Usuário logado
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    return loadFromStorage<User | null>(STORAGE_KEYS.USER, SEED_USERS[0])
-  })
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [dataLoading, setDataLoading] = useState(false)
 
   // Entidades principais
-  const [patients, setPatients] = useState<Patient[]>(() =>
-    loadFromStorage<Patient[]>(STORAGE_KEYS.PATIENTS, SEED_PATIENTS),
-  )
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [aidsRaw, setAidsRaw] = useState<any[]>([])
+  const [maintenances, setMaintenances] = useState<AidMaintenance[]>([])
+  const [adjustments, setAdjustments] = useState<AidAdjustment[]>([])
+  const [stockRaw, setStockRaw] = useState<any[]>([])
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>([])
+  const [budgets, setBudgets] = useState<Budget[]>([])
+  const [sales, setSales] = useState<Sale[]>([])
+  const [installments, setInstallments] = useState<Installment[]>([])
+  const [commissions, setCommissions] = useState<Commission[]>([])
+  const [cashMovements, setCashMovements] = useState<CashFlowMovement[]>([])
+  const [clinicalRecords, setClinicalRecords] = useState<Record<string, ClinicalRecord>>({})
+  const [evolutions, setEvolutions] = useState<ClinicalEvolution[]>([])
+  const [audiometries, setAudiometries] = useState<AudiometryExam[]>([])
+  const [tympanometries, setTympanometries] = useState<TympanometryExam[]>([])
+  const [beras, setBeras] = useState<BeraExam[]>([])
 
-  const [appointments, setAppointments] = useState<Appointment[]>(() =>
-    loadFromStorage<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, SEED_APPOINTMENTS),
-  )
+  // ---------- Carregamento de dados ----------
+  const reloadAll = useCallback(async () => {
+    setDataLoading(true)
+    try {
+      const [
+        p,
+        ap,
+        aids,
+        maints,
+        adjs,
+        stk,
+        stkmov,
+        bud,
+        sl,
+        inst,
+        com,
+        cash,
+        clin,
+        evo,
+        aud,
+        tymp,
+        bera,
+      ] = await Promise.all([
+        pb.collection('patients').getFullList({ sort: '-created' }),
+        pb.collection('appointments').getFullList({ sort: '-created' }),
+        pb.collection('hearing_aids').getFullList({ sort: '-created' }),
+        pb.collection('maintenances').getFullList({ sort: '-created' }),
+        pb.collection('adjustments').getFullList({ sort: '-created' }),
+        pb.collection('inventory').getFullList({ sort: '-created' }),
+        pb.collection('inventory_movements').getFullList({ sort: '-created' }),
+        pb.collection('budgets').getFullList({ sort: '-created' }),
+        pb.collection('sales').getFullList({ sort: '-created' }),
+        pb.collection('installments').getFullList({ sort: '-created' }),
+        pb.collection('commissions').getFullList({ sort: '-created' }),
+        pb.collection('cash_flow').getFullList({ sort: '-created' }),
+        pb.collection('clinical_records').getFullList({ sort: '-created' }),
+        pb.collection('evolutions').getFullList({ sort: '-created' }),
+        pb.collection('audiometries').getFullList({ sort: '-created' }),
+        pb.collection('tympanometries').getFullList({ sort: '-created' }),
+        pb.collection('beras').getFullList({ sort: '-created' }),
+      ])
 
-  const [hearingAids, setHearingAids] = useState<HearingAid[]>(() =>
-    loadFromStorage<HearingAid[]>(STORAGE_KEYS.HEARING_AIDS, SEED_HEARING_AIDS),
-  )
+      const maintList = maints.map(mapMaintenance)
+      const adjList = adjs.map(mapAdjustment)
+      const movList = stkmov.map(mapStockMovement)
 
-  const [stockItems, setStockItems] = useState<StockItem[]>(() =>
-    loadFromStorage<StockItem[]>(STORAGE_KEYS.STOCK, SEED_STOCK_ITEMS),
-  )
+      setPatients(p.map(mapPatient))
+      setAppointments(ap.map(mapAppointment))
+      setAidsRaw(aids)
+      setMaintenances(maintList)
+      setAdjustments(adjList)
+      setStockRaw(stk)
+      setStockMovements(movList)
+      setBudgets(bud.map(mapBudget))
+      setSales(sl.map(mapSale))
+      setInstallments(inst.map(mapInstallment))
+      setCommissions(com.map(mapCommission))
+      setCashMovements(cash.map(mapCashMovement))
 
-  const [budgets, setBudgets] = useState<Budget[]>(() =>
-    loadFromStorage<Budget[]>(STORAGE_KEYS.BUDGETS, SEED_BUDGETS),
-  )
+      const clinMap: Record<string, ClinicalRecord> = {}
+      clin.forEach((r: any) => {
+        const rec = mapClinicalRecord(r)
+        if (rec.patientId) clinMap[rec.patientId] = rec
+      })
+      setClinicalRecords(clinMap)
 
-  const [sales, setSales] = useState<Sale[]>(() =>
-    loadFromStorage<Sale[]>(STORAGE_KEYS.SALES, SEED_SALES),
-  )
-
-  const [installments, setInstallments] = useState<Installment[]>(() =>
-    loadFromStorage<Installment[]>(STORAGE_KEYS.INSTALLMENTS, SEED_INSTALLMENTS),
-  )
-
-  const [commissions, setCommissions] = useState<Commission[]>(() =>
-    loadFromStorage<Commission[]>(STORAGE_KEYS.COMMISSIONS, SEED_COMMISSIONS),
-  )
-
-  const [cashMovements, setCashMovements] = useState<CashFlowMovement[]>(() =>
-    loadFromStorage<CashFlowMovement[]>(STORAGE_KEYS.CASH, SEED_CASH_MOVEMENTS),
-  )
-
-  const [clinicalRecords, setClinicalRecords] = useState<Record<string, ClinicalRecord>>(() =>
-    loadFromStorage<Record<string, ClinicalRecord>>(STORAGE_KEYS.CLINICAL, SEED_CLINICAL_RECORDS),
-  )
-
-  const [evolutions, setEvolutions] = useState<ClinicalEvolution[]>(() =>
-    loadFromStorage<ClinicalEvolution[]>(STORAGE_KEYS.EVOLUTIONS, SEED_EVOLUTIONS),
-  )
-
-  const [audiometries, setAudiometries] = useState<AudiometryExam[]>(() =>
-    loadFromStorage<AudiometryExam[]>(STORAGE_KEYS.AUDIOMETRIES, SEED_AUDIOMETRIES),
-  )
-
-  const [tympanometries, setTympanometries] = useState<TympanometryExam[]>(() =>
-    loadFromStorage<TympanometryExam[]>(STORAGE_KEYS.TYMPANOMETRIES, SEED_TYMPANOMETRIES),
-  )
-
-  const [beras, setBeras] = useState<BeraExam[]>(() =>
-    loadFromStorage<BeraExam[]>(STORAGE_KEYS.BERAS, SEED_BERAS),
-  )
-
-  // Persistir sempre que houver alterações
-  useEffect(() => saveToStorage(STORAGE_KEYS.USER, currentUser), [currentUser])
-  useEffect(() => saveToStorage(STORAGE_KEYS.PATIENTS, patients), [patients])
-  useEffect(() => saveToStorage(STORAGE_KEYS.APPOINTMENTS, appointments), [appointments])
-  useEffect(() => saveToStorage(STORAGE_KEYS.HEARING_AIDS, hearingAids), [hearingAids])
-  useEffect(() => saveToStorage(STORAGE_KEYS.STOCK, stockItems), [stockItems])
-  useEffect(() => saveToStorage(STORAGE_KEYS.BUDGETS, budgets), [budgets])
-  useEffect(() => saveToStorage(STORAGE_KEYS.SALES, sales), [sales])
-  useEffect(() => saveToStorage(STORAGE_KEYS.INSTALLMENTS, installments), [installments])
-  useEffect(() => saveToStorage(STORAGE_KEYS.COMMISSIONS, commissions), [commissions])
-  useEffect(() => saveToStorage(STORAGE_KEYS.CASH, cashMovements), [cashMovements])
-  useEffect(() => saveToStorage(STORAGE_KEYS.CLINICAL, clinicalRecords), [clinicalRecords])
-  useEffect(() => saveToStorage(STORAGE_KEYS.EVOLUTIONS, evolutions), [evolutions])
-  useEffect(() => saveToStorage(STORAGE_KEYS.AUDIOMETRIES, audiometries), [audiometries])
-  useEffect(() => saveToStorage(STORAGE_KEYS.TYMPANOMETRIES, tympanometries), [tympanometries])
-  useEffect(() => saveToStorage(STORAGE_KEYS.BERAS, beras), [beras])
-
-  // --- Auth Handlers ---
-  const login = (email: string, pass: string, _rememberMe = false): boolean => {
-    const found = SEED_USERS.find((u) => u.email.toLowerCase() === email.trim().toLowerCase())
-    if (found) {
-      // Aceita as senhas do seed ou qualquer senha >= 4 dígitos para flexibilidade
-      if (
-        (found.role === 'admin' && (pass === 'admin123' || pass.length >= 4)) ||
-        (found.role === 'profissional' && (pass === 'prof123' || pass.length >= 4))
-      ) {
-        setCurrentUser(found)
-        toast({
-          title: 'Acesso autorizado',
-          description: `Bem-vindo(a) ao Audição360, ${found.name}!`,
-        })
-        return true
-      }
+      setEvolutions(evo.map(mapEvolution))
+      setAudiometries(aud.map(mapAudiometry))
+      setTympanometries(tymp.map(mapTympanometry))
+      setBeras(bera.map(mapBera))
+    } catch (err) {
+      console.error('Erro ao carregar dados do PocketBase:', err)
+    } finally {
+      setDataLoading(false)
     }
-    // Fallback: se for e-mail válido qualquer com senha válida para teste
-    if (email.includes('@') && pass.length >= 4) {
-      const genericUser: User = {
-        id: `user-${Date.now()}`,
-        name: email.split('@')[0].replace('.', ' '),
-        email: email.trim(),
-        role: 'admin',
-        crmCrfa: 'CRFa 2-99999',
+  }, [])
+
+  // ---------- Auth: restaurar sessão ----------
+  useEffect(() => {
+    try {
+      // `pb.authStore.record` was renamed to `model` in PocketBase SDK v0.21+.
+      // Support both to stay compatible across versions.
+      const storeAny = pb.authStore as any
+      const rec: any = storeAny.model || storeAny.record
+      if (pb.authStore.isValid && rec) {
+        const r: any = rec
+        setCurrentUser({
+          id: r.id,
+          name: r.name || r.email || 'Usuário',
+          email: r.email || '',
+          role: r.role === 'profissional' ? 'profissional' : 'admin',
+          avatar: r.avatar || undefined,
+          crmCrfa: r.crmCrfa || undefined,
+        })
       }
-      setCurrentUser(genericUser)
+    } catch (_) {
+      // sessão inválida — ignora
+    }
+  }, [])
+
+  // ---------- Carregar dados quando autenticado ----------
+  useEffect(() => {
+    if (currentUser && pb.authStore.isValid) {
+      reloadAll()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id])
+
+  // ---------- Auth Handlers ----------
+  const login = async (email: string, pass: string, _rememberMe = false): Promise<boolean> => {
+    try {
+      const auth = await pb.collection('users').authWithPassword(email.trim(), pass)
+      const r: any = auth.record
+      const user: User = {
+        id: r.id,
+        name: r.name || r.email || 'Usuário',
+        email: r.email || '',
+        role: r.role === 'profissional' ? 'profissional' : 'admin',
+        avatar: r.avatar || undefined,
+        crmCrfa: r.crmCrfa || undefined,
+      }
+      setCurrentUser(user)
       toast({
         title: 'Acesso autorizado',
-        description: `Bem-vindo(a), ${genericUser.name}!`,
+        description: `Bem-vindo(a) ao Audição360, ${user.name}!`,
       })
       return true
+    } catch (err) {
+      console.error('Falha no login:', err)
+      return false
     }
-    return false
   }
 
   const logout = () => {
+    pb.authStore.clear()
     setCurrentUser(null)
+    // Limpar dados em memória
+    setPatients([])
+    setAppointments([])
+    setAidsRaw([])
+    setMaintenances([])
+    setAdjustments([])
+    setStockRaw([])
+    setStockMovements([])
+    setBudgets([])
+    setSales([])
+    setInstallments([])
+    setCommissions([])
+    setCashMovements([])
+    setClinicalRecords({})
+    setEvolutions([])
+    setAudiometries([])
+    setTympanometries([])
+    setBeras([])
     toast({
       title: 'Sessão encerrada',
       description: 'Você saiu do sistema com segurança.',
@@ -313,6 +609,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const recoverPassword = (email: string): boolean => {
     if (!email || !email.includes('@')) return false
+    // Dispara solicitação de redefinição de senha no PocketBase
+    pb.collection('users')
+      .requestPasswordReset(email)
+      .catch((e) => {
+        console.warn('requestPasswordReset falhou:', e)
+      })
     toast({
       title: 'Link de recuperação enviado',
       description: `Enviamos as instruções de recuperação para ${email}.`,
@@ -320,25 +622,75 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true
   }
 
-  // --- Pacientes Handlers ---
+  // ---------- Pacientes Handlers ----------
   const addPatient = (patientData: Omit<Patient, 'id' | 'createdAt'>): Patient => {
-    const newId = `pat-${Date.now()}`
+    const tempId = `temp-${Date.now()}`
     const newPatient: Patient = {
       ...patientData,
-      id: newId,
-      createdAt: new Date().toISOString().split('T')[0],
-      lastVisit: new Date().toISOString().split('T')[0],
+      id: tempId,
+      createdAt: todayStr(),
+      lastVisit: patientData.lastVisit || todayStr(),
     }
     setPatients((prev) => [newPatient, ...prev])
     toast({
       title: 'Paciente cadastrado',
       description: `${newPatient.name} foi adicionado(a) com sucesso.`,
     })
+
+    const payload: any = {
+      name: newPatient.name,
+      cpf: newPatient.cpf,
+      birthDate: newPatient.birthDate,
+      gender: newPatient.gender,
+      phone: newPatient.phone,
+      mobile: newPatient.mobile,
+      email: newPatient.email,
+      cep: newPatient.cep,
+      street: newPatient.street,
+      number: newPatient.number,
+      complement: newPatient.complement || '',
+      neighborhood: newPatient.neighborhood,
+      city: newPatient.city,
+      state: newPatient.state,
+      planType: newPatient.planType,
+      planName: newPatient.planName || '',
+      cardNumber: newPatient.cardNumber || '',
+      hasResponsible: !!newPatient.hasResponsible,
+      responsible: newPatient.responsible || {},
+      hearingLossType: newPatient.hearingLossType,
+      previousHearingAid: !!newPatient.previousHearingAid,
+      previousAidBrand: newPatient.previousAidBrand || '',
+      previousAidModel: newPatient.previousAidModel || '',
+      generalNotes: newPatient.generalNotes || '',
+      status: newPatient.status,
+      lastVisit: newPatient.lastVisit || '',
+    }
+    pb.collection('patients')
+      .create(payload)
+      .then((rec: any) => {
+        const mapped = mapPatient(rec)
+        setPatients((prev) => prev.map((p) => (p.id === tempId ? mapped : p)))
+      })
+      .catch((err) => {
+        console.error('Erro ao criar paciente no PB:', err)
+        setPatients((prev) => prev.filter((p) => p.id !== tempId))
+        toast({
+          title: 'Erro ao cadastrar',
+          description: 'Não foi possível salvar o paciente no servidor.',
+          variant: 'destructive',
+        })
+      })
     return newPatient
   }
 
   const updatePatient = (id: string, patientData: Partial<Patient>) => {
     setPatients((prev) => prev.map((p) => (p.id === id ? { ...p, ...patientData } : p)))
+    const patch: any = { ...patientData }
+    delete patch.id
+    delete patch.createdAt
+    pb.collection('patients')
+      .update(id, patch)
+      .catch((err) => console.error('Erro ao atualizar paciente:', err))
     toast({
       title: 'Cadastro atualizado',
       description: 'Os dados do paciente foram salvos com sucesso.',
@@ -348,6 +700,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deletePatient = (id: string) => {
     const target = patients.find((p) => p.id === id)
     setPatients((prev) => prev.filter((p) => p.id !== id))
+    pb.collection('patients')
+      .delete(id)
+      .catch((err) => console.error('Erro ao excluir paciente:', err))
     toast({
       title: 'Paciente excluído',
       description: target ? `${target.name} foi removido(a) do sistema.` : 'Paciente excluído.',
@@ -357,25 +712,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const getPatient = (id: string) => patients.find((p) => p.id === id)
 
-  // --- Agenda Handlers (Com regra de conflito de profissional) ---
+  // ---------- Agenda Handlers ----------
   const addAppointment = (
     appData: Omit<Appointment, 'id' | 'createdAt'>,
   ): { success: boolean; message?: string; appointment?: Appointment } => {
-    // Validação de conflito: mesmo profissional no mesmo dia e com horários coincidentes
+    // Validação de conflito de profissional
     const conflict = appointments.find((existing) => {
       if (existing.status === 'Cancelado') return false
       if (existing.professionalName !== appData.professionalName) return false
       if (existing.date !== appData.date) return false
-
-      // Comparar minutos
       const [exHour, exMin] = existing.time.split(':').map(Number)
       const [newHour, newMin] = appData.time.split(':').map(Number)
       const existingStart = exHour * 60 + exMin
       const existingEnd = existingStart + existing.duration
       const newStart = newHour * 60 + newMin
       const newEnd = newStart + appData.duration
-
-      // Verifica sobreposição
       return newStart < existingEnd && newEnd > existingStart
     })
 
@@ -389,17 +740,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: msg }
     }
 
+    const tempId = `temp-${Date.now()}`
     const newAppointment: Appointment = {
       ...appData,
-      id: `app-${Date.now()}`,
-      createdAt: new Date().toISOString().split('T')[0],
+      id: tempId,
+      createdAt: todayStr(),
     }
-
     setAppointments((prev) => [...prev, newAppointment])
     toast({
       title: 'Agendamento confirmado',
       description: `Atendimento agendado para ${newAppointment.patientName} em ${newAppointment.date} às ${newAppointment.time}.`,
     })
+
+    const payload: any = {
+      patientId: appData.patientId || '',
+      patientName: appData.patientName,
+      patientPhone: appData.patientPhone || '',
+      type: appData.type,
+      date: appData.date,
+      time: appData.time,
+      duration: appData.duration,
+      professionalName: appData.professionalName,
+      status: appData.status,
+      notes: appData.notes || '',
+    }
+    pb.collection('appointments')
+      .create(payload)
+      .then((rec: any) => {
+        const mapped = mapAppointment(rec)
+        setAppointments((prev) => prev.map((a) => (a.id === tempId ? mapped : a)))
+      })
+      .catch((err) => {
+        console.error('Erro ao criar agendamento no PB:', err)
+        setAppointments((prev) => prev.filter((a) => a.id !== tempId))
+      })
+
     return { success: true, appointment: newAppointment }
   }
 
@@ -420,17 +795,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (existing.id === id || existing.status === 'Cancelado') return false
         if (existing.professionalName !== targetProf) return false
         if (existing.date !== targetDate) return false
-
         const [exHour, exMin] = existing.time.split(':').map(Number)
         const [newHour, newMin] = targetTime.split(':').map(Number)
         const existingStart = exHour * 60 + exMin
         const existingEnd = existingStart + existing.duration
         const newStart = newHour * 60 + newMin
         const newEnd = newStart + targetDur
-
         return newStart < existingEnd && newEnd > existingStart
       })
-
       if (conflict) {
         const msg = `Conflito de horário: ${targetProf} já possui agendamento (${conflict.patientName}) às ${conflict.time}.`
         toast({
@@ -443,6 +815,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setAppointments((prev) => prev.map((a) => (a.id === id ? { ...a, ...appData } : a)))
+    const patch: any = { ...appData }
+    delete patch.id
+    delete patch.createdAt
+    pb.collection('appointments')
+      .update(id, patch)
+      .catch((err) => console.error('Erro ao atualizar agendamento:', err))
     toast({
       title: 'Agendamento atualizado',
       description: 'As alterações foram salvas com sucesso.',
@@ -452,6 +830,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteAppointment = (id: string) => {
     setAppointments((prev) => prev.filter((a) => a.id !== id))
+    pb.collection('appointments')
+      .delete(id)
+      .catch((err) => console.error('Erro ao excluir agendamento:', err))
     toast({
       title: 'Agendamento cancelado',
       description: 'O agendamento foi removido da grade.',
@@ -459,29 +840,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     })
   }
 
-  // --- Prontuário & Evoluções Handlers ---
+  // ---------- Prontuário & Evoluções ----------
   const updateClinicalRecord = (patientId: string, record: Partial<ClinicalRecord>) => {
-    setClinicalRecords((prev) => {
-      const current = prev[patientId] || {
-        patientId,
-        mainComplaint: '',
-        anamnesis: '',
-        hearingHistory: '',
-        currentMedications: '',
-        familyHistory: '',
-        diagnosis: '',
-        conduct: '',
-        updatedAt: '',
-      }
-      return {
-        ...prev,
-        [patientId]: {
-          ...current,
-          ...record,
-          updatedAt: new Date().toISOString().split('T')[0],
-        },
-      }
-    })
+    const pat = patients.find((p) => p.id === patientId)
+    const current = clinicalRecords[patientId] || {
+      patientId,
+      mainComplaint: '',
+      anamnesis: '',
+      hearingHistory: '',
+      currentMedications: '',
+      familyHistory: '',
+      diagnosis: '',
+      conduct: '',
+      nextReturn: '',
+      updatedAt: '',
+    }
+    const updated: ClinicalRecord = {
+      ...current,
+      ...record,
+      updatedAt: todayStr(),
+    }
+    setClinicalRecords((prev) => ({ ...prev, [patientId]: updated }))
+
+    const payload: any = {
+      patientId,
+      patientName: pat?.name || '',
+      mainComplaint: updated.mainComplaint,
+      anamnesis: updated.anamnesis,
+      hearingHistory: updated.hearingHistory,
+      currentMedications: updated.currentMedications,
+      familyHistory: updated.familyHistory,
+      diagnosis: updated.diagnosis,
+      conduct: updated.conduct,
+      nextReturn: updated.nextReturn || '',
+      updatedAt: updated.updatedAt,
+    }
+
+    // Procura registro existente pelo patientId
+    pb.collection('clinical_records')
+      .getFirstListItem(`patientId = "${patientId}"`)
+      .then((existing) => {
+        pb.collection('clinical_records')
+          .update(existing.id, payload)
+          .catch((err) => console.error('Erro ao atualizar prontuário:', err))
+      })
+      .catch(() => {
+        // não existe — cria
+        pb.collection('clinical_records')
+          .create(payload)
+          .catch((err) => console.error('Erro ao criar prontuário:', err))
+      })
+
     toast({
       title: 'Prontuário salvo',
       description: 'Dados clínicos atualizados com sucesso.',
@@ -491,21 +900,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addEvolution = (
     evoData: Omit<ClinicalEvolution, 'id' | 'createdAt'>,
   ): ClinicalEvolution => {
+    const tempId = `temp-${Date.now()}`
     const newEvo: ClinicalEvolution = {
       ...evoData,
-      id: `evo-${Date.now()}`,
-      createdAt: new Date().toISOString(),
+      id: tempId,
+      createdAt: nowIso(),
     }
     setEvolutions((prev) => [newEvo, ...prev])
     toast({
       title: 'Evolução registrada',
       description: 'Nova entrada adicionada ao histórico clínico.',
     })
+
+    pb.collection('evolutions')
+      .create({
+        patientId: evoData.patientId || '',
+        patientName: '',
+        date: evoData.date,
+        professionalName: evoData.professionalName,
+        description: evoData.description,
+      })
+      .then((rec: any) => {
+        const mapped = mapEvolution(rec)
+        setEvolutions((prev) => prev.map((e) => (e.id === tempId ? mapped : e)))
+      })
+      .catch((err) => {
+        console.error('Erro ao criar evolução:', err)
+        setEvolutions((prev) => prev.filter((e) => e.id !== tempId))
+      })
     return newEvo
   }
 
   const deleteEvolution = (id: string) => {
     setEvolutions((prev) => prev.filter((e) => e.id !== id))
+    pb.collection('evolutions')
+      .delete(id)
+      .catch((err) => console.error('Erro ao excluir evolução:', err))
     toast({
       title: 'Evolução removida',
       description: 'Registro excluído do prontuário.',
@@ -513,19 +943,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     })
   }
 
-  // --- Exames Handlers ---
+  // ---------- Exames ----------
   const addAudiometry = (exam: Omit<AudiometryExam, 'id'>): AudiometryExam => {
-    const newExam: AudiometryExam = { ...exam, id: `audio-${Date.now()}` }
+    const tempId = `temp-${Date.now()}`
+    const newExam: AudiometryExam = { ...exam, id: tempId }
     setAudiometries((prev) => [newExam, ...prev])
     toast({
       title: 'Audiometria registrada',
       description: `Exame de audiometria de ${exam.patientName} salvo com sucesso.`,
     })
+
+    pb.collection('audiometries')
+      .create({
+        patientId: exam.patientId || '',
+        patientName: exam.patientName,
+        date: exam.date,
+        professionalName: exam.professionalName,
+        airOD: exam.airOD,
+        airOE: exam.airOE,
+        boneOD: exam.boneOD,
+        boneOE: exam.boneOE,
+        srtOD: exam.srtOD,
+        srtOE: exam.srtOE,
+        iprfOD: exam.iprfOD,
+        iprfOE: exam.iprfOE,
+        lossDegree: exam.lossDegree,
+        lossType: exam.lossType,
+        notes: exam.notes || '',
+      })
+      .then((rec: any) => {
+        const mapped = mapAudiometry(rec)
+        setAudiometries((prev) => prev.map((a) => (a.id === tempId ? mapped : a)))
+      })
+      .catch((err) => {
+        console.error('Erro ao criar audiometria:', err)
+        setAudiometries((prev) => prev.filter((a) => a.id !== tempId))
+      })
     return newExam
   }
 
   const deleteAudiometry = (id: string) => {
     setAudiometries((prev) => prev.filter((a) => a.id !== id))
+    pb.collection('audiometries')
+      .delete(id)
+      .catch((err) => console.error('Erro ao excluir audiometria:', err))
     toast({
       title: 'Exame excluído',
       description: 'Audiometria removida com sucesso.',
@@ -534,17 +995,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }
 
   const addTympanometry = (exam: Omit<TympanometryExam, 'id'>): TympanometryExam => {
-    const newExam: TympanometryExam = { ...exam, id: `tymp-${Date.now()}` }
+    const tempId = `temp-${Date.now()}`
+    const newExam: TympanometryExam = { ...exam, id: tempId }
     setTympanometries((prev) => [newExam, ...prev])
     toast({
       title: 'Imitanciometria registrada',
       description: `Exame de imitanciometria de ${exam.patientName} salvo com sucesso.`,
     })
+
+    pb.collection('tympanometries')
+      .create({
+        patientId: exam.patientId || '',
+        patientName: exam.patientName,
+        date: exam.date,
+        professionalName: exam.professionalName,
+        tympanometryOD: exam.tympanometryOD,
+        tympanometryOE: exam.tympanometryOE,
+        reflexesOD: exam.reflexesOD,
+        reflexesOE: exam.reflexesOE,
+        conclusion: exam.conclusion,
+        notes: exam.notes || '',
+      })
+      .then((rec: any) => {
+        const mapped = mapTympanometry(rec)
+        setTympanometries((prev) => prev.map((t) => (t.id === tempId ? mapped : t)))
+      })
+      .catch((err) => {
+        console.error('Erro ao criar imitanciometria:', err)
+        setTympanometries((prev) => prev.filter((t) => t.id !== tempId))
+      })
     return newExam
   }
 
   const deleteTympanometry = (id: string) => {
     setTympanometries((prev) => prev.filter((t) => t.id !== id))
+    pb.collection('tympanometries')
+      .delete(id)
+      .catch((err) => console.error('Erro ao excluir imitanciometria:', err))
     toast({
       title: 'Exame excluído',
       description: 'Imitanciometria removida com sucesso.',
@@ -553,17 +1040,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }
 
   const addBera = (exam: Omit<BeraExam, 'id'>): BeraExam => {
-    const newExam: BeraExam = { ...exam, id: `bera-${Date.now()}` }
+    const tempId = `temp-${Date.now()}`
+    const newExam: BeraExam = { ...exam, id: tempId }
     setBeras((prev) => [newExam, ...prev])
     toast({
       title: 'BERA registrado',
       description: `Potencial evocado de ${exam.patientName} salvo com sucesso.`,
     })
+
+    pb.collection('beras')
+      .create({
+        patientId: exam.patientId || '',
+        patientName: exam.patientName,
+        date: exam.date,
+        professionalName: exam.professionalName,
+        od: exam.od,
+        oe: exam.oe,
+        classification: exam.classification,
+        notes: exam.notes || '',
+      })
+      .then((rec: any) => {
+        const mapped = mapBera(rec)
+        setBeras((prev) => prev.map((b) => (b.id === tempId ? mapped : b)))
+      })
+      .catch((err) => {
+        console.error('Erro ao criar BERA:', err)
+        setBeras((prev) => prev.filter((b) => b.id !== tempId))
+      })
     return newExam
   }
 
   const deleteBera = (id: string) => {
     setBeras((prev) => prev.filter((b) => b.id !== id))
+    pb.collection('beras')
+      .delete(id)
+      .catch((err) => console.error('Erro ao excluir BERA:', err))
     toast({
       title: 'Exame excluído',
       description: 'Registro de BERA removido.',
@@ -571,25 +1082,86 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     })
   }
 
-  // --- Aparelhos Handlers ---
+  // ---------- Aparelhos Handlers ----------
   const addHearingAid = (aidData: Omit<HearingAid, 'id' | 'createdAt'>): HearingAid => {
+    const tempId = `temp-${Date.now()}`
     const newAid: HearingAid = {
       ...aidData,
-      id: `aid-${Date.now()}`,
-      createdAt: new Date().toISOString().split('T')[0],
+      id: tempId,
+      createdAt: todayStr(),
       maintenances: [],
       adjustments: [],
     }
-    setHearingAids((prev) => [newAid, ...prev])
+    setAidsRaw((prev) => [
+      {
+        id: tempId,
+        brand: aidData.brand,
+        model: aidData.model,
+        type: aidData.type,
+        side: aidData.side,
+        serialNumber: aidData.serialNumber,
+        patientId: aidData.patientId || '',
+        patientName: aidData.patientName || '',
+        saleDate: aidData.saleDate || '',
+        saleValue: aidData.saleValue ?? 0,
+        paymentMethod: aidData.paymentMethod || '',
+        warrantyMonths: aidData.warrantyMonths,
+        warrantyEndDate: aidData.warrantyEndDate || '',
+        powerSource: aidData.powerSource,
+        earMold: aidData.earMold,
+        earMoldType: aidData.earMoldType || '',
+        notes: aidData.notes || '',
+        status: aidData.status,
+        created: nowIso(),
+      },
+      ...prev,
+    ])
     toast({
       title: 'Aparelho cadastrado',
       description: `${newAid.brand} ${newAid.model} adicionado com sucesso.`,
     })
+
+    const payload: any = {
+      patientId: aidData.patientId || '',
+      patientName: aidData.patientName || '',
+      brand: aidData.brand,
+      model: aidData.model,
+      type: aidData.type,
+      side: aidData.side,
+      serialNumber: aidData.serialNumber,
+      saleDate: aidData.saleDate || '',
+      saleValue: aidData.saleValue ?? 0,
+      paymentMethod: aidData.paymentMethod || '',
+      warrantyMonths: aidData.warrantyMonths,
+      warrantyEndDate: aidData.warrantyEndDate || '',
+      powerSource: aidData.powerSource,
+      earMold: !!aidData.earMold,
+      earMoldType: aidData.earMoldType || '',
+      notes: aidData.notes || '',
+      status: aidData.status,
+    }
+    pb.collection('hearing_aids')
+      .create(payload)
+      .then((rec: any) => {
+        setAidsRaw((prev) => prev.map((a) => (a.id === tempId ? rec : a)))
+      })
+      .catch((err) => {
+        console.error('Erro ao criar aparelho:', err)
+        setAidsRaw((prev) => prev.filter((a) => a.id !== tempId))
+      })
     return newAid
   }
 
   const updateHearingAid = (id: string, aidData: Partial<HearingAid>) => {
-    setHearingAids((prev) => prev.map((a) => (a.id === id ? { ...a, ...aidData } : a)))
+    setAidsRaw((prev) => prev.map((a) => (a.id === id ? { ...a, ...aidData } : a)))
+    const patch: any = { ...aidData }
+    delete patch.id
+    delete patch.createdAt
+    delete patch.maintenances
+    delete patch.adjustments
+    pb.collection('hearing_aids')
+      .update(id, patch)
+      .catch((err) => console.error('Erro ao atualizar aparelho:', err))
     toast({
       title: 'Aparelho atualizado',
       description: 'Informações do aparelho auditivo salvas.',
@@ -597,7 +1169,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }
 
   const deleteHearingAid = (id: string) => {
-    setHearingAids((prev) => prev.filter((a) => a.id !== id))
+    setAidsRaw((prev) => prev.filter((a) => a.id !== id))
+    pb.collection('hearing_aids')
+      .delete(id)
+      .catch((err) => console.error('Erro ao excluir aparelho:', err))
     toast({
       title: 'Aparelho excluído',
       description: 'Registro de aparelho auditivo removido.',
@@ -611,27 +1186,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     responsible: string,
     date: string,
   ) => {
-    setHearingAids((prev) =>
-      prev.map((a) => {
-        if (a.id !== aidId) return a
-        const newMaint = {
-          id: `maint-${Date.now()}`,
-          hearingAidId: aidId,
-          date,
-          description,
-          responsible,
-          createdAt: new Date().toISOString(),
-        }
-        return {
-          ...a,
-          maintenances: [newMaint, ...(a.maintenances || [])],
-        }
-      }),
-    )
+    const aid = aidsRaw.find((a) => a.id === aidId)
+    const tempId = `temp-${Date.now()}`
+    const newMaint: AidMaintenance = {
+      id: tempId,
+      hearingAidId: aidId,
+      date,
+      description,
+      responsible,
+      createdAt: nowIso(),
+    }
+    setMaintenances((prev) => [newMaint, ...prev])
     toast({
       title: 'Manutenção registrada',
       description: 'Histórico de manutenção atualizado.',
     })
+
+    pb.collection('maintenances')
+      .create({
+        hearingAidId: aidId,
+        hearingAidLabel: aid ? `${aid.brand} ${aid.model}` : '',
+        date,
+        description,
+        responsible,
+      })
+      .then((rec: any) => {
+        const mapped = mapMaintenance(rec)
+        setMaintenances((prev) => prev.map((m) => (m.id === tempId ? mapped : m)))
+      })
+      .catch((err) => {
+        console.error('Erro ao criar manutenção:', err)
+        setMaintenances((prev) => prev.filter((m) => m.id !== tempId))
+      })
   }
 
   const addAidAdjustment = (
@@ -640,48 +1226,118 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     professionalName: string,
     date: string,
   ) => {
-    setHearingAids((prev) =>
-      prev.map((a) => {
-        if (a.id !== aidId) return a
-        const newAdj = {
-          id: `adj-${Date.now()}`,
-          hearingAidId: aidId,
-          date,
-          description,
-          professionalName,
-          createdAt: new Date().toISOString(),
-        }
-        return {
-          ...a,
-          adjustments: [newAdj, ...(a.adjustments || [])],
-        }
-      }),
-    )
+    const aid = aidsRaw.find((a) => a.id === aidId)
+    const tempId = `temp-${Date.now()}`
+    const newAdj: AidAdjustment = {
+      id: tempId,
+      hearingAidId: aidId,
+      date,
+      description,
+      professionalName,
+      createdAt: nowIso(),
+    }
+    setAdjustments((prev) => [newAdj, ...prev])
     toast({
       title: 'Ajuste registrado',
       description: 'Histórico de ajuste fino do aparelho atualizado.',
     })
+
+    pb.collection('adjustments')
+      .create({
+        hearingAidId: aidId,
+        hearingAidLabel: aid ? `${aid.brand} ${aid.model}` : '',
+        date,
+        description,
+        professionalName,
+      })
+      .then((rec: any) => {
+        const mapped = mapAdjustment(rec)
+        setAdjustments((prev) => prev.map((a) => (a.id === tempId ? mapped : a)))
+      })
+      .catch((err) => {
+        console.error('Erro ao criar ajuste:', err)
+        setAdjustments((prev) => prev.filter((a) => a.id !== tempId))
+      })
   }
 
-  // --- Financeiro Handlers ---
+  // ---------- Financeiro Handlers ----------
+  const addCashMovement = (
+    movData: Omit<CashFlowMovement, 'id' | 'createdAt'>,
+  ): CashFlowMovement => {
+    const tempId = `temp-${Date.now()}`
+    const newMov: CashFlowMovement = {
+      ...movData,
+      id: tempId,
+      createdAt: nowIso(),
+    }
+    setCashMovements((prev) => [newMov, ...prev])
+
+    pb.collection('cash_flow')
+      .create({
+        date: movData.date,
+        description: movData.description,
+        type: movData.type,
+        category: movData.category,
+        value: movData.value,
+        responsible: movData.responsible,
+      })
+      .then((rec: any) => {
+        const mapped = mapCashMovement(rec)
+        setCashMovements((prev) => prev.map((m) => (m.id === tempId ? mapped : m)))
+      })
+      .catch((err) => {
+        console.error('Erro ao criar movimentação de caixa:', err)
+        setCashMovements((prev) => prev.filter((m) => m.id !== tempId))
+      })
+    return newMov
+  }
+
   const addBudget = (budgetData: Omit<Budget, 'id' | 'createdAt' | 'number'>): Budget => {
     const nextNum = budgets.length > 0 ? Math.max(...budgets.map((b) => b.number)) + 1 : 1001
+    const tempId = `temp-${Date.now()}`
     const newBudget: Budget = {
       ...budgetData,
-      id: `bud-${Date.now()}`,
+      id: tempId,
       number: nextNum,
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: todayStr(),
     }
     setBudgets((prev) => [newBudget, ...prev])
     toast({
       title: 'Orçamento gerado',
       description: `Orçamento #${newBudget.number} criado com sucesso.`,
     })
+
+    pb.collection('budgets')
+      .create({
+        patientId: budgetData.patientId || '',
+        patientName: budgetData.patientName,
+        number: nextNum,
+        date: budgetData.date,
+        items: budgetData.items,
+        discountPercent: budgetData.discountPercent,
+        totalValue: budgetData.totalValue,
+        status: budgetData.status,
+        notes: budgetData.notes || '',
+      })
+      .then((rec: any) => {
+        const mapped = mapBudget(rec)
+        setBudgets((prev) => prev.map((b) => (b.id === tempId ? mapped : b)))
+      })
+      .catch((err) => {
+        console.error('Erro ao criar orçamento:', err)
+        setBudgets((prev) => prev.filter((b) => b.id !== tempId))
+      })
     return newBudget
   }
 
   const updateBudget = (id: string, budgetData: Partial<Budget>) => {
     setBudgets((prev) => prev.map((b) => (b.id === id ? { ...b, ...budgetData } : b)))
+    const patch: any = { ...budgetData }
+    delete patch.id
+    delete patch.createdAt
+    pb.collection('budgets')
+      .update(id, patch)
+      .catch((err) => console.error('Erro ao atualizar orçamento:', err))
     toast({
       title: 'Orçamento atualizado',
       description: 'As alterações foram salvas.',
@@ -690,6 +1346,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteBudget = (id: string) => {
     setBudgets((prev) => prev.filter((b) => b.id !== id))
+    pb.collection('budgets')
+      .delete(id)
+      .catch((err) => console.error('Erro ao excluir orçamento:', err))
     toast({
       title: 'Orçamento excluído',
       description: 'Orçamento removido com sucesso.',
@@ -699,34 +1358,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addSale = (saleData: Omit<Sale, 'id' | 'createdAt' | 'number'>): Sale => {
     const nextNum = sales.length > 0 ? Math.max(...sales.map((s) => Number(s.number))) + 1 : 501
+    const tempId = `temp-${Date.now()}`
     const newSale: Sale = {
       ...saleData,
-      id: `sale-${Date.now()}`,
+      id: tempId,
       number: nextNum,
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: todayStr(),
     }
-
     setSales((prev) => [newSale, ...prev])
 
-    // Gerar parcelas automaticamente se for parcelado ou boleto/cartão com parcelas > 1
     const totalInstallments = newSale.installmentsCount || 1
     const totalWithInterest = newSale.totalValue * (1 + (newSale.interestPercent || 0) / 100)
     const installmentValue = totalWithInterest / totalInstallments
-
     const baseDueDate = newSale.firstDueDate ? new Date(newSale.firstDueDate) : new Date()
 
-    const newInstallmentsList: Installment[] = []
+    const tempInstallments: Installment[] = []
     for (let i = 1; i <= totalInstallments; i++) {
       const d = new Date(baseDueDate)
       d.setMonth(d.getMonth() + (i - 1))
       const dueStr = d.toISOString().split('T')[0]
-
       const isFirstPaid = newSale.paymentMethod === 'À vista'
-
-      newInstallmentsList.push({
-        id: `inst-${Date.now()}-${i}`,
-        saleId: newSale.id,
-        saleNumber: newSale.number,
+      tempInstallments.push({
+        id: `temp-inst-${Date.now()}-${i}`,
+        saleId: tempId,
+        saleNumber: nextNum,
         installmentNumber: i,
         totalInstallments,
         patientId: newSale.patientId,
@@ -737,14 +1392,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         paidDate: isFirstPaid ? newSale.date : undefined,
       })
     }
+    setInstallments((prev) => [...tempInstallments, ...prev])
 
-    setInstallments((prev) => [...newInstallmentsList, ...prev])
-
-    // Movimentação no Caixa Diário se foi à vista
     if (newSale.paymentMethod === 'À vista') {
       addCashMovement({
         date: newSale.date,
-        description: `Venda #${newSale.number} à vista - ${newSale.patientName}`,
+        description: `Venda #${nextNum} à vista - ${newSale.patientName}`,
         type: 'Entrada',
         category: 'Venda de aparelho',
         value: newSale.totalValue,
@@ -754,8 +1407,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     toast({
       title: 'Venda registrada com sucesso!',
-      description: `Venda #${newSale.number} gerou ${totalInstallments} parcela(s).`,
+      description: `Venda #${nextNum} gerou ${totalInstallments} parcela(s).`,
     })
+
+    // Persistir venda e parcelas no PB
+    pb.collection('sales')
+      .create({
+        patientId: newSale.patientId || '',
+        patientName: newSale.patientName,
+        number: nextNum,
+        date: newSale.date,
+        itemsDescription: newSale.itemsDescription,
+        totalValue: newSale.totalValue,
+        paymentMethod: newSale.paymentMethod,
+        installmentsCount: newSale.installmentsCount,
+        interestPercent: newSale.interestPercent || 0,
+        firstDueDate: newSale.firstDueDate || '',
+        status: newSale.status,
+      })
+      .then(async (rec: any) => {
+        const mappedSale = mapSale(rec)
+        const realSaleId = rec.id
+        setSales((prev) => prev.map((s) => (s.id === tempId ? mappedSale : s)))
+
+        // Criar parcelas no PB
+        const createdInsts: Installment[] = []
+        for (const inst of tempInstallments) {
+          try {
+            const r: any = await pb.collection('installments').create({
+              saleId: realSaleId,
+              patientId: inst.patientId || '',
+              patientName: inst.patientName,
+              saleNumber: nextNum,
+              installmentNumber: inst.installmentNumber,
+              totalInstallments: inst.totalInstallments,
+              dueDate: inst.dueDate,
+              value: inst.value,
+              status: inst.status,
+              paidDate: inst.paidDate || '',
+            })
+            createdInsts.push(mapInstallment(r))
+          } catch (err) {
+            console.error('Erro ao criar parcela:', err)
+          }
+        }
+        if (createdInsts.length > 0) {
+          setInstallments((prev) => {
+            const filtered = prev.filter((i) => !i.id.startsWith('temp-inst-'))
+            return [...createdInsts, ...filtered]
+          })
+        }
+      })
+      .catch((err) => {
+        console.error('Erro ao criar venda:', err)
+        setSales((prev) => prev.filter((s) => s.id !== tempId))
+      })
 
     return newSale
   }
@@ -774,17 +1480,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newSale = addSale({
       patientId: b.patientId,
       patientName: b.patientName,
-      date: new Date().toISOString().split('T')[0],
+      date: todayStr(),
       itemsDescription: itemsSummary,
       totalValue: b.totalValue,
       paymentMethod,
       installmentsCount,
       interestPercent: 0,
-      firstDueDate: firstDueDate || new Date().toISOString().split('T')[0],
+      firstDueDate: firstDueDate || todayStr(),
       status: 'Concluída',
     })
 
-    // Atualizar orçamento para 'Convertido'
     updateBudget(budgetId, { status: 'Convertido' })
 
     toast({
@@ -796,7 +1501,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }
 
   const payInstallment = (installmentId: string, paidDate?: string) => {
-    const paymentDateStr = paidDate || new Date().toISOString().split('T')[0]
+    const paymentDateStr = paidDate || todayStr()
     let paidVal = 0
     let patName = ''
     let sNum = 0
@@ -817,7 +1522,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }),
     )
 
-    // Registra entrada no Caixa Diário
+    pb.collection('installments')
+      .update(installmentId, { status: 'Pago', paidDate: paymentDateStr })
+      .catch((err) => console.error('Erro ao pagar parcela:', err))
+
     if (paidVal > 0) {
       addCashMovement({
         date: paymentDateStr,
@@ -836,56 +1544,133 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }
 
   const addCommission = (commData: Omit<Commission, 'id'>) => {
-    const newComm: Commission = { ...commData, id: `com-${Date.now()}` }
+    const tempId = `temp-${Date.now()}`
+    const newComm: Commission = { ...commData, id: tempId }
     setCommissions((prev) => [newComm, ...prev])
     toast({
       title: 'Comissão registrada',
       description: `Comissão de ${commData.professionalName} cadastrada para ${commData.period}.`,
     })
+
+    pb.collection('commissions')
+      .create({
+        professionalName: commData.professionalName,
+        period: commData.period,
+        salesCount: commData.salesCount,
+        totalSalesValue: commData.totalSalesValue,
+        commissionPercent: commData.commissionPercent,
+        commissionValue: commData.commissionValue,
+      })
+      .then((rec: any) => {
+        const mapped = mapCommission(rec)
+        setCommissions((prev) => prev.map((c) => (c.id === tempId ? mapped : c)))
+      })
+      .catch((err) => {
+        console.error('Erro ao criar comissão:', err)
+        setCommissions((prev) => prev.filter((c) => c.id !== tempId))
+      })
   }
 
-  const addCashMovement = (
-    movData: Omit<CashFlowMovement, 'id' | 'createdAt'>,
-  ): CashFlowMovement => {
-    const newMov: CashFlowMovement = {
-      ...movData,
-      id: `cash-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    }
-    setCashMovements((prev) => [newMov, ...prev])
-    return newMov
-  }
-
-  // --- Estoque Handlers ---
+  // ---------- Estoque Handlers ----------
   const addStockItem = (itemData: Omit<StockItem, 'id' | 'createdAt'>): StockItem => {
+    const tempId = `temp-${Date.now()}`
+    const initialMov: StockMovement = {
+      id: `temp-mov-${Date.now()}`,
+      stockItemId: tempId,
+      date: todayStr(),
+      type: 'Entrada',
+      quantity: itemData.currentQuantity,
+      responsible: currentUser?.name || 'Administrador',
+      reason: 'Estoque inicial cadastrado',
+      supplier: itemData.supplier,
+      createdAt: nowIso(),
+    }
     const newItem: StockItem = {
       ...itemData,
-      id: `stk-${Date.now()}`,
-      createdAt: new Date().toISOString().split('T')[0],
-      movements: [
-        {
-          id: `mov-${Date.now()}`,
-          stockItemId: `stk-${Date.now()}`,
-          date: new Date().toISOString().split('T')[0],
-          type: 'Entrada',
-          quantity: itemData.currentQuantity,
-          responsible: currentUser?.name || 'Administrador',
-          reason: 'Estoque inicial cadastrado',
-          supplier: itemData.supplier,
-          createdAt: new Date().toISOString(),
-        },
-      ],
+      id: tempId,
+      createdAt: todayStr(),
+      movements: [initialMov],
     }
-    setStockItems((prev) => [newItem, ...prev])
+    setStockRaw((prev) => [
+      {
+        id: tempId,
+        name: itemData.name,
+        brand: itemData.brand || '',
+        model: itemData.model || '',
+        color: itemData.color || '',
+        category: itemData.category,
+        batterySize: itemData.batterySize || '',
+        accessorySubcategory: itemData.accessorySubcategory || '',
+        minQuantity: itemData.minQuantity,
+        currentQuantity: itemData.currentQuantity,
+        supplier: itemData.supplier || '',
+        costPrice: itemData.costPrice,
+        salePrice: itemData.salePrice,
+        notes: itemData.notes || '',
+        created: nowIso(),
+      },
+      ...prev,
+    ])
     toast({
       title: 'Item cadastrado no estoque',
       description: `${newItem.name} adicionado com sucesso.`,
     })
+
+    pb.collection('inventory')
+      .create({
+        name: itemData.name,
+        brand: itemData.brand || '',
+        model: itemData.model || '',
+        color: itemData.color || '',
+        category: itemData.category,
+        batterySize: itemData.batterySize || '',
+        accessorySubcategory: itemData.accessorySubcategory || '',
+        minQuantity: itemData.minQuantity,
+        currentQuantity: itemData.currentQuantity,
+        supplier: itemData.supplier || '',
+        costPrice: itemData.costPrice,
+        salePrice: itemData.salePrice,
+        notes: itemData.notes || '',
+      })
+      .then(async (rec: any) => {
+        const realId = rec.id
+        setStockRaw((prev) => prev.map((it) => (it.id === tempId ? rec : it)))
+        // registrar movimento inicial
+        try {
+          const m: any = await pb.collection('inventory_movements').create({
+            itemId: realId,
+            item_name: itemData.name,
+            date: todayStr(),
+            type: 'Entrada',
+            quantity: itemData.currentQuantity,
+            responsible: currentUser?.name || 'Administrador',
+            reason: 'Estoque inicial cadastrado',
+            supplier: itemData.supplier || '',
+          })
+          setStockMovements((prev) => [
+            mapStockMovement(m),
+            ...prev.filter((mv) => mv.id !== initialMov.id),
+          ])
+        } catch (err) {
+          console.error('Erro ao registrar movimento inicial:', err)
+        }
+      })
+      .catch((err) => {
+        console.error('Erro ao criar item de estoque:', err)
+        setStockRaw((prev) => prev.filter((it) => it.id !== tempId))
+      })
     return newItem
   }
 
   const updateStockItem = (id: string, itemData: Partial<StockItem>) => {
-    setStockItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...itemData } : it)))
+    setStockRaw((prev) => prev.map((it) => (it.id === id ? { ...it, ...itemData } : it)))
+    const patch: any = { ...itemData }
+    delete patch.id
+    delete patch.createdAt
+    delete patch.movements
+    pb.collection('inventory')
+      .update(id, patch)
+      .catch((err) => console.error('Erro ao atualizar item de estoque:', err))
     toast({
       title: 'Item atualizado',
       description: 'Dados do item de estoque foram salvos.',
@@ -893,7 +1678,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }
 
   const deleteStockItem = (id: string) => {
-    setStockItems((prev) => prev.filter((it) => it.id !== id))
+    setStockRaw((prev) => prev.filter((it) => it.id !== id))
+    pb.collection('inventory')
+      .delete(id)
+      .catch((err) => console.error('Erro ao excluir item de estoque:', err))
     toast({
       title: 'Item excluído',
       description: 'Item removido do controle de estoque.',
@@ -908,31 +1696,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     responsible?: string,
     date?: string,
   ) => {
-    const movDate = date || new Date().toISOString().split('T')[0]
-    setStockItems((prev) =>
-      prev.map((it) => {
-        if (it.id !== itemId) return it
-        const newMov = {
-          id: `mov-${Date.now()}`,
-          stockItemId: itemId,
-          date: movDate,
-          type: 'Entrada' as const,
-          quantity,
-          responsible: responsible || currentUser?.name || 'Almoxarifado',
-          supplier: supplier || it.supplier,
-          createdAt: new Date().toISOString(),
-        }
-        return {
-          ...it,
-          currentQuantity: it.currentQuantity + quantity,
-          movements: [newMov, ...(it.movements || [])],
-        }
-      }),
-    )
+    const movDate = date || todayStr()
+    const target = stockRaw.find((it) => it.id === itemId)
+    if (target) {
+      setStockRaw((prev) =>
+        prev.map((it) =>
+          it.id === itemId ? { ...it, currentQuantity: Number(it.currentQuantity) + quantity } : it,
+        ),
+      )
+    }
+    const tempId = `temp-mov-${Date.now()}`
+    const newMov: StockMovement = {
+      id: tempId,
+      stockItemId: itemId,
+      date: movDate,
+      type: 'Entrada',
+      quantity,
+      responsible: responsible || currentUser?.name || 'Almoxarifado',
+      supplier: supplier || target?.supplier,
+      createdAt: nowIso(),
+    }
+    setStockMovements((prev) => [newMov, ...prev])
     toast({
       title: 'Entrada de estoque realizada',
       description: `+${quantity} unidades adicionadas ao saldo.`,
     })
+
+    pb.collection('inventory_movements')
+      .create({
+        itemId,
+        item_name: target?.name || '',
+        date: movDate,
+        type: 'Entrada',
+        quantity,
+        responsible: responsible || currentUser?.name || 'Almoxarifado',
+        reason: '',
+        supplier: supplier || target?.supplier || '',
+      })
+      .then((rec: any) => {
+        const mapped = mapStockMovement(rec)
+        setStockMovements((prev) => prev.map((m) => (m.id === tempId ? mapped : m)))
+      })
+      .catch((err) => {
+        console.error('Erro ao registrar entrada:', err)
+        setStockMovements((prev) => prev.filter((m) => m.id !== tempId))
+      })
   }
 
   const addStockExit = (
@@ -943,10 +1751,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     patientName?: string,
     date?: string,
   ): boolean => {
-    const target = stockItems.find((it) => it.id === itemId)
+    const target = stockRaw.find((it) => it.id === itemId)
     if (!target) return false
-
-    if (target.currentQuantity < quantity) {
+    if (Number(target.currentQuantity) < quantity) {
       toast({
         title: 'Saldo insuficiente',
         description: `O estoque possui apenas ${target.currentQuantity} unidades disponíveis.`,
@@ -955,41 +1762,77 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false
     }
 
-    const movDate = date || new Date().toISOString().split('T')[0]
-    setStockItems((prev) =>
-      prev.map((it) => {
-        if (it.id !== itemId) return it
-        const newMov = {
-          id: `mov-${Date.now()}`,
-          stockItemId: itemId,
-          date: movDate,
-          type: 'Saída' as const,
-          quantity,
-          reason,
-          patientName,
-          responsible: responsible || currentUser?.name || 'Atendimento',
-          createdAt: new Date().toISOString(),
-        }
-        return {
-          ...it,
-          currentQuantity: it.currentQuantity - quantity,
-          movements: [newMov, ...(it.movements || [])],
-        }
-      }),
+    const movDate = date || todayStr()
+    setStockRaw((prev) =>
+      prev.map((it) =>
+        it.id === itemId ? { ...it, currentQuantity: Number(it.currentQuantity) - quantity } : it,
+      ),
     )
+    const tempId = `temp-mov-${Date.now()}`
+    const newMov: StockMovement = {
+      id: tempId,
+      stockItemId: itemId,
+      date: movDate,
+      type: 'Saída',
+      quantity,
+      reason,
+      patientName,
+      responsible: responsible || currentUser?.name || 'Atendimento',
+      createdAt: nowIso(),
+    }
+    setStockMovements((prev) => [newMov, ...prev])
     toast({
       title: 'Saída de estoque registrada',
       description: `-${quantity} unidades baixadas do estoque.`,
     })
+
+    pb.collection('inventory_movements')
+      .create({
+        itemId,
+        item_name: target.name,
+        date: movDate,
+        type: 'Saída',
+        quantity,
+        reason,
+        supplier: '',
+        patientName: patientName || '',
+        responsible: responsible || currentUser?.name || 'Atendimento',
+      })
+      .then((rec: any) => {
+        const mapped = mapStockMovement(rec)
+        setStockMovements((prev) => prev.map((m) => (m.id === tempId ? mapped : m)))
+      })
+      .catch((err) => {
+        console.error('Erro ao registrar saída:', err)
+        setStockMovements((prev) => prev.filter((m) => m.id !== tempId))
+      })
     return true
   }
 
-  // --- Alertas Inteligentes do Sistema ---
+  // ---------- Derivar aparelhos com manutenções/ajustes ----------
+  const hearingAids: HearingAid[] = useMemo(() => {
+    return aidsRaw.map((r) => {
+      const maints = maintenances.filter((m) => m.hearingAidId === r.id)
+      const adjs = adjustments.filter((a) => a.hearingAidId === r.id)
+      return mapHearingAid(r, maints, adjs)
+    })
+  }, [aidsRaw, maintenances, adjustments])
+
+  // ---------- Derivar itens de estoque com movimentos ----------
+  const stockItems: StockItem[] = useMemo(() => {
+    return stockRaw.map((r) => {
+      const movs = stockMovements
+        .filter((m) => m.stockItemId === r.id)
+        .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+      return mapStockItem(r, movs)
+    })
+  }, [stockRaw, stockMovements])
+
+  // ---------- Alertas Inteligentes ----------
   const alerts = useMemo<SystemAlert[]>(() => {
     const list: SystemAlert[] = []
     const today = new Date()
 
-    // 1. Garantias vencendo em até 30 dias
     hearingAids.forEach((aid) => {
       if (aid.warrantyEndDate && aid.status === 'Em uso') {
         const end = new Date(aid.warrantyEndDate)
@@ -1009,7 +1852,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     })
 
-    // 2. Follow-ups de adaptação (aparelhos vendidos há ~30 dias)
     patients
       .filter((p) => p.status === 'Em tratamento')
       .slice(0, 3)
@@ -1025,10 +1867,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
       })
 
-    // 3. Parcelas em atraso
-    const todayStr = today.toISOString().split('T')[0]
+    const todayISO = today.toISOString().split('T')[0]
     installments.forEach((inst) => {
-      if (inst.status === 'Atrasado' || (inst.status === 'Pendente' && inst.dueDate < todayStr)) {
+      if (inst.status === 'Atrasado' || (inst.status === 'Pendente' && inst.dueDate < todayISO)) {
         list.push({
           id: `alert-inst-${inst.id}`,
           type: 'installment',
@@ -1042,7 +1883,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     })
 
-    // 4. Estoque abaixo do mínimo
     stockItems.forEach((stk) => {
       if (stk.currentQuantity < stk.minQuantity) {
         list.push({
@@ -1063,24 +1903,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const unreadAlertsCount = alerts.length
 
   const resetToSeedData = () => {
-    localStorage.clear()
-    setPatients(SEED_PATIENTS)
-    setAppointments(SEED_APPOINTMENTS)
-    setHearingAids(SEED_HEARING_AIDS)
-    setStockItems(SEED_STOCK_ITEMS)
-    setBudgets(SEED_BUDGETS)
-    setSales(SEED_SALES)
-    setInstallments(SEED_INSTALLMENTS)
-    setCommissions(SEED_COMMISSIONS)
-    setCashMovements(SEED_CASH_MOVEMENTS)
-    setClinicalRecords(SEED_CLINICAL_RECORDS)
-    setEvolutions(SEED_EVOLUTIONS)
-    setAudiometries(SEED_AUDIOMETRIES)
-    setTympanometries(SEED_TYMPANOMETRIES)
-    setBeras(SEED_BERAS)
+    reloadAll()
     toast({
-      title: 'Dados restaurados',
-      description: 'Todos os registros foram reiniciados com os dados de demonstração.',
+      title: 'Dados recarregados',
+      description: 'Todos os registros foram recarregados a partir do banco de dados.',
     })
   }
 
@@ -1091,6 +1917,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         login,
         logout,
         recoverPassword,
+        dataLoading,
         patients,
         addPatient,
         updatePatient,
