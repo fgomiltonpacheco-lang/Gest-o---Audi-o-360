@@ -327,7 +327,7 @@ export default function Login() {
                   className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 hover:bg-teal-50 hover:border-teal-200 hover:text-teal-600 transition-all text-left"
                 >
                   <div className="font-bold">Administrador</div>
-                  <div className="text-[10px] text-slate-400">Dra. Mariana</div>
+                  <div className="text-[10px] text-slate-400">Milton Soares Pacheco</div>
                 </button>
                 <button
                   type="button"

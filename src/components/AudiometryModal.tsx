@@ -37,7 +37,7 @@ export const AudiometryModal: React.FC<AudiometryModalProps> = ({
   onSave,
 }) => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
-  const [professionalName, setProfessionalName] = useState('Dra. Mariana Silva Costa')
+  const [professionalName, setProfessionalName] = useState('Milton Soares Pacheco')
 
   // Via Aérea OD & OE
   const [airOD, setAirOD] = useState<Record<string, number | null | 'NR'>>({
@@ -153,7 +153,9 @@ export const AudiometryModal: React.FC<AudiometryModalProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Dra. Mariana Silva Costa">Dra. Mariana Silva Costa</SelectItem>
+                  <SelectItem value="Milton Soares Pacheco">
+                    Milton Soares Pacheco (CRFa 3-11981-5)
+                  </SelectItem>
                   <SelectItem value="Dr. Lucas Ferreira Santos">
                     Dr. Lucas Ferreira Santos
                   </SelectItem>

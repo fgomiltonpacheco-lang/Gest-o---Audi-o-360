@@ -256,7 +256,7 @@ export default function Agenda() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos os Profissionais</SelectItem>
-              <SelectItem value="Dra. Mariana Silva Costa">Dra. Mariana Silva</SelectItem>
+              <SelectItem value="Milton Soares Pacheco">Milton Soares Pacheco</SelectItem>
               <SelectItem value="Dr. Lucas Ferreira Santos">Dr. Lucas Ferreira</SelectItem>
             </SelectContent>
           </Select>

@@ -68,7 +68,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   const [date, setDate] = useState('')
   const [time, setTime] = useState('09:00')
   const [duration, setDuration] = useState<number>(60)
-  const [professionalName, setProfessionalName] = useState('Dra. Mariana Silva Costa')
+  const [professionalName, setProfessionalName] = useState('Milton Soares Pacheco')
   const [status, setStatus] = useState<AppointmentStatus>('Agendado')
   const [notes, setNotes] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
@@ -91,7 +91,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       setDate(initialDate || new Date().toISOString().split('T')[0])
       setTime(initialTime || '09:00')
       setDuration(60)
-      setProfessionalName('Dra. Mariana Silva Costa')
+      setProfessionalName('Milton Soares Pacheco')
       setStatus('Agendado')
       setNotes('')
     }
@@ -242,8 +242,8 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Dra. Mariana Silva Costa">
-                    Dra. Mariana Silva Costa (CRFa 2-18492)
+                  <SelectItem value="Milton Soares Pacheco">
+                    Milton Soares Pacheco (CRFa 3-11981-5)
                   </SelectItem>
                   <SelectItem value="Dr. Lucas Ferreira Santos">
                     Dr. Lucas Ferreira Santos (CRFa 2-20381)

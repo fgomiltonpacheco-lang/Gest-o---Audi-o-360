@@ -133,7 +133,7 @@ export default function Financeiro() {
   const [cValue, setCValue] = useState<number>(0)
 
   // State: Nova Comissão
-  const [comProf, setComProf] = useState('Dra. Mariana Silva Costa')
+  const [comProf, setComProf] = useState('Milton Soares Pacheco')
   const [comPeriod, setComPeriod] = useState('02/2025')
   const [comSalesCount, setComSalesCount] = useState<number>(3)
   const [comTotalSales, setComTotalSales] = useState<number>(25000)
@@ -1274,7 +1274,7 @@ export default function Financeiro() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Dra. Mariana Silva Costa">Dra. Mariana Silva Costa</SelectItem>
+                  <SelectItem value="Milton Soares Pacheco">Milton Soares Pacheco</SelectItem>
                   <SelectItem value="Dr. Lucas Ferreira Santos">
                     Dr. Lucas Ferreira Santos
                   </SelectItem>

@@ -112,7 +112,7 @@ export default function Prontuario() {
   // Modal Nova Evolução
   const [evoModalOpen, setEvoModalOpen] = useState(false)
   const [evoDate, setEvoDate] = useState(new Date().toISOString().split('T')[0])
-  const [evoProf, setEvoProf] = useState('Dra. Mariana Silva Costa')
+  const [evoProf, setEvoProf] = useState('Milton Soares Pacheco')
   const [evoDesc, setEvoDesc] = useState('')
 
   // Confirmação de Exclusão
@@ -1083,8 +1083,8 @@ export default function Prontuario() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Dra. Mariana Silva Costa">
-                      Dra. Mariana Silva Costa
+                    <SelectItem value="Milton Soares Pacheco">
+                      Milton Soares Pacheco (CRFa 3-11981-5)
                     </SelectItem>
                     <SelectItem value="Dr. Lucas Ferreira Santos">
                       Dr. Lucas Ferreira Santos

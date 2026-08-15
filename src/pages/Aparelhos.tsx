@@ -75,7 +75,7 @@ export default function Aparelhos() {
 
   const [adjModalOpen, setAdjModalOpen] = useState(false)
   const [adjDesc, setAdjDesc] = useState('')
-  const [adjProf, setAdjProf] = useState('Dra. Mariana Silva Costa')
+  const [adjProf, setAdjProf] = useState('Milton Soares Pacheco')
   const [adjDate, setAdjDate] = useState(new Date().toISOString().split('T')[0])
 
   // Confirmação de Exclusão
