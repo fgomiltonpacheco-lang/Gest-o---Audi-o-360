@@ -22,6 +22,8 @@ import {
 } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
+import { extractFieldErrors } from '@/lib/pocketbase/errors'
+import { ClientResponseError } from 'pocketbase'
 
 // ============================================================
 // Helpers
@@ -41,6 +43,20 @@ function todayStr(): string {
 
 function nowIso(): string {
   return new Date().toISOString()
+}
+
+/**
+ * Extrai uma mensagem de erro legível do PocketBase (ClientResponseError),
+ * listando os campos que falharam na validação. Usado nos toasts de erro.
+ */
+function describePbError(error: unknown): string {
+  if (error instanceof ClientResponseError) {
+    const fieldErrors = extractFieldErrors(error)
+    const parts = Object.entries(fieldErrors).map(([field, msg]) => `${field}: ${msg}`)
+    if (parts.length > 0) return parts.join(' • ')
+    if (error.response?.message) return String(error.response.message)
+  }
+  return error instanceof Error ? error.message : 'Erro desconhecido.'
 }
 
 // ============================================================
@@ -637,14 +653,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       description: `${newPatient.name} foi adicionado(a) com sucesso.`,
     })
 
-    const payload: any = {
+    // Monta o payload respeitando os tipos do schema do PocketBase:
+    // - email (tipo email): enviar vazio é rejeitado por validação; omitir quando ausente.
+    // - responsible (tipo json): só enviar quando houver responsável; caso contrário omitir.
+    const payload: Record<string, any> = {
       name: newPatient.name,
       cpf: newPatient.cpf,
       birthDate: newPatient.birthDate,
       gender: newPatient.gender,
       phone: newPatient.phone,
       mobile: newPatient.mobile,
-      email: newPatient.email,
       cep: newPatient.cep,
       street: newPatient.street,
       number: newPatient.number,
@@ -656,7 +674,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       planName: newPatient.planName || '',
       cardNumber: newPatient.cardNumber || '',
       hasResponsible: !!newPatient.hasResponsible,
-      responsible: newPatient.responsible || {},
       hearingLossType: newPatient.hearingLossType,
       previousHearingAid: !!newPatient.previousHearingAid,
       previousAidBrand: newPatient.previousAidBrand || '',
@@ -664,6 +681,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       generalNotes: newPatient.generalNotes || '',
       status: newPatient.status,
       lastVisit: newPatient.lastVisit || '',
+    }
+    // email: o campo é do tipo "email" no PocketBase — string vazia falha a validação.
+    if (newPatient.email && newPatient.email.trim() !== '') {
+      payload.email = newPatient.email.trim()
+    }
+    // responsible: campo json — só enviar quando houver dados de responsável.
+    if (newPatient.hasResponsible && newPatient.responsible) {
+      payload.responsible = newPatient.responsible
     }
     pb.collection('patients')
       .create(payload)
@@ -676,7 +701,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setPatients((prev) => prev.filter((p) => p.id !== tempId))
         toast({
           title: 'Erro ao cadastrar',
-          description: 'Não foi possível salvar o paciente no servidor.',
+          description: `Não foi possível salvar o paciente no servidor. ${describePbError(err)}`,
           variant: 'destructive',
         })
       })
@@ -688,9 +713,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const patch: any = { ...patientData }
     delete patch.id
     delete patch.createdAt
+    // Mesmas regras do addPatient: email vazio falha validação do tipo "email";
+    // responsible deve ser enviado apenas quando houver dados.
+    if ('email' in patch) {
+      if (patch.email && String(patch.email).trim() !== '') {
+        patch.email = String(patch.email).trim()
+      } else {
+        delete patch.email
+      }
+    }
+    if ('responsible' in patch) {
+      if (!patch.responsible || Object.keys(patch.responsible).length === 0) {
+        delete patch.responsible
+      }
+    }
     pb.collection('patients')
       .update(id, patch)
-      .catch((err) => console.error('Erro ao atualizar paciente:', err))
+      .catch((err) => {
+        console.error('Erro ao atualizar paciente:', err)
+        toast({
+          title: 'Erro ao atualizar',
+          description: `Não foi possível salvar as alterações. ${describePbError(err)}`,
+          variant: 'destructive',
+        })
+      })
     toast({
       title: 'Cadastro atualizado',
       description: 'Os dados do paciente foram salvos com sucesso.',
