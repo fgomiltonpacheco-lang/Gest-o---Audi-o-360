@@ -38,6 +38,7 @@ interface HearingAidModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   aidToEdit?: HearingAid | null
+  initialPatientId?: string
   onSave: (data: any) => void
 }
 
@@ -45,6 +46,7 @@ export const HearingAidModal: React.FC<HearingAidModalProps> = ({
   open,
   onOpenChange,
   aidToEdit,
+  initialPatientId,
   onSave,
 }) => {
   const { patients } = useApp()
@@ -88,7 +90,7 @@ export const HearingAidModal: React.FC<HearingAidModalProps> = ({
       setType('RIC')
       setSide('Bilateral')
       setSerialNumber('')
-      setPatientId('none')
+      setPatientId(initialPatientId || 'none')
       setSaleDate(new Date().toISOString().split('T')[0])
       setSaleValue(0)
       setPaymentMethod('Parcelado')
@@ -97,9 +99,9 @@ export const HearingAidModal: React.FC<HearingAidModalProps> = ({
       setEarMold(false)
       setEarMoldType('')
       setNotes('')
-      setStatus('Estoque')
+      setStatus(initialPatientId ? 'Em uso' : 'Estoque')
     }
-  }, [aidToEdit, open])
+  }, [aidToEdit, open, initialPatientId])
 
   // Cálculo da data de término da garantia
   const calculatedWarrantyEndDate = React.useMemo(() => {

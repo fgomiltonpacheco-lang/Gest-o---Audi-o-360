@@ -44,6 +44,8 @@ interface AppointmentModalProps {
   appointmentToEdit?: Appointment | null
   initialDate?: string
   initialTime?: string
+  initialPatientId?: string
+  initialPatientName?: string
   onSave: (appData: any) => boolean
 }
 
@@ -53,6 +55,8 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   appointmentToEdit,
   initialDate,
   initialTime,
+  initialPatientId,
+  initialPatientName,
   onSave,
 }) => {
   const { patients } = useApp()
@@ -81,8 +85,8 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       setStatus(appointmentToEdit.status)
       setNotes(appointmentToEdit.notes || '')
     } else {
-      setPatientId('')
-      setPatientSearch('')
+      setPatientId(initialPatientId || '')
+      setPatientSearch(initialPatientName || '')
       setType('Avaliação auditiva')
       setDate(initialDate || new Date().toISOString().split('T')[0])
       setTime(initialTime || '09:00')
@@ -93,7 +97,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
     }
     setErrorMessage('')
     setPatientDropdownOpen(false)
-  }, [appointmentToEdit, initialDate, initialTime, open])
+  }, [appointmentToEdit, initialDate, initialTime, initialPatientId, initialPatientName, open])
 
   const filteredPatients = React.useMemo(() => {
     if (!patientSearch.trim()) return patients.slice(0, 6)
