@@ -100,12 +100,18 @@ function PrintLayout({
         className="flex items-center justify-between border-b-2 border-navy-700 pb-3 mb-5"
         style={{ borderBottom: '2px solid #0F2B5C' }}
       >
-        <div className="flex items-center gap-3">
-          <img src={logoImg} alt="Audição360" className="h-14 w-auto object-contain" />
+        <div className="flex items-center gap-4">
+          <div className="relative w-44 h-16 overflow-hidden flex items-center justify-center shrink-0">
+            <img
+              src={logoImg}
+              alt="Audição360"
+              className="w-full h-[150%] object-cover object-[center_35%] scale-105"
+            />
+          </div>
           <div>
             <h1
               className="text-lg font-extrabold leading-tight"
-              style={{ fontSize: '16pt', color: '#0F2B5C', fontWeight: 800 }}
+              style={{ fontSize: '15pt', color: '#0F2B5C', fontWeight: 800 }}
             >
               Audição360 — Centro Auditivo
             </h1>

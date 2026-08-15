@@ -167,12 +167,14 @@ export default function Login() {
       <div className="w-full max-w-[420px] bg-white rounded-2xl shadow-2xl p-8 sm:p-10 border border-slate-100 relative z-10 animate-in fade-in zoom-in-95 duration-200">
         {/* Logo & Cabeçalho */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <img
-              src={logoImg}
-              alt="Audição360 Centro Auditivo"
-              className="h-28 w-auto object-contain max-w-[300px]"
-            />
+          <div className="flex justify-center mb-2 overflow-hidden">
+            <div className="relative w-full max-w-[320px] h-32 overflow-hidden flex items-center justify-center rounded-lg">
+              <img
+                src={logoImg}
+                alt="Audição360 Centro Auditivo"
+                className="w-full h-[140%] object-cover object-[center_38%] scale-105"
+              />
+            </div>
           </div>
           <p className="text-sm text-slate-600 mt-2">
             {mode === 'login'

@@ -105,13 +105,15 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* SIDEBAR DESKTOP (Fixa 260px) */}
       <aside className="hidden lg:flex flex-col fixed top-0 left-0 bottom-0 w-[260px] bg-navy-700 text-white z-40 border-r border-navy-900/40 shadow-xl select-none">
         {/* Topo / Logo */}
-        <div className="h-20 px-5 flex items-center border-b border-white/10 bg-white">
-          <Link to="/" className="flex items-center justify-center w-full py-2">
-            <img
-              src={logoImg}
-              alt="Audição360 Centro Auditivo"
-              className="h-16 w-auto object-contain max-w-[220px]"
-            />
+        <div className="h-20 px-4 flex items-center justify-center border-b border-white/10 bg-white overflow-hidden">
+          <Link to="/" className="flex items-center justify-center w-full h-full py-1">
+            <div className="relative w-full h-16 overflow-hidden flex items-center justify-center">
+              <img
+                src={logoImg}
+                alt="Audição360 Centro Auditivo"
+                className="w-full h-[180%] object-cover object-[center_32%] scale-110"
+              />
+            </div>
           </Link>
         </div>
 
@@ -191,21 +193,23 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           {/* Gaveta lateral */}
           <div className="relative w-[280px] max-w-[80vw] bg-navy-700 text-white flex flex-col z-10 shadow-2xl animate-in slide-in-from-left duration-300">
-            <div className="h-20 px-5 flex items-center justify-between border-b border-white/10 bg-white">
+            <div className="h-20 px-4 flex items-center justify-between border-b border-white/10 bg-white overflow-hidden">
               <Link
                 to="/"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center py-2"
+                className="flex items-center flex-1 h-full py-1"
               >
-                <img
-                  src={logoImg}
-                  alt="Audição360 Centro Auditivo"
-                  className="h-14 w-auto object-contain max-w-[220px]"
-                />
+                <div className="relative w-full h-16 overflow-hidden flex items-center justify-center">
+                  <img
+                    src={logoImg}
+                    alt="Audição360 Centro Auditivo"
+                    className="w-full h-[180%] object-cover object-[center_32%] scale-110"
+                  />
+                </div>
               </Link>
               <button
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-1.5 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100"
+                className="p-1.5 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 shrink-0 ml-2"
               >
                 <X className="w-5 h-5" />
               </button>
