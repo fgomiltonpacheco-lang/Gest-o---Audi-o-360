@@ -16,7 +16,10 @@ import {
   ShieldCheck,
   CreditCard,
   Stethoscope,
+  ArrowUpDown,
 } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { CompareAudiometriesModal } from '@/components/CompareAudiometriesModal'
 import {
   formatDate,
   formatCurrency,
@@ -94,6 +97,9 @@ export default function Prontuario() {
 
   // Modal Agendamento
   const [appointmentModalOpen, setAppointmentModalOpen] = useState(false)
+
+  // Modal Comparar Audiometrias
+  const [compareModalOpen, setCompareModalOpen] = useState(false)
 
   // Modal Nova Evolução
   const [evoModalOpen, setEvoModalOpen] = useState(false)
@@ -567,6 +573,28 @@ export default function Prontuario() {
             <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
               <h3 className="text-sm font-bold text-slate-900">Histórico de Exames Audiológicos</h3>
               <div className="flex items-center gap-2">
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0} className="inline-flex">
+                        <Button
+                          size="sm"
+                          disabled={patientAudiometries.length < 2}
+                          onClick={() => setCompareModalOpen(true)}
+                          className="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl h-8 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <ArrowUpDown className="w-3.5 h-3.5 mr-1" />
+                          Comparar Audiometrias
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {patientAudiometries.length < 2 && (
+                      <TooltipContent className="max-w-[220px] text-xs">
+                        São necessárias pelo menos 2 audiometrias para comparar
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
                 <Button
                   size="sm"
                   onClick={() => setAudioModalOpen(true)}
@@ -1041,6 +1069,13 @@ export default function Prontuario() {
         onOpenChange={setAudioModalOpen}
         patient={patient}
         onSave={addAudiometry}
+      />
+
+      {/* Modal Comparar Audiometrias */}
+      <CompareAudiometriesModal
+        open={compareModalOpen}
+        onOpenChange={setCompareModalOpen}
+        audiometries={patientAudiometries}
       />
       <TympanometryModal
         open={tympModalOpen}
