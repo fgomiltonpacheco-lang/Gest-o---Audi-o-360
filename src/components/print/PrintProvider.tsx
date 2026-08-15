@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react'
-import logoImg from '@/assets/editedimage1786755251977-cb14f.png'
+import logoImg from '@/assets/editedimage1786832958942-232e6.png'
 
 export interface PrintContent {
   title: string

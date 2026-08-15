@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { getInitials, getAvatarColor } from '@/lib/formatters'
-import logoImg from '@/assets/editedimage1786755251977-cb14f.png'
+import logoImg from '@/assets/editedimage1786832958942-232e6.png'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { NotificationsDrawer } from '@/components/NotificationsDrawer'
 import { GlobalSearch } from '@/components/GlobalSearch'
