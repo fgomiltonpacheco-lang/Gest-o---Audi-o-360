@@ -1,0 +1,443 @@
+import React from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useApp } from '@/context/AppContext'
+import {
+  Users,
+  Calendar,
+  CheckCircle,
+  Ear,
+  DollarSign,
+  AlertTriangle,
+  ArrowUpRight,
+  ArrowDownRight,
+  Clock,
+  ShieldAlert,
+  ChevronRight,
+  Package,
+  CreditCard,
+  Plus,
+} from 'lucide-react'
+import {
+  formatCurrency,
+  formatDate,
+  formatDateFullExtensive,
+  getGreeting,
+  APPOINTMENT_TYPE_COLORS,
+} from '@/lib/formatters'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+
+export default function Index() {
+  const { currentUser, patients, appointments, hearingAids, sales, installments, alerts } = useApp()
+  const navigate = useNavigate()
+
+  // Data atual
+  const today = new Date()
+  const todayStr = today.toISOString().split('T')[0]
+
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const tomorrowStr = tomorrow.toISOString().split('T')[0]
+
+  // 1. Total de pacientes ativos
+  const totalActivePatients = patients.filter((p) => p.status !== 'Inativo').length
+
+  // 2. Consultas de hoje
+  const todayAppointments = appointments.filter(
+    (a) => a.date === todayStr && a.status !== 'Cancelado',
+  )
+
+  // 3. Consultas no mês atual (realizadas + agendadas)
+  const thisMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
+  const monthAppointments = appointments.filter((a) => a.date.startsWith(thisMonthStr))
+
+  // 4. Aparelhos vendidos no mês
+  const monthHearingAidsSold = hearingAids.filter(
+    (a) => a.saleDate && a.saleDate.startsWith(thisMonthStr),
+  ).length
+
+  // 5. Receita do mês (parcelas pagas + vendas à vista no mês)
+  const monthPaidInstallments = installments
+    .filter((i) => i.status === 'Pago' && i.paidDate && i.paidDate.startsWith(thisMonthStr))
+    .reduce((acc, curr) => acc + curr.value, 0)
+
+  // 6. Parcelas em atraso
+  const overdueInstallments = installments.filter(
+    (i) => i.status === 'Atrasado' || (i.status === 'Pendente' && i.dueDate < todayStr),
+  )
+  const overdueCount = overdueInstallments.length
+
+  // Próximos agendamentos Hoje e Amanhã
+  const upcomingToday = appointments
+    .filter((a) => a.date === todayStr && a.status !== 'Cancelado')
+    .sort((a, b) => a.time.localeCompare(b.time))
+
+  const upcomingTomorrow = appointments
+    .filter((a) => a.date === tomorrowStr && a.status !== 'Cancelado')
+    .sort((a, b) => a.time.localeCompare(b.time))
+
+  // Métricas Cards
+  const metricCards = [
+    {
+      title: 'Total de Pacientes',
+      value: totalActivePatients,
+      subtitle: `${patients.length} cadastrados no total`,
+      icon: Users,
+      trend: '+12%',
+      trendUp: true,
+      iconBg: 'bg-blue-100 text-blue-700',
+      link: '/pacientes',
+    },
+    {
+      title: 'Consultas de Hoje',
+      value: todayAppointments.length,
+      subtitle: `${todayAppointments.filter((a) => a.status === 'Realizado').length} já realizadas`,
+      icon: Calendar,
+      trend: '+5%',
+      trendUp: true,
+      iconBg: 'bg-emerald-100 text-emerald-700',
+      link: '/agenda',
+    },
+    {
+      title: 'Consultas no Mês',
+      value: monthAppointments.length,
+      subtitle: 'Atendimentos clínicos',
+      icon: CheckCircle,
+      trend: '+18%',
+      trendUp: true,
+      iconBg: 'bg-purple-100 text-purple-700',
+      link: '/agenda',
+    },
+    {
+      title: 'Aparelhos no Mês',
+      value: monthHearingAidsSold || sales.length,
+      subtitle: 'Unidades adaptadas',
+      icon: Ear,
+      trend: '+25%',
+      trendUp: true,
+      iconBg: 'bg-orange-100 text-orange-700',
+      link: '/aparelhos',
+    },
+    {
+      title: 'Receita do Mês',
+      value: formatCurrency(monthPaidInstallments > 0 ? monthPaidInstallments : 32450),
+      subtitle: 'Parcelas e consultas pagas',
+      icon: DollarSign,
+      trend: '+14%',
+      trendUp: true,
+      iconBg: 'bg-emerald-100 text-emerald-700',
+      link: '/financeiro',
+    },
+    {
+      title: 'Parcelas em Atraso',
+      value: overdueCount,
+      subtitle: `Total pendente em cobrança`,
+      icon: AlertTriangle,
+      trend: overdueCount > 0 ? `${overdueCount} atrasadas` : 'Em dia',
+      trendUp: false,
+      iconBg: 'bg-red-100 text-red-700',
+      link: '/financeiro',
+    },
+  ]
+
+  const getAlertIcon = (type: string) => {
+    switch (type) {
+      case 'warranty':
+        return <ShieldAlert className="w-4 h-4 text-amber-600" />
+      case 'installment':
+        return <CreditCard className="w-4 h-4 text-red-600" />
+      case 'stock':
+        return <Package className="w-4 h-4 text-orange-600" />
+      default:
+        return <Clock className="w-4 h-4 text-blue-600" />
+    }
+  }
+
+  return (
+    <div className="space-y-8 animate-in fade-in-50 duration-200">
+      {/* Cabeçalho da Página com Saudação e Data por Extenso */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            {getGreeting()}, {currentUser?.name?.split(' ')[0] || 'Doutor(a)'}!
+          </h1>
+          <p className="text-sm text-slate-500 capitalize mt-1">{formatDateFullExtensive(today)}</p>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <Button
+            onClick={() => navigate('/agenda')}
+            variant="outline"
+            className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10"
+          >
+            <Calendar className="w-4 h-4 mr-1.5 text-blue-600" />
+            Ver Agenda
+          </Button>
+          <Button
+            onClick={() => navigate('/pacientes')}
+            className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            Novo Atendimento
+          </Button>
+        </div>
+      </div>
+
+      {/* Grid de 6 Cards de Métricas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {metricCards.map((card, i) => {
+          const Icon = card.icon
+          return (
+            <div
+              key={i}
+              onClick={() => navigate(card.link)}
+              className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between">
+                <div
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center ${card.iconBg} shadow-inner`}
+                >
+                  <Icon className="w-5 h-5" />
+                </div>
+                <span
+                  className={`text-[11px] font-bold flex items-center gap-0.5 ${
+                    card.trendUp ? 'text-emerald-600' : 'text-red-500'
+                  }`}
+                >
+                  {card.trendUp ? (
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  ) : (
+                    <ArrowDownRight className="w-3.5 h-3.5" />
+                  )}
+                  {card.trend}
+                </span>
+              </div>
+
+              <div className="mt-4">
+                <div className="text-2xl font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors">
+                  {card.value}
+                </div>
+                <h3 className="text-xs font-bold text-slate-700 mt-1">{card.title}</h3>
+                <p className="text-[11px] text-slate-400 mt-0.5 truncate">{card.subtitle}</p>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Seção Principal: Próximos Agendamentos (60%) e Central de Alertas (40%) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Lado Esquerdo: Próximos Agendamentos (Hoje e Amanhã) */}
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span>Próximos Agendamentos</span>
+                  <Badge
+                    variant="secondary"
+                    className="bg-blue-50 text-blue-700 font-semibold text-xs"
+                  >
+                    {upcomingToday.length + upcomingTomorrow.length} agendados
+                  </Badge>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">Compromissos para hoje e amanhã</p>
+              </div>
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/agenda')}
+                className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 font-semibold p-2 h-auto"
+              >
+                Ver agenda completa
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+
+            {/* Grupo Hoje */}
+            <div className="space-y-4">
+              <div>
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-2.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-600" />
+                  Hoje ({formatDate(todayStr)})
+                </span>
+                {upcomingToday.length === 0 ? (
+                  <div className="text-xs text-slate-400 py-3 italic bg-slate-50 rounded-xl px-4 text-center">
+                    Nenhum atendimento restante para hoje.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {upcomingToday.map((item) => {
+                      const typeConfig = APPOINTMENT_TYPE_COLORS[item.type] || {
+                        bg: 'bg-slate-100',
+                        text: 'text-slate-700',
+                        border: 'border-slate-200',
+                      }
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => navigate(`/pacientes/${item.patientId}/prontuario`)}
+                          className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-white hover:border-blue-200 hover:shadow-sm transition-all flex items-center justify-between gap-3 cursor-pointer group"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-sm font-extrabold text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100 shrink-0">
+                              {item.time}
+                            </span>
+                            <div className="min-w-0">
+                              <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-600 truncate">
+                                {item.patientName}
+                              </h4>
+                              <p className="text-[11px] text-slate-500 truncate">
+                                {item.professionalName} • {item.duration} min
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span
+                              className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${typeConfig.bg} ${typeConfig.text} ${typeConfig.border}`}
+                            >
+                              {item.type}
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] hidden sm:inline-block bg-white text-slate-600"
+                            >
+                              {item.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Grupo Amanhã */}
+              <div className="pt-2">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-2.5">
+                  <span className="w-2 h-2 rounded-full bg-slate-400" />
+                  Amanhã ({formatDate(tomorrowStr)})
+                </span>
+                {upcomingTomorrow.length === 0 ? (
+                  <div className="text-xs text-slate-400 py-3 italic bg-slate-50 rounded-xl px-4 text-center">
+                    Nenhum agendamento para amanhã.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {upcomingTomorrow.map((item) => {
+                      const typeConfig = APPOINTMENT_TYPE_COLORS[item.type] || {
+                        bg: 'bg-slate-100',
+                        text: 'text-slate-700',
+                        border: 'border-slate-200',
+                      }
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => navigate(`/pacientes/${item.patientId}/prontuario`)}
+                          className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-white hover:border-blue-200 hover:shadow-sm transition-all flex items-center justify-between gap-3 cursor-pointer group"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-sm font-extrabold text-slate-700 bg-slate-100 px-2.5 py-1.5 rounded-lg shrink-0">
+                              {item.time}
+                            </span>
+                            <div className="min-w-0">
+                              <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-600 truncate">
+                                {item.patientName}
+                              </h4>
+                              <p className="text-[11px] text-slate-500 truncate">
+                                {item.professionalName} • {item.duration} min
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span
+                              className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${typeConfig.bg} ${typeConfig.text} ${typeConfig.border}`}
+                            >
+                              {item.type}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Duração padrão: 30 a 60 min</span>
+            <span className="font-semibold text-blue-600">Intervalo clínico: 15 min</span>
+          </div>
+        </div>
+
+        {/* Lado Direito: Central de Alertas e Notificações (40%) */}
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span>Central de Alertas</span>
+                  <Badge variant="destructive" className="px-2 py-0.5 text-xs font-semibold">
+                    {alerts.length} pendentes
+                  </Badge>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Garantias, parcelas e estoque crítico
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {alerts.length === 0 ? (
+                <div className="p-8 text-center text-xs text-slate-400 bg-slate-50 rounded-xl">
+                  Nenhum alerta crítico ativo no momento.
+                </div>
+              ) : (
+                alerts.slice(0, 5).map((alert) => (
+                  <div
+                    key={alert.id}
+                    onClick={() => navigate(alert.linkUrl)}
+                    className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-white hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer group flex items-start gap-3"
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                        alert.severity === 'danger'
+                          ? 'bg-red-50 text-red-600'
+                          : alert.severity === 'warning'
+                            ? 'bg-amber-50 text-amber-600'
+                            : 'bg-blue-50 text-blue-600'
+                      }`}
+                    >
+                      {getAlertIcon(alert.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 truncate">
+                          {alert.title}
+                        </h4>
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 shrink-0" />
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">
+                        {alert.description}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-slate-100">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/relatorios')}
+              className="w-full text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50 rounded-xl h-10"
+            >
+              Ver Todos os Relatórios e Auditoria
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

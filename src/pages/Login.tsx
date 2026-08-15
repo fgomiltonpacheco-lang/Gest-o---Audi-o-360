@@ -1,0 +1,271 @@
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useApp } from '@/context/AppContext'
+import { Ear, Lock, Mail, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+
+export default function Login() {
+  const { login, recoverPassword } = useApp()
+  const navigate = useNavigate()
+
+  const [email, setEmail] = useState('admin@audicao360.com.br')
+  const [password, setPassword] = useState('admin123')
+  const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+
+  // Modal Esqueci minha senha
+  const [recoveryOpen, setRecoveryOpen] = useState(false)
+  const [recoveryEmail, setRecoveryEmail] = useState('')
+  const [recoveryLoading, setRecoveryLoading] = useState(false)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setErrorMessage('')
+
+    if (!email || !email.includes('@')) {
+      setErrorMessage('Por favor, informe um endereço de e-mail válido.')
+      return
+    }
+    if (!password || password.length < 3) {
+      setErrorMessage('A senha deve ter pelo menos 3 caracteres.')
+      return
+    }
+
+    setLoading(true)
+    setTimeout(() => {
+      const success = login(email, password, rememberMe)
+      setLoading(false)
+      if (success) {
+        navigate('/')
+      } else {
+        setErrorMessage('E-mail ou senha inválidos. Tente admin@audicao360.com.br / admin123')
+      }
+    }, 400)
+  }
+
+  const handleRecoverySubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!recoveryEmail || !recoveryEmail.includes('@')) return
+
+    setRecoveryLoading(true)
+    setTimeout(() => {
+      recoverPassword(recoveryEmail)
+      setRecoveryLoading(false)
+      setRecoveryOpen(false)
+      setRecoveryEmail('')
+    }, 500)
+  }
+
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#1e3a8a] via-[#1d4ed8] to-[#2563eb] p-4 relative overflow-hidden">
+      {/* Padrão sutil de fundo em ondas acústicas */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:24px_24px]" />
+
+      {/* Onda acústica decorativa no canto */}
+      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-300/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Card Central Branco */}
+      <div className="w-full max-w-[420px] bg-white rounded-2xl shadow-2xl p-8 sm:p-10 border border-slate-100 relative z-10 animate-in fade-in zoom-in-95 duration-200">
+        {/* Logo & Cabeçalho */}
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700 mx-auto shadow-sm mb-4">
+            <Ear className="w-8 h-8" />
+          </div>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+            Audição<span className="text-blue-600">360</span>
+          </h1>
+          <p className="text-xs uppercase tracking-widest font-semibold text-slate-400 mt-0.5">
+            Centro Auditivo
+          </p>
+          <p className="text-sm text-slate-600 mt-3">Acesse o painel de gestão clínica integrada</p>
+        </div>
+
+        {/* Mensagem de Erro */}
+        {errorMessage && (
+          <div className="mb-5 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-600 font-medium animate-in fade-in">
+            {errorMessage}
+          </div>
+        )}
+
+        {/* Formulário de Login */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* E-mail */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              E-mail profissional <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="nome@audicao360.com.br"
+                required
+                className="h-11 pl-10 rounded-xl border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Senha */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-slate-700">
+                Senha de acesso <span className="text-red-500">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setRecoveryOpen(true)}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                Esqueci minha senha
+              </button>
+            </div>
+            <div className="relative">
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                className="h-11 pl-10 pr-10 rounded-xl border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                aria-label="Alternar visualização da senha"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Lembrar-me */}
+          <div className="flex items-center space-x-2 pt-1">
+            <Checkbox
+              id="remember"
+              checked={rememberMe}
+              onCheckedChange={(c) => setRememberMe(!!c)}
+              className="border-slate-300 data-[state=checked]:bg-blue-600"
+            />
+            <label
+              htmlFor="remember"
+              className="text-xs font-medium text-slate-600 cursor-pointer select-none"
+            >
+              Lembrar-me neste dispositivo
+            </label>
+          </div>
+
+          {/* Botão de Entrar */}
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-150 mt-2 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                <span>Entrar no Sistema</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </Button>
+        </form>
+
+        {/* Dica de Acesso Rápido para Demonstração */}
+        <div className="mt-8 pt-6 border-t border-slate-100">
+          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider text-center mb-2.5">
+            Acessos rápidos de demonstração
+          </p>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('admin@audicao360.com.br')
+                setPassword('admin123')
+              }}
+              className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all text-left"
+            >
+              <div className="font-bold">Administrador</div>
+              <div className="text-[10px] text-slate-400">Dra. Mariana</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('profissional@audicao360.com.br')
+                setPassword('prof123')
+              }}
+              className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all text-left"
+            >
+              <div className="font-bold">Fonoaudiólogo</div>
+              <div className="text-[10px] text-slate-400">Dr. Lucas</div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Modal de Recuperação de Senha */}
+      <Dialog open={recoveryOpen} onOpenChange={setRecoveryOpen}>
+        <DialogContent className="max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900">
+              Recuperação de Senha
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 mt-1">
+              Informe seu e-mail cadastrado. Enviaremos um link de redefinição imediato.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleRecoverySubmit} className="space-y-4 py-2">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                E-mail institucional
+              </label>
+              <Input
+                type="email"
+                value={recoveryEmail}
+                onChange={(e) => setRecoveryEmail(e.target.value)}
+                placeholder="seu.email@audicao360.com.br"
+                required
+                className="h-10 rounded-xl border-slate-300 text-sm"
+              />
+            </div>
+            <DialogFooter className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setRecoveryOpen(false)}
+                className="rounded-xl border-slate-300 text-xs"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={recoveryLoading}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold"
+              >
+                {recoveryLoading ? 'Enviando...' : 'Enviar Link'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
