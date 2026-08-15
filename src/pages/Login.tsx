@@ -155,13 +155,13 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#1e3a8a] via-[#1d4ed8] to-[#2563eb] p-4 relative overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-navy-700 via-navy-700 to-teal-500 p-4 relative overflow-hidden">
       {/* Padrão sutil de fundo em ondas acústicas */}
       <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:24px_24px]" />
 
       {/* Onda acústica decorativa no canto */}
-      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-300/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-teal-400/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-24 -left-24 w-96 h-96 bg-teal-300/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Card Central Branco */}
       <div className="w-full max-w-[420px] bg-white rounded-2xl shadow-2xl p-8 sm:p-10 border border-slate-100 relative z-10 animate-in fade-in zoom-in-95 duration-200">
@@ -188,22 +188,22 @@ export default function Login() {
             onClick={() => switchMode('login')}
             className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
               mode === 'login'
-                ? 'bg-white text-blue-700 shadow-sm'
+                ? 'bg-white text-teal-600 shadow-sm'
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            Entrar
+            Entrar{' '}
           </button>
           <button
             type="button"
             onClick={() => switchMode('signup')}
             className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
               mode === 'signup'
-                ? 'bg-white text-blue-700 shadow-sm'
+                ? 'bg-white text-teal-600 shadow-sm'
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            Criar conta
+            Criar conta{' '}
           </button>
         </div>
 
@@ -237,7 +237,7 @@ export default function Login() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="nome@audicao360.com.br"
                     required
-                    className="h-11 pl-10 rounded-xl border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm"
+                    className="h-11 pl-10 rounded-xl border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 text-sm"
                   />
                 </div>
               </div>
@@ -251,7 +251,7 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={() => setRecoveryOpen(true)}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                    className="text-xs font-semibold text-teal-600 hover:text-teal-700 transition-colors"
                   >
                     Esqueci minha senha
                   </button>
@@ -264,7 +264,7 @@ export default function Login() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     required
-                    className="h-11 pl-10 pr-10 rounded-xl border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm"
+                    className="h-11 pl-10 pr-10 rounded-xl border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 text-sm"
                   />
                   <button
                     type="button"
@@ -283,7 +283,7 @@ export default function Login() {
                   id="remember"
                   checked={rememberMe}
                   onCheckedChange={(c) => setRememberMe(!!c)}
-                  className="border-slate-300 data-[state=checked]:bg-blue-600"
+                  className="border-slate-300 data-[state=checked]:bg-teal-500"
                 />
                 <label
                   htmlFor="remember"
@@ -297,7 +297,7 @@ export default function Login() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-150 mt-2 flex items-center justify-center gap-2"
+                className="w-full h-11 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-150 mt-2 flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -322,7 +322,7 @@ export default function Login() {
                     setEmail('admin@audicao360.com.br')
                     setPassword('Admin@123')
                   }}
-                  className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all text-left"
+                  className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 hover:bg-teal-50 hover:border-teal-200 hover:text-teal-600 transition-all text-left"
                 >
                   <div className="font-bold">Administrador</div>
                   <div className="text-[10px] text-slate-400">Dra. Mariana</div>
@@ -333,7 +333,7 @@ export default function Login() {
                     setEmail('profissional@audicao360.com.br')
                     setPassword('Profissional@123')
                   }}
-                  className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all text-left"
+                  className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 hover:bg-teal-50 hover:border-teal-200 hover:text-teal-600 transition-all text-left"
                 >
                   <div className="font-bold">Fonoaudiólogo</div>
                   <div className="text-[10px] text-slate-400">Dr. Lucas</div>
@@ -347,7 +347,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => switchMode('signup')}
-                className="font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                className="font-semibold text-teal-600 hover:text-teal-700 transition-colors"
               >
                 Criar conta
               </button>
@@ -369,7 +369,7 @@ export default function Login() {
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Seu nome completo"
                     required
-                    className="h-11 pl-10 rounded-xl border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm"
+                    className="h-11 pl-10 rounded-xl border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 text-sm"
                   />
                 </div>
               </div>
@@ -387,7 +387,7 @@ export default function Login() {
                     onChange={(e) => setSignupEmail(e.target.value)}
                     placeholder="nome@exemplo.com"
                     required
-                    className="h-11 pl-10 rounded-xl border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm"
+                    className="h-11 pl-10 rounded-xl border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 text-sm"
                   />
                 </div>
               </div>
@@ -406,7 +406,7 @@ export default function Login() {
                     onChange={(e) => setSignupPassword(e.target.value)}
                     placeholder="••••••"
                     required
-                    className="h-11 pl-10 pr-10 rounded-xl border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm"
+                    className="h-11 pl-10 pr-10 rounded-xl border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 text-sm"
                   />
                   <button
                     type="button"
@@ -436,7 +436,7 @@ export default function Login() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••"
                     required
-                    className="h-11 pl-10 pr-10 rounded-xl border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm"
+                    className="h-11 pl-10 pr-10 rounded-xl border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 text-sm"
                   />
                   <button
                     type="button"
@@ -468,7 +468,7 @@ export default function Login() {
                     value={crfa}
                     onChange={(e) => setCrfa(e.target.value)}
                     placeholder="Ex.: 2-12345"
-                    className="h-11 pl-10 rounded-xl border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm"
+                    className="h-11 pl-10 rounded-xl border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 text-sm"
                   />
                 </div>
               </div>
@@ -477,7 +477,7 @@ export default function Login() {
               <Button
                 type="submit"
                 disabled={signupLoading}
-                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-150 mt-2 flex items-center justify-center gap-2"
+                className="w-full h-11 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-150 mt-2 flex items-center justify-center gap-2"
               >
                 {signupLoading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -496,7 +496,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => switchMode('login')}
-                className="font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                className="font-semibold text-teal-600 hover:text-teal-700 transition-colors"
               >
                 Entrar
               </button>
@@ -543,7 +543,7 @@ export default function Login() {
               <Button
                 type="submit"
                 disabled={recoveryLoading}
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold"
+                className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold"
               >
                 {recoveryLoading ? 'Enviando...' : 'Enviar Link'}
               </Button>

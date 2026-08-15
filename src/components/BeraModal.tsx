@@ -288,7 +288,7 @@ export const BeraModal: React.FC<BeraModalProps> = ({ open, onOpenChange, patien
             </Button>
             <Button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm"
+              className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold shadow-sm"
             >
               Salvar Exame BERA
             </Button>

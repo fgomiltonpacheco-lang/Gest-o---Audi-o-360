@@ -53,7 +53,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             className={
               variant === 'danger'
                 ? 'bg-red-600 text-white hover:bg-red-700 rounded-lg shadow-sm'
-                : 'bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-sm'
+                : 'bg-teal-500 text-white hover:bg-teal-600 rounded-lg shadow-sm'
             }
           >
             {confirmText}

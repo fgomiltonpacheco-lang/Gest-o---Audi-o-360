@@ -223,7 +223,7 @@ export default function Estoque() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Estoque</h1>
-            <Badge variant="secondary" className="bg-blue-50 text-blue-700 font-bold text-xs">
+            <Badge variant="secondary" className="bg-teal-50 text-navy-700 font-bold text-xs">
               {stockItems.length} itens cadastrados
             </Badge>
           </div>
@@ -234,7 +234,7 @@ export default function Estoque() {
 
         <Button
           onClick={openNewItem}
-          className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
+          className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
         >
           <Plus className="w-4 h-4" />
           Novo Item de Estoque
@@ -339,14 +339,14 @@ export default function Estoque() {
                 filteredItems.map((item) => {
                   const isBelowMin = item.currentQuantity < item.minQuantity
                   return (
-                    <tr key={item.id} className="hover:bg-blue-50/40 transition-colors">
+                    <tr key={item.id} className="hover:bg-teal-50/40 transition-colors">
                       <td className="py-3.5 px-4">
                         <span
                           onClick={() => {
                             setSelectedStockItem(item)
                             setHistoryModalOpen(true)
                           }}
-                          className="font-bold text-slate-900 hover:text-blue-600 cursor-pointer block"
+                          className="font-bold text-slate-900 hover:text-teal-600 cursor-pointer block"
                         >
                           {item.name}
                         </span>
@@ -491,7 +491,7 @@ export default function Estoque() {
         <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
           <DialogHeader className="border-b border-slate-100 pb-3">
             <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <Package className="w-5 h-5 text-blue-600" />
+              <Package className="w-5 h-5 text-teal-600" />
               <span>{itemToEdit ? 'Editar Item de Estoque' : 'Novo Item no Estoque'}</span>
             </DialogTitle>
           </DialogHeader>
@@ -685,7 +685,7 @@ export default function Estoque() {
               </Button>
               <Button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm"
+                className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold shadow-sm"
               >
                 Salvar Item
               </Button>
@@ -871,7 +871,7 @@ export default function Estoque() {
           <DialogContent className="max-w-2xl w-full max-h-[85vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
             <DialogHeader className="border-b border-slate-100 pb-3">
               <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <History className="w-5 h-5 text-blue-600" />
+                <History className="w-5 h-5 text-teal-600" />
                 <span>Histórico de Movimentações: {selectedStockItem.name}</span>
               </DialogTitle>
               <p className="text-xs text-slate-500">

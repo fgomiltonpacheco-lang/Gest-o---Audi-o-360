@@ -318,7 +318,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
       <DialogContent className="max-w-3xl w-full max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
         <DialogHeader className="border-b border-slate-100 pb-4">
           <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <UserCheck className="w-5 h-5 text-blue-600" />
+            <UserCheck className="w-5 h-5 text-teal-600" />
             <span>{patientToEdit ? 'Editar Cadastro do Paciente' : 'Novo Paciente'}</span>
           </DialogTitle>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -400,7 +400,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                       Data de Nascimento <span className="text-red-500">*</span>
                     </Label>
                     {calculatedAge !== null && (
-                      <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                      <span className="text-xs font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded">
                         Idade: {calculatedAge} anos
                       </span>
                     )}
@@ -504,7 +504,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                   <div className="flex items-center justify-between">
                     <Label className="text-xs font-semibold text-slate-700">CEP</Label>
                     {loadingCep && (
-                      <span className="text-[10px] text-blue-600 font-semibold animate-pulse">
+                      <span className="text-[10px] text-teal-600 font-semibold animate-pulse">
                         Buscando endereço...
                       </span>
                     )}
@@ -692,7 +692,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                   <Switch
                     checked={hasResponsible}
                     onCheckedChange={setHasResponsible}
-                    className="data-[state=checked]:bg-blue-600"
+                    className="data-[state=checked]:bg-teal-500"
                   />
                 </div>
 
@@ -871,7 +871,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             </Button>
             <Button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm"
+              className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold shadow-sm"
             >
               Salvar Paciente
             </Button>

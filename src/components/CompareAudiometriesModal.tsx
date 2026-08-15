@@ -140,7 +140,7 @@ export const CompareAudiometriesModal: React.FC<CompareAudiometriesModalProps> =
       <DialogContent className="max-w-5xl w-[95vw] max-h-[92vh] overflow-y-auto rounded-2xl bg-white p-5 sm:p-6 shadow-2xl border border-slate-200">
         <DialogHeader className="border-b border-slate-100 pb-3">
           <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <ArrowUpDown className="w-5 h-5 text-blue-600" />
+            <ArrowUpDown className="w-5 h-5 text-teal-600" />
             Comparativo de Audiometrias
           </DialogTitle>
           <p className="text-xs text-slate-500">
@@ -194,12 +194,12 @@ export const CompareAudiometriesModal: React.FC<CompareAudiometriesModalProps> =
           <div className="space-y-5 pt-1">
             {/* Cabeçalho com datas e laudo */}
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-              <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600">
+              <div className="p-3 rounded-xl bg-teal-50 border border-teal-200 text-center">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-teal-600">
                   Exame A
                 </p>
                 <p className="text-sm font-extrabold text-slate-900">{formatDate(examA.date)}</p>
-                <Badge className="mt-1 bg-white text-blue-700 border-blue-200 text-[10px]">
+                <Badge className="mt-1 bg-white text-navy-700 border-teal-200 text-[10px]">
                   {examA.lossDegree} • {examA.lossType}
                 </Badge>
               </div>
@@ -235,7 +235,7 @@ export const CompareAudiometriesModal: React.FC<CompareAudiometriesModalProps> =
             {/* VIA AÉREA */}
             <ComparisonSection
               title="Via Aérea (dB NA)"
-              icon={<Activity className="w-4 h-4 text-blue-600" />}
+              icon={<Activity className="w-4 h-4 text-teal-600" />}
               frequencies={AIR_FREQUENCIES}
               examA={examA}
               examB={examB}
@@ -342,8 +342,8 @@ function ComparisonSection({
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
               {/* Linha Exame A */}
-              <tr className="bg-blue-50/40">
-                <td className="py-2 px-2 text-left font-bold text-blue-700">
+              <tr className="bg-teal-50/40">
+                <td className="py-2 px-2 text-left font-bold text-navy-700">
                   A — {formatDate(examA.date)}
                 </td>
                 {frequencies.map((f) => (

@@ -41,8 +41,8 @@ import {
 type PeriodShortcut = '7d' | '30d' | 'this_month' | 'last_month' | 'this_year'
 
 const PIE_COLORS = [
-  '#2563eb', // Azul
-  '#06b6d4', // Ciano
+  '#00A6A6', // Turquesa
+  '#0F2B5C', // Navy
   '#10b981', // Verde
   '#8b5cf6', // Roxo
   '#ec4899', // Rosa
@@ -280,7 +280,7 @@ export default function Relatorios() {
               <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
                 Relatórios Gerenciais
               </h1>
-              <Badge variant="secondary" className="bg-blue-50 text-blue-700 font-bold text-xs">
+              <Badge variant="secondary" className="bg-teal-50 text-navy-700 font-bold text-xs">
                 Business Intelligence
               </Badge>
             </div>
@@ -317,51 +317,51 @@ export default function Relatorios() {
               onClick={() => handlePeriodChange('7d')}
               className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${
                 period === '7d'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-teal-500 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              Últimos 7 dias
+              Últimos 7 dias{' '}
             </button>
             <button
               onClick={() => handlePeriodChange('30d')}
               className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${
                 period === '30d'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-teal-500 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              Últimos 30 dias
+              Últimos 30 dias{' '}
             </button>
             <button
               onClick={() => handlePeriodChange('this_month')}
               className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${
                 period === 'this_month'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-teal-500 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              Este Mês
+              Este Mês{' '}
             </button>
             <button
               onClick={() => handlePeriodChange('last_month')}
               className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${
                 period === 'last_month'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-teal-500 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              Mês Passado
+              Mês Passado{' '}
             </button>
             <button
               onClick={() => handlePeriodChange('this_year')}
               className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${
                 period === 'this_year'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-teal-500 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              Este Ano
+              Este Ano{' '}
             </button>
           </div>
 
@@ -391,12 +391,12 @@ export default function Relatorios() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Users className="w-4 h-4 text-blue-600" />
+                <Users className="w-4 h-4 text-teal-600" />
                 Novos Pacientes Cadastrados
               </h3>
               <p className="text-xs text-slate-400">Evolução mensal de primeiros cadastros</p>
             </div>
-            <Badge className="bg-blue-50 text-blue-700">Total: {patients.length}</Badge>
+            <Badge className="bg-teal-50 text-navy-700">Total: {patients.length}</Badge>
           </div>
 
           <div className="h-64 w-full pt-2">
@@ -406,7 +406,7 @@ export default function Relatorios() {
                 <XAxis dataKey="mes" fontSize={11} stroke="#94a3b8" />
                 <YAxis fontSize={11} stroke="#94a3b8" />
                 <Tooltip />
-                <Bar dataKey="novos" fill="#2563eb" radius={[6, 6, 0, 0]} name="Novos Pacientes" />
+                <Bar dataKey="novos" fill="#00A6A6" radius={[6, 6, 0, 0]} name="Novos Pacientes" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -511,7 +511,7 @@ export default function Relatorios() {
                 <Legend />
                 <Bar
                   dataKey="valorMil"
-                  fill="#2563eb"
+                  fill="#0F2B5C"
                   name="Faturamento (R$ mil)"
                   radius={[6, 6, 0, 0]}
                 />
@@ -607,7 +607,7 @@ export default function Relatorios() {
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-blue-600" />
+              <ShieldCheck className="w-4 h-4 text-teal-600" />
               Aparelhos Ativos em Garantia ({hearingAidsInWarranty.length})
             </h3>
           </div>
@@ -663,10 +663,10 @@ export default function Relatorios() {
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-blue-600" />
+              <Clock className="w-4 h-4 text-teal-600" />
               Follow-ups de Adaptação Pendentes (~30 Dias) ({pendingFollowups.length})
             </h3>
-            <Badge className="bg-blue-50 text-blue-700">Acompanhamento Ativo</Badge>
+            <Badge className="bg-teal-50 text-navy-700">Acompanhamento Ativo</Badge>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
             {pendingFollowups.map((pat) => (

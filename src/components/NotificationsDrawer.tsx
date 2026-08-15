@@ -32,7 +32,7 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({ open, 
       case 'stock':
         return <PackageX className="w-5 h-5 text-orange-600" />
       case 'followup':
-        return <Clock className="w-5 h-5 text-blue-600" />
+        return <Clock className="w-5 h-5 text-teal-600" />
       default:
         return <AlertTriangle className="w-5 h-5 text-slate-600" />
     }
@@ -65,7 +65,7 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({ open, 
               onClick={() => setFilter('all')}
               className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
                 filter === 'all'
-                  ? 'bg-blue-600 text-white shadow-sm'
+                  ? 'bg-teal-500 text-white shadow-sm'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -105,7 +105,7 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({ open, 
               onClick={() => setFilter('followup')}
               className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
                 filter === 'followup'
-                  ? 'bg-blue-600 text-white shadow-sm'
+                  ? 'bg-teal-500 text-white shadow-sm'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -130,7 +130,7 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({ open, 
               <div
                 key={alert.id}
                 onClick={() => handleNavigate(alert.linkUrl)}
-                className="group relative bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
+                className="group relative bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-teal-300 transition-all cursor-pointer"
               >
                 <div className="flex items-start gap-3">
                   <div
@@ -139,17 +139,17 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({ open, 
                         ? 'bg-red-50 border border-red-100'
                         : alert.severity === 'warning'
                           ? 'bg-amber-50 border border-amber-100'
-                          : 'bg-blue-50 border border-blue-100'
+                          : 'bg-teal-50 border border-teal-100'
                     }`}
                   >
                     {getAlertIcon(alert.type)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <h5 className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                      <h5 className="text-sm font-semibold text-slate-900 group-hover:text-teal-600 transition-colors truncate">
                         {alert.title}
                       </h5>
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all shrink-0" />
                     </div>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed line-clamp-2">
                       {alert.description}
@@ -164,7 +164,7 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({ open, 
         <div className="p-4 bg-white border-t border-slate-200">
           <Button
             variant="outline"
-            className="w-full text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50"
+            className="w-full text-xs font-semibold text-teal-600 border-teal-200 hover:bg-teal-50"
             onClick={() => handleNavigate('/relatorios')}
           >
             Ver Relatórios Completos

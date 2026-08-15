@@ -300,12 +300,12 @@ export default function Financeiro() {
             variant="outline"
             className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10"
           >
-            <Plus className="w-4 h-4 mr-1 text-blue-600" />
+            <Plus className="w-4 h-4 mr-1 text-teal-600" />
             Novo Orçamento
           </Button>
           <Button
             onClick={() => setSaleModalOpen(true)}
-            className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
+            className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             Nova Venda
@@ -344,7 +344,7 @@ export default function Financeiro() {
               <Button
                 size="sm"
                 onClick={() => setBudgetModalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl h-9"
+                className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-9"
               >
                 <Plus className="w-3.5 h-3.5 mr-1" />
                 Criar Orçamento
@@ -367,7 +367,7 @@ export default function Financeiro() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {budgets.map((b) => (
-                    <tr key={b.id} className="hover:bg-blue-50/40 transition-colors">
+                    <tr key={b.id} className="hover:bg-teal-50/40 transition-colors">
                       <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
                         #{b.number}
                       </td>
@@ -377,7 +377,7 @@ export default function Financeiro() {
                         {b.items.map((it) => `${it.quantity}x ${it.description}`).join(', ')}
                       </td>
                       <td className="py-3.5 px-4 text-slate-600">{b.discountPercent}%</td>
-                      <td className="py-3.5 px-4 font-bold text-blue-700">
+                      <td className="py-3.5 px-4 font-bold text-navy-700">
                         {formatCurrency(b.totalValue)}
                       </td>
                       <td className="py-3.5 px-4">
@@ -387,7 +387,7 @@ export default function Financeiro() {
                             b.status === 'Aprovado'
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               : b.status === 'Convertido'
-                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                ? 'bg-teal-50 text-navy-700 border-teal-200'
                                 : b.status === 'Enviado'
                                   ? 'bg-purple-50 text-purple-700 border-purple-200'
                                   : 'bg-slate-100 text-slate-600'
@@ -440,7 +440,7 @@ export default function Financeiro() {
               <Button
                 size="sm"
                 onClick={() => setSaleModalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl h-9"
+                className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-9"
               >
                 <Plus className="w-3.5 h-3.5 mr-1" />
                 Registrar Venda
@@ -462,7 +462,7 @@ export default function Financeiro() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {sales.map((s) => (
-                    <tr key={s.id} className="hover:bg-blue-50/40 transition-colors">
+                    <tr key={s.id} className="hover:bg-teal-50/40 transition-colors">
                       <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
                         #{s.number}
                       </td>
@@ -556,7 +556,7 @@ export default function Financeiro() {
                         className={`transition-colors ${
                           isOverdue
                             ? 'bg-red-50/60 hover:bg-red-50 text-red-950 font-medium'
-                            : 'hover:bg-blue-50/40'
+                            : 'hover:bg-teal-50/40'
                         }`}
                       >
                         <td className="py-3.5 px-4 font-bold">
@@ -617,7 +617,7 @@ export default function Financeiro() {
               <Button
                 size="sm"
                 onClick={() => setCommissionModalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl h-9"
+                className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-9"
               >
                 <Plus className="w-3.5 h-3.5 mr-1" />
                 Nova Comissão
@@ -638,14 +638,14 @@ export default function Financeiro() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {commissions.map((c) => (
-                    <tr key={c.id} className="hover:bg-blue-50/40 transition-colors">
+                    <tr key={c.id} className="hover:bg-teal-50/40 transition-colors">
                       <td className="py-3.5 px-4 font-bold text-slate-900">{c.professionalName}</td>
                       <td className="py-3.5 px-4 font-mono text-slate-600">{c.period}</td>
                       <td className="py-3.5 px-4 text-slate-700">{c.salesCount} vendas</td>
                       <td className="py-3.5 px-4 font-semibold text-slate-800">
                         {formatCurrency(c.totalSalesValue)}
                       </td>
-                      <td className="py-3.5 px-4 font-bold text-blue-600">
+                      <td className="py-3.5 px-4 font-bold text-teal-600">
                         {c.commissionPercent}%
                       </td>
                       <td className="py-3.5 px-4 text-right font-extrabold text-emerald-700">
@@ -684,14 +684,14 @@ export default function Financeiro() {
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/40">
+              <div className="p-4 rounded-xl border border-teal-200 bg-teal-50/40">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase text-blue-700">Saldo do Dia</span>
-                  <Wallet className="w-4 h-4 text-blue-600" />
+                  <span className="text-xs font-bold uppercase text-navy-700">Saldo do Dia</span>
+                  <Wallet className="w-4 h-4 text-teal-600" />
                 </div>
                 <div
                   className={`text-2xl font-extrabold mt-2 ${
-                    todayBalance >= 0 ? 'text-blue-700' : 'text-red-600'
+                    todayBalance >= 0 ? 'text-navy-700' : 'text-red-600'
                   }`}
                 >
                   {formatCurrency(todayBalance)}
@@ -704,7 +704,7 @@ export default function Financeiro() {
               <Button
                 size="sm"
                 onClick={() => setCashModalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl h-9"
+                className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-9"
               >
                 <Plus className="w-3.5 h-3.5 mr-1" />
                 Nova Movimentação
@@ -725,7 +725,7 @@ export default function Financeiro() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {cashMovements.map((mov) => (
-                    <tr key={mov.id} className="hover:bg-blue-50/40 transition-colors">
+                    <tr key={mov.id} className="hover:bg-teal-50/40 transition-colors">
                       <td className="py-3.5 px-4 font-mono text-slate-600">
                         {formatDate(mov.date)}
                       </td>
@@ -764,7 +764,7 @@ export default function Financeiro() {
         <DialogContent className="max-w-3xl w-full max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
           <DialogHeader className="border-b border-slate-100 pb-3">
             <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-600" />
+              <FileText className="w-5 h-5 text-teal-600" />
               <span>Novo Orçamento de Atendimento / Aparelhos</span>
             </DialogTitle>
           </DialogHeader>
@@ -923,7 +923,7 @@ export default function Financeiro() {
 
                 <div className="text-right">
                   <span className="text-xs text-slate-500 block">Total Final com Desconto:</span>
-                  <span className="text-xl font-extrabold text-blue-700">
+                  <span className="text-xl font-extrabold text-navy-700">
                     {formatCurrency(finalBudgetTotal)}
                   </span>
                 </div>
@@ -954,7 +954,7 @@ export default function Financeiro() {
               </Button>
               <Button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold"
+                className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold"
               >
                 Salvar Orçamento
               </Button>
@@ -1049,7 +1049,7 @@ export default function Financeiro() {
         <DialogContent className="max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
           <DialogHeader className="border-b border-slate-100 pb-3">
             <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-blue-600" />
+              <ShoppingBag className="w-5 h-5 text-teal-600" />
               <span>Registrar Venda Direta</span>
             </DialogTitle>
           </DialogHeader>
@@ -1150,7 +1150,7 @@ export default function Financeiro() {
               </Button>
               <Button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold"
+                className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold"
               >
                 Concluir Venda
               </Button>
@@ -1248,7 +1248,7 @@ export default function Financeiro() {
               </Button>
               <Button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold"
+                className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold"
               >
                 Lançar no Caixa
               </Button>
@@ -1326,9 +1326,9 @@ export default function Financeiro() {
               </div>
             </div>
 
-            <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 flex items-center justify-between">
-              <span className="text-xs text-blue-700 font-medium">Valor Calculado:</span>
-              <span className="text-sm font-extrabold text-blue-900">
+            <div className="p-3 bg-teal-50 rounded-xl border border-teal-100 flex items-center justify-between">
+              <span className="text-xs text-teal-700 font-medium">Valor Calculado:</span>
+              <span className="text-sm font-extrabold text-navy-700">
                 {formatCurrency((comTotalSales * comPercent) / 100)}
               </span>
             </div>
@@ -1344,7 +1344,7 @@ export default function Financeiro() {
               </Button>
               <Button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold"
+                className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold"
               >
                 Salvar Comissão
               </Button>

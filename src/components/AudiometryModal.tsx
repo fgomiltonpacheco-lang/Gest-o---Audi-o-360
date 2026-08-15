@@ -124,7 +124,7 @@ export const AudiometryModal: React.FC<AudiometryModalProps> = ({
       <DialogContent className="max-w-3xl w-full max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
         <DialogHeader className="border-b border-slate-100 pb-3">
           <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-blue-600" />
+            <Activity className="w-5 h-5 text-teal-600" />
             <span>Registro de Audiometria Tonal Liminar & Vocal</span>
           </DialogTitle>
           <p className="text-xs text-slate-500">
@@ -165,7 +165,7 @@ export const AudiometryModal: React.FC<AudiometryModalProps> = ({
           {/* VIA AÉREA */}
           <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-              <Ear className="w-4 h-4 text-blue-600" />
+              <Ear className="w-4 h-4 text-teal-600" />
               Limiares por Via Aérea (dB NA)
             </h4>
             <div className="overflow-x-auto">
@@ -381,7 +381,7 @@ export const AudiometryModal: React.FC<AudiometryModalProps> = ({
             </Button>
             <Button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm"
+              className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold shadow-sm"
             >
               Salvar Audiometria
             </Button>

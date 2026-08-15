@@ -232,7 +232,7 @@ export const GlobalSearch: React.FC = () => {
   const showDropdown = open && debouncedQuery.trim().length > 0
 
   const categoryMeta: Record<ResultCategory, { icon: React.ElementType; color: string }> = {
-    patient: { icon: Users, color: 'text-blue-600' },
+    patient: { icon: Users, color: 'text-teal-600' },
     appointment: { icon: Calendar, color: 'text-emerald-600' },
     record: { icon: FileText, color: 'text-purple-600' },
   }
@@ -260,7 +260,7 @@ export const GlobalSearch: React.FC = () => {
           aria-expanded={showDropdown}
           aria-controls="global-search-listbox"
           aria-activedescendant={activeIndex >= 0 ? `search-item-${activeIndex}` : undefined}
-          className="w-full h-10 pl-9 pr-4 rounded-full bg-slate-100 border border-transparent focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm text-slate-800 placeholder-slate-400 transition-all outline-none"
+          className="w-full h-10 pl-9 pr-4 rounded-full bg-slate-100 border border-transparent focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/20 text-xs sm:text-sm text-slate-800 placeholder-slate-400 transition-all outline-none"
         />
         {inputValue && (
           <button
@@ -331,7 +331,7 @@ export const GlobalSearch: React.FC = () => {
                           onMouseEnter={() => setActiveIndex(idx)}
                           onClick={() => handleSelect(item.patientId)}
                           className={`flex items-center justify-between gap-3 px-3 py-2.5 cursor-pointer transition-colors group ${
-                            isActive ? 'bg-blue-50' : 'hover:bg-blue-50/60'
+                            isActive ? 'bg-teal-50' : 'hover:bg-teal-50/60'
                           }`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
@@ -346,8 +346,8 @@ export const GlobalSearch: React.FC = () => {
                               <p
                                 className={`text-sm font-semibold truncate ${
                                   isActive
-                                    ? 'text-blue-700'
-                                    : 'text-slate-800 group-hover:text-blue-600'
+                                    ? 'text-navy-700'
+                                    : 'text-slate-800 group-hover:text-teal-600'
                                 }`}
                               >
                                 <Highlight text={item.primary} query={debouncedQuery} />
@@ -359,7 +359,7 @@ export const GlobalSearch: React.FC = () => {
                           </div>
                           <ChevronRight
                             className={`w-4 h-4 shrink-0 transition-all ${
-                              isActive ? 'text-blue-600 translate-x-0.5' : 'text-slate-300'
+                              isActive ? 'text-teal-600 translate-x-0.5' : 'text-slate-300'
                             }`}
                           />
                         </div>

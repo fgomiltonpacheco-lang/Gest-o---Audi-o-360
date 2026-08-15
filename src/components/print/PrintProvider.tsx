@@ -97,15 +97,15 @@ function PrintLayout({
     <div className="font-sans text-slate-800" style={{ fontFamily: 'Roboto, sans-serif' }}>
       {/* Cabeçalho */}
       <div
-        className="flex items-center justify-between border-b-2 border-blue-700 pb-3 mb-5"
-        style={{ borderBottom: '2px solid #1d4ed8' }}
+        className="flex items-center justify-between border-b-2 border-navy-700 pb-3 mb-5"
+        style={{ borderBottom: '2px solid #0F2B5C' }}
       >
         <div className="flex items-center gap-3">
           <img src={logoImg} alt="Audição360" className="h-14 w-auto object-contain" />
           <div>
             <h1
               className="text-lg font-extrabold leading-tight"
-              style={{ fontSize: '16pt', color: '#1e3a8a', fontWeight: 800 }}
+              style={{ fontSize: '16pt', color: '#0F2B5C', fontWeight: 800 }}
             >
               Audição360 — Centro Auditivo
             </h1>

@@ -18,7 +18,7 @@ const sectionTitle = (text: string) => (
     style={{
       fontSize: '12pt',
       fontWeight: 700,
-      color: '#1e3a8a',
+      color: '#0F2B5C',
       borderBottom: '1.5px solid #cbd5e1',
       paddingBottom: '4px',
       marginTop: '18px',
@@ -172,7 +172,7 @@ export function PatientFichaPrint({
                 breakInside: 'avoid',
               }}
             >
-              <div style={{ fontSize: '10pt', fontWeight: 700, color: '#1e3a8a' }}>
+              <div style={{ fontSize: '10pt', fontWeight: 700, color: '#0F2B5C' }}>
                 {i + 1}. {formatDate(evo.date)} — {evo.professionalName}
               </div>
               <div style={{ fontSize: '10pt', color: '#334155', marginTop: '2px' }}>

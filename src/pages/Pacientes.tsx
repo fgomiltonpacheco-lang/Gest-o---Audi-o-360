@@ -154,7 +154,7 @@ export default function Pacientes() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Pacientes</h1>
-            <Badge variant="secondary" className="bg-blue-50 text-blue-700 font-bold text-xs">
+            <Badge variant="secondary" className="bg-teal-50 text-navy-700 font-bold text-xs">
               {patients.length} cadastrados
             </Badge>
           </div>
@@ -177,7 +177,7 @@ export default function Pacientes() {
               setPatientToEdit(null)
               setPatientModalOpen(true)
             }}
-            className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
+            className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             Novo Paciente
@@ -257,7 +257,7 @@ export default function Pacientes() {
             <Button
               variant="ghost"
               onClick={clearFilters}
-              className="text-xs text-blue-600 hover:text-blue-800 p-0 h-auto font-semibold"
+              className="text-xs text-teal-600 hover:text-teal-700 p-0 h-auto font-semibold"
             >
               Limpar filtros
             </Button>
@@ -308,7 +308,7 @@ export default function Pacientes() {
                   return (
                     <tr
                       key={patient.id}
-                      className={`hover:bg-blue-50/50 transition-colors ${
+                      className={`hover:bg-teal-50/50 transition-colors ${
                         index % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
                       }`}
                     >
@@ -325,7 +325,7 @@ export default function Pacientes() {
                           <div>
                             <span
                               onClick={() => navigate(`/pacientes/${patient.id}/prontuario`)}
-                              className="font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer block"
+                              className="font-bold text-slate-900 hover:text-teal-600 transition-colors cursor-pointer block"
                             >
                               {patient.name}
                             </span>
@@ -373,7 +373,7 @@ export default function Pacientes() {
                             patient.status === 'Ativo'
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               : patient.status === 'Em tratamento'
-                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                ? 'bg-teal-50 text-navy-700 border-teal-200'
                                 : 'bg-slate-100 text-slate-600 border-slate-200'
                           }
                         >
@@ -394,7 +394,7 @@ export default function Pacientes() {
                             size="sm"
                             variant="ghost"
                             onClick={() => navigate(`/pacientes/${patient.id}/prontuario`)}
-                            className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 rounded-lg"
+                            className="h-8 w-8 p-0 text-teal-600 hover:bg-teal-50 rounded-lg"
                             title="Abrir Prontuário"
                           >
                             <FileText className="w-4 h-4" />

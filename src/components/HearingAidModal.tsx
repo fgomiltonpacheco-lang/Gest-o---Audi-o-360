@@ -144,7 +144,7 @@ export const HearingAidModal: React.FC<HearingAidModalProps> = ({
       <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
         <DialogHeader className="border-b border-slate-100 pb-3">
           <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Ear className="w-5 h-5 text-blue-600" />
+            <Ear className="w-5 h-5 text-teal-600" />
             <span>{aidToEdit ? 'Editar Aparelho Auditivo' : 'Novo Aparelho Auditivo'}</span>
           </DialogTitle>
         </DialogHeader>
@@ -328,7 +328,7 @@ export const HearingAidModal: React.FC<HearingAidModalProps> = ({
                   type="date"
                   disabled
                   value={calculatedWarrantyEndDate}
-                  className="h-9 rounded-lg text-xs bg-slate-100 font-bold text-blue-700 mt-1"
+                  className="h-9 rounded-lg text-xs bg-slate-100 font-bold text-navy-700 mt-1"
                 />
               </div>
             </div>
@@ -421,7 +421,7 @@ export const HearingAidModal: React.FC<HearingAidModalProps> = ({
             </Button>
             <Button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm"
+              className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold shadow-sm"
             >
               Salvar Aparelho
             </Button>

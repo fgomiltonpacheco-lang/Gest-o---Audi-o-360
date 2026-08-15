@@ -232,7 +232,7 @@ export default function Prontuario() {
           <div
             className={`w-12 h-12 rounded-full ${getAvatarColor(
               patient.name,
-            )} text-white flex items-center justify-center font-extrabold text-base shadow-md ring-4 ring-blue-50 shrink-0`}
+            )} text-white flex items-center justify-center font-extrabold text-base shadow-md ring-4 ring-teal-50 shrink-0`}
           >
             {getInitials(patient.name)}
           </div>
@@ -246,7 +246,7 @@ export default function Prontuario() {
                 className={
                   patient.status === 'Ativo'
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[10px]'
-                    : 'bg-blue-50 text-blue-700 border-blue-200 font-bold text-[10px]'
+                    : 'bg-teal-50 text-navy-700 border-teal-200 font-bold text-[10px]'
                 }
               >
                 {patient.status}
@@ -269,7 +269,7 @@ export default function Prontuario() {
           </Button>
           <Button
             onClick={() => setAppointmentModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
+            className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
           >
             <Calendar className="w-4 h-4" />
             Agendar Atendimento
@@ -332,7 +332,7 @@ export default function Prontuario() {
               <div
                 className={`w-20 h-20 rounded-full ${getAvatarColor(
                   patient.name,
-                )} text-white flex items-center justify-center font-extrabold text-2xl shadow-md ring-4 ring-blue-50 shrink-0`}
+                )} text-white flex items-center justify-center font-extrabold text-2xl shadow-md ring-4 ring-teal-50 shrink-0`}
               >
                 {getInitials(patient.name)}
               </div>
@@ -348,7 +348,7 @@ export default function Prontuario() {
                     className={
                       patient.status === 'Ativo'
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200 font-bold'
-                        : 'bg-blue-50 text-blue-700 border-blue-200 font-bold'
+                        : 'bg-teal-50 text-navy-700 border-teal-200 font-bold'
                     }
                   >
                     {patient.status}
@@ -367,7 +367,7 @@ export default function Prontuario() {
               {/* Dados Pessoais */}
               <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2.5">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 pb-1.5 border-b border-slate-200">
-                  <User className="w-4 h-4 text-blue-600" />
+                  <User className="w-4 h-4 text-teal-600" />
                   Dados Pessoais
                 </h3>
                 <InfoRow label="CPF" value={maskCPF(patient.cpf)} mono />
@@ -382,7 +382,7 @@ export default function Prontuario() {
               {/* Contato */}
               <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2.5">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 pb-1.5 border-b border-slate-200">
-                  <Phone className="w-4 h-4 text-blue-600" />
+                  <Phone className="w-4 h-4 text-teal-600" />
                   Contato
                 </h3>
                 <InfoRow label="Celular" value={patient.mobile || '—'} highlight />
@@ -393,7 +393,7 @@ export default function Prontuario() {
               {/* Convênio */}
               <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2.5">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 pb-1.5 border-b border-slate-200">
-                  <CreditCard className="w-4 h-4 text-blue-600" />
+                  <CreditCard className="w-4 h-4 text-teal-600" />
                   Convênio / Pagamento
                 </h3>
                 <InfoRow
@@ -412,7 +412,7 @@ export default function Prontuario() {
               {/* Endereço */}
               <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2.5">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 pb-1.5 border-b border-slate-200">
-                  <MapPin className="w-4 h-4 text-blue-600" />
+                  <MapPin className="w-4 h-4 text-teal-600" />
                   Endereço
                 </h3>
                 <div className="space-y-1 text-xs">
@@ -438,7 +438,7 @@ export default function Prontuario() {
               {/* Responsável Financeiro */}
               <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2.5">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 pb-1.5 border-b border-slate-200">
-                  <ShieldCheck className="w-4 h-4 text-blue-600" />
+                  <ShieldCheck className="w-4 h-4 text-teal-600" />
                   Responsável Financeiro
                 </h3>
                 {patient.hasResponsible && patient.responsible ? (
@@ -459,7 +459,7 @@ export default function Prontuario() {
               {/* Histórico Auditivo */}
               <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2.5">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 pb-1.5 border-b border-slate-200">
-                  <Ear className="w-4 h-4 text-blue-600" />
+                  <Ear className="w-4 h-4 text-teal-600" />
                   Histórico Auditivo
                 </h3>
                 <InfoRow label="Tipo de Perda Auditiva" value={patient.hearingLossType} highlight />
@@ -591,7 +591,7 @@ export default function Prontuario() {
               <div className="flex justify-end pt-2 border-t border-slate-100">
                 <Button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm px-6"
+                  className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold shadow-sm px-6"
                 >
                   Salvar Prontuário Clínico
                 </Button>
@@ -629,7 +629,7 @@ export default function Prontuario() {
                 <Button
                   size="sm"
                   onClick={() => setAudioModalOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl h-8"
+                  className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-8"
                 >
                   + Audiometria
                 </Button>
@@ -652,7 +652,7 @@ export default function Prontuario() {
 
             {/* Audiometrias */}
             <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-blue-700 flex items-center gap-1.5">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-teal-700 flex items-center gap-1.5">
                 <Activity className="w-4 h-4" />
                 Audiometrias Tonais & Vocais ({patientAudiometries.length})
               </h4>
@@ -674,7 +674,7 @@ export default function Prontuario() {
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge className="bg-blue-50 text-blue-700 border-blue-200">
+                        <Badge className="bg-teal-50 text-navy-700 border-teal-200">
                           {exam.lossDegree} • {exam.lossType}
                         </Badge>
                         <Button
@@ -687,7 +687,7 @@ export default function Prontuario() {
                               body: <AudiometryPrint exam={exam} />,
                             })
                           }
-                          className="h-7 w-7 p-0 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          className="h-7 w-7 p-0 text-teal-600 hover:bg-teal-50 rounded-lg"
                           title="Imprimir laudo"
                         >
                           <Printer className="w-3.5 h-3.5" />
@@ -760,7 +760,7 @@ export default function Prontuario() {
                               body: <TympanometryPrint exam={exam} />,
                             })
                           }
-                          className="h-7 w-7 p-0 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          className="h-7 w-7 p-0 text-teal-600 hover:bg-teal-50 rounded-lg"
                           title="Imprimir laudo"
                         >
                           <Printer className="w-3.5 h-3.5" />
@@ -834,7 +834,7 @@ export default function Prontuario() {
                               body: <BeraPrint exam={exam} />,
                             })
                           }
-                          className="h-7 w-7 p-0 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          className="h-7 w-7 p-0 text-teal-600 hover:bg-teal-50 rounded-lg"
                           title="Imprimir laudo"
                         >
                           <Printer className="w-3.5 h-3.5" />
@@ -870,7 +870,7 @@ export default function Prontuario() {
               <Button
                 size="sm"
                 onClick={() => setAidModalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl h-9"
+                className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-9"
               >
                 <Plus className="w-3.5 h-3.5 mr-1" />
                 Vincular Aparelho
@@ -900,7 +900,7 @@ export default function Prontuario() {
                         {aid.powerSource}
                       </p>
                     </div>
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    <Badge variant="outline" className="bg-teal-50 text-navy-700 border-teal-200">
                       {aid.status}
                     </Badge>
                   </div>
@@ -916,7 +916,7 @@ export default function Prontuario() {
               <Button
                 size="sm"
                 onClick={() => navigate('/financeiro')}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl h-9"
+                className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-9"
               >
                 + Novo Orçamento / Venda
               </Button>
@@ -996,7 +996,7 @@ export default function Prontuario() {
               <Button
                 size="sm"
                 onClick={() => setEvoModalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl h-9"
+                className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-9"
               >
                 <Plus className="w-3.5 h-3.5 mr-1" />
                 Nova Evolução
@@ -1008,11 +1008,11 @@ export default function Prontuario() {
                 Nenhuma evolução clínica registrada ainda para este paciente.
               </div>
             ) : (
-              <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-blue-200">
+              <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-teal-200">
                 {patientEvolutions.map((evo) => (
                   <div key={evo.id} className="relative group">
                     {/* Ponto na timeline */}
-                    <div className="absolute -left-6 top-1.5 w-3 h-3 rounded-full bg-blue-600 ring-4 ring-blue-100" />
+                    <div className="absolute -left-6 top-1.5 w-3 h-3 rounded-full bg-teal-500 ring-4 ring-teal-100" />
 
                     <div className="bg-slate-50 hover:bg-white p-4 rounded-xl border border-slate-200 hover:shadow-sm transition-all space-y-2">
                       <div className="flex items-center justify-between">
@@ -1115,7 +1115,7 @@ export default function Prontuario() {
               </Button>
               <Button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold"
+                className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold"
               >
                 Salvar Evolução
               </Button>
@@ -1200,7 +1200,7 @@ function InfoRow({
       <span className="text-[11px] text-slate-500 font-medium shrink-0">{label}:</span>
       <span
         className={`text-xs text-right ${
-          highlight ? 'font-bold text-blue-700' : 'font-semibold text-slate-800'
+          highlight ? 'font-bold text-navy-700' : 'font-semibold text-slate-800'
         } ${mono ? 'font-mono' : ''}`}
       >
         {value}

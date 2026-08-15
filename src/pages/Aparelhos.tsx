@@ -156,7 +156,7 @@ export default function Aparelhos() {
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
               Aparelhos Auditivos
             </h1>
-            <Badge variant="secondary" className="bg-blue-50 text-blue-700 font-bold text-xs">
+            <Badge variant="secondary" className="bg-teal-50 text-navy-700 font-bold text-xs">
               {hearingAids.length} dispositivos
             </Badge>
           </div>
@@ -171,7 +171,7 @@ export default function Aparelhos() {
             setAidToEdit(null)
             setAidModalOpen(true)
           }}
-          className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
+          className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
         >
           <Plus className="w-4 h-4" />
           Novo Aparelho
@@ -267,14 +267,14 @@ export default function Aparelhos() {
                   return (
                     <tr
                       key={aid.id}
-                      className="hover:bg-blue-50/40 transition-colors cursor-pointer group"
+                      className="hover:bg-teal-50/40 transition-colors cursor-pointer group"
                       onClick={() => {
                         setSelectedAid(aid)
                         setDetailModalOpen(true)
                       }}
                     >
                       <td className="py-3.5 px-4">
-                        <span className="font-bold text-slate-900 block group-hover:text-blue-600">
+                        <span className="font-bold text-slate-900 block group-hover:text-teal-600">
                           {aid.brand} {aid.model}
                         </span>
                         <span className="text-[11px] text-slate-400">
@@ -302,7 +302,7 @@ export default function Aparelhos() {
                               e.stopPropagation()
                               if (aid.patientId) navigate(`/pacientes/${aid.patientId}/prontuario`)
                             }}
-                            className="font-bold text-slate-800 hover:text-blue-600 block truncate max-w-[170px]"
+                            className="font-bold text-slate-800 hover:text-teal-600 block truncate max-w-[170px]"
                           >
                             {aid.patientName}
                           </span>
@@ -339,7 +339,7 @@ export default function Aparelhos() {
                           variant="outline"
                           className={
                             aid.status === 'Em uso'
-                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              ? 'bg-teal-50 text-navy-700 border-teal-200'
                               : aid.status === 'Estoque'
                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                 : aid.status === 'Em manutenção'
@@ -360,7 +360,7 @@ export default function Aparelhos() {
                               setSelectedAid(aid)
                               setDetailModalOpen(true)
                             }}
-                            className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 rounded-lg"
+                            className="h-8 w-8 p-0 text-teal-600 hover:bg-teal-50 rounded-lg"
                             title="Ver Histórico de Ajustes e Manutenções"
                           >
                             <Sliders className="w-4 h-4" />
@@ -416,7 +416,7 @@ export default function Aparelhos() {
               <div className="flex items-center justify-between">
                 <div>
                   <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <Ear className="w-5 h-5 text-blue-600" />
+                    <Ear className="w-5 h-5 text-teal-600" />
                     <span>
                       {selectedAid.brand} {selectedAid.model}
                     </span>
@@ -426,7 +426,7 @@ export default function Aparelhos() {
                     <strong>{selectedAid.patientName || 'Estoque'}</strong>
                   </p>
                 </div>
-                <Badge className="bg-blue-50 text-blue-700 border-blue-200">
+                <Badge className="bg-teal-50 text-navy-700 border-teal-200">
                   {selectedAid.status}
                 </Badge>
               </div>
@@ -451,7 +451,7 @@ export default function Aparelhos() {
                   <Button
                     size="sm"
                     onClick={() => setMaintModalOpen(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-xl h-8 font-semibold"
+                    className="bg-teal-500 hover:bg-teal-600 text-white text-xs rounded-xl h-8 font-semibold"
                   >
                     <Plus className="w-3.5 h-3.5 mr-1" />
                     Nova Manutenção
@@ -489,7 +489,7 @@ export default function Aparelhos() {
                   <Button
                     size="sm"
                     onClick={() => setAdjModalOpen(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-xl h-8 font-semibold"
+                    className="bg-teal-500 hover:bg-teal-600 text-white text-xs rounded-xl h-8 font-semibold"
                   >
                     <Plus className="w-3.5 h-3.5 mr-1" />
                     Novo Ajuste
@@ -586,7 +586,7 @@ export default function Aparelhos() {
               </Button>
               <Button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold"
+                className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold"
               >
                 Salvar Manutenção
               </Button>
@@ -647,7 +647,7 @@ export default function Aparelhos() {
               </Button>
               <Button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold"
+                className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold"
               >
                 Salvar Ajuste
               </Button>

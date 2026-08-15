@@ -195,7 +195,7 @@ export const TympanometryModal: React.FC<TympanometryModalProps> = ({
             <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/20 space-y-3">
               <h4 className="text-xs font-bold text-blue-700 uppercase tracking-wider">
                 Timpanometria OE (Orelha Esquerda)
-              </h4>
+              </h4>{' '}
               <div>
                 <Label className="text-xs font-medium text-slate-700">Tipo de Curva</Label>
                 <Select value={curveOE} onValueChange={(v: any) => setCurveOE(v)}>
@@ -349,7 +349,7 @@ export const TympanometryModal: React.FC<TympanometryModalProps> = ({
             </Button>
             <Button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm"
+              className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold shadow-sm"
             >
               Salvar Imitanciometria
             </Button>

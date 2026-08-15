@@ -85,7 +85,7 @@ export default function Index() {
       icon: Users,
       trend: '+12%',
       trendUp: true,
-      iconBg: 'bg-blue-100 text-blue-700',
+      iconBg: 'bg-teal-100 text-navy-700',
       link: '/pacientes',
     },
     {
@@ -149,7 +149,7 @@ export default function Index() {
       case 'stock':
         return <Package className="w-4 h-4 text-orange-600" />
       default:
-        return <Clock className="w-4 h-4 text-blue-600" />
+        return <Clock className="w-4 h-4 text-teal-600" />
     }
   }
 
@@ -170,12 +170,12 @@ export default function Index() {
             variant="outline"
             className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10"
           >
-            <Calendar className="w-4 h-4 mr-1.5 text-blue-600" />
+            <Calendar className="w-4 h-4 mr-1.5 text-teal-600" />
             Ver Agenda
           </Button>
           <Button
             onClick={() => navigate('/pacientes')}
-            className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
+            className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             Novo Atendimento
@@ -214,7 +214,7 @@ export default function Index() {
               </div>
 
               <div className="mt-4">
-                <div className="text-2xl font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors">
+                <div className="text-2xl font-extrabold text-slate-900 group-hover:text-teal-600 transition-colors">
                   {card.value}
                 </div>
                 <h3 className="text-xs font-bold text-slate-700 mt-1">{card.title}</h3>
@@ -236,7 +236,7 @@ export default function Index() {
                   <span>Próximos Agendamentos</span>
                   <Badge
                     variant="secondary"
-                    className="bg-blue-50 text-blue-700 font-semibold text-xs"
+                    className="bg-teal-50 text-navy-700 font-semibold text-xs"
                   >
                     {upcomingToday.length + upcomingTomorrow.length} agendados
                   </Badge>
@@ -246,7 +246,7 @@ export default function Index() {
               <Button
                 variant="ghost"
                 onClick={() => navigate('/agenda')}
-                className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 font-semibold p-2 h-auto"
+                className="text-xs text-teal-600 hover:text-teal-700 hover:bg-teal-50 font-semibold p-2 h-auto"
               >
                 Ver agenda completa
                 <ChevronRight className="w-4 h-4 ml-1" />
@@ -257,7 +257,7 @@ export default function Index() {
             <div className="space-y-4">
               <div>
                 <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-2.5">
-                  <span className="w-2 h-2 rounded-full bg-blue-600" />
+                  <span className="w-2 h-2 rounded-full bg-teal-500" />
                   Hoje ({formatDate(todayStr)})
                 </span>
                 {upcomingToday.length === 0 ? (
@@ -276,14 +276,14 @@ export default function Index() {
                         <div
                           key={item.id}
                           onClick={() => navigate(`/pacientes/${item.patientId}/prontuario`)}
-                          className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-white hover:border-blue-200 hover:shadow-sm transition-all flex items-center justify-between gap-3 cursor-pointer group"
+                          className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-white hover:border-teal-200 hover:shadow-sm transition-all flex items-center justify-between gap-3 cursor-pointer group"
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <span className="text-sm font-extrabold text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100 shrink-0">
+                            <span className="text-sm font-extrabold text-navy-700 bg-teal-50 px-2.5 py-1.5 rounded-lg border border-teal-100 shrink-0">
                               {item.time}
                             </span>
                             <div className="min-w-0">
-                              <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-600 truncate">
+                              <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-teal-600 truncate">
                                 {item.patientName}
                               </h4>
                               <p className="text-[11px] text-slate-500 truncate">
@@ -333,14 +333,14 @@ export default function Index() {
                         <div
                           key={item.id}
                           onClick={() => navigate(`/pacientes/${item.patientId}/prontuario`)}
-                          className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-white hover:border-blue-200 hover:shadow-sm transition-all flex items-center justify-between gap-3 cursor-pointer group"
+                          className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-white hover:border-teal-200 hover:shadow-sm transition-all flex items-center justify-between gap-3 cursor-pointer group"
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <span className="text-sm font-extrabold text-slate-700 bg-slate-100 px-2.5 py-1.5 rounded-lg shrink-0">
                               {item.time}
                             </span>
                             <div className="min-w-0">
-                              <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-600 truncate">
+                              <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-teal-600 truncate">
                                 {item.patientName}
                               </h4>
                               <p className="text-[11px] text-slate-500 truncate">
@@ -366,7 +366,7 @@ export default function Index() {
 
           <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
             <span>Duração padrão: 30 a 60 min</span>
-            <span className="font-semibold text-blue-600">Intervalo clínico: 15 min</span>
+            <span className="font-semibold text-teal-600">Intervalo clínico: 15 min</span>
           </div>
         </div>
 
@@ -397,7 +397,7 @@ export default function Index() {
                   <div
                     key={alert.id}
                     onClick={() => navigate(alert.linkUrl)}
-                    className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-white hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer group flex items-start gap-3"
+                    className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-white hover:border-teal-300 hover:shadow-sm transition-all cursor-pointer group flex items-start gap-3"
                   >
                     <div
                       className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
@@ -405,17 +405,17 @@ export default function Index() {
                           ? 'bg-red-50 text-red-600'
                           : alert.severity === 'warning'
                             ? 'bg-amber-50 text-amber-600'
-                            : 'bg-blue-50 text-blue-600'
+                            : 'bg-teal-50 text-teal-600'
                       }`}
                     >
                       {getAlertIcon(alert.type)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
-                        <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 truncate">
+                        <h4 className="text-xs font-bold text-slate-900 group-hover:text-teal-600 truncate">
                           {alert.title}
                         </h4>
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 shrink-0" />
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-600 shrink-0" />
                       </div>
                       <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">
                         {alert.description}
@@ -431,7 +431,7 @@ export default function Index() {
             <Button
               variant="outline"
               onClick={() => navigate('/relatorios')}
-              className="w-full text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50 rounded-xl h-10"
+              className="w-full text-xs font-semibold text-teal-600 border-teal-200 hover:bg-teal-50 rounded-xl h-10"
             >
               Ver Todos os Relatórios e Auditoria
             </Button>

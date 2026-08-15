@@ -156,7 +156,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       <DialogContent className="max-w-xl w-full rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
         <DialogHeader className="border-b border-slate-100 pb-3">
           <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-blue-600" />
+            <Calendar className="w-5 h-5 text-teal-600" />
             <span>{appointmentToEdit ? 'Editar Agendamento' : 'Novo Agendamento'}</span>
           </DialogTitle>
         </DialogHeader>
@@ -191,13 +191,13 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                   <div
                     key={p.id}
                     onClick={() => handleSelectPatient(p)}
-                    className="p-2.5 hover:bg-blue-50 cursor-pointer text-xs flex items-center justify-between"
+                    className="p-2.5 hover:bg-teal-50 cursor-pointer text-xs flex items-center justify-between"
                   >
                     <div>
                       <span className="font-bold text-slate-800 block">{p.name}</span>
                       <span className="text-slate-400 text-[10px]">CPF: {p.cpf}</span>
                     </div>
-                    <span className="text-blue-600 text-[11px] font-semibold">{p.mobile}</span>
+                    <span className="text-teal-600 text-[11px] font-semibold">{p.mobile}</span>
                   </div>
                 ))}
               </div>
@@ -338,7 +338,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
             </Button>
             <Button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm"
+              className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold shadow-sm"
             >
               Salvar Agendamento
             </Button>

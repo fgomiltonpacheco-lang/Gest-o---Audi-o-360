@@ -241,7 +241,7 @@ export default function Agenda() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Agenda</h1>
-            <Badge variant="secondary" className="bg-blue-50 text-blue-700 font-bold text-xs">
+            <Badge variant="secondary" className="bg-teal-50 text-navy-700 font-bold text-xs">
               {filteredAppointments.length} atendimentos
             </Badge>
           </div>
@@ -269,7 +269,7 @@ export default function Agenda() {
               setModalInitialTime('09:00')
               setModalOpen(true)
             }}
-            className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
+            className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             Novo Agendamento
@@ -314,37 +314,37 @@ export default function Agenda() {
             onClick={() => setViewMode('dia')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               viewMode === 'dia'
-                ? 'bg-white text-blue-700 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-teal-600 shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            Dia
+            Dia{' '}
           </button>
           <button
             onClick={() => setViewMode('semana')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               viewMode === 'semana'
-                ? 'bg-white text-blue-700 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-teal-600 shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            Semana
+            Semana{' '}
           </button>
           <button
             onClick={() => setViewMode('mes')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               viewMode === 'mes'
-                ? 'bg-white text-blue-700 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-teal-600 shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            Mês
+            Mês{' '}
           </button>
           <button
             onClick={() => setViewMode('lista')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               viewMode === 'lista'
-                ? 'bg-white text-blue-700 shadow-sm'
+                ? 'bg-white text-teal-600 shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -379,7 +379,7 @@ export default function Agenda() {
                           setModalInitialTime(time)
                           setModalOpen(true)
                         }}
-                        className="opacity-0 group-hover:opacity-100 text-[11px] text-blue-600 font-semibold flex items-center gap-1 hover:underline py-1"
+                        className="opacity-0 group-hover:opacity-100 text-[11px] text-teal-600 font-semibold flex items-center gap-1 hover:underline py-1"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         Agendar neste horário
@@ -387,9 +387,9 @@ export default function Agenda() {
                     ) : (
                       matchedApps.map((app) => {
                         const typeConfig = APPOINTMENT_TYPE_COLORS[app.type] || {
-                          bg: 'bg-blue-50',
-                          text: 'text-blue-700',
-                          border: 'border-blue-200',
+                          bg: 'bg-teal-50',
+                          text: 'text-navy-700',
+                          border: 'border-teal-200',
                         }
                         return (
                           <div
@@ -481,7 +481,7 @@ export default function Agenda() {
                 <div
                   key={index}
                   className={`rounded-xl border p-2.5 min-h-[400px] flex flex-col justify-between ${
-                    isToday ? 'border-blue-400 bg-blue-50/20' : 'border-slate-200 bg-slate-50/40'
+                    isToday ? 'border-teal-400 bg-teal-50/20' : 'border-slate-200 bg-slate-50/40'
                   }`}
                 >
                   <div>
@@ -491,7 +491,7 @@ export default function Agenda() {
                       </span>
                       <span
                         className={`text-sm font-extrabold inline-block mt-0.5 w-7 h-7 rounded-full text-center leading-7 ${
-                          isToday ? 'bg-blue-600 text-white' : 'text-slate-800'
+                          isToday ? 'bg-teal-500 text-white' : 'text-slate-800'
                         }`}
                       >
                         {d.getDate()}
@@ -501,9 +501,9 @@ export default function Agenda() {
                     <div className="space-y-1.5 mt-2.5">
                       {dayApps.map((app) => {
                         const typeConfig = APPOINTMENT_TYPE_COLORS[app.type] || {
-                          bg: 'bg-blue-50',
-                          text: 'text-blue-700',
-                          border: 'border-blue-200',
+                          bg: 'bg-teal-50',
+                          text: 'text-navy-700',
+                          border: 'border-teal-200',
                         }
                         return (
                           <div
@@ -538,7 +538,7 @@ export default function Agenda() {
                       setModalInitialTime('09:00')
                       setModalOpen(true)
                     }}
-                    className="w-full text-[11px] text-blue-600 hover:bg-blue-50 h-7 rounded-lg mt-2 font-semibold"
+                    className="w-full text-[11px] text-teal-600 hover:bg-teal-50 h-7 rounded-lg mt-2 font-semibold"
                   >
                     + Agendar
                   </Button>
@@ -574,7 +574,7 @@ export default function Agenda() {
                     setSelectedDate(item.date)
                     setViewMode('dia')
                   }}
-                  className={`min-h-[90px] p-2 rounded-xl border text-left cursor-pointer transition-all hover:border-blue-400 ${
+                  className={`min-h-[90px] p-2 rounded-xl border text-left cursor-pointer transition-all hover:border-teal-400 ${
                     item.inCurrentMonth
                       ? 'bg-white border-slate-200'
                       : 'bg-slate-50 text-slate-300 border-transparent'
@@ -582,7 +582,7 @@ export default function Agenda() {
                 >
                   <span
                     className={`text-xs font-extrabold w-6 h-6 rounded-full flex items-center justify-center ${
-                      isToday ? 'bg-blue-600 text-white' : 'text-slate-700'
+                      isToday ? 'bg-teal-500 text-white' : 'text-slate-700'
                     }`}
                   >
                     {item.date.getDate()}
@@ -592,13 +592,13 @@ export default function Agenda() {
                     {dayApps.slice(0, 2).map((app) => (
                       <div
                         key={app.id}
-                        className="text-[10px] font-semibold truncate bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100"
+                        className="text-[10px] font-semibold truncate bg-teal-50 text-navy-700 px-1.5 py-0.5 rounded border border-teal-100"
                       >
                         {app.time} {app.patientName.split(' ')[0]}
                       </div>
                     ))}
                     {dayApps.length > 2 && (
-                      <span className="text-[9px] font-bold text-blue-600 pl-1">
+                      <span className="text-[9px] font-bold text-teal-600 pl-1">
                         +{dayApps.length - 2} mais
                       </span>
                     )}
@@ -636,22 +636,22 @@ export default function Agenda() {
                 ) : (
                   filteredAppointments.map((app) => {
                     const typeConfig = APPOINTMENT_TYPE_COLORS[app.type] || {
-                      bg: 'bg-blue-50',
-                      text: 'text-blue-700',
-                      border: 'border-blue-200',
+                      bg: 'bg-teal-50',
+                      text: 'text-navy-700',
+                      border: 'border-teal-200',
                     }
                     return (
-                      <tr key={app.id} className="hover:bg-blue-50/40 transition-colors">
+                      <tr key={app.id} className="hover:bg-teal-50/40 transition-colors">
                         <td className="py-3.5 px-4 font-mono text-xs text-slate-700">
                           <span className="font-bold text-slate-900 block">
                             {formatDate(app.date)}
                           </span>
-                          <span className="text-blue-600 font-extrabold">{app.time}</span>
+                          <span className="text-teal-600 font-extrabold">{app.time}</span>
                         </td>
                         <td className="py-3.5 px-4">
                           <span
                             onClick={() => navigate(`/pacientes/${app.patientId}/prontuario`)}
-                            className="font-bold text-slate-900 hover:text-blue-600 cursor-pointer block"
+                            className="font-bold text-slate-900 hover:text-teal-600 cursor-pointer block"
                           >
                             {app.patientName}
                           </span>
@@ -673,7 +673,7 @@ export default function Agenda() {
                               app.status === 'Realizado'
                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                 : app.status === 'Confirmado'
-                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                  ? 'bg-teal-50 text-navy-700 border-teal-200'
                                   : app.status === 'Cancelado'
                                     ? 'bg-red-50 text-red-700 border-red-200'
                                     : 'bg-slate-100 text-slate-700'
