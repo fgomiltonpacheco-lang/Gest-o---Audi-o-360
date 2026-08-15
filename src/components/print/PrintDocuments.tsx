@@ -93,7 +93,11 @@ export function PatientFichaPrint({
           )}
           {row(
             'Convênio',
-            patient.planType === 'Convênio' ? patient.planName || 'Convênio' : 'Particular',
+            patient.planType === 'Convênio'
+              ? patient.planName || 'Convênio'
+              : patient.planType === 'SUS'
+                ? 'SUS'
+                : 'Particular',
           )}
           {row('Cadastrado em', formatDate(patient.createdAt))}
           {row('Última visita', formatDate(patient.lastVisit))}

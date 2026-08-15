@@ -64,7 +64,7 @@ const mapPatient = (r: any): Patient => ({
   neighborhood: r.neighborhood || '',
   city: r.city || '',
   state: r.state || '',
-  planType: r.planType === 'Convênio' ? 'Convênio' : 'Particular',
+  planType: r.planType === 'Convênio' ? 'Convênio' : r.planType === 'SUS' ? 'SUS' : 'Particular',
   planName: r.planName || '',
   cardNumber: r.cardNumber || '',
   hasResponsible: !!r.hasResponsible,

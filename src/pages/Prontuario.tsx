@@ -399,7 +399,11 @@ export default function Prontuario() {
                 <InfoRow
                   label="Tipo"
                   value={
-                    patient.planType === 'Convênio' ? patient.planName || 'Convênio' : 'Particular'
+                    patient.planType === 'Convênio'
+                      ? patient.planName || 'Convênio'
+                      : patient.planType === 'SUS'
+                        ? 'SUS'
+                        : 'Particular'
                   }
                   highlight
                 />

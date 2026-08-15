@@ -39,7 +39,7 @@ export interface Patient {
   city: string
   state: string
   // Convênio
-  planType: 'Particular' | 'Convênio'
+  planType: 'Particular' | 'Convênio' | 'SUS'
   planName?: string
   cardNumber?: string
   // Responsável Financeiro

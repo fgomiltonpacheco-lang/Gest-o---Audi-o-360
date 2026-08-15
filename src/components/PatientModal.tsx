@@ -91,7 +91,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
   const [loadingCep, setLoadingCep] = useState(false)
 
   // Convênio
-  const [planType, setPlanType] = useState<'Particular' | 'Convênio'>('Particular')
+  const [planType, setPlanType] = useState<'Particular' | 'Convênio' | 'SUS'>('Particular')
   const [planName, setPlanName] = useState('')
   const [cardNumber, setCardNumber] = useState('')
 
@@ -643,6 +643,12 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                       <RadioGroupItem value="Convênio" id="plan-conv" />
                       <Label htmlFor="plan-conv" className="text-sm font-medium cursor-pointer">
                         Convênio / Plano de Saúde
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="SUS" id="plan-sus" />
+                      <Label htmlFor="plan-sus" className="text-sm font-medium cursor-pointer">
+                        SUS
                       </Label>
                     </div>
                   </RadioGroup>

@@ -238,6 +238,7 @@ export default function Pacientes() {
               <SelectContent>
                 <SelectItem value="todos">Todos os Convênios</SelectItem>
                 <SelectItem value="Particular">Particular</SelectItem>
+                <SelectItem value="SUS">SUS</SelectItem>
                 {uniquePlans.map((pl) => (
                   <SelectItem key={pl} value={pl}>
                     {pl}
@@ -356,9 +357,11 @@ export default function Pacientes() {
                         <span className="text-xs font-semibold text-slate-700 block">
                           {patient.planType === 'Convênio'
                             ? patient.planName || 'Convênio'
-                            : 'Particular'}
+                            : patient.planType === 'SUS'
+                              ? 'SUS'
+                              : 'Particular'}
                         </span>
-                        {patient.cardNumber && (
+                        {patient.planType === 'Convênio' && patient.cardNumber && (
                           <span className="text-[10px] text-slate-400 font-mono">
                             Cart: {patient.cardNumber}
                           </span>
