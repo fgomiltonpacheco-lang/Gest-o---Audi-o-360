@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -10,25 +10,22 @@ import {
   BarChart3,
   Menu,
   X,
-  Search,
   Bell,
   LogOut,
-  ChevronRight,
-  ShieldCheck,
   Ear,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
-import { getInitials, getAvatarColor, maskCPF } from '@/lib/formatters'
+import { getInitials, getAvatarColor } from '@/lib/formatters'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { NotificationsDrawer } from '@/components/NotificationsDrawer'
-import { Badge } from '@/components/ui/badge'
+import { GlobalSearch } from '@/components/GlobalSearch'
 
 interface LayoutProps {
   children?: React.ReactNode
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { currentUser, logout, patients, unreadAlertsCount } = useApp()
+  const { currentUser, logout, unreadAlertsCount } = useApp()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -36,45 +33,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [logoutModalOpen, setLogoutModalOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
-
-  // Global search autocomplete
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchOpen, setSearchOpen] = useState(false)
-  const searchRef = useRef<HTMLDivElement>(null)
-
-  // Fechar dropdown de busca ao clicar fora ou apertar ESC
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setSearchOpen(false)
-      }
-    }
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSearchOpen(false)
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [])
-
-  // Filtragem de busca global por nome ou CPF
-  const searchResults = React.useMemo(() => {
-    if (!searchQuery.trim()) return []
-    const q = searchQuery.toLowerCase().trim()
-    const cleanQ = q.replace(/\D/g, '')
-
-    return patients
-      .filter((p) => {
-        const nameMatch = p.name.toLowerCase().includes(q)
-        const cpfMatch = p.cpf.replace(/\D/g, '').includes(cleanQ) || p.cpf.includes(q)
-        const phoneMatch = p.mobile.replace(/\D/g, '').includes(cleanQ)
-        return nameMatch || (cleanQ.length > 2 && cpfMatch) || (cleanQ.length > 3 && phoneMatch)
-      })
-      .slice(0, 8)
-  }, [patients, searchQuery])
 
   // Menu agrupado institucional
   const navigationGroups = [
@@ -139,12 +97,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const isCurrentActive = (path: string, exact = false) => {
     if (exact) return location.pathname === path
     return location.pathname.startsWith(path)
-  }
-
-  const handleSelectPatient = (patientId: string) => {
-    setSearchOpen(false)
-    setSearchQuery('')
-    navigate(`/pacientes/${patientId}/prontuario`)
   }
 
   return (
@@ -323,82 +275,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </span>
         </div>
 
-        {/* Barra de Busca Global de Pacientes com Autocomplete */}
-        <div ref={searchRef} className="relative flex-1 max-w-md mx-auto">
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value)
-                setSearchOpen(true)
-              }}
-              onFocus={() => setSearchOpen(true)}
-              placeholder="Buscar paciente por nome ou CPF..."
-              className="w-full h-10 pl-9 pr-4 rounded-full bg-slate-100 border border-transparent focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm text-slate-800 placeholder-slate-400 transition-all outline-none"
-            />
-          </div>
-
-          {/* Dropdown de Resultados da Busca */}
-          {searchOpen && searchQuery.trim() && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50 animate-in fade-in-50 duration-150">
-              <div className="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Pacientes Encontrados ({searchResults.length})
-                </span>
-                <span className="text-[10px] text-slate-400">ESC para fechar</span>
-              </div>
-
-              <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
-                {searchResults.length === 0 ? (
-                  <div className="p-6 text-center text-xs text-slate-500">
-                    Nenhum paciente localizado com esse critério.
-                  </div>
-                ) : (
-                  searchResults.map((patient) => (
-                    <div
-                      key={patient.id}
-                      onClick={() => handleSelectPatient(patient.id)}
-                      className="p-3 flex items-center justify-between hover:bg-blue-50/70 cursor-pointer transition-colors group"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className={`w-8 h-8 rounded-full ${getAvatarColor(
-                            patient.name,
-                          )} text-white flex items-center justify-center font-bold text-xs shrink-0`}
-                        >
-                          {getInitials(patient.name)}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 truncate">
-                            {patient.name}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            CPF: {maskCPF(patient.cpf)} • {patient.mobile || patient.phone}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Badge
-                          variant="outline"
-                          className={
-                            patient.status === 'Ativo'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-blue-50 text-blue-700 border-blue-200'
-                          }
-                        >
-                          {patient.status}
-                        </Badge>
-                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Barra de Busca Global (pacientes, agendamentos e prontuários) */}
+        <GlobalSearch />
 
         {/* Lado Direito: Notificações & Avatar do Usuário */}
         <div className="flex items-center gap-3 shrink-0">
