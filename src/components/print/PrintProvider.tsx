@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react'
-import logoImg from '@/assets/editedimage1786832958942-232e6.png'
+import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
 
 export interface PrintContent {
   title: string
@@ -101,11 +101,11 @@ function PrintLayout({
         style={{ borderBottom: '2px solid #0F2B5C' }}
       >
         <div className="flex items-center gap-4">
-          <div className="relative w-44 h-16 overflow-hidden flex items-center justify-center shrink-0">
+          <div className="w-52 h-16 flex items-center justify-center shrink-0">
             <img
               src={logoImg}
               alt="Audição360"
-              className="w-full h-[150%] object-cover object-[center_35%] scale-105"
+              className="max-h-full max-w-full object-contain mx-auto"
             />
           </div>
           <div>

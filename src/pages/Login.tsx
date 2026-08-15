@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import pb from '@/lib/pocketbase/client'
 import { Lock, Mail, Eye, EyeOff, ArrowRight, User, IdCard } from 'lucide-react'
-import logoImg from '@/assets/editedimage1786832958942-232e6.png'
+import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -167,16 +167,16 @@ export default function Login() {
       <div className="w-full max-w-[420px] bg-white rounded-2xl shadow-2xl p-8 sm:p-10 border border-slate-100 relative z-10 animate-in fade-in zoom-in-95 duration-200">
         {/* Logo & Cabeçalho */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-2 overflow-hidden">
-            <div className="relative w-full max-w-[320px] h-32 overflow-hidden flex items-center justify-center rounded-lg">
+          <div className="flex justify-center mb-3">
+            <div className="w-full max-w-[320px] h-28 flex items-center justify-center p-2">
               <img
                 src={logoImg}
                 alt="Audição360 Centro Auditivo"
-                className="w-full h-[140%] object-cover object-[center_38%] scale-105"
+                className="max-h-full max-w-full object-contain mx-auto"
               />
             </div>
           </div>
-          <p className="text-sm text-slate-600 mt-2">
+          <p className="text-sm text-slate-600 mt-1">
             {mode === 'login'
               ? 'Acesse o painel de gestão clínica integrada'
               : 'Cadastre-se para acessar o sistema'}

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { getInitials, getAvatarColor } from '@/lib/formatters'
-import logoImg from '@/assets/editedimage1786832958942-232e6.png'
+import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { NotificationsDrawer } from '@/components/NotificationsDrawer'
 import { GlobalSearch } from '@/components/GlobalSearch'
@@ -106,14 +106,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <aside className="hidden lg:flex flex-col fixed top-0 left-0 bottom-0 w-[260px] bg-navy-700 text-white z-40 border-r border-navy-900/40 shadow-xl select-none">
         {/* Topo / Logo */}
         <div className="h-20 px-4 flex items-center justify-center border-b border-white/10 bg-white overflow-hidden">
-          <Link to="/" className="flex items-center justify-center w-full h-full py-1">
-            <div className="relative w-full h-16 overflow-hidden flex items-center justify-center">
-              <img
-                src={logoImg}
-                alt="Audição360 Centro Auditivo"
-                className="w-full h-[180%] object-cover object-[center_32%] scale-110"
-              />
-            </div>
+          <Link to="/" className="flex items-center justify-center w-full h-full py-2">
+            <img
+              src={logoImg}
+              alt="Audição360 Centro Auditivo"
+              className="max-h-full max-w-full object-contain mx-auto"
+            />
           </Link>
         </div>
 
@@ -197,15 +195,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <Link
                 to="/"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center flex-1 h-full py-1"
+                className="flex items-center justify-center flex-1 h-full py-2"
               >
-                <div className="relative w-full h-16 overflow-hidden flex items-center justify-center">
-                  <img
-                    src={logoImg}
-                    alt="Audição360 Centro Auditivo"
-                    className="w-full h-[180%] object-cover object-[center_32%] scale-110"
-                  />
-                </div>
+                <img
+                  src={logoImg}
+                  alt="Audição360 Centro Auditivo"
+                  className="max-h-full max-w-full object-contain mx-auto"
+                />
               </Link>
               <button
                 onClick={() => setMobileMenuOpen(false)}
