@@ -2,7 +2,8 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import pb from '@/lib/pocketbase/client'
-import { Ear, Lock, Mail, Eye, EyeOff, ArrowRight, User, IdCard } from 'lucide-react'
+import { Lock, Mail, Eye, EyeOff, ArrowRight, User, IdCard } from 'lucide-react'
+import logoImg from '@/assets/editedimage1786755251977-cb14f.png'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -166,16 +167,14 @@ export default function Login() {
       <div className="w-full max-w-[420px] bg-white rounded-2xl shadow-2xl p-8 sm:p-10 border border-slate-100 relative z-10 animate-in fade-in zoom-in-95 duration-200">
         {/* Logo & Cabeçalho */}
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700 mx-auto shadow-sm mb-4">
-            <Ear className="w-8 h-8" />
+          <div className="flex justify-center mb-4">
+            <img
+              src={logoImg}
+              alt="Audição360 Centro Auditivo"
+              className="h-20 w-auto object-contain max-w-full"
+            />
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Audição<span className="text-blue-600">360</span>
-          </h1>
-          <p className="text-xs uppercase tracking-widest font-semibold text-slate-400 mt-0.5">
-            Centro Auditivo
-          </p>
-          <p className="text-sm text-slate-600 mt-3">
+          <p className="text-sm text-slate-600 mt-2">
             {mode === 'login'
               ? 'Acesse o painel de gestão clínica integrada'
               : 'Cadastre-se para acessar o sistema'}

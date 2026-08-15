@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { getInitials, getAvatarColor } from '@/lib/formatters'
+import logoImg from '@/assets/editedimage1786755251977-cb14f.png'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { NotificationsDrawer } from '@/components/NotificationsDrawer'
 import { GlobalSearch } from '@/components/GlobalSearch'
@@ -104,18 +105,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* SIDEBAR DESKTOP (Fixa 260px) */}
       <aside className="hidden lg:flex flex-col fixed top-0 left-0 bottom-0 w-[260px] bg-[#1e3a8a] text-white z-40 border-r border-blue-950/40 shadow-xl select-none">
         {/* Topo / Logo */}
-        <div className="h-16 px-6 flex items-center gap-3 border-b border-white/10 bg-[#172554]">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 shadow-inner">
-            <Ear className="w-6 h-6 text-blue-300 animate-pulse" />
-          </div>
-          <div>
-            <span className="font-extrabold text-lg tracking-tight text-white block leading-none">
-              Audição<span className="text-blue-400">360</span>
-            </span>
-            <span className="text-[10px] uppercase tracking-wider text-blue-200/70 font-semibold block mt-1">
-              Centro Auditivo
-            </span>
-          </div>
+        <div className="h-20 px-5 flex items-center border-b border-white/10 bg-white">
+          <Link to="/" className="flex items-center justify-center w-full py-2">
+            <img
+              src={logoImg}
+              alt="Audição360 Centro Auditivo"
+              className="h-12 w-auto object-contain max-w-full"
+            />
+          </Link>
         </div>
 
         {/* Menu agrupado */}
@@ -194,16 +191,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           {/* Gaveta lateral */}
           <div className="relative w-[280px] max-w-[80vw] bg-[#1e3a8a] text-white flex flex-col z-10 shadow-2xl animate-in slide-in-from-left duration-300">
-            <div className="h-16 px-6 flex items-center justify-between border-b border-white/10 bg-[#172554]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300">
-                  <Ear className="w-5 h-5" />
-                </div>
-                <span className="font-bold text-base text-white">Audição360</span>
-              </div>
+            <div className="h-20 px-5 flex items-center justify-between border-b border-white/10 bg-white">
+              <Link
+                to="/"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center py-2"
+              >
+                <img
+                  src={logoImg}
+                  alt="Audição360 Centro Auditivo"
+                  className="h-10 w-auto object-contain max-w-[180px]"
+                />
+              </Link>
               <button
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-1.5 text-blue-200 hover:text-white rounded-lg hover:bg-white/10"
+                className="p-1.5 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100"
               >
                 <X className="w-5 h-5" />
               </button>
