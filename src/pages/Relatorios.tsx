@@ -15,10 +15,13 @@ import {
   ShieldCheck,
   CheckCircle,
   Package,
+  Printer,
 } from 'lucide-react'
 import { formatCurrency, formatDate, exportToCSV } from '@/lib/formatters'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { usePrint } from '@/components/print/PrintProvider'
+import { RelatorioPrint } from '@/components/print/PrintDocuments'
 import {
   ResponsiveContainer,
   BarChart,
@@ -53,6 +56,7 @@ const PIE_COLORS = [
 export default function Relatorios() {
   const { patients, appointments, hearingAids, sales, installments, stockItems, cashMovements } =
     useApp()
+  const { print } = usePrint()
 
   const [period, setPeriod] = useState<PeriodShortcut>('this_month')
   const [startDate, setStartDate] = useState('2025-02-01')
@@ -199,6 +203,73 @@ export default function Relatorios() {
     exportToCSV('relatorio_geral_audicao360', rows)
   }
 
+  // Imprimir relatório gerencial (dados tabulares do período selecionado)
+  const handlePrintRelatorio = () => {
+    const periodSales = sales.filter((s) => s.date >= startDate && s.date <= endDate)
+    const periodAppts = appointments.filter((a) => a.date >= startDate && a.date <= endDate)
+    const periodInstallments = installments.filter(
+      (i) => i.dueDate >= startDate && i.dueDate <= endDate,
+    )
+
+    const typeCount: Record<string, number> = {}
+    periodAppts.forEach((a) => {
+      typeCount[a.type] = (typeCount[a.type] || 0) + 1
+    })
+
+    const profCount: Record<string, number> = {}
+    periodAppts.forEach((a) => {
+      profCount[a.professionalName] = (profCount[a.professionalName] || 0) + 1
+    })
+
+    const sections = [
+      {
+        title: 'Resumo de Vendas no Período',
+        columns: ['#', 'Paciente', 'Data', 'Valor', 'Pagamento', 'Status'],
+        rows: periodSales.map((s) => [
+          s.number,
+          s.patientName,
+          formatDate(s.date),
+          formatCurrency(s.totalValue),
+          s.paymentMethod,
+          s.status,
+        ]),
+      },
+      {
+        title: 'Atendimentos por Tipo',
+        columns: ['Tipo de Atendimento', 'Quantidade'],
+        rows: Object.entries(typeCount).map(([t, c]) => [t, c]),
+      },
+      {
+        title: 'Atendimentos por Profissional',
+        columns: ['Profissional', 'Atendimentos'],
+        rows: Object.entries(profCount).map(([p, c]) => [p, c]),
+      },
+      {
+        title: 'Parcelas no Período',
+        columns: ['Venda', 'Parcela', 'Paciente', 'Vencimento', 'Valor', 'Status'],
+        rows: periodInstallments.map((i) => [
+          i.saleNumber,
+          `${i.installmentNumber}/${i.totalInstallments}`,
+          i.patientName,
+          formatDate(i.dueDate),
+          formatCurrency(i.value),
+          i.status,
+        ]),
+      },
+    ]
+
+    print({
+      title: 'Relatório Gerencial',
+      subtitle: `Período: ${formatDate(startDate)} a ${formatDate(endDate)}`,
+      body: (
+        <RelatorioPrint
+          periodLabel={`${formatDate(startDate)} a ${formatDate(endDate)}`}
+          sections={sections}
+        />
+      ),
+    })
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-200">
       {/* Cabeçalho da Página com Seletor Global de Período */}
@@ -218,14 +289,24 @@ export default function Relatorios() {
             </p>
           </div>
 
-          <Button
-            onClick={handleExportAllCSV}
-            variant="outline"
-            className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10"
-          >
-            <Download className="w-4 h-4 mr-1.5 text-slate-600" />
-            Exportar Dados Gerais (CSV)
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handlePrintRelatorio}
+              variant="outline"
+              className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10"
+            >
+              <Printer className="w-4 h-4 mr-1.5 text-slate-600" />
+              Imprimir Relatório
+            </Button>
+            <Button
+              onClick={handleExportAllCSV}
+              variant="outline"
+              className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10"
+            >
+              <Download className="w-4 h-4 mr-1.5 text-slate-600" />
+              Exportar Dados Gerais (CSV)
+            </Button>
+          </div>
         </div>
 
         {/* Atalhos de Período */}

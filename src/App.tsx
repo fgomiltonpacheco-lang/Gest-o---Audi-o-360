@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AppProvider, useApp } from '@/context/AppContext'
+import { PrintProvider } from '@/components/print/PrintProvider'
 import Layout from '@/components/Layout'
 import Login from '@/pages/Login'
 import Index from '@/pages/Index'
@@ -35,103 +36,105 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 export function App() {
   return (
     <AppProvider>
-      <Router>
-        <Routes>
-          {/* Rota Pública */}
-          <Route
-            path="/login"
-            element={
-              <PublicRoute>
-                <Login />
-              </PublicRoute>
-            }
-          />
+      <PrintProvider>
+        <Router>
+          <Routes>
+            {/* Rota Pública */}
+            <Route
+              path="/login"
+              element={
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
+              }
+            />
 
-          {/* Rotas Autenticadas com Layout Global */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Index />
-              </ProtectedRoute>
-            }
-          />
+            {/* Rotas Autenticadas com Layout Global */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/pacientes"
-            element={
-              <ProtectedRoute>
-                <Pacientes />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/pacientes"
+              element={
+                <ProtectedRoute>
+                  <Pacientes />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/pacientes/:id/prontuario"
-            element={
-              <ProtectedRoute>
-                <Prontuario />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/pacientes/:id/prontuario"
+              element={
+                <ProtectedRoute>
+                  <Prontuario />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/agenda"
-            element={
-              <ProtectedRoute>
-                <Agenda />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/agenda"
+              element={
+                <ProtectedRoute>
+                  <Agenda />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/aparelhos"
-            element={
-              <ProtectedRoute>
-                <Aparelhos />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/aparelhos"
+              element={
+                <ProtectedRoute>
+                  <Aparelhos />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/financeiro"
-            element={
-              <ProtectedRoute>
-                <Financeiro />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/financeiro"
+              element={
+                <ProtectedRoute>
+                  <Financeiro />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/estoque"
-            element={
-              <ProtectedRoute>
-                <Estoque />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/estoque"
+              element={
+                <ProtectedRoute>
+                  <Estoque />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/relatorios"
-            element={
-              <ProtectedRoute>
-                <Relatorios />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/relatorios"
+              element={
+                <ProtectedRoute>
+                  <Relatorios />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Rota 404 */}
-          <Route
-            path="*"
-            element={
-              <ProtectedRoute>
-                <NotFound />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </Router>
-      <Toaster />
+            {/* Rota 404 */}
+            <Route
+              path="*"
+              element={
+                <ProtectedRoute>
+                  <NotFound />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Router>
+        <Toaster />
+      </PrintProvider>
     </AppProvider>
   )
 }

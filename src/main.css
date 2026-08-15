@@ -288,3 +288,70 @@
     animation: spotlight 2s ease forwards;
   }
 }
+
+/* ============================================================
+   ESTILOS DE IMPRESSÃO — Layout limpo A4 para laudos/relatórios
+   ============================================================ */
+
+/* Container de impressão: oculto em tela, visível apenas na impressão */
+#print-root {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 14mm 16mm 14mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    font-size: 11pt !important;
+    color: #1e293b !important;
+  }
+
+  /* Esconde toda a chrome da aplicação (sidebar, header, conteúdo, rodapé) */
+  body > #root > *:not(#print-root) {
+    display: none !important;
+  }
+
+  /* Mostra apenas a área de impressão */
+  #print-root {
+    display: block !important;
+  }
+
+  /* Evita quebras desleixadas dentro de cartões e tabelas */
+  .print-card,
+  .print-section,
+  table {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+
+  /* Tabelas com bordas limpas para impressão */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+  }
+
+  th,
+  td {
+    border: 1px solid #cbd5e1;
+    padding: 5px 8px;
+    text-align: left;
+  }
+
+  th {
+    background: #f1f5f9 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

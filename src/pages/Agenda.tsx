@@ -31,12 +31,15 @@ import {
 } from '@/components/ui/select'
 import { AppointmentModal } from '@/components/AppointmentModal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { usePrint } from '@/components/print/PrintProvider'
+import { AgendaPrint } from '@/components/print/PrintDocuments'
 
 type ViewMode = 'dia' | 'semana' | 'mes' | 'lista'
 
 export default function Agenda() {
   const { appointments, addAppointment, updateAppointment, deleteAppointment } = useApp()
   const navigate = useNavigate()
+  const { print } = usePrint()
 
   const [viewMode, setViewMode] = useState<ViewMode>('dia')
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
@@ -75,6 +78,50 @@ export default function Agenda() {
 
   const handleToday = () => {
     setSelectedDate(new Date())
+  }
+
+  // Imprimir agenda do período atual (dia/semana/mês/lista)
+  const handlePrintAgenda = () => {
+    let periodAppts: Appointment[] = filteredAppointments
+    let label = periodLabel
+
+    if (viewMode === 'dia') {
+      periodAppts = filteredAppointments.filter((a) => a.date === selectedDateStr)
+    } else if (viewMode === 'semana') {
+      const start = new Date(selectedDate)
+      const day = start.getDay()
+      start.setDate(start.getDate() - (day === 0 ? 6 : day - 1))
+      const end = new Date(start)
+      end.setDate(end.getDate() + 6)
+      const startStr = start.toISOString().split('T')[0]
+      const endStr = end.toISOString().split('T')[0]
+      periodAppts = filteredAppointments.filter((a) => a.date >= startStr && a.date <= endStr)
+    } else if (viewMode === 'mes') {
+      const year = selectedDate.getFullYear()
+      const month = selectedDate.getMonth()
+      const firstStr = new Date(year, month, 1).toISOString().split('T')[0]
+      const lastStr = new Date(year, month + 1, 0).toISOString().split('T')[0]
+      periodAppts = filteredAppointments.filter((a) => a.date >= firstStr && a.date <= lastStr)
+    }
+
+    print({
+      title: 'Agenda de Atendimentos',
+      subtitle: `Visão: ${viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}`,
+      body: (
+        <AgendaPrint
+          periodLabel={label}
+          appointments={periodAppts.map((a) => ({
+            date: a.date,
+            time: a.time,
+            patientName: a.patientName,
+            type: a.type,
+            professionalName: a.professionalName,
+            duration: a.duration,
+            status: a.status,
+          }))}
+        />
+      ),
+    })
   }
 
   // Label do período

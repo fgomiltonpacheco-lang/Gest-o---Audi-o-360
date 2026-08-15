@@ -17,9 +17,17 @@ import {
   CreditCard,
   Stethoscope,
   ArrowUpDown,
+  Printer,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { CompareAudiometriesModal } from '@/components/CompareAudiometriesModal'
+import { usePrint } from '@/components/print/PrintProvider'
+import {
+  PatientFichaPrint,
+  AudiometryPrint,
+  TympanometryPrint,
+  BeraPrint,
+} from '@/components/print/PrintDocuments'
 import {
   formatDate,
   formatCurrency,
@@ -114,6 +122,9 @@ export default function Prontuario() {
     id: string
     name: string
   } | null>(null)
+
+  // Impressão
+  const { print } = usePrint()
 
   // State local para Dados Clínicos
   const existingRecord = patient ? clinicalRecords[patient.id] : null
@@ -262,6 +273,26 @@ export default function Prontuario() {
           >
             <Calendar className="w-4 h-4" />
             Agendar Atendimento
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              print({
+                title: 'Ficha do Paciente',
+                subtitle: patient.name,
+                body: (
+                  <PatientFichaPrint
+                    patient={patient}
+                    record={existingRecord}
+                    evolutions={patientEvolutions}
+                  />
+                ),
+              })
+            }
+            className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10 flex items-center gap-1.5"
+          >
+            <Printer className="w-4 h-4" />
+            Imprimir Ficha
           </Button>
         </div>
       </div>
@@ -649,6 +680,21 @@ export default function Prontuario() {
                         <Button
                           size="sm"
                           variant="ghost"
+                          onClick={() =>
+                            print({
+                              title: 'Laudo Audiometrico',
+                              subtitle: `${patient.name} — ${formatDate(exam.date)}`,
+                              body: <AudiometryPrint exam={exam} />,
+                            })
+                          }
+                          className="h-7 w-7 p-0 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          title="Imprimir laudo"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={() => {
                             setDeleteTarget({
                               type: 'audiometry',
@@ -703,21 +749,38 @@ export default function Prontuario() {
                       <span className="text-xs font-extrabold text-slate-900">
                         Imitanciometria em {formatDate(exam.date)}
                       </span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setDeleteTarget({
-                            type: 'tympanometry',
-                            id: exam.id,
-                            name: `Imitanciometria de ${formatDate(exam.date)}`,
-                          })
-                          setDeleteConfirmOpen(true)
-                        }}
-                        className="h-7 w-7 p-0 text-red-500 hover:bg-red-50 rounded-lg"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            print({
+                              title: 'Laudo de Imitanciometria',
+                              subtitle: `${patient.name} — ${formatDate(exam.date)}`,
+                              body: <TympanometryPrint exam={exam} />,
+                            })
+                          }
+                          className="h-7 w-7 p-0 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          title="Imprimir laudo"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setDeleteTarget({
+                              type: 'tympanometry',
+                              id: exam.id,
+                              name: `Imitanciometria de ${formatDate(exam.date)}`,
+                            })
+                            setDeleteConfirmOpen(true)
+                          }}
+                          className="h-7 w-7 p-0 text-red-500 hover:bg-red-50 rounded-lg"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs bg-white p-2.5 rounded-lg border border-slate-200">
                       <div>
@@ -761,6 +824,21 @@ export default function Prontuario() {
                         >
                           {exam.classification}
                         </Badge>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            print({
+                              title: 'Laudo BERA / PEATE',
+                              subtitle: `${patient.name} — ${formatDate(exam.date)}`,
+                              body: <BeraPrint exam={exam} />,
+                            })
+                          }
+                          className="h-7 w-7 p-0 text-blue-600 hover:bg-blue-50 rounded-lg"
+                          title="Imprimir laudo"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"
