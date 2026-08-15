@@ -110,7 +110,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <img
               src={logoImg}
               alt="Audição360 Centro Auditivo"
-              className="h-12 w-auto object-contain max-w-full"
+              className="h-16 w-auto object-contain max-w-[220px]"
             />
           </Link>
         </div>
@@ -200,7 +200,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <img
                   src={logoImg}
                   alt="Audição360 Centro Auditivo"
-                  className="h-10 w-auto object-contain max-w-[180px]"
+                  className="h-14 w-auto object-contain max-w-[220px]"
                 />
               </Link>
               <button

@@ -171,7 +171,7 @@ export default function Login() {
             <img
               src={logoImg}
               alt="Audição360 Centro Auditivo"
-              className="h-20 w-auto object-contain max-w-full"
+              className="h-28 w-auto object-contain max-w-[300px]"
             />
           </div>
           <p className="text-sm text-slate-600 mt-2">
