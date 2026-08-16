@@ -12,6 +12,7 @@ import Aparelhos from '@/pages/Aparelhos'
 import Financeiro from '@/pages/Financeiro'
 import Estoque from '@/pages/Estoque'
 import Relatorios from '@/pages/Relatorios'
+import Profile from '@/pages/Profile'
 import NotFound from '@/pages/NotFound'
 import { Toaster } from '@/components/ui/toaster'
 
@@ -118,6 +119,15 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <Relatorios />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/perfil"
+              element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               }
             />

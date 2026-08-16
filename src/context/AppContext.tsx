@@ -326,6 +326,13 @@ interface AppContextType {
   login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>
   logout: () => void
   recoverPassword: (email: string) => boolean
+  updateProfile: (data: {
+    name: string
+    crmCrfa?: string
+    oldPassword?: string
+    newPassword?: string
+    passwordConfirm?: string
+  }) => Promise<{ success: boolean; message?: string }>
   dataLoading: boolean
 
   // Pacientes
@@ -636,6 +643,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       description: `Enviamos as instruções de recuperação para ${email}.`,
     })
     return true
+  }
+
+  // ---------- Atualização do próprio perfil ----------
+  const updateProfile = async (data: {
+    name: string
+    crmCrfa?: string
+    oldPassword?: string
+    newPassword?: string
+    passwordConfirm?: string
+  }): Promise<{ success: boolean; message?: string }> => {
+    if (!currentUser?.id) {
+      return { success: false, message: 'Usuário não autenticado.' }
+    }
+    try {
+      const baseData: Record<string, any> = {
+        name: data.name.trim(),
+        crmCrfa: data.crmCrfa?.trim() || '',
+      }
+      // 1. Atualiza nome/CRFa
+      await pb.collection('users').update(currentUser.id, baseData)
+
+      // 2. Se newPassword preenchida, atualiza a senha em uma segunda chamada
+      if (data.newPassword && data.newPassword.trim() !== '') {
+        if (!data.oldPassword) {
+          return {
+            success: false,
+            message: 'Para alterar a senha é necessário informar a senha atual.',
+          }
+        }
+        if (data.newPassword !== data.passwordConfirm) {
+          return { success: false, message: 'A nova senha e a confirmação não conferem.' }
+        }
+        if (data.newPassword.length < 6) {
+          return { success: false, message: 'A nova senha deve ter pelo menos 6 caracteres.' }
+        }
+        await pb.collection('users').update(currentUser.id, {
+          password: data.newPassword,
+          passwordConfirm: data.passwordConfirm,
+          oldPassword: data.oldPassword,
+        })
+      }
+
+      // Atualiza o currentUser local
+      setCurrentUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: data.name.trim(),
+              crmCrfa: data.crmCrfa?.trim() || prev.crmCrfa,
+            }
+          : prev,
+      )
+      return { success: true }
+    } catch (err) {
+      console.error('Erro ao atualizar perfil:', err)
+      return {
+        success: false,
+        message: describePbError(err) || 'Não foi possível atualizar o perfil.',
+      }
+    }
   }
 
   // ---------- Pacientes Handlers ----------
@@ -1963,6 +2030,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         login,
         logout,
         recoverPassword,
+        updateProfile,
         dataLoading,
         patients,
         addPatient,

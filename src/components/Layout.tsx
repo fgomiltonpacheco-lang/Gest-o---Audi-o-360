@@ -13,6 +13,7 @@ import {
   Bell,
   LogOut,
   Ear,
+  Settings,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { getInitials, getAvatarColor } from '@/lib/formatters'
@@ -93,6 +94,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         },
       ],
     },
+    {
+      groupTitle: 'Configurações',
+      items: [
+        {
+          name: 'Perfil',
+          path: '/perfil',
+          icon: Settings,
+        },
+      ],
+    },
   ]
 
   const isCurrentActive = (path: string, exact = false) => {
@@ -152,7 +163,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Rodapé do Usuário */}
         <div className="p-3 border-t border-white/10 bg-navy-900/60">
           <div className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/10">
-            <div className="flex items-center gap-2.5 min-w-0">
+            <Link
+              to="/perfil"
+              className="flex items-center gap-2.5 min-w-0 group/user flex-1"
+              title="Editar perfil"
+            >
               <div
                 className={`w-9 h-9 rounded-full ${getAvatarColor(
                   currentUser?.name || 'Admin',
@@ -161,21 +176,30 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 {getInitials(currentUser?.name || 'Audição360')}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-white truncate">
+                <p className="text-xs font-semibold text-white truncate group-hover/user:text-teal-300 transition-colors">
                   {currentUser?.name || 'Administrador'}
                 </p>
                 <p className="text-[11px] text-slate-300/70 truncate">
                   {currentUser?.email || 'admin@audicao360.com.br'}
                 </p>
               </div>
+            </Link>
+            <div className="flex items-center gap-1 shrink-0">
+              <Link
+                to="/perfil"
+                title="Editar perfil"
+                className="p-1.5 rounded-lg text-slate-300/70 hover:text-teal-300 hover:bg-white/10 transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+              </Link>
+              <button
+                onClick={() => setLogoutModalOpen(true)}
+                title="Sair do sistema"
+                className="p-1.5 rounded-lg text-slate-300/70 hover:text-red-400 hover:bg-white/10 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
-            <button
-              onClick={() => setLogoutModalOpen(true)}
-              title="Sair do sistema"
-              className="p-1.5 rounded-lg text-slate-300/70 hover:text-red-400 hover:bg-white/10 transition-colors shrink-0"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </aside>
@@ -240,20 +264,37 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
 
             <div className="p-4 border-t border-white/10 bg-navy-900/60">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-white truncate">{currentUser?.name}</p>
-                  <p className="text-[11px] text-slate-300/70 truncate">{currentUser?.email}</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false)
-                    setLogoutModalOpen(true)
-                  }}
-                  className="p-2 text-red-300 hover:bg-red-500/20 rounded-lg transition-colors"
+              <div className="flex items-center justify-between gap-2">
+                <Link
+                  to="/perfil"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="min-w-0 flex-1"
+                  title="Editar perfil"
                 >
-                  <LogOut className="w-4 h-4" />
-                </button>
+                  <p className="text-xs font-semibold text-white truncate hover:text-teal-300 transition-colors">
+                    {currentUser?.name}
+                  </p>
+                  <p className="text-[11px] text-slate-300/70 truncate">{currentUser?.email}</p>
+                </Link>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Link
+                    to="/perfil"
+                    onClick={() => setMobileMenuOpen(false)}
+                    title="Editar perfil"
+                    className="p-2 text-slate-300/70 hover:text-teal-300 hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      setLogoutModalOpen(true)
+                    }}
+                    className="p-2 text-red-300 hover:bg-red-500/20 rounded-lg transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
