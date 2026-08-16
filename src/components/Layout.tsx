@@ -10,7 +10,6 @@ import {
   BarChart3,
   Menu,
   X,
-  Bell,
   LogOut,
   Ear,
   Settings,
@@ -23,22 +22,19 @@ import { useApp } from '@/context/AppContext'
 import { getInitials, getAvatarColor, getAvatarUrl } from '@/lib/formatters'
 import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { NotificationsDrawer } from '@/components/NotificationsDrawer'
-import { GlobalSearch } from '@/components/GlobalSearch'
 
 interface LayoutProps {
   children?: React.ReactNode
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { currentUser, logout, unreadAlertsCount } = useApp()
+  const { currentUser, logout } = useApp()
   const location = useLocation()
   const navigate = useNavigate()
 
   // Mobile sidebar state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [logoutModalOpen, setLogoutModalOpen] = useState(false)
-  const [notificationsOpen, setNotificationsOpen] = useState(false)
 
   interface NavItem {
     name: string
@@ -350,74 +346,23 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       )}
 
-      {/* HEADER SUPERIOR (Fixo 64px) */}
-      <header className="h-16 bg-white border-b border-slate-200 fixed top-0 right-0 left-0 lg:left-[260px] z-30 px-4 sm:px-6 flex items-center justify-between gap-4 shadow-sm">
-        {/* Botão Hambúrguer Mobile */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            className="lg:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            aria-label="Abrir menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <span className="hidden sm:inline-block text-xs font-semibold px-2.5 py-1 rounded-full bg-teal-50 text-navy-700 border border-teal-100">
-            Centro de Atendimento Clínico
-          </span>
-        </div>
+      {/* BOTÃO HAMBÚRGUER MOBILE FLUTUANTE / BARRA MINIMALISTA MOBILE */}
+      <div className="lg:hidden sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          aria-label="Abrir menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        <Link to="/" className="flex items-center h-8">
+          <img src={logoImg} alt="Audição360" className="h-full object-contain" />
+        </Link>
+        <div className="w-9" /> {/* balance spacer */}
+      </div>
 
-        {/* Barra de Busca Global (pacientes, agendamentos e prontuários) */}
-        <GlobalSearch />
-
-        {/* Lado Direito: Notificações & Avatar do Usuário */}
-        <div className="flex items-center gap-3 shrink-0">
-          {/* Sino de Notificações */}
-          <button
-            onClick={() => setNotificationsOpen(true)}
-            className="relative p-2 rounded-full text-slate-600 hover:text-teal-500 hover:bg-teal-50 transition-colors"
-            title="Ver alertas"
-            aria-label="Alertas do sistema"
-          >
-            <Bell className="w-5 h-5" />
-            {unreadAlertsCount > 0 && (
-              <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white shadow-sm">
-                {unreadAlertsCount}
-              </span>
-            )}
-          </button>
-
-          {/* Avatar (foto ou iniciais) */}
-          <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200">
-            {getAvatarUrl(currentUser) ? (
-              <img
-                src={getAvatarUrl(currentUser) || ''}
-                alt={currentUser?.name || 'Avatar'}
-                className="w-9 h-9 rounded-full object-cover shadow-sm ring-2 ring-teal-500/20"
-              />
-            ) : (
-              <div
-                className={`w-9 h-9 rounded-full ${getAvatarColor(
-                  currentUser?.name || 'Admin',
-                )} text-white flex items-center justify-center font-bold text-xs shadow-sm ring-2 ring-teal-500/20`}
-              >
-                {getInitials(currentUser?.name || 'Audição360')}
-              </div>
-            )}
-            <div className="hidden md:block text-left">
-              <span className="text-xs font-bold text-slate-800 block leading-tight truncate max-w-[140px]">
-                {currentUser?.name || 'Administrador'}
-              </span>
-              <span className="text-[10px] text-slate-500 block truncate">
-                {currentUser?.crmCrfa || 'Fonoaudiologia'}
-              </span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* ÁREA DE CONTEÚDO PRINCIPAL (Offset Desktop 260px e Topo 64px).
-          A sidebar e o header são fixed, então apenas esta área rola. */}
-      <main className="flex-1 lg:ml-[260px] pt-20 sm:pt-24 p-4 sm:p-6 lg:px-8 lg:pb-8 min-h-screen">
+      {/* ÁREA DE CONTEÚDO PRINCIPAL (Offset Desktop 260px sem padding superior de header) */}
+      <main className="flex-1 lg:ml-[260px] p-4 sm:p-6 lg:p-8 min-h-screen">
         <div className="max-w-7xl mx-auto space-y-6">{children}</div>
       </main>
 
@@ -425,9 +370,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <footer className="lg:ml-[260px] py-4 px-6 border-t border-slate-200 bg-white text-center text-xs text-slate-400">
         © 2025 Audição360 — Sistema de Gestão Clínica Integrada para Centros Auditivos
       </footer>
-
-      {/* PAINEL LATERAL DE NOTIFICAÇÕES */}
-      <NotificationsDrawer open={notificationsOpen} onOpenChange={setNotificationsOpen} />
 
       {/* MODAL DE CONFIRMAÇÃO DE LOGOUT */}
       <ConfirmDialog
