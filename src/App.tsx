@@ -25,6 +25,7 @@ import RelatorioPacientesFluxo from '@/pages/relatorios/PacientesFluxo'
 import RelatorioEstoqueBaixo from '@/pages/relatorios/EstoqueBaixo'
 import RelatorioGarantias from '@/pages/relatorios/Garantias'
 import Profile from '@/pages/Profile'
+import AlterarSenha from '@/pages/AlterarSenha'
 import Users from '@/pages/Users'
 import Procedimentos from '@/pages/Procedimentos'
 import Configuracoes from '@/pages/Configuracoes'
@@ -355,6 +356,15 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/alterar-senha"
+              element={
+                <ProtectedRoute>
+                  <AlterarSenha />
                 </ProtectedRoute>
               }
             />

@@ -1,7 +1,16 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
-import { Lock, Mail, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react'
+import {
+  Lock,
+  Mail,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ShieldCheck,
+  KeyRound,
+  AlertTriangle,
+} from 'lucide-react'
 import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,9 +24,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
+type TwoFAState = {
+  userId: string
+  email: string
+  backupAvailable: boolean
+} | null
+
 export default function Login() {
-  const { login, recoverPassword, fetchLgpdPolicyTexts } = useApp()
+  const { login, verify2FA, recoverPassword, fetchLgpdPolicyTexts } = useApp()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   // Login state
   const [email, setEmail] = useState('admin@audicao360.com.br')
@@ -26,6 +42,15 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(true)
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+
+  // 2FA state
+  const [twoFA, setTwoFA] = useState<TwoFAState>(null)
+  const [twoFACode, setTwoFACode] = useState('')
+  const [useBackupCode, setUseBackupCode] = useState(false)
+  const [verifying2FA, setVerifying2FA] = useState(false)
+
+  // Mensagem de sessão expirada por timeout
+  const timeoutReason = searchParams.get('reason') === 'timeout'
 
   // Modal Esqueci minha senha
   const [recoveryOpen, setRecoveryOpen] = useState(false)
@@ -62,14 +87,61 @@ export default function Login() {
     }
 
     setLoading(true)
-    login(email, password, rememberMe).then((success) => {
+    setErrorMessage('')
+    login(email, password, rememberMe).then((result) => {
       setLoading(false)
-      if (success) {
+      // Resultado 2FA: entra no fluxo de verificação
+      if (result && typeof result === 'object' && 'requires2FA' in result && result.requires2FA) {
+        setTwoFA({
+          userId: result.userId,
+          email: result.email,
+          backupAvailable: result.backupAvailable,
+        })
+        setTwoFACode('')
+        setUseBackupCode(false)
+        return
+      }
+      // Conta bloqueada
+      if (result && typeof result === 'object' && 'locked' in result && result.locked) {
+        setErrorMessage(
+          `Conta bloqueada por excesso de tentativas. Tente novamente em ${result.minutesLeft} minuto(s).`,
+        )
+        return
+      }
+      // Sucesso (boolean true)
+      if (result === true) {
+        navigate('/')
+        return
+      }
+      // Falha
+      setErrorMessage('E-mail ou senha inválidos. Tente admin@audicao360.com.br / Admin@123')
+    })
+  }
+
+  const handle2FASubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!twoFA) return
+    setErrorMessage('')
+    if (!twoFACode.trim()) {
+      setErrorMessage('Digite o código de verificação.')
+      return
+    }
+    setVerifying2FA(true)
+    verify2FA(twoFA.userId, twoFACode.trim(), useBackupCode).then((res) => {
+      setVerifying2FA(false)
+      if (res.success) {
         navigate('/')
       } else {
-        setErrorMessage('E-mail ou senha inválidos. Tente admin@audicao360.com.br / Admin@123')
+        setErrorMessage(res.message || 'Código inválido.')
       }
     })
+  }
+
+  const handleCancel2FA = () => {
+    setTwoFA(null)
+    setTwoFACode('')
+    setUseBackupCode(false)
+    setErrorMessage('')
   }
 
   const handleRecoverySubmit = (e: React.FormEvent) => {
@@ -110,6 +182,14 @@ export default function Login() {
           <p className="text-sm text-slate-600 mt-1">Acesse o painel de gestão clínica integrada</p>
         </div>
 
+        {/* Aviso de sessão expirada por timeout */}
+        {timeoutReason && !twoFA && (
+          <div className="mb-5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-700 font-medium flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            Sua sessão expirou por inatividade. Faça login novamente.
+          </div>
+        )}
+
         {/* Mensagem de Erro */}
         {errorMessage && (
           <div className="mb-5 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-600 font-medium animate-in fade-in">
@@ -117,102 +197,172 @@ export default function Login() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* E-mail */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              E-mail profissional <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="nome@audicao360.com.br"
-                required
-                className="h-11 pl-10 rounded-xl border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 text-sm"
-              />
+        {/* ---------- STEP 2FA ---------- */}
+        {twoFA ? (
+          <form onSubmit={handle2FASubmit} className="space-y-4">
+            <div className="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 rounded-lg p-3">
+              <KeyRound className="w-4 h-4 text-teal-600 shrink-0" />
+              <span>
+                Autenticação de dois fatores ativada. Digite o código de 6 dígitos gerado pelo seu
+                app autenticador.
+              </span>
             </div>
-          </div>
-
-          {/* Senha */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-semibold text-slate-700">
-                Senha de acesso <span className="text-red-500">*</span>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                {useBackupCode ? 'Código de backup' : 'Código de verificação'}
               </label>
-              <button
-                type="button"
-                onClick={() => setRecoveryOpen(true)}
-                className="text-xs font-semibold text-teal-600 hover:text-teal-700 transition-colors"
-              >
-                Esqueci minha senha
-              </button>
-            </div>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <Input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="h-11 pl-10 pr-10 rounded-xl border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 text-sm"
+                value={twoFACode}
+                onChange={(e) =>
+                  setTwoFACode(
+                    e.target.value
+                      .replace(useBackupCode ? /[^a-fA-F0-9]/g : /\D/g, '')
+                      .slice(0, useBackupCode ? 8 : 6),
+                  )
+                }
+                placeholder={useBackupCode ? 'XXXXXXXX' : '000000'}
+                inputMode={useBackupCode ? 'text' : 'numeric'}
+                autoFocus
+                className="h-11 rounded-xl border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 text-center text-lg tracking-[0.4em] font-mono"
               />
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              {twoFA.backupAvailable ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUseBackupCode((v) => !v)
+                    setTwoFACode('')
+                  }}
+                  className="font-semibold text-teal-600 hover:text-teal-700"
+                >
+                  {useBackupCode ? 'Usar código TOTP' : 'Usar backup code'}
+                </button>
+              ) : (
+                <span />
+              )}
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
-                aria-label="Alternar visualização da senha"
+                onClick={handleCancel2FA}
+                className="font-semibold text-slate-500 hover:text-slate-700"
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                Voltar
               </button>
             </div>
-          </div>
-
-          {/* Lembrar-me */}
-          <div className="flex items-center space-x-2 pt-1">
-            <Checkbox
-              id="remember"
-              checked={rememberMe}
-              onCheckedChange={(c) => setRememberMe(!!c)}
-              className="border-slate-300 data-[state=checked]:bg-teal-500"
-            />
-            <label
-              htmlFor="remember"
-              className="text-xs font-medium text-slate-600 cursor-pointer select-none"
+            <Button
+              type="submit"
+              disabled={verifying2FA || twoFACode.length === 0}
+              className="w-full h-11 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-150 mt-2 flex items-center justify-center gap-2"
             >
-              Lembrar-me neste dispositivo
-            </label>
-          </div>
+              {verifying2FA ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span>Verificar e Entrar</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </Button>
+          </form>
+        ) : (
+          /* ---------- STEP LOGIN ---------- */
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* E-mail */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                E-mail profissional <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="nome@audicao360.com.br"
+                  required
+                  className="h-11 pl-10 rounded-xl border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 text-sm"
+                />
+              </div>
+            </div>
 
-          {/* Botão de Entrar */}
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full h-11 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-150 mt-2 flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <>
-                <span>Entrar no Sistema</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </Button>
+            {/* Senha */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-slate-700">
+                  Senha de acesso <span className="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setRecoveryOpen(true)}
+                  className="text-xs font-semibold text-teal-600 hover:text-teal-700 transition-colors"
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="h-11 pl-10 pr-10 rounded-xl border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                  aria-label="Alternar visualização da senha"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
 
-          {/* Link Política de Privacidade (LGPD) */}
-          <button
-            type="button"
-            onClick={openPolicyModal}
-            className="w-full mt-3 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-500 hover:text-teal-600 transition-colors"
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Política de Privacidade
-          </button>
-        </form>
+            {/* Lembrar-me */}
+            <div className="flex items-center space-x-2 pt-1">
+              <Checkbox
+                id="remember"
+                checked={rememberMe}
+                onCheckedChange={(c) => setRememberMe(!!c)}
+                className="border-slate-300 data-[state=checked]:bg-teal-500"
+              />
+              <label
+                htmlFor="remember"
+                className="text-xs font-medium text-slate-600 cursor-pointer select-none"
+              >
+                Lembrar-me neste dispositivo
+              </label>
+            </div>
+
+            {/* Botão de Entrar */}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-11 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-150 mt-2 flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span>Entrar no Sistema</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </Button>
+
+            {/* Link Política de Privacidade (LGPD) */}
+            <button
+              type="button"
+              onClick={openPolicyModal}
+              className="w-full mt-3 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-500 hover:text-teal-600 transition-colors"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Política de Privacidade
+            </button>
+          </form>
+        )}
 
         {/* Dica de Acesso Rápido para Demonstração */}
         <div className="mt-8 pt-6 border-t border-slate-100">

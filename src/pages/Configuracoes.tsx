@@ -57,6 +57,7 @@ import type { Equipment, NfseB2BProvedor, NfseB2BAmbiente, PolicyTexts } from '@
 import { getEquipmentStatus } from '@/types'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Switch } from '@/components/ui/switch'
+import { TwoFactorSetup } from '@/components/TwoFactorSetup'
 
 // ============================================================
 // Tipos e constantes
@@ -145,8 +146,80 @@ export default function Configuracoes() {
     saveNfseB2BConfig,
     fetchLgpdPolicyTexts,
     saveLgpdPolicyTexts,
+    twoFactorEnabled,
+    enable2FA,
+    disable2FA,
+    securitySettings,
+    fetchSecuritySettings,
+    saveSecuritySettings,
   } = useApp()
   const { toast } = useToast()
+
+  // ---------- Segurança (2FA + timeout + senha) ----------
+  const [twoFactorOpen, setTwoFactorOpen] = useState(false)
+  const [secTimeoutEnabled, setSecTimeoutEnabled] = useState(true)
+  const [secTimeoutMinutes, setSecTimeoutMinutes] = useState(15)
+  const [secWarningSeconds, setSecWarningSeconds] = useState(60)
+  const [secPwExpiryEnabled, setSecPwExpiryEnabled] = useState(false)
+  const [secPwExpiryDays, setSecPwExpiryDays] = useState(0)
+  const [secPwMinLength, setSecPwMinLength] = useState(8)
+  const [secLockoutMax, setSecLockoutMax] = useState(5)
+  const [secLockoutMin, setSecLockoutMin] = useState(15)
+  const [secSaving, setSecSaving] = useState(false)
+
+  useEffect(() => {
+    if (currentUser?.role === 'admin') {
+      fetchSecuritySettings()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.role])
+
+  useEffect(() => {
+    if (securitySettings) {
+      setSecTimeoutEnabled(!!securitySettings.session_timeout_enabled)
+      setSecTimeoutMinutes(securitySettings.session_timeout_minutes || 15)
+      setSecWarningSeconds(securitySettings.session_timeout_warning_seconds || 60)
+      setSecPwExpiryEnabled(!!securitySettings.password_expiration_enabled)
+      setSecPwExpiryDays(securitySettings.password_expiration_days || 0)
+      setSecPwMinLength(securitySettings.password_min_length || 8)
+      setSecLockoutMax(securitySettings.lockout_max_attempts || 5)
+      setSecLockoutMin(securitySettings.lockout_duration_minutes || 15)
+    }
+  }, [securitySettings])
+
+  const handleSaveSecurity = async () => {
+    setSecSaving(true)
+    await saveSecuritySettings({
+      session_timeout_enabled: secTimeoutEnabled,
+      session_timeout_minutes: secTimeoutMinutes,
+      session_timeout_warning_seconds: secWarningSeconds,
+      password_expiration_enabled: secPwExpiryEnabled,
+      password_expiration_days: secPwExpiryDays,
+      password_min_length: secPwMinLength,
+      lockout_max_attempts: secLockoutMax,
+      lockout_duration_minutes: secLockoutMin,
+    })
+    setSecSaving(false)
+  }
+
+  const handleToggle2FA = async (enable: boolean) => {
+    if (enable) {
+      setTwoFactorOpen(true)
+    } else {
+      const res = await disable2FA()
+      if (!res.success) {
+        toast({
+          title: 'Não foi possível desativar',
+          description: res.message,
+          variant: 'destructive',
+        })
+      }
+    }
+  }
+
+  const handle2FAComplete = async (data: { secret: string; backupCodesHashed: string[] }) => {
+    await enable2FA(data.secret, data.backupCodesHashed)
+  }
 
   // Horários de funcionamento
   const [configId, setConfigId] = useState<string>('')
@@ -726,6 +799,13 @@ export default function Configuracoes() {
           >
             <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
             WhatsApp
+          </TabsTrigger>
+          <TabsTrigger
+            value="security"
+            className="rounded-lg text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm px-4 py-2"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
+            Segurança
           </TabsTrigger>
         </TabsList>
 
@@ -1716,6 +1796,219 @@ export default function Configuracoes() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ============ ABA: SEGURANÇA ============ */}
+        <TabsContent value="security" className="mt-4 space-y-4">
+          {/* 2FA */}
+          <Card className="rounded-2xl border-slate-200 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-teal-600" />
+                Autenticação de dois fatores (2FA)
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                Proteja sua conta com um segundo fator (TOTP).{' '}
+                {currentUser?.role === 'admin' &&
+                  'O administrador não pode desativar o 2FA após ativado.'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">
+                    2FA {twoFactorEnabled ? 'ativado' : 'desativado'}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {twoFactorEnabled
+                      ? 'Sua conta exige um código TOTP no login.'
+                      : 'Ative para exigir um código TOTP no login.'}
+                  </p>
+                </div>
+                <Switch
+                  checked={twoFactorEnabled}
+                  onCheckedChange={(v) => {
+                    if (v) {
+                      handleToggle2FA(true)
+                    } else if (currentUser?.role === 'admin') {
+                      toast({
+                        title: 'Operação bloqueada',
+                        description: 'O administrador não pode desativar o 2FA.',
+                        variant: 'destructive',
+                      })
+                    } else {
+                      handleToggle2FA(false)
+                    }
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Timeout de sessão */}
+          <Card className="rounded-2xl border-slate-200 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-teal-600" />
+                Timeout de sessão
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                Encerra a sessão automaticamente após inatividade.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-slate-700">Ativar timeout</Label>
+                <Switch checked={secTimeoutEnabled} onCheckedChange={setSecTimeoutEnabled} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">
+                    Tempo de inatividade (min)
+                  </Label>
+                  <Select
+                    value={String(secTimeoutMinutes)}
+                    onValueChange={(v) => setSecTimeoutMinutes(Number(v))}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-300 text-sm mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[5, 10, 15, 20, 30, 45, 60].map((m) => (
+                        <SelectItem key={m} value={String(m)} className="text-xs">
+                          {m} minutos
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">Aviso prévio (seg)</Label>
+                  <Select
+                    value={String(secWarningSeconds)}
+                    onValueChange={(v) => setSecWarningSeconds(Number(v))}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-300 text-sm mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[30, 45, 60, 90, 120].map((s) => (
+                        <SelectItem key={s} value={String(s)} className="text-xs">
+                          {s} segundos
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Política de senha */}
+          <Card className="rounded-2xl border-slate-200 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Lock className="w-5 h-5 text-teal-600" />
+                Política de senha
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                Regras para troca e expiração de senhas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">Comprimento mínimo</Label>
+                  <Select
+                    value={String(secPwMinLength)}
+                    onValueChange={(v) => setSecPwMinLength(Number(v))}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-300 text-sm mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[6, 8, 10, 12].map((n) => (
+                        <SelectItem key={n} value={String(n)} className="text-xs">
+                          {n} caracteres
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">Expiração (dias)</Label>
+                  <Select
+                    value={String(secPwExpiryDays)}
+                    onValueChange={(v) => setSecPwExpiryDays(Number(v))}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-300 text-sm mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0" className="text-xs">
+                        Desativado
+                      </SelectItem>
+                      {[30, 60, 90, 180].map((d) => (
+                        <SelectItem key={d} value={String(d)} className="text-xs">
+                          {d} dias
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">
+                    Máx. tentativas falhas
+                  </Label>
+                  <Select
+                    value={String(secLockoutMax)}
+                    onValueChange={(v) => setSecLockoutMax(Number(v))}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-300 text-sm mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[3, 5, 7, 10].map((n) => (
+                        <SelectItem key={n} value={String(n)} className="text-xs">
+                          {n} tentativas
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">Bloqueio (min)</Label>
+                  <Select
+                    value={String(secLockoutMin)}
+                    onValueChange={(v) => setSecLockoutMin(Number(v))}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-slate-300 text-sm mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[5, 10, 15, 30, 60].map((n) => (
+                        <SelectItem key={n} value={String(n)} className="text-xs">
+                          {n} minutos
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end pt-2 border-t border-slate-100">
+                <Button
+                  onClick={handleSaveSecurity}
+                  disabled={secSaving}
+                  className="bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-xl shadow-sm flex items-center gap-2 h-10 px-5"
+                >
+                  <Save className="w-4 h-4" />
+                  {secSaving ? 'Salvando...' : 'Salvar'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Modal: Adicionar bloqueio */}
@@ -1842,6 +2135,14 @@ export default function Configuracoes() {
         confirmText="Excluir"
         cancelText="Cancelar"
         onConfirm={handleDeleteEquipment}
+      />
+
+      {/* Modal: Setup 2FA */}
+      <TwoFactorSetup
+        open={twoFactorOpen}
+        onOpenChange={setTwoFactorOpen}
+        email={currentUser?.email || ''}
+        onComplete={handle2FAComplete}
       />
     </div>
   )

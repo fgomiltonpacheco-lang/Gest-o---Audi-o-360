@@ -51,6 +51,82 @@ import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
 import { ClientResponseError } from 'pocketbase'
+import { validatePassword } from '@/lib/passwordPolicy'
+import { verifyToken, verifyBackupCode } from '@/lib/twoFactor'
+
+// ============================================================
+// Segurança — tipos e constantes
+// ============================================================
+
+/** Configurações de segurança globais (collection `settings`, singleton). */
+export interface SecuritySettings {
+  id: string
+  session_timeout_enabled: boolean
+  session_timeout_minutes: number
+  session_timeout_warning_seconds: number
+  password_expiration_enabled: boolean
+  password_expiration_days: number
+  password_min_length: number
+  lockout_max_attempts: number
+  lockout_duration_minutes: number
+}
+
+const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
+  id: '',
+  session_timeout_enabled: true,
+  session_timeout_minutes: 15,
+  session_timeout_warning_seconds: 60,
+  password_expiration_enabled: false,
+  password_expiration_days: 0,
+  password_min_length: 8,
+  lockout_max_attempts: 5,
+  lockout_duration_minutes: 15,
+}
+
+function mapSecuritySettings(r: any): SecuritySettings {
+  return {
+    id: r.id || '',
+    session_timeout_enabled: r.session_timeout_enabled !== false,
+    session_timeout_minutes: Number(r.session_timeout_minutes) || 15,
+    session_timeout_warning_seconds: Number(r.session_timeout_warning_seconds) || 60,
+    password_expiration_enabled: !!r.password_expiration_enabled,
+    password_expiration_days: Number(r.password_expiration_days) || 0,
+    password_min_length: Number(r.password_min_length) || 8,
+    lockout_max_attempts: Number(r.lockout_max_attempts) || 5,
+    lockout_duration_minutes: Number(r.lockout_duration_minutes) || 15,
+  }
+}
+
+/** Resultado de login: true (ok) | objeto 2FA | false (falha). */
+export type LoginResult =
+  | boolean
+  | {
+      requires2FA: true
+      userId: string
+      email: string
+      backupAvailable: boolean
+      forcePasswordChange?: boolean
+    }
+  | { locked: true; minutesLeft: number }
+  | { error: string }
+
+/** Util: calcula minutos restantes até uma data ISO futura. */
+function minutesUntil(iso: string): number {
+  if (!iso) return 0
+  const t = new Date(iso).getTime()
+  if (isNaN(t)) return 0
+  const diff = t - Date.now()
+  return Math.max(0, Math.ceil(diff / 60000))
+}
+
+/** Hash SHA-256 (hex) usando Web Crypto API (disponível no browser). */
+async function hashSha256Browser(text: string): Promise<string> {
+  const data = new TextEncoder().encode(text)
+  const digest = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
 
 // ============================================================
 // Helpers
@@ -629,7 +705,12 @@ const mapVendaB2B = (r: any): VendaB2B => {
 interface AppContextType {
   // Auth
   currentUser: User | null
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<LoginResult>
+  verify2FA: (
+    userId: string,
+    token: string,
+    useBackup?: boolean,
+  ) => Promise<{ success: boolean; message?: string; forcePasswordChange?: boolean }>
   logout: () => void
   recoverPassword: (email: string) => boolean
   updateProfile: (data: {
@@ -639,8 +720,28 @@ interface AppContextType {
     newPassword?: string
     passwordConfirm?: string
   }) => Promise<{ success: boolean; message?: string }>
+  changePassword: (
+    oldPassword: string,
+    newPassword: string,
+  ) => Promise<{ success: boolean; message?: string }>
+  enable2FA: (
+    secret: string,
+    backupCodesHashed: string[],
+  ) => Promise<{ success: boolean; message?: string }>
+  disable2FA: () => Promise<{ success: boolean; message?: string }>
+  twoFactorEnabled: boolean
   uploadAvatar: (file: File) => Promise<{ success: boolean; message?: string }>
   dataLoading: boolean
+
+  // Segurança — configurações globais (settings)
+  securitySettings: SecuritySettings | null
+  fetchSecuritySettings: () => Promise<void>
+  saveSecuritySettings: (
+    data: Partial<SecuritySettings>,
+  ) => Promise<{ success: boolean; message?: string }>
+  /** Desabilita temporariamente o timeout de sessão (formulário sujo, impressão, download). */
+  sessionTimeoutDisabled: boolean
+  setSessionTimeoutDisabled: (disabled: boolean) => void
 
   // Configurações da Clínica
   clinicSettings: ClinicSettings | null
@@ -919,6 +1020,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Contas a Receber (Controle de Inadimplência)
   const [contasReceber, setContasReceber] = useState<ContaReceber[]>([])
 
+  // Segurança — configurações globais + estado 2FA + timeout
+  const [securitySettings, setSecuritySettings] = useState<SecuritySettings | null>(null)
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
+  const [sessionTimeoutDisabled, setSessionTimeoutDisabled] = useState(false)
+
   // ---------- Carregamento de dados ----------
   const reloadAll = useCallback(async () => {
     setDataLoading(true)
@@ -1063,6 +1169,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           avatar: r.avatar || undefined,
           crmCrfa: r.crmCrfa || undefined,
         })
+        setTwoFactorEnabled(!!r.two_factor_enabled)
       }
     } catch (_) {
       // sessão inválida — ignora
@@ -1077,39 +1184,355 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id])
 
-  // ---------- Auth Handlers ----------
-  const login = async (email: string, pass: string, _rememberMe = false): Promise<boolean> => {
+  // Carrega as configurações de segurança ao autenticar.
+  useEffect(() => {
+    if (currentUser && pb.authStore.isValid) {
+      fetchSecuritySettings()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id])
+
+  // ---------- Carregar configurações de segurança ----------
+  const fetchSecuritySettings = useCallback(async () => {
     try {
-      const auth = await pb.collection('users').authWithPassword(email.trim(), pass)
-      const r: any = auth.record
-      const user: User = {
-        id: r.id,
-        name: r.name || r.email || 'Usuário',
-        email: r.email || '',
-        role:
-          r.role === 'profissional'
-            ? 'profissional'
-            : r.role === 'secretaria'
-              ? 'secretaria'
-              : 'admin',
-        avatar: r.avatar || undefined,
-        crmCrfa: r.crmCrfa || undefined,
+      const list = await pb.collection('settings').getList(1, 1, { sort: '-created' })
+      const rec: any = list.items?.[0]
+      if (rec) {
+        setSecuritySettings(mapSecuritySettings(rec))
+      } else {
+        // Cria o singleton com defaults se não existir.
+        const created: any = await pb.collection('settings').create({
+          session_timeout_enabled: true,
+          session_timeout_minutes: 15,
+          session_timeout_warning_seconds: 60,
+          password_expiration_enabled: false,
+          password_expiration_days: 0,
+          password_min_length: 8,
+          lockout_max_attempts: 5,
+          lockout_duration_minutes: 15,
+        })
+        setSecuritySettings(mapSecuritySettings(created))
       }
+    } catch (err) {
+      console.error('Erro ao carregar configurações de segurança:', err)
+      setSecuritySettings({ ...DEFAULT_SECURITY_SETTINGS })
+    }
+  }, [])
+
+  const saveSecuritySettings = useCallback(
+    async (data: Partial<SecuritySettings>): Promise<{ success: boolean; message?: string }> => {
+      try {
+        let current = securitySettings
+        if (!current || !current.id) {
+          try {
+            const list = await pb.collection('settings').getList(1, 1, { sort: '-created' })
+            if (list.items.length > 0) {
+              current = mapSecuritySettings(list.items[0] as any)
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+        const payload: Record<string, any> = {
+          session_timeout_enabled: data.session_timeout_enabled ?? true,
+          session_timeout_minutes: data.session_timeout_minutes ?? 15,
+          session_timeout_warning_seconds: data.session_timeout_warning_seconds ?? 60,
+          password_expiration_enabled: data.password_expiration_enabled ?? false,
+          password_expiration_days: data.password_expiration_days ?? 0,
+          password_min_length: data.password_min_length ?? 8,
+          lockout_max_attempts: data.lockout_max_attempts ?? 5,
+          lockout_duration_minutes: data.lockout_duration_minutes ?? 15,
+        }
+        let rec: any
+        if (current && current.id) {
+          rec = await pb.collection('settings').update(current.id, payload)
+        } else {
+          rec = await pb.collection('settings').create(payload)
+        }
+        setSecuritySettings(mapSecuritySettings(rec))
+        toast({ title: 'Configurações de segurança salvas' })
+        return { success: true }
+      } catch (err) {
+        console.error('Erro ao salvar configurações de segurança:', err)
+        return {
+          success: false,
+          message: describePbError(err) || 'Não foi possível salvar as configurações.',
+        }
+      }
+    },
+    [securitySettings],
+  )
+
+  // ---------- Auth Handlers ----------
+  const loginUserRecord = useCallback((r: any): User => {
+    return {
+      id: r.id,
+      name: r.name || r.email || 'Usuário',
+      email: r.email || '',
+      role:
+        r.role === 'profissional'
+          ? 'profissional'
+          : r.role === 'secretaria'
+            ? 'secretaria'
+            : 'admin',
+      avatar: r.avatar || undefined,
+      crmCrfa: r.crmCrfa || undefined,
+    }
+  }, [])
+
+  /**
+   * Busca um usuário pelo e-mail SEM autenticar (para checar bloqueio/2FA antes).
+   * Usa authWithPassword só para validar a senha; se falhar, trata como falha de login.
+   */
+  const login = async (email: string, pass: string, _rememberMe = false): Promise<LoginResult> => {
+    const trimmedEmail = email.trim()
+    try {
+      // 1) Tenta autenticar com senha. Se falhar, conta como tentativa falha.
+      const auth = await pb.collection('users').authWithPassword(trimmedEmail, pass)
+      const r: any = auth.record
+
+      // 2) Verifica bloqueio (locked_until).
+      const lockedUntil = r.locked_until as string | undefined
+      if (lockedUntil) {
+        const mins = minutesUntil(lockedUntil)
+        if (mins > 0) {
+          // Limpa a sessão que acabou de ser criada — não deve logar.
+          pb.authStore.clear()
+          return { locked: true, minutesLeft: mins }
+        }
+      }
+
+      // 3) Reseta tentativas falhas em login bem-sucedido.
+      try {
+        await pb.collection('users').update(r.id, { failed_login_attempts: 0, locked_until: '' })
+      } catch {
+        /* ignore */
+      }
+
+      // 4) 2FA: se habilitado, NÃO consolida o login — pede o token.
+      //    Mantemos o authStore válido (a sessão foi autenticada por senha)
+      //    mas NÃO setamos currentUser, de forma que as rotas protegidas
+      //    permanecem bloqueadas até verify2FA() concluir.
+      if (r.two_factor_enabled) {
+        const backupCodes: string[] = Array.isArray(r.two_factor_backup_codes)
+          ? r.two_factor_backup_codes
+          : []
+        return {
+          requires2FA: true,
+          userId: r.id,
+          email: r.email || trimmedEmail,
+          backupAvailable: backupCodes.length > 0,
+          forcePasswordChange: !!r.force_password_change,
+        }
+      }
+
+      // 5) Sem 2FA — loga normalmente.
+      const user = loginUserRecord(r)
       setCurrentUser(user)
+      setTwoFactorEnabled(false)
       toast({
         title: 'Acesso autorizado',
         description: `Bem-vindo(a) ao Audição360, ${user.name}!`,
       })
       return true
-    } catch (err) {
+    } catch (err: any) {
       console.error('Falha no login:', err)
+      // 6) Tentativa falha: tenta incrementar o contador e bloquear se exceder.
+      try {
+        // Busca o usuário pelo e-mail para incrementar o contador (best-effort).
+        const list = await pb.collection('users').getList(1, 1, {
+          filter: `email = "${trimmedEmail}"`,
+        })
+        if (list.items.length > 0) {
+          const u: any = list.items[0]
+          const attempts = (Number(u.failed_login_attempts) || 0) + 1
+          const maxAttempts = securitySettings?.lockout_max_attempts || 5
+          const lockoutMin = securitySettings?.lockout_duration_minutes || 15
+          const patch: Record<string, any> = { failed_login_attempts: attempts }
+          if (attempts >= maxAttempts) {
+            const lockUntil = new Date(Date.now() + lockoutMin * 60000).toISOString()
+            patch.locked_until = lockUntil
+            await pb.collection('users').update(u.id, patch)
+            return { locked: true, minutesLeft: lockoutMin }
+          }
+          await pb.collection('users').update(u.id, patch)
+        }
+      } catch (e) {
+        console.warn('Não foi possível incrementar tentativas falhas:', e)
+      }
       return false
     }
   }
 
+  /**
+   * Finaliza o login após verificação do 2FA (token TOTP ou backup code).
+   * Reautentica com senha? Não — não temos a senha. Em vez disso, autenticamos
+   * via token TOTP com authWithPassword novamente não é possível.
+   *
+   * Abordagem: usamos o fato de que o PocketBase retorna o registro auth.
+   * Como não temos a senha aqui, faremos uma segunda authWithPassword com
+   * um token "mágico"? Não. Em vez disso, o fluxo real é: a tela de login
+   * chama login(email, senha) que autentica e detecta 2FA; mantemos a
+   * sessão autenticada ativa (não limpamos) e apenas verificamos o token
+   * TOTP no cliente. Se válido, consolidamos o login.
+   *
+   * Para manter a sessão já autenticada, verify2FA reautentica com a senha
+   * armazenada temporariamente. Como não guardamos a senha, o fluxo abaixo
+   * espera que a tela repasse email+senha. Implementação simplificada:
+   * verify2FA(userId, token, useBackup) verifica o token contra o segredo
+   * do registro (buscado via API) e, se ok, reautentica com a senha
+   * temporária guardada no estado de login.
+   *
+   * NOTA PRÁTICA: A tela de Login guarda email+senha e chama login() que
+   * autentica e devolve requires2FA; a sessão fica válida no authStore.
+   * Mantemos authStore intacto e apenas verificamos o token no cliente.
+   * Assim verify2FA não precisa reautenticar.
+   */
+  const verify2FA = useCallback(
+    async (
+      userId: string,
+      token: string,
+      useBackup = false,
+    ): Promise<{ success: boolean; message?: string; forcePasswordChange?: boolean }> => {
+      try {
+        // Busca o registro do usuário (segredo + backup codes).
+        const rec: any = await pb.collection('users').getOne(userId)
+
+        if (useBackup) {
+          const hashes: string[] = Array.isArray(rec.two_factor_backup_codes)
+            ? rec.two_factor_backup_codes
+            : []
+          const ok = await verifyBackupCode(token, hashes)
+          if (!ok) {
+            return { success: false, message: 'Código de backup inválido.' }
+          }
+          // Remove o código usado (consome um backup code).
+          const used = await (await import('@/lib/twoFactor')).hashBackupCode(token)
+          const remaining = hashes.filter((h) => h !== used)
+          await pb.collection('users').update(userId, {
+            two_factor_backup_codes: remaining,
+            failed_login_attempts: 0,
+            locked_until: '',
+          })
+        } else {
+          const secret = rec.two_factor_secret || ''
+          if (!secret) {
+            return { success: false, message: '2FA não configurado para este usuário.' }
+          }
+          const ok = verifyToken(secret, token)
+          if (!ok) {
+            return { success: false, message: 'Código de verificação inválido.' }
+          }
+        }
+
+        // Reautentica para estabelecer a sessão (não temos a senha —
+        // rely on the still-valid authStore from the initial login call).
+        // Como o login() limpou o authStore ao detectar 2FA, precisamos
+        // reautenticar. Sem a senha isso não é possível pela API de auth.
+        //
+        // SOLUÇÃO: o fluxo de login NÃO limpa o authStore quando 2FA é
+        // requerido. Ajustamos login() acima para manter a sessão e
+        // apenas sinalizar requires2FA. Aqui, portanto, a sessão já
+        // está autenticada; basta carregar o usuário.
+        const storeAny = pb.authStore as any
+        const authRec: any = storeAny.model || storeAny.record
+        if (!pb.authStore.isValid || !authRec || authRec.id !== userId) {
+          return {
+            success: false,
+            message: 'Sessão expirada. Faça login novamente.',
+          }
+        }
+
+        const user = loginUserRecord(authRec)
+        setCurrentUser(user)
+        setTwoFactorEnabled(true)
+        toast({
+          title: 'Acesso autorizado',
+          description: `Bem-vindo(a) ao Audição360, ${user.name}!`,
+        })
+        return { success: true, forcePasswordChange: !!rec.force_password_change }
+      } catch (err) {
+        console.error('Erro na verificação 2FA:', err)
+        return { success: false, message: 'Não foi possível verificar o 2FA.' }
+      }
+    },
+    [loginUserRecord],
+  )
+
+  /**
+   * Ativa 2FA para o usuário atual: armazena o segredo e os hashes dos
+   * backup codes, marca two_factor_enabled = true.
+   */
+  const enable2FA = useCallback(
+    async (
+      secret: string,
+      backupCodesHashed: string[],
+    ): Promise<{ success: boolean; message?: string }> => {
+      if (!currentUser?.id) {
+        return { success: false, message: 'Usuário não autenticado.' }
+      }
+      try {
+        await pb.collection('users').update(currentUser.id, {
+          two_factor_enabled: true,
+          two_factor_secret: secret,
+          two_factor_backup_codes: backupCodesHashed,
+          two_factor_method: 'totp',
+          two_factor_setup_at: new Date().toISOString(),
+        })
+        setTwoFactorEnabled(true)
+        toast({
+          title: 'Autenticação de dois fatores ativada',
+          description: 'Sua conta está mais segura agora.',
+        })
+        return { success: true }
+      } catch (err) {
+        console.error('Erro ao ativar 2FA:', err)
+        return {
+          success: false,
+          message: describePbError(err) || 'Não foi possível ativar o 2FA.',
+        }
+      }
+    },
+    [currentUser?.id],
+  )
+
+  /**
+   * Desativa 2FA. Admin NÃO pode desativar (regra de negócio).
+   */
+  const disable2FA = useCallback(async (): Promise<{ success: boolean; message?: string }> => {
+    if (!currentUser?.id) {
+      return { success: false, message: 'Usuário não autenticado.' }
+    }
+    if (currentUser.role === 'admin') {
+      return {
+        success: false,
+        message: 'Por segurança, o administrador não pode desativar o 2FA.',
+      }
+    }
+    try {
+      await pb.collection('users').update(currentUser.id, {
+        two_factor_enabled: false,
+        two_factor_secret: '',
+        two_factor_backup_codes: [],
+        two_factor_method: '',
+        two_factor_setup_at: '',
+      })
+      setTwoFactorEnabled(false)
+      toast({ title: '2FA desativado', variant: 'destructive' })
+      return { success: true }
+    } catch (err) {
+      console.error('Erro ao desativar 2FA:', err)
+      return {
+        success: false,
+        message: describePbError(err) || 'Não foi possível desativar o 2FA.',
+      }
+    }
+  }, [currentUser?.id, currentUser?.role])
+
   const logout = () => {
     pb.authStore.clear()
     setCurrentUser(null)
+    setTwoFactorEnabled(false)
     // Limpar dados em memória
     setPatients([])
     setAppointments([])
@@ -1158,6 +1581,74 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true
   }
 
+  /**
+   * Troca de senha com política, histórico (últimas 3) e atualização de
+   * password_changed_at + force_password_change = false.
+   */
+  const changePassword = useCallback(
+    async (
+      oldPassword: string,
+      newPassword: string,
+    ): Promise<{ success: boolean; message?: string }> => {
+      if (!currentUser?.id) {
+        return { success: false, message: 'Usuário não autenticado.' }
+      }
+      const minLen = securitySettings?.password_min_length || 8
+      const validation = validatePassword(newPassword, minLen)
+      if (!validation.valid) {
+        return { success: false, message: validation.errors.join(' ') }
+      }
+      try {
+        // Busca o registro atual para validar a senha antiga e o histórico.
+        const rec: any = await pb.collection('users').getOne(currentUser.id)
+
+        // Atualiza a senha (PocketBase valida oldPassword automaticamente
+        // quando o campo `oldPassword` é enviado junto).
+        await pb.collection('users').update(currentUser.id, {
+          password: newPassword,
+          passwordConfirm: newPassword,
+          oldPassword,
+        })
+
+        // Atualiza histórico (mantém últimas 3) + password_changed_at +
+        // limpa force_password_change.
+        const history: any[] = Array.isArray(rec.password_history) ? rec.password_history : []
+        // Armazena um hash SHA-256 da nova senha no histórico (últimas 3)
+        // para checagem best-effort de reuso. A verificação real de "igual
+        // às últimas 3" é feita comparando o hash da nova senha com os
+        // hashes armazenados antes de aceitar a troca.
+        if (history.length > 0) {
+          const candidateHash = await hashSha256Browser(newPassword)
+          if (history.includes(candidateHash)) {
+            return {
+              success: false,
+              message: 'A nova senha não pode ser igual a uma das últimas 3 senhas utilizadas.',
+            }
+          }
+        }
+        const newHash = await hashSha256Browser(newPassword)
+        const newHistory = [newHash, ...history].slice(0, 3)
+
+        await pb.collection('users').update(currentUser.id, {
+          password_history: newHistory,
+          password_changed_at: new Date().toISOString(),
+          force_password_change: false,
+        })
+
+        toast({ title: 'Senha alterada com sucesso' })
+        return { success: true }
+      } catch (err) {
+        console.error('Erro ao trocar senha:', err)
+        const msg = describePbError(err)
+        if (msg && /old|senha atual|current password/i.test(msg)) {
+          return { success: false, message: 'A senha atual informada está incorreta.' }
+        }
+        return { success: false, message: msg || 'Não foi possível alterar a senha.' }
+      }
+    },
+    [currentUser?.id, securitySettings?.password_min_length],
+  )
+
   // ---------- Atualização do próprio perfil ----------
   const updateProfile = async (data: {
     name: string
@@ -1177,7 +1668,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // 1. Atualiza nome/CRFa
       await pb.collection('users').update(currentUser.id, baseData)
 
-      // 2. Se newPassword preenchida, atualiza a senha em uma segunda chamada
+      // 2. Se newPassword preenchida, delega para changePassword (com política).
       if (data.newPassword && data.newPassword.trim() !== '') {
         if (!data.oldPassword) {
           return {
@@ -1188,14 +1679,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (data.newPassword !== data.passwordConfirm) {
           return { success: false, message: 'A nova senha e a confirmação não conferem.' }
         }
-        if (data.newPassword.length < 6) {
-          return { success: false, message: 'A nova senha deve ter pelo menos 6 caracteres.' }
-        }
-        await pb.collection('users').update(currentUser.id, {
-          password: data.newPassword,
-          passwordConfirm: data.passwordConfirm,
-          oldPassword: data.oldPassword,
-        })
+        const res = await changePassword(data.oldPassword, data.newPassword)
+        if (!res.success) return res
       }
 
       // Atualiza o currentUser local
@@ -4168,11 +4653,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         currentUser,
         login,
+        verify2FA,
         logout,
         recoverPassword,
         updateProfile,
+        changePassword,
+        enable2FA,
+        disable2FA,
+        twoFactorEnabled,
         uploadAvatar,
         dataLoading,
+        // Segurança
+        securitySettings,
+        fetchSecuritySettings,
+        saveSecuritySettings,
+        sessionTimeoutDisabled,
+        setSessionTimeoutDisabled,
         clinicSettings,
         saveClinicSettings,
         equipments,

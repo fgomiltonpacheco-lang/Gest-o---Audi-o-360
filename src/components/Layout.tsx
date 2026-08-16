@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -37,15 +37,74 @@ import { useApp } from '@/context/AppContext'
 import { getInitials, getAvatarColor, getAvatarUrl } from '@/lib/formatters'
 import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { useSessionTimeout } from '@/lib/sessionTimeout'
+import { SessionTimeoutModal } from '@/components/SessionTimeoutModal'
 
 interface LayoutProps {
   children?: React.ReactNode
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { currentUser, logout } = useApp()
+  const {
+    currentUser,
+    logout,
+    securitySettings,
+    sessionTimeoutDisabled,
+    setSessionTimeoutDisabled,
+  } = useApp()
   const location = useLocation()
   const navigate = useNavigate()
+
+  // ---------- Timeout de sessão por inatividade ----------
+  const [timeoutModalOpen, setTimeoutModalOpen] = useState(false)
+  const printingRef = useRef(false)
+
+  // Detecta impressão (beforeprint/afterprint) para pausar o timeout.
+  React.useEffect(() => {
+    const onBeforePrint = () => {
+      printingRef.current = true
+      setSessionTimeoutDisabled(true)
+    }
+    const onAfterPrint = () => {
+      printingRef.current = false
+      setSessionTimeoutDisabled(false)
+    }
+    window.addEventListener('beforeprint', onBeforePrint)
+    window.addEventListener('afterprint', onAfterPrint)
+    return () => {
+      window.removeEventListener('beforeprint', onBeforePrint)
+      window.removeEventListener('afterprint', onAfterPrint)
+    }
+  }, [setSessionTimeoutDisabled])
+
+  const handleSessionExpire = useCallback(() => {
+    setTimeoutModalOpen(false)
+    logout()
+    navigate('/login?reason=timeout')
+  }, [logout, navigate])
+
+  const handleSessionWarning = useCallback(() => {
+    // Só mostra o modal se não estiver desabilitado (form sujo, impressão, download).
+    if (!sessionTimeoutDisabled) {
+      setTimeoutModalOpen(true)
+    }
+  }, [sessionTimeoutDisabled])
+
+  const handleSessionContinue = useCallback(() => {
+    setTimeoutModalOpen(false)
+  }, [])
+
+  const timeoutEnabled =
+    !!securitySettings?.session_timeout_enabled &&
+    (securitySettings?.session_timeout_minutes || 0) > 0
+
+  useSessionTimeout({
+    timeoutMinutes: securitySettings?.session_timeout_minutes || 15,
+    warningSeconds: securitySettings?.session_timeout_warning_seconds || 60,
+    onWarning: handleSessionWarning,
+    onExpire: handleSessionExpire,
+    isDisabled: !timeoutEnabled || sessionTimeoutDisabled,
+  })
 
   // Mobile sidebar state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -575,6 +634,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           logout()
           navigate('/login')
         }}
+      />
+
+      {/* MODAL DE TIMEOUT DE SESSÃO */}
+      <SessionTimeoutModal
+        open={timeoutModalOpen}
+        initialSeconds={securitySettings?.session_timeout_warning_seconds || 60}
+        onContinue={handleSessionContinue}
+        onExpire={handleSessionExpire}
       />
     </div>
   )

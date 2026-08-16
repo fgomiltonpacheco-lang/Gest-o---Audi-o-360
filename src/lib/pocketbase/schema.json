@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T23:22:19.468Z",
+  "generatedAt": "2026-08-16T23:45:34.677Z",
   "collections": [
     {
       "name": "users",
@@ -49,11 +49,74 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "two_factor_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "two_factor_secret",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "two_factor_backup_codes",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "two_factor_method",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["totp", "email"]
+        },
+        {
+          "name": "two_factor_setup_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "password_history",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "password_changed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "force_password_change",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "failed_login_attempts",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "locked_until",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
-        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
+        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''",
+        "CREATE INDEX `idx_users_locked_until` ON `users` (locked_until)",
+        "CREATE INDEX `idx_users_force_password_change` ON `users` (force_password_change)"
       ]
     },
     {
@@ -4335,6 +4398,82 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "settings",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.role = \"admin\"",
+        "update": "@request.auth.role = \"admin\"",
+        "delete": "@request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "session_timeout_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "session_timeout_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "session_timeout_warning_seconds",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "password_expiration_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "password_expiration_days",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lockout_max_attempts",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lockout_duration_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "password_min_length",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
