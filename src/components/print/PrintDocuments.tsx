@@ -8,6 +8,7 @@ import {
   BeraExam,
   AudiometryExamFull,
   AudiogramMap,
+  AudiogramSymbol,
   AIR_FREQS,
   BONE_FREQS,
 } from '@/types'
@@ -30,6 +31,20 @@ const FREQUENCIES_AIR = [
 ]
 const FREQUENCIES_BONE = ['500', '1000', '2000', '3000', '4000']
 const REFLEX_FREQS = ['500', '1000', '2000', '4000']
+
+/** Frequências exibidas nas tabelas impressas (sem 125 Hz). */
+const PRINT_AIR_FREQS = [
+  '250',
+  '500',
+  '750',
+  '1000',
+  '1500',
+  '2000',
+  '3000',
+  '4000',
+  '6000',
+  '8000',
+]
 
 const sectionTitle = (text: string) => (
   <h3
@@ -325,10 +340,11 @@ export function AudiometryPrint({ exam }: { exam: AudiometryExam }) {
 }
 
 /* ============ AUDIOMETRIA COMPLETA (audiometry_exams) ============ */
+/* Layout compacto para caber em 1 página A4. */
 export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
   const thStyle: React.CSSProperties = {
     border: '1px solid #94a3b8',
-    padding: '2px 4px',
+    padding: '1.5px 3px',
     background: '#f1f5f9',
     fontSize: '7pt',
     fontWeight: 700,
@@ -336,7 +352,7 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
   }
   const tdStyle: React.CSSProperties = {
     border: '1px solid #94a3b8',
-    padding: '2px 4px',
+    padding: '1.5px 3px',
     fontSize: '7pt',
     textAlign: 'center',
   }
@@ -347,9 +363,32 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
   const oeTrito = mediaTritonal(exam.air_oe)
   const oeQuadri = mediaQuadritonal(exam.air_oe)
 
-  const checkBox = (checked: boolean) => (
-    <span style={{ display: 'inline-block', fontWeight: 700 }}>{checked ? '☒' : '☐'}</span>
-  )
+  const fmtFreq = (f: string) => (Number(f) >= 1000 ? `${Number(f) / 1000}k` : f)
+
+  // Texto do símbolo + valor para uma célula da tabela impressa
+  const cellSymbol = (
+    map: AudiogramMap,
+    freq: string,
+    side: 'OD' | 'OE',
+    kind: 'air' | 'bone',
+  ): string => {
+    const p = map[freq]
+    if (!p || p.db === null || p.db === undefined) return '—'
+    const sym = p.symbol as AudiogramSymbol
+    let glyph = ''
+    if (kind === 'air') {
+      if (side === 'OD') glyph = sym === 'masked' || sym === 'masked_no_response' ? '△' : '○'
+      else glyph = sym === 'masked' || sym === 'masked_no_response' ? '□' : '✕'
+    } else {
+      if (side === 'OD') glyph = sym === 'masked' || sym === 'masked_no_response' ? '[' : '<'
+      else glyph = sym === 'masked' || sym === 'masked_no_response' ? ']' : '>'
+    }
+    const arrow = sym === 'no_response' || sym === 'masked_no_response' ? '↓' : ''
+    return `${p.db}${glyph}${arrow}`
+  }
+
+  const fmtVocal = (v: number | null | undefined, unit: string) =>
+    v === null || v === undefined ? '—' : `${v} ${unit}`
 
   return (
     <div className="audiometry-print" style={{ color: '#000', fontSize: '7.5pt', lineHeight: 1.3 }}>
@@ -357,9 +396,9 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
       <h2
         style={{
           textAlign: 'center',
-          fontSize: '10pt',
+          fontSize: '9pt',
           fontWeight: 800,
-          margin: '0 0 3px 0',
+          margin: '0 0 2px 0',
           color: '#0F2B5C',
           textTransform: 'uppercase',
           letterSpacing: '0.04em',
@@ -367,22 +406,21 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
       >
         Avaliação Audiológica
       </h2>
-      <div style={{ marginBottom: '3px', lineHeight: 1.4 }}>
+      <div style={{ marginBottom: '3px', lineHeight: 1.35 }}>
         <div style={{ fontSize: '7.5pt' }}>
           <strong>Nome:</strong> {exam.patientName || '—'} &nbsp;&nbsp;
-          <strong>Data:</strong> {formatDate(exam.date) || '—'} &nbsp;&nbsp;
-          <strong>CPF:</strong> {maskCPF(exam.cpf) || '—'} &nbsp;&nbsp;
-          <strong>DN:</strong> {formatDate(exam.dob) || '—'} &nbsp;&nbsp;
-          <strong>Sexo:</strong> {checkBox(exam.sex === 'F')}F {checkBox(exam.sex === 'M')}M
+          <strong>Data:</strong> {formatDate(exam.date)} &nbsp;&nbsp;
+          <strong>CPF:</strong> {maskCPF(exam.cpf)} &nbsp;&nbsp;
+          <strong>DN:</strong> {formatDate(exam.dob)} &nbsp;&nbsp;
+          <strong>Sexo:</strong> {exam.sex || '—'}
         </div>
         <div style={{ fontSize: '7.5pt' }}>
-          <strong>Encaminhado por:</strong> {exam.referred_by || '—'}
-        </div>
-        <div style={{ fontSize: '7.5pt' }}>
+          <strong>Encaminhado por:</strong> {exam.referred_by || '—'} &nbsp;&nbsp;
           <strong>Audiômetro:</strong> {exam.audiometer || '—'} &nbsp;&nbsp;
-          <strong>Calibração:</strong> {formatDate(exam.calibration) || '—'}
+          <strong>Calibração:</strong> {formatDate(exam.calibration)}
         </div>
       </div>
+
       {/* Audiogramas lado a lado (OD vermelho / OE azul) */}
       <div
         style={{
@@ -393,7 +431,7 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
           alignItems: 'flex-start',
         }}
       >
-        <div style={{ width: '45%', breakInside: 'avoid' }}>
+        <div style={{ width: '50%', breakInside: 'avoid' }}>
           <div
             style={{
               fontSize: '8pt',
@@ -412,19 +450,12 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
             ldl={exam.ldl_od}
             width="100%"
           />
-          <div
-            style={{
-              textAlign: 'center',
-              color: '#dc2626',
-              fontSize: '7pt',
-              marginTop: '1px',
-            }}
-          >
+          <div style={{ textAlign: 'center', color: '#dc2626', fontSize: '7pt', marginTop: '1px' }}>
             <strong>Tritonal:</strong> {fmtMedia(odTrito)} &nbsp;|&nbsp;{' '}
             <strong>Quadritonal:</strong> {fmtMedia(odQuadri)}
           </div>
         </div>
-        <div style={{ width: '45%', breakInside: 'avoid' }}>
+        <div style={{ width: '50%', breakInside: 'avoid' }}>
           <div
             style={{
               fontSize: '8pt',
@@ -443,81 +474,150 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
             ldl={exam.ldl_oe}
             width="100%"
           />
-          <div
-            style={{
-              textAlign: 'center',
-              color: '#2563eb',
-              fontSize: '7pt',
-              marginTop: '1px',
-            }}
-          >
+          <div style={{ textAlign: 'center', color: '#2563eb', fontSize: '7pt', marginTop: '1px' }}>
             <strong>Tritonal:</strong> {fmtMedia(oeTrito)} &nbsp;|&nbsp;{' '}
             <strong>Quadritonal:</strong> {fmtMedia(oeQuadri)}
           </div>
         </div>
       </div>
-      {/* Limiares Vocais — uma linha, separada por pipe, sem MT */}
-      <div style={{ fontSize: '7.5pt', marginBottom: '3px' }}>
-        <span style={{ color: '#dc2626', fontWeight: 700 }}>OD</span> — LRF:{' '}
-        {exam.lrf_od != null ? `${exam.lrf_od} dB` : '—'} LDV:{' '}
-        {exam.ldv_od != null ? `${exam.ldv_od} dB` : '—'} &nbsp;&nbsp;|&nbsp;&nbsp;
-        <span style={{ color: '#2563eb', fontWeight: 700 }}>OE</span> — LRF:{' '}
-        {exam.lrf_oe != null ? `${exam.lrf_oe} dB` : '—'} LDV:{' '}
-        {exam.ldv_oe != null ? `${exam.ldv_oe} dB` : '—'}
-      </div>
-      {/* IPRF — tabela compacta */}
-      <div style={{ marginTop: '2px', marginBottom: '3px', breakInside: 'avoid' }}>
+
+      {/* Tabela Via Aérea (com símbolos) */}
+      <div style={{ marginTop: '2px', marginBottom: '2px', breakInside: 'avoid' }}>
         <div
           style={{
             fontWeight: 700,
             fontSize: '8pt',
             color: '#0F2B5C',
-            marginBottom: '2px',
+            marginBottom: '1px',
             textTransform: 'uppercase',
-            letterSpacing: '0.02em',
           }}
         >
-          IPRF — Índice de Reconhecimento de Fala
+          Via Aérea (Fones)
         </div>
-        <table
-          style={{
-            borderCollapse: 'collapse',
-            width: '100%',
-            borderRadius: '3px',
-            overflow: 'hidden',
-          }}
-        >
+        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
           <thead>
             <tr>
               <th style={thStyle}>Orelha</th>
-              <th style={thStyle}>Intens. (dB)</th>
-              <th style={thStyle}>Monoss. (%)</th>
-              <th style={thStyle}>Diss. (%)</th>
-              <th style={thStyle}>Masc. (dB)</th>
-              <th style={thStyle}>Pal. Faladas</th>
+              {PRINT_AIR_FREQS.map((f) => (
+                <th key={f} style={thStyle}>
+                  {fmtFreq(f)}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {(['od', 'oe'] as const).map((side) => {
-              const r = exam.iprf?.[side]
-              const label = side === 'od' ? 'OD' : 'OE'
-              const color = side === 'od' ? '#dc2626' : '#2563eb'
-              return (
-                <tr key={side}>
-                  <td style={{ ...tdStyle, fontWeight: 800, color }}>{label}</td>
-                  <td style={tdStyle}>{r?.intensidade || '—'}</td>
-                  <td style={tdStyle}>{r?.monossilabos || '—'}</td>
-                  <td style={tdStyle}>{r?.dissilabos || '—'}</td>
-                  <td style={tdStyle}>{r?.mascaramento || '—'}</td>
-                  <td style={tdStyle}>{r?.palavras || '—'}</td>
-                </tr>
-              )
-            })}
+            <tr>
+              <td style={{ ...tdStyle, fontWeight: 800, color: '#dc2626' }}>OD</td>
+              {PRINT_AIR_FREQS.map((f) => (
+                <td key={f} style={tdStyle}>
+                  {cellSymbol(exam.air_od, f, 'OD', 'air')}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <td style={{ ...tdStyle, fontWeight: 800, color: '#2563eb' }}>OE</td>
+              {PRINT_AIR_FREQS.map((f) => (
+                <td key={f} style={tdStyle}>
+                  {cellSymbol(exam.air_oe, f, 'OE', 'air')}
+                </td>
+              ))}
+            </tr>
           </tbody>
         </table>
       </div>
+
+      {/* Tabela Via Óssea (com símbolos) */}
+      <div style={{ marginTop: '2px', marginBottom: '2px', breakInside: 'avoid' }}>
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: '8pt',
+            color: '#0F2B5C',
+            marginBottom: '1px',
+            textTransform: 'uppercase',
+          }}
+        >
+          Via Óssea (Mastóide)
+        </div>
+        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <thead>
+            <tr>
+              <th style={thStyle}>Orelha</th>
+              {FREQUENCIES_BONE.map((f) => (
+                <th key={f} style={thStyle}>
+                  {fmtFreq(f)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ ...tdStyle, fontWeight: 800, color: '#dc2626' }}>OD</td>
+              {FREQUENCIES_BONE.map((f) => (
+                <td key={f} style={tdStyle}>
+                  {cellSymbol(exam.bone_od, f, 'OD', 'bone')}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <td style={{ ...tdStyle, fontWeight: 800, color: '#2563eb' }}>OE</td>
+              {FREQUENCIES_BONE.map((f) => (
+                <td key={f} style={tdStyle}>
+                  {cellSymbol(exam.bone_oe, f, 'OE', 'bone')}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Audiometria Vocal — LRF, LDV, IPRF */}
+      <div style={{ marginTop: '2px', marginBottom: '2px', breakInside: 'avoid' }}>
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: '8pt',
+            color: '#0F2B5C',
+            marginBottom: '1px',
+            textTransform: 'uppercase',
+          }}
+        >
+          Audiometria Vocal
+        </div>
+        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <thead>
+            <tr>
+              <th style={thStyle}>Orelha</th>
+              <th style={thStyle}>LRF (dB)</th>
+              <th style={thStyle}>LDV (dB)</th>
+              <th style={thStyle}>IPRF (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ ...tdStyle, fontWeight: 800, color: '#dc2626' }}>OD</td>
+              <td style={tdStyle}>{fmtVocal(exam.lrf_od, '')}</td>
+              <td style={tdStyle}>{fmtVocal(exam.ldv_od, '')}</td>
+              <td style={tdStyle}>{fmtVocal(exam.iprf_od, '')}</td>
+            </tr>
+            <tr>
+              <td style={{ ...tdStyle, fontWeight: 800, color: '#2563eb' }}>OE</td>
+              <td style={tdStyle}>{fmtVocal(exam.lrf_oe, '')}</td>
+              <td style={tdStyle}>{fmtVocal(exam.ldv_oe, '')}</td>
+              <td style={tdStyle}>{fmtVocal(exam.iprf_oe, '')}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Grau e Tipo da perda */}
+      <div style={{ fontSize: '7.5pt', marginTop: '3px', marginBottom: '2px' }}>
+        <strong>Grau da perda:</strong> {exam.loss_degree || '—'} &nbsp;|&nbsp;{' '}
+        <strong>Tipo:</strong> {exam.loss_type || '—'}
+      </div>
+
       {/* Parecer Audiológico */}
-      <div style={{ marginTop: '3px' }}>
+      <div style={{ marginTop: '2px' }}>
         <div
           style={{
             fontSize: '8pt',
@@ -527,7 +627,6 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
             paddingBottom: '1px',
             marginBottom: '2px',
             textTransform: 'uppercase',
-            letterSpacing: '0.03em',
           }}
         >
           Parecer Audiológico
@@ -538,7 +637,7 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
             color: '#0f172a',
             lineHeight: 1.3,
             whiteSpace: 'pre-wrap',
-            maxHeight: '50px',
+            maxHeight: '52px',
             overflow: 'hidden',
             border: '1px solid #cbd5e1',
             borderRadius: '3px',
@@ -562,12 +661,13 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
           Carhart (1945) e Lloyd e Kaplan (1978); Jerger, Speaks, e Trammell (1968)
         </p>
       </div>
+
       {/* Linhas de Assinatura */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
-          marginTop: '12px',
+          marginTop: '10px',
           gap: '40px',
         }}
       >
@@ -581,11 +681,9 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
               color: '#1e293b',
             }}
           >
-            Fonoaudiólogo
-          </div>
-          <div style={{ fontSize: '7.5pt', color: '#475569', marginTop: '1px' }}>
             Dr. Milton Soares Pacheco — CRFa 3-11981-5
           </div>
+          <div style={{ fontSize: '7pt', color: '#475569', marginTop: '1px' }}>Fonoaudiólogo</div>
         </div>
         <div style={{ flex: 1, textAlign: 'center' }}>
           <div
@@ -597,10 +695,14 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
               color: '#1e293b',
             }}
           >
+            Cliente
+          </div>
+          <div style={{ fontSize: '7pt', color: '#475569', marginTop: '1px' }}>
             Paciente / Responsável
           </div>
         </div>
       </div>
+
       {/* Rodapé */}
       <div
         style={{
@@ -610,8 +712,7 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
           textAlign: 'center',
         }}
       >
-        Endereço: R. Sadoc Correa, 373 - St. Central, Araguaína - TO, 77803-060 &nbsp;•&nbsp;
-        Telefone: (63) 3421-2611
+        R. Sadoc Correa, 373 - St. Central, Araguaína - TO, 77803-060 &nbsp;•&nbsp; (63) 3421-2611
       </div>
     </div>
   )

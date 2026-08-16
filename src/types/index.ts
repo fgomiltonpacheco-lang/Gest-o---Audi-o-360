@@ -265,10 +265,26 @@ export interface AudiometryExamFull {
   ldv_od: number | null
   ldv_oe: number | null
   iprf: IprfData
+  // IPRF simplificado (percentual por orelha)
+  iprf_od: number | null
+  iprf_oe: number | null
+  // Laudo clínico
+  loss_degree: string
+  loss_type: string
   report: string
   created: string
   updated: string
 }
+
+export const LOSS_DEGREE_OPTIONS = [
+  'Normal',
+  'Leve',
+  'Moderada',
+  'Moderadamente Severa',
+  'Severa',
+  'Profunda',
+] as const
+export const LOSS_TYPE_OPTIONS = ['Condutiva', 'Neurossensorial', 'Mista'] as const
 
 export function emptyAudiogramMap(freqs: readonly string[]): AudiogramMap {
   const m: AudiogramMap = {}
@@ -323,6 +339,10 @@ export function emptyAudiometryExamFull(
     ldv_od: null,
     ldv_oe: null,
     iprf: emptyIprf(),
+    iprf_od: null,
+    iprf_oe: null,
+    loss_degree: '',
+    loss_type: '',
     report: '',
   }
 }

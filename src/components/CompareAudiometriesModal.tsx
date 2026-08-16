@@ -130,10 +130,10 @@ function normalizeExam(rec: any): NormExam {
       airOE,
       boneOD,
       boneOE,
-      srtOD: numOrUndef(rec.mt_od),
-      srtOE: numOrUndef(rec.mt_oe),
-      iprfOD: numOrUndef(rec.iprf?.od?.monossilabos),
-      iprfOE: numOrUndef(rec.iprf?.oe?.monossilabos),
+      srtOD: numOrUndef(rec.lrf_od),
+      srtOE: numOrUndef(rec.lrf_oe),
+      iprfOD: numOrUndef(rec.iprf_od),
+      iprfOE: numOrUndef(rec.iprf_oe),
     }
   }
   // Exame legado (AudiometryExam) — airOD/airOE/boneOD/boneOE em dB direto

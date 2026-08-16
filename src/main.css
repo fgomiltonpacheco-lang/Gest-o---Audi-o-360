@@ -366,8 +366,20 @@
 
   .audiometry-print th,
   .audiometry-print td {
-    padding: 2px 4px;
+    padding: 1.5px 3px;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  /* Garante que cores (OD vermelho / OE azul, faixa verde) apareçam na impressão */
+  .audiometry-print svg,
+  #print-root svg {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* SVGs do audiograma compactos na impressão */
+  .audiometry-print svg {
+    max-height: 200px;
   }
 }

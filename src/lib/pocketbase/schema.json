@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T03:44:14.038Z",
+  "generatedAt": "2026-08-16T03:55:57.918Z",
   "collections": [
     {
       "name": "users",
@@ -1953,6 +1953,40 @@
           "type": "json",
           "required": false,
           "system": false
+        },
+        {
+          "name": "iprf_od",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "iprf_oe",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "loss_degree",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "",
+            "Normal",
+            "Leve",
+            "Moderada",
+            "Moderadamente Severa",
+            "Severa",
+            "Profunda"
+          ]
+        },
+        {
+          "name": "loss_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["", "Condutiva", "Neurossensorial", "Mista"]
         }
       ],
       "indexes": [
