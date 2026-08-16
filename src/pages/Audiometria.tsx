@@ -269,6 +269,11 @@ export default function Audiometria() {
     setExam((prev) => ({ ...prev, [key]: value }))
   }
 
+  // Alvos de via aérea/óssea: ao digitar um valor de dB, o símbolo padrão
+  // "Normal Response" (○ para OD / × para OE) é aplicado automaticamente,
+  // sem que o usuário precise clicar no botão "Normal".
+  const AIR_BONE_TARGETS = new Set(['air_od', 'air_oe', 'bone_od', 'bone_oe'])
+
   const setPoint = (
     target: 'air_od' | 'air_oe' | 'bone_od' | 'bone_oe' | 'ldl_od' | 'ldl_oe',
     freq: string,
@@ -277,7 +282,12 @@ export default function Audiometria() {
     setExam((prev) => {
       const map = { ...(prev[target] || {}) }
       const cur = map[freq] || { db: null, symbol: 'normal' }
-      map[freq] = { ...cur, ...patch }
+      let nextSymbol = cur.symbol
+      if (AIR_BONE_TARGETS.has(target) && 'db' in patch) {
+        // Símbolo padrão automático sempre que o dB é alterado por digitação.
+        nextSymbol = 'normal'
+      }
+      map[freq] = { ...cur, ...patch, symbol: nextSymbol }
       return { ...prev, [target]: map }
     })
   }
@@ -957,12 +967,17 @@ function HorizontalAudiogramGrid({
   const airNormalSym = isOD ? '○' : '×'
   const airNoRespSym = isOD ? '○↓' : '×↓'
   const airMaskedSym = isOD ? 'Δ' : '□'
+  const airMaskedNoRespSym = isOD ? 'Δ↓' : '□↓'
 
   const boneNormalSym = isOD ? '<' : '>'
   const boneNoRespSym = isOD ? '<↓' : '>↓'
   const boneMaskedSym = isOD ? '[' : ']'
+  const boneMaskedNoRespSym = isOD ? '[↓' : ']↓'
 
-  const absenceSym = isOD ? '⤓' : '⤓'
+  const symBtn = (active: boolean) =>
+    `w-4 h-6 text-[10px] font-bold rounded ${
+      active ? 'bg-teal-600 text-white' : 'text-slate-600 hover:bg-slate-200'
+    }`
 
   const formatFreqHeader = (f: string) => {
     const n = Number(f)
@@ -1026,27 +1041,10 @@ function HorizontalAudiogramGrid({
                     <div className="flex items-center justify-center gap-0.5">
                       <button
                         type="button"
-                        onClick={() => onAirSymbol(f, 'masked')}
-                        disabled={disabled}
-                        title="Mascarado"
-                        className={`w-4 h-6 text-xs font-bold rounded ${
-                          sym === 'masked'
-                            ? 'bg-teal-600 text-white'
-                            : 'text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {airMaskedSym}
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => onAirSymbol(f, 'normal')}
                         disabled={disabled}
                         title="Normal"
-                        className={`w-4 h-6 text-xs font-bold rounded ${
-                          sym === 'normal'
-                            ? 'bg-teal-600 text-white'
-                            : 'text-slate-600 hover:bg-slate-200'
-                        }`}
+                        className={symBtn(sym === 'normal')}
                       >
                         {airNormalSym}
                       </button>
@@ -1054,14 +1052,28 @@ function HorizontalAudiogramGrid({
                         type="button"
                         onClick={() => onAirSymbol(f, 'no_response')}
                         disabled={disabled}
-                        title="Sem Resposta"
-                        className={`w-4 h-6 text-xs font-bold rounded ${
-                          sym === 'no_response' || sym === 'masked_no_response'
-                            ? 'bg-teal-600 text-white'
-                            : 'text-slate-600 hover:bg-slate-200'
-                        }`}
+                        title="Ausente / Sem Resposta"
+                        className={symBtn(sym === 'no_response')}
                       >
                         {airNoRespSym}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onAirSymbol(f, 'masked')}
+                        disabled={disabled}
+                        title="Mascarado"
+                        className={symBtn(sym === 'masked')}
+                      >
+                        {airMaskedSym}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onAirSymbol(f, 'masked_no_response')}
+                        disabled={disabled}
+                        title="Mascarado Ausente"
+                        className={symBtn(sym === 'masked_no_response')}
+                      >
+                        {airMaskedNoRespSym}
                       </button>
                     </div>
                   </td>
@@ -1112,27 +1124,10 @@ function HorizontalAudiogramGrid({
                     <div className="flex items-center justify-center gap-0.5">
                       <button
                         type="button"
-                        onClick={() => onBoneSymbol(f, 'masked')}
-                        disabled={disabled}
-                        title="Mascarado"
-                        className={`w-4 h-6 text-xs font-bold rounded ${
-                          sym === 'masked'
-                            ? 'bg-teal-600 text-white'
-                            : 'text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {boneMaskedSym}
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => onBoneSymbol(f, 'normal')}
                         disabled={disabled}
                         title="Normal"
-                        className={`w-4 h-6 text-xs font-bold rounded ${
-                          sym === 'normal'
-                            ? 'bg-teal-600 text-white'
-                            : 'text-slate-600 hover:bg-slate-200'
-                        }`}
+                        className={symBtn(sym === 'normal')}
                       >
                         {boneNormalSym}
                       </button>
@@ -1140,14 +1135,28 @@ function HorizontalAudiogramGrid({
                         type="button"
                         onClick={() => onBoneSymbol(f, 'no_response')}
                         disabled={disabled}
-                        title="Sem Resposta"
-                        className={`w-4 h-6 text-xs font-bold rounded ${
-                          sym === 'no_response' || sym === 'masked_no_response'
-                            ? 'bg-teal-600 text-white'
-                            : 'text-slate-600 hover:bg-slate-200'
-                        }`}
+                        title="Ausente / Sem Resposta"
+                        className={symBtn(sym === 'no_response')}
                       >
                         {boneNoRespSym}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onBoneSymbol(f, 'masked')}
+                        disabled={disabled}
+                        title="Mascarado"
+                        className={symBtn(sym === 'masked')}
+                      >
+                        {boneMaskedSym}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onBoneSymbol(f, 'masked_no_response')}
+                        disabled={disabled}
+                        title="Mascarado Ausente"
+                        className={symBtn(sym === 'masked_no_response')}
+                      >
+                        {boneMaskedNoRespSym}
                       </button>
                     </div>
                   </td>
@@ -1172,32 +1181,6 @@ function HorizontalAudiogramGrid({
                       placeholder=""
                       className="w-12 h-8 text-center text-xs font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
                     />
-                  </td>
-                )
-              })}
-            </tr>
-
-            {/* Linha 6: Ausências */}
-            <tr>
-              <td className="py-2 px-3 font-semibold text-slate-600 bg-slate-50/80 border-r border-slate-200">
-                Ausências
-              </td>
-              {freqs.map((f) => {
-                const airSym = airMap[f]?.symbol
-                const isNoResp = airSym === 'no_response' || airSym === 'masked_no_response'
-                return (
-                  <td key={f} className="p-1 border-r border-slate-200 text-center">
-                    <button
-                      type="button"
-                      onClick={() => onAirSymbol(f, isNoResp ? 'normal' : 'no_response')}
-                      disabled={disabled}
-                      title="Alternar ausência de resposta"
-                      className={`w-6 h-6 text-sm font-bold rounded mx-auto ${
-                        isNoResp ? 'bg-red-600 text-white' : 'text-slate-400 hover:bg-slate-200'
-                      }`}
-                    >
-                      {absenceSym}
-                    </button>
                   </td>
                 )
               })}
