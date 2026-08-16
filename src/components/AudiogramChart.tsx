@@ -14,7 +14,7 @@ import { AudiogramMap, AudiogramSymbol } from '@/types'
  *  - Via Óssea OE: > (normal) / ] (mascarado)
  *  - Ausente (no_response): símbolo + seta para baixo
  *
- * Linhas: sólidas (via aérea) e tracejadas (via óssea).
+ * Linhas: sólidas (OD) e tracejadas (OE) — estilo por ORELHA.
  * Faixa verde de 0 a 25 dB (audição normal).
  */
 
@@ -233,20 +233,33 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
   const isMasked = (sym: AudiogramSymbol | undefined) =>
     sym === 'masked' || sym === 'masked_no_response'
 
-  const buildPath = (pts: typeof airPts): string => {
-    const valid = pts.filter((p) => !isNoResp(p.point.symbol))
-    if (valid.length < 2) return ''
-    return valid
-      .map((p, i) => {
-        const x = xForFreq(p.freq)
-        const y = yForDb(p.point.db as number)
-        return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`
-      })
-      .join(' ')
+  /**
+   * Gera múltiplos paths SVG — um por segmento contíguo de pontos presentes.
+   * Ao encontrar um ponto ausente (no_response / masked_no_response), o segmento
+   * atual é fechado e um novo começa no próximo ponto presente, evitando que a
+   * linha "pule" por cima das frequências com sinal ausente.
+   */
+  const buildPaths = (pts: typeof airPts): string[] => {
+    const segments: string[] = []
+    let current: string[] = []
+    for (const p of pts) {
+      if (isNoResp(p.point.symbol)) {
+        if (current.length >= 2) segments.push(current.join(' '))
+        current = []
+        continue
+      }
+      const x = xForFreq(p.freq)
+      const y = yForDb(p.point.db as number)
+      current.push(`${current.length === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`)
+    }
+    if (current.length >= 2) segments.push(current.join(' '))
+    return segments
   }
 
-  const airPath = buildPath(airPts)
-  const bonePath = buildPath(bonePts)
+  const airPaths = buildPaths(airPts)
+  const bonePaths = buildPaths(bonePts)
+  // Estilo de linha por ORELHA: OD = sólida, OE = tracejada.
+  const lineDash = side === 'OD' ? undefined : '4 3'
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -336,12 +349,27 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
           strokeWidth={1.2}
         />
 
-        {/* Linha Aérea (sólida) */}
-        {airPath && <path d={airPath} fill="none" stroke={color} strokeWidth={1.8} />}
-        {/* Linha Óssea (tracejada) */}
-        {bonePath && (
-          <path d={bonePath} fill="none" stroke={color} strokeWidth={1.8} strokeDasharray="4 3" />
-        )}
+        {/* Linhas (estilo por orelha: OD sólida, OE tracejada) — segmentos quebram nos pontos ausentes */}
+        {airPaths.map((d, i) => (
+          <path
+            key={`air-line-${side}-${i}`}
+            d={d}
+            fill="none"
+            stroke={color}
+            strokeWidth={1.8}
+            strokeDasharray={lineDash}
+          />
+        ))}
+        {bonePaths.map((d, i) => (
+          <path
+            key={`bone-line-${side}-${i}`}
+            d={d}
+            fill="none"
+            stroke={color}
+            strokeWidth={1.8}
+            strokeDasharray={lineDash}
+          />
+        ))}
 
         {/* Símbolos Aéreos */}
         {airPts.map((p, i) => {
