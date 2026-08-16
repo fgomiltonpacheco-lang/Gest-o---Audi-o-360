@@ -10,6 +10,8 @@ import {
   Package,
   BarChart3,
   ShoppingCart,
+  Building2,
+  Handshake,
   Menu,
   X,
   LogOut,
@@ -91,6 +93,18 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           name: 'Vendas',
           path: '/vendas',
           icon: ShoppingCart,
+        },
+        {
+          name: 'Vendas B2B',
+          path: '/vendas-b2b',
+          icon: Building2,
+          adminOnly: true,
+        },
+        {
+          name: 'Parceiros',
+          path: '/empresas-parceiras',
+          icon: Handshake,
+          adminOnly: true,
         },
         {
           name: 'Financeiro',

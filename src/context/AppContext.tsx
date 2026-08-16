@@ -31,6 +31,10 @@ import {
   FechamentoCaixaStatus,
   MovimentacaoCaixaTipo,
   FormaPagamentoCaixa,
+  VendaB2B,
+  ItemVendaB2B,
+  NFServicoComissao,
+  EmpresaParceira,
 } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
@@ -436,6 +440,79 @@ const mapMovimentacaoCaixa = (r: any): MovimentacaoCaixa => {
   }
 }
 
+const mapEmpresaParceira = (r: any): EmpresaParceira => ({
+  id: r.id,
+  razao_social: r.razao_social || '',
+  nome_fantasia: r.nome_fantasia || '',
+  cnpj: r.cnpj || '',
+  inscricao_estadual: r.inscricao_estadual || '',
+  email: r.email || '',
+  telefone: r.telefone || '',
+  endereco: r.endereco || '',
+  cidade: r.cidade || '',
+  estado: r.estado || '',
+  cep: r.cep || '',
+  status: (r.status === 'inativo' ? 'inativo' : 'ativo') as EmpresaParceira['status'],
+  created: toDateStr(r.created),
+  updated: toDateStr(r.updated),
+})
+
+const mapItemVendaB2B = (r: any): ItemVendaB2B => ({
+  id: r.id,
+  venda_b2b_id: r.venda_b2b_id || r.venda_b2b || '',
+  produto_id: r.produto_id || r.produto || '',
+  produto_nome: r.produto_nome || '',
+  quantidade: Number(r.quantidade) || 0,
+  valor_unitario: Number(r.valor_unitario) || 0,
+  valor_subtotal: Number(r.valor_subtotal) || 0,
+  created: toDateStr(r.created),
+})
+
+const mapNFServicoComissao = (r: any): NFServicoComissao => ({
+  id: r.id,
+  venda_b2b_id: r.venda_b2b_id || r.venda_b2b || '',
+  numero_nf: r.numero_nf || '',
+  codigo_verificacao: r.codigo_verificacao || '',
+  data_emissao: toDateStr(r.data_emissao),
+  valor_base: Number(r.valor_base) || 0,
+  aliquota_iss: Number(r.aliquota_iss) || 0,
+  valor_iss: Number(r.valor_iss) || 0,
+  valor_liquido: Number(r.valor_liquido) || 0,
+  discriminacao_servico: r.discriminacao_servico || '',
+  item_lista_servico: r.item_lista_servico || '',
+  status: (r.status || 'rascunho') as NFServicoComissao['status'],
+  created: toDateStr(r.created),
+})
+
+const mapVendaB2B = (r: any): VendaB2B => {
+  const itens = Array.isArray(r.expand?.itens_venda_b2b_venda_b2b_id)
+    ? r.expand.itens_venda_b2b_venda_b2b_id.map(mapItemVendaB2B)
+    : Array.isArray(r.itens)
+      ? r.itens.map(mapItemVendaB2B)
+      : undefined
+  const nfRec = r.expand?.nf_servico_comissao_venda_b2b_id?.[0] || r.expand?.nf?.[0] || r.nf || null
+  return {
+    id: r.id,
+    numero_venda: r.numero_venda || '',
+    cliente_empresa_id: r.cliente_empresa_id || r.cliente_empresa || '',
+    cliente_empresa_nome:
+      r.cliente_empresa_nome || r.expand?.cliente_empresa_id?.razao_social || '',
+    data_venda: toDateStr(r.data_venda),
+    valor_total: Number(r.valor_total) || 0,
+    percentual_comissao: Number(r.percentual_comissao) || 0,
+    valor_comissao: Number(r.valor_comissao) || 0,
+    valor_repasse: Number(r.valor_repasse) || 0,
+    status: (r.status || 'pendente') as VendaB2B['status'],
+    especialista_id: r.especialista_id || r.especialista || '',
+    especialista_nome: r.especialista_nome || r.expand?.especialista_id?.name || '',
+    observacoes: r.observacoes || '',
+    itens,
+    nf: nfRec ? mapNFServicoComissao(nfRec) : null,
+    created: toDateStr(r.created),
+    updated: toDateStr(r.updated),
+  }
+}
+
 // ============================================================
 // Context interface (mantida compatível com as páginas existentes)
 // ============================================================
@@ -595,6 +672,39 @@ interface AppContextType {
   alerts: SystemAlert[]
   unreadAlertsCount: number
 
+  // Vendas B2B (Business-to-Business)
+  vendasB2B: VendaB2B[]
+  fetchVendasB2B: () => Promise<void>
+  addVendaB2B: (
+    data: Omit<VendaB2B, 'id' | 'created' | 'updated' | 'numero_venda' | 'itens' | 'nf'> & {
+      itens: Array<Omit<ItemVendaB2B, 'id' | 'created' | 'venda_b2b_id'>>
+    },
+  ) => Promise<VendaB2B | null>
+  updateVendaB2B: (
+    id: string,
+    data: Partial<VendaB2B>,
+  ) => Promise<{ success: boolean; message?: string }>
+  cancelVendaB2B: (id: string, reason: string) => Promise<{ success: boolean; message?: string }>
+  fetchItensVendaB2B: (vendaId: string) => Promise<ItemVendaB2B[]>
+  empresasParceiras: EmpresaParceira[]
+  fetchEmpresasParceiras: () => Promise<void>
+  addEmpresaParceira: (
+    data: Omit<EmpresaParceira, 'id' | 'created' | 'updated'>,
+  ) => Promise<{ success: boolean; message?: string }>
+  updateEmpresaParceira: (
+    id: string,
+    data: Partial<EmpresaParceira>,
+  ) => Promise<{ success: boolean; message?: string }>
+  nfServicoComissao: NFServicoComissao[]
+  fetchNFServicoComissao: (vendaId?: string) => Promise<void>
+  addNFServicoComissao: (
+    data: Omit<NFServicoComissao, 'id' | 'created'>,
+  ) => Promise<NFServicoComissao | null>
+  updateNFServicoComissao: (
+    id: string,
+    data: Partial<NFServicoComissao>,
+  ) => Promise<{ success: boolean; message?: string }>
+
   // Utilitário para recarregar dados do banco
   resetToSeedData: () => void
 }
@@ -637,6 +747,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Fechamento de Caixa
   const [fechamentosCaixa, setFechamentosCaixa] = useState<FechamentoCaixa[]>([])
   const [movimentacoesCaixa, setMovimentacoesCaixa] = useState<MovimentacaoCaixa[]>([])
+
+  // Vendas B2B
+  const [vendasB2B, setVendasB2B] = useState<VendaB2B[]>([])
+  const [empresasParceiras, setEmpresasParceiras] = useState<EmpresaParceira[]>([])
+  const [nfServicoComissao, setNfServicoComissao] = useState<NFServicoComissao[]>([])
 
   // ---------- Carregamento de dados ----------
   const reloadAll = useCallback(async () => {
@@ -2678,6 +2793,389 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }
 
+  // ---------- Vendas B2B Handlers ----------
+  const fetchVendasB2B = useCallback(async () => {
+    try {
+      const list = await pb.collection('vendas_b2b').getFullList({
+        sort: '-data_venda',
+        expand:
+          'cliente_empresa_id,especialista_id,itens_venda_b2b_venda_b2b_id,nf_servico_comissao_venda_b2b_id',
+      })
+      setVendasB2B(list.map(mapVendaB2B))
+    } catch (err) {
+      console.error('Erro ao carregar vendas B2B:', err)
+    }
+  }, [])
+
+  const fetchEmpresasParceiras = useCallback(async () => {
+    try {
+      const list = await pb.collection('empresas_parceiras').getFullList({ sort: 'razao_social' })
+      setEmpresasParceiras(list.map(mapEmpresaParceira))
+    } catch (err) {
+      console.error('Erro ao carregar empresas parceiras:', err)
+    }
+  }, [])
+
+  const fetchNFServicoComissao = useCallback(async (vendaId?: string) => {
+    try {
+      let list: any[] = []
+      if (vendaId) {
+        list = await pb
+          .collection('nf_servico_comissao')
+          .getFullList({ filter: `venda_b2b_id = "${vendaId}"`, sort: '-created' })
+      } else {
+        list = await pb.collection('nf_servico_comissao').getFullList({ sort: '-created' })
+      }
+      setNfServicoComissao(list.map(mapNFServicoComissao))
+    } catch (err) {
+      console.error('Erro ao carregar NFs de serviço:', err)
+    }
+  }, [])
+
+  const fetchItensVendaB2B = useCallback(async (vendaId: string): Promise<ItemVendaB2B[]> => {
+    try {
+      const list = await pb
+        .collection('itens_venda_b2b')
+        .getFullList({ filter: `venda_b2b_id = "${vendaId}"`, sort: 'created' })
+      return list.map(mapItemVendaB2B)
+    } catch (err) {
+      console.error('Erro ao carregar itens da venda B2B:', err)
+      return []
+    }
+  }, [])
+
+  const addEmpresaParceira = async (
+    data: Omit<EmpresaParceira, 'id' | 'created' | 'updated'>,
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      if (!data.razao_social?.trim()) {
+        return { success: false, message: 'Informe a razão social.' }
+      }
+      const rec: any = await pb.collection('empresas_parceiras').create({
+        razao_social: data.razao_social.trim(),
+        nome_fantasia: data.nome_fantasia || '',
+        cnpj: data.cnpj || '',
+        inscricao_estadual: data.inscricao_estadual || '',
+        email: data.email || '',
+        telefone: data.telefone || '',
+        endereco: data.endereco || '',
+        cidade: data.cidade || '',
+        estado: data.estado || '',
+        cep: data.cep || '',
+        status: data.status || 'ativo',
+      })
+      setEmpresasParceiras((prev) =>
+        [...prev, mapEmpresaParceira(rec)].sort((a, b) =>
+          a.razao_social.localeCompare(b.razao_social),
+        ),
+      )
+      toast({ title: 'Empresa parceira cadastrada', description: data.razao_social.trim() })
+      return { success: true }
+    } catch (err) {
+      console.error('Erro ao criar empresa parceira:', err)
+      return { success: false, message: describePbError(err) }
+    }
+  }
+
+  const updateEmpresaParceira = async (
+    id: string,
+    data: Partial<EmpresaParceira>,
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const patch: Record<string, any> = {}
+      if (data.razao_social !== undefined) patch.razao_social = data.razao_social.trim()
+      if (data.nome_fantasia !== undefined) patch.nome_fantasia = data.nome_fantasia || ''
+      if (data.cnpj !== undefined) patch.cnpj = data.cnpj || ''
+      if (data.inscricao_estadual !== undefined)
+        patch.inscricao_estadual = data.inscricao_estadual || ''
+      if (data.email !== undefined) patch.email = data.email || ''
+      if (data.telefone !== undefined) patch.telefone = data.telefone || ''
+      if (data.endereco !== undefined) patch.endereco = data.endereco || ''
+      if (data.cidade !== undefined) patch.cidade = data.cidade || ''
+      if (data.estado !== undefined) patch.estado = data.estado || ''
+      if (data.cep !== undefined) patch.cep = data.cep || ''
+      if (data.status !== undefined) patch.status = data.status
+      const rec: any = await pb.collection('empresas_parceiras').update(id, patch)
+      setEmpresasParceiras((prev) =>
+        prev
+          .map((e) => (e.id === id ? mapEmpresaParceira(rec) : e))
+          .sort((a, b) => a.razao_social.localeCompare(b.razao_social)),
+      )
+      toast({ title: 'Empresa parceira atualizada' })
+      return { success: true }
+    } catch (err) {
+      console.error('Erro ao atualizar empresa parceira:', err)
+      return { success: false, message: describePbError(err) }
+    }
+  }
+
+  const addVendaB2B = async (
+    data: Omit<VendaB2B, 'id' | 'created' | 'updated' | 'numero_venda' | 'itens' | 'nf'> & {
+      itens: Array<Omit<ItemVendaB2B, 'id' | 'created' | 'venda_b2b_id'>>
+    },
+  ): Promise<VendaB2B | null> => {
+    try {
+      if (!data.cliente_empresa_id) {
+        toast({ title: 'Selecione a empresa parceira', variant: 'destructive' })
+        return null
+      }
+      if (!data.itens || data.itens.length === 0) {
+        toast({ title: 'Adicione ao menos um item', variant: 'destructive' })
+        return null
+      }
+
+      const empresa = empresasParceiras.find((e) => e.id === data.cliente_empresa_id)
+      const ano = new Date().getFullYear()
+      // Conta vendas do ano para gerar número sequencial (B2B-ANO-0001)
+      let seq = 1
+      try {
+        const existing = await pb.collection('vendas_b2b').getFullList({
+          filter: `numero_venda ~ "B2B-${ano}-"`,
+        })
+        seq = existing.length + 1
+      } catch (_) {
+        seq = vendasB2B.filter((v) => v.numero_venda.includes(`B2B-${ano}-`)).length + 1
+      }
+      const numero_venda = `B2B-${ano}-${String(seq).padStart(4, '0')}`
+
+      const valor_total = data.itens.reduce((acc, it) => acc + (it.valor_subtotal || 0), 0)
+      const percentual_comissao = Number(data.percentual_comissao) || 30
+      const valor_comissao = (valor_total * percentual_comissao) / 100
+      const valor_repasse = valor_total - valor_comissao
+
+      const rec: any = await pb.collection('vendas_b2b').create({
+        numero_venda,
+        cliente_empresa_id: data.cliente_empresa_id,
+        cliente_empresa_nome: empresa?.razao_social || data.cliente_empresa_nome || '',
+        data_venda: data.data_venda || todayStr(),
+        valor_total,
+        percentual_comissao,
+        valor_comissao,
+        valor_repasse,
+        status: data.status || 'pendente',
+        especialista_id: data.especialista_id || currentUser?.id || '',
+        especialista_nome: data.especialista_nome || currentUser?.name || '',
+        observacoes: data.observacoes || '',
+      })
+
+      // Cria itens
+      const itensCriados: ItemVendaB2B[] = []
+      for (const it of data.itens) {
+        try {
+          const r: any = await pb.collection('itens_venda_b2b').create({
+            venda_b2b_id: rec.id,
+            produto_id: it.produto_id || '',
+            produto_nome: it.produto_nome || '',
+            quantidade: it.quantidade,
+            valor_unitario: it.valor_unitario,
+            valor_subtotal: it.valor_subtotal,
+          })
+          itensCriados.push(mapItemVendaB2B(r))
+        } catch (err) {
+          console.error('Erro ao criar item da venda B2B:', err)
+        }
+      }
+
+      // Recarrega vendas B2B para incluir a nova com expand
+      await fetchVendasB2B()
+
+      // Integração com estoque: baixa produtos se status aprovada/concluida
+      if (data.status === 'aprovada' || data.status === 'concluida') {
+        for (const it of data.itens) {
+          if (it.produto_id) {
+            addStockExit(
+              it.produto_id,
+              it.quantidade,
+              `Venda B2B ${numero_venda}`,
+              currentUser?.name || 'Sistema',
+              empresa?.razao_social || '',
+              data.data_venda || todayStr(),
+            )
+          }
+        }
+      }
+
+      toast({
+        title: 'Venda B2B registrada',
+        description: `${numero_venda} criada com sucesso.`,
+      })
+      return mapVendaB2B(rec)
+    } catch (err) {
+      console.error('Erro ao criar venda B2B:', err)
+      toast({
+        title: 'Erro ao criar venda B2B',
+        description: describePbError(err),
+        variant: 'destructive',
+      })
+      return null
+    }
+  }
+
+  const updateVendaB2B = async (
+    id: string,
+    data: Partial<VendaB2B>,
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const current = vendasB2B.find((v) => v.id === id)
+      const patch: Record<string, any> = {}
+      if (data.status !== undefined) patch.status = data.status
+      if (data.observacoes !== undefined) patch.observacoes = data.observacoes
+      if (data.percentual_comissao !== undefined) {
+        const valor_total = current?.valor_total || 0
+        const percentual_comissao = Number(data.percentual_comissao)
+        patch.percentual_comissao = percentual_comissao
+        patch.valor_comissao = (valor_total * percentual_comissao) / 100
+        patch.valor_repasse = valor_total - patch.valor_comissao
+      }
+      if (data.valor_total !== undefined) {
+        const valor_total = Number(data.valor_total)
+        const percentual = Number(data.percentual_comissao ?? current?.percentual_comissao ?? 30)
+        patch.valor_total = valor_total
+        patch.valor_comissao = (valor_total * percentual) / 100
+        patch.valor_repasse = valor_total - patch.valor_comissao
+      }
+
+      const rec: any = await pb.collection('vendas_b2b').update(id, patch, {
+        expand:
+          'cliente_empresa_id,especialista_id,itens_venda_b2b_venda_b2b_id,nf_servico_comissao_venda_b2b_id',
+      })
+      const mapped = mapVendaB2B(rec)
+      setVendasB2B((prev) => prev.map((v) => (v.id === id ? mapped : v)))
+
+      // Integração com estoque: baixa/devolve conforme mudança de status
+      if (data.status && current) {
+        const baixar = data.status === 'aprovada' || data.status === 'concluida'
+        const devolver = data.status === 'cancelada'
+        const jaBaixada =
+          current.status === 'aprovada' ||
+          current.status === 'concluida' ||
+          current.status === 'nf_emitida'
+        const itens = current.itens || []
+        if (baixar && !jaBaixada) {
+          for (const it of itens) {
+            if (it.produto_id) {
+              addStockExit(
+                it.produto_id,
+                it.quantidade,
+                `Venda B2B ${current.numero_venda}`,
+                currentUser?.name || 'Sistema',
+                current.cliente_empresa_nome,
+                current.data_venda,
+              )
+            }
+          }
+        } else if (devolver && jaBaixada) {
+          for (const it of itens) {
+            if (it.produto_id) {
+              addStockEntry(
+                it.produto_id,
+                it.quantidade,
+                `Cancelamento Venda B2B ${current.numero_venda}`,
+                currentUser?.name || 'Sistema',
+                undefined,
+              )
+            }
+          }
+        }
+      }
+
+      toast({ title: 'Venda B2B atualizada' })
+      return { success: true }
+    } catch (err) {
+      console.error('Erro ao atualizar venda B2B:', err)
+      return { success: false, message: describePbError(err) }
+    }
+  }
+
+  const cancelVendaB2B = async (
+    id: string,
+    reason: string,
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const current = vendasB2B.find((v) => v.id === id)
+      if (!current) return { success: false, message: 'Venda não encontrada.' }
+      const obs = reason.trim()
+        ? `${current.observacoes ? current.observacoes + '\n' : ''}Cancelada: ${reason.trim()}`
+        : current.observacoes
+      const result = await updateVendaB2B(id, { status: 'cancelada', observacoes: obs })
+      if (result.success) {
+        toast({
+          title: 'Venda B2B cancelada',
+          description: `${current.numero_venda} foi cancelada.`,
+          variant: 'destructive',
+        })
+      }
+      return result
+    } catch (err) {
+      console.error('Erro ao cancelar venda B2B:', err)
+      return { success: false, message: describePbError(err) }
+    }
+  }
+
+  const addNFServicoComissao = async (
+    data: Omit<NFServicoComissao, 'id' | 'created'>,
+  ): Promise<NFServicoComissao | null> => {
+    try {
+      const rec: any = await pb.collection('nf_servico_comissao').create({
+        venda_b2b_id: data.venda_b2b_id || '',
+        numero_nf: data.numero_nf || '',
+        codigo_verificacao: data.codigo_verificacao || '',
+        data_emissao: data.data_emissao || todayStr(),
+        valor_base: data.valor_base ?? 0,
+        aliquota_iss: data.aliquota_iss ?? 3,
+        valor_iss: data.valor_iss ?? 0,
+        valor_liquido: data.valor_liquido ?? 0,
+        discriminacao_servico: data.discriminacao_servico || '',
+        item_lista_servico: data.item_lista_servico || '10.01',
+        status: data.status || 'emitida',
+      })
+      const mapped = mapNFServicoComissao(rec)
+      setNfServicoComissao((prev) => [mapped, ...prev])
+      // Atualiza status da venda para nf_emitida
+      await updateVendaB2B(data.venda_b2b_id, { status: 'nf_emitida' })
+      await fetchVendasB2B()
+      toast({ title: 'NF de Serviço emitida', description: `NF ${data.numero_nf}` })
+      return mapped
+    } catch (err) {
+      console.error('Erro ao criar NF de serviço:', err)
+      toast({
+        title: 'Erro ao emitir NF',
+        description: describePbError(err),
+        variant: 'destructive',
+      })
+      return null
+    }
+  }
+
+  const updateNFServicoComissao = async (
+    id: string,
+    data: Partial<NFServicoComissao>,
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const patch: Record<string, any> = {}
+      if (data.numero_nf !== undefined) patch.numero_nf = data.numero_nf
+      if (data.codigo_verificacao !== undefined) patch.codigo_verificacao = data.codigo_verificacao
+      if (data.data_emissao !== undefined) patch.data_emissao = data.data_emissao
+      if (data.valor_base !== undefined) patch.valor_base = data.valor_base
+      if (data.aliquota_iss !== undefined) patch.aliquota_iss = data.aliquota_iss
+      if (data.valor_iss !== undefined) patch.valor_iss = data.valor_iss
+      if (data.valor_liquido !== undefined) patch.valor_liquido = data.valor_liquido
+      if (data.discriminacao_servico !== undefined)
+        patch.discriminacao_servico = data.discriminacao_servico
+      if (data.item_lista_servico !== undefined) patch.item_lista_servico = data.item_lista_servico
+      if (data.status !== undefined) patch.status = data.status
+      const rec: any = await pb.collection('nf_servico_comissao').update(id, patch)
+      const mapped = mapNFServicoComissao(rec)
+      setNfServicoComissao((prev) => prev.map((n) => (n.id === id ? mapped : n)))
+      await fetchVendasB2B()
+      toast({ title: 'NF de Serviço atualizada' })
+      return { success: true }
+    } catch (err) {
+      console.error('Erro ao atualizar NF de serviço:', err)
+      return { success: false, message: describePbError(err) }
+    }
+  }
+
   return (
     <AppContext.Provider
       value={{
@@ -2752,6 +3250,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         movimentacoesCaixa,
         fetchMovimentacoesCaixa,
         addMovimentacaoCaixa,
+        // Vendas B2B
+        vendasB2B,
+        fetchVendasB2B,
+        addVendaB2B,
+        updateVendaB2B,
+        cancelVendaB2B,
+        fetchItensVendaB2B,
+        empresasParceiras,
+        fetchEmpresasParceiras,
+        addEmpresaParceira,
+        updateEmpresaParceira,
+        nfServicoComissao,
+        fetchNFServicoComissao,
+        addNFServicoComissao,
+        updateNFServicoComissao,
         alerts,
         unreadAlertsCount,
         resetToSeedData,

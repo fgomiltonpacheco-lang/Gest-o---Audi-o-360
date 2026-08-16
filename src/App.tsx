@@ -20,6 +20,10 @@ import Profile from '@/pages/Profile'
 import Users from '@/pages/Users'
 import Procedimentos from '@/pages/Procedimentos'
 import Configuracoes from '@/pages/Configuracoes'
+import VendasB2B from '@/pages/VendasB2B'
+import NovaVendaB2B from '@/pages/NovaVendaB2B'
+import DetalhesVendaB2B from '@/pages/DetalhesVendaB2B'
+import EmpresasParceiras from '@/pages/EmpresasParceiras'
 import NotFound from '@/pages/NotFound'
 import { Toaster } from '@/components/ui/toaster'
 import { useToast } from '@/hooks/use-toast'
@@ -171,6 +175,40 @@ export function App() {
                 <ProtectedRoute>
                   <Vendas />
                 </ProtectedRoute>
+              }
+            />
+
+            {/* ===== Módulo de Vendas B2B ===== */}
+            <Route
+              path="/vendas-b2b"
+              element={
+                <AdminRoute>
+                  <VendasB2B />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/vendas-b2b/nova"
+              element={
+                <AdminRoute>
+                  <NovaVendaB2B />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/vendas-b2b/:id"
+              element={
+                <AdminRoute>
+                  <DetalhesVendaB2B />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/empresas-parceiras"
+              element={
+                <AdminRoute>
+                  <EmpresasParceiras />
+                </AdminRoute>
               }
             />
 

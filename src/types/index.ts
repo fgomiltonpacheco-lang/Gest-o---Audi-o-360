@@ -759,6 +759,75 @@ export interface MovimentacaoCaixa {
   created: string
 }
 
+// ===== Módulo de Vendas B2B (Business-to-Business) =====
+export type VendaB2BStatus = 'pendente' | 'aprovada' | 'nf_emitida' | 'concluida' | 'cancelada'
+export type NFServicoStatus = 'rascunho' | 'emitida' | 'cancelada'
+export type EmpresaParceiraStatus = 'ativo' | 'inativo'
+
+export interface EmpresaParceira {
+  id: string
+  razao_social: string
+  nome_fantasia: string
+  cnpj: string
+  inscricao_estadual: string
+  email: string
+  telefone: string
+  endereco: string
+  cidade: string
+  estado: string
+  cep: string
+  status: EmpresaParceiraStatus
+  created: string
+  updated: string
+}
+
+export interface ItemVendaB2B {
+  id: string
+  venda_b2b_id: string
+  produto_id: string
+  produto_nome: string
+  quantidade: number
+  valor_unitario: number
+  valor_subtotal: number
+  created: string
+}
+
+export interface VendaB2B {
+  id: string
+  numero_venda: string
+  cliente_empresa_id: string
+  cliente_empresa_nome: string
+  data_venda: string
+  valor_total: number
+  percentual_comissao: number
+  valor_comissao: number
+  valor_repasse: number
+  status: VendaB2BStatus
+  especialista_id: string
+  especialista_nome: string
+  observacoes: string
+  itens?: ItemVendaB2B[]
+  nf?: NFServicoComissao | null
+  created: string
+  updated: string
+}
+
+export interface NFServicoComissao {
+  id: string
+  venda_b2b_id: string
+  numero_nf: string
+  codigo_verificacao: string
+  data_emissao: string
+  valor_base: number
+  aliquota_iss: number
+  valor_iss: number
+  valor_liquido: number
+  discriminacao_servico: string
+  item_lista_servico: string
+  status: NFServicoStatus
+  created: string
+}
+
 // Alertas do Sistema
 export interface SystemAlert {
   id: string
