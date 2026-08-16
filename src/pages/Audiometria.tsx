@@ -1018,7 +1018,7 @@ function EarAudiometrySection({
   // LDL: Ausente (símbolo de ausência em LDL)
 
   const symBtnClass = (active: boolean) =>
-    `px-1 py-0 min-w-[20px] h-5 text-[10px] font-bold rounded flex items-center justify-center transition-all select-none ${
+    `px-0.5 py-0 min-w-[18px] h-5 text-[10px] font-bold rounded flex items-center justify-center transition-all select-none ${
       active
         ? isOd
           ? 'bg-red-600 text-white shadow-sm scale-105'
@@ -1041,13 +1041,13 @@ function EarAudiometrySection({
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="border-b border-slate-300 bg-white">
-              <th className="py-1.5 px-2 text-center text-slate-400 font-bold border-r border-slate-200 w-28">
+              <th className="py-1.5 px-1 text-center text-slate-400 font-bold border-r border-slate-200 w-20">
                 .
               </th>
               {ALL_INPUT_FREQS.map((f) => (
                 <th
                   key={f}
-                  className={`py-1.5 px-1 text-center font-bold border-r border-slate-200 min-w-[48px] ${headerFreqColor}`}
+                  className={`py-1.5 px-0.5 text-center font-bold border-r border-slate-200 min-w-[38px] ${headerFreqColor}`}
                 >
                   {fmtFreq(f)}
                 </th>
@@ -1088,7 +1088,7 @@ function EarAudiometrySection({
                 const sym = airMap[f]?.symbol || 'normal'
                 return (
                   <td key={f} className="p-1 border-r border-slate-200 text-center align-middle">
-                    <div className="flex items-center justify-center gap-0.5 sm:gap-1">
+                    <div className="flex items-center justify-center gap-0.5">
                       {isOd ? (
                         <>
                           {/* OD Aérea alternativos: Mascarado △, Ausente ○↓, Mascarado Ausente △↓ */}
