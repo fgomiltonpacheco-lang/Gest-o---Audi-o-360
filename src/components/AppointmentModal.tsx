@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,15 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 import {
   Appointment,
   AppointmentStatus,
@@ -26,11 +35,12 @@ import {
 } from '@/types'
 import { useApp } from '@/context/AppContext'
 import { getAppointmentColor, formatCurrency } from '@/lib/formatters'
-import { Calendar, Clock, User, AlertCircle, DollarSign } from 'lucide-react'
+import { Calendar, Clock, User, AlertCircle, DollarSign, Check, ChevronsUpDown } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 
 const DURATIONS = [15, 30, 45, 60, 90, 120]
 const STATUSES: AppointmentStatus[] = ['Agendado', 'Confirmado', 'Realizado', 'Faltou', 'Cancelado']
+const PLAN_OPTIONS: PatientPlanType[] = ['Particular', 'SUS', 'Convênio']
 
 interface AppointmentModalProps {
   open: boolean
@@ -60,6 +70,9 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   const [patientDropdownOpen, setPatientDropdownOpen] = useState(false)
   const [procedureId, setProcedureId] = useState<string>('')
   const [procedureName, setProcedureName] = useState<string>('')
+  const [procedureSearch, setProcedureSearch] = useState<string>('')
+  const [procedureComboboxOpen, setProcedureComboboxOpen] = useState(false)
+  const [planType, setPlanType] = useState<PatientPlanType>('Particular')
   const [date, setDate] = useState('')
   const [time, setTime] = useState('09:00')
   const [duration, setDuration] = useState<number>(60)
@@ -117,14 +130,17 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       setPatientSearch(appointmentToEdit.patientName)
       setProcedureId(appointmentToEdit.procedureId || '')
       setProcedureName(appointmentToEdit.type || '')
+      setProcedureSearch(appointmentToEdit.type || '')
       setDate(appointmentToEdit.date)
       setTime(appointmentToEdit.time)
       setDuration(appointmentToEdit.duration)
       setValue(appointmentToEdit.value ?? 0)
-      // Ao editar, indica a origem do valor conforme o plano do paciente.
+      // Ao editar, pré-seleciona o tipo de pagamento conforme o plano do
+      // paciente e indica a origem do valor.
       {
         const pat = patients.find((p) => p.id === appointmentToEdit.patientId)
         const plan: PatientPlanType = pat?.planType || 'Particular'
+        setPlanType(plan)
         setValueSourceLabel(appointmentToEdit.procedureId ? `Valor para ${plan}` : '')
       }
       setProfessionalName(appointmentToEdit.professionalName)
@@ -133,8 +149,14 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
     } else {
       setPatientId(initialPatientId || '')
       setPatientSearch(initialPatientName || '')
+      // Pré-seleciona o plano conforme o paciente inicial (se houver).
+      {
+        const pat = initialPatientId ? patients.find((p) => p.id === initialPatientId) : undefined
+        setPlanType(pat?.planType || 'Particular')
+      }
       setProcedureId('')
       setProcedureName('')
+      setProcedureSearch('')
       setDate(initialDate || new Date().toISOString().split('T')[0])
       setTime(initialTime || '09:00')
       setDuration(60)
@@ -146,44 +168,85 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
     }
     setErrorMessage('')
     setPatientDropdownOpen(false)
-  }, [appointmentToEdit, initialDate, initialTime, initialPatientId, initialPatientName, open])
+    setProcedureComboboxOpen(false)
+  }, [
+    appointmentToEdit,
+    initialDate,
+    initialTime,
+    initialPatientId,
+    initialPatientName,
+    open,
+    patients,
+  ])
 
-  const filteredPatients = React.useMemo(() => {
+  const filteredPatients = useMemo(() => {
     if (!patientSearch.trim()) return patients.slice(0, 6)
     const q = patientSearch.toLowerCase().trim()
     return patients.filter((p) => p.name.toLowerCase().includes(q) || p.cpf.includes(q)).slice(0, 8)
   }, [patients, patientSearch])
 
+  const filteredProcedures = useMemo(() => {
+    const q = procedureSearch.toLowerCase().trim()
+    if (!q) return procedures
+    return procedures.filter((p) => p.name.toLowerCase().includes(q))
+  }, [procedures, procedureSearch])
+
+  /**
+   * Reajusta o valor exibido conforme o procedimento e o tipo de pagamento
+   * informados. Mantém o campo editável em seguida.
+   */
+  const applyProcedureValue = useCallback(
+    (procId: string, plan: PatientPlanType) => {
+      const proc = procedures.find((p) => p.id === procId)
+      if (proc) {
+        setValue(getProcedureValueByPlan(proc, plan))
+        setValueSourceLabel(`Valor para ${plan}`)
+      } else {
+        setValueSourceLabel('')
+      }
+    },
+    [procedures],
+  )
+
   const handleSelectPatient = (p: (typeof patients)[0]) => {
     setPatientId(p.id)
     setPatientSearch(p.name)
     setPatientDropdownOpen(false)
+    // Pré-seleciona o tipo de pagamento conforme o plano do novo paciente.
+    const plan: PatientPlanType = p.planType || 'Particular'
+    setPlanType(plan)
     // Se um procedimento já estiver selecionado, reajusta o valor conforme o
-    // plano do novo paciente.
+    // novo tipo de pagamento.
     if (procedureId) {
-      const proc = procedures.find((pr) => pr.id === procedureId)
-      if (proc) {
-        const plan: PatientPlanType = p.planType || 'Particular'
-        setValue(getProcedureValueByPlan(proc, plan))
-        setValueSourceLabel(`Valor para ${plan}`)
-      }
+      applyProcedureValue(procedureId, plan)
     }
   }
 
-  // Ao selecionar um procedimento, preenche nome/duração/valor automaticamente.
-  // O valor é escolhido conforme o planType do paciente selecionado
-  // (Particular como padrão quando nenhum paciente estiver selecionado).
-  // Os campos continuam editáveis depois.
+  /**
+   * Ao selecionar um procedimento no combobox, preenche nome/duração/valor
+   * automaticamente. O valor é escolhido conforme o tipo de pagamento atual.
+   * Os campos continuam editáveis depois.
+   */
   const handleSelectProcedure = (procId: string) => {
     const proc = procedures.find((p) => p.id === procId)
     if (proc) {
       setProcedureId(proc.id)
       setProcedureName(proc.name)
+      setProcedureSearch(proc.name)
       setDuration(proc.duration)
-      const patientObj = patients.find((p) => p.id === patientId)
-      const plan: PatientPlanType = patientObj?.planType || 'Particular'
-      setValue(getProcedureValueByPlan(proc, plan))
-      setValueSourceLabel(`Valor para ${plan}`)
+      applyProcedureValue(proc.id, planType)
+      setProcedureComboboxOpen(false)
+    }
+  }
+
+  /**
+   * Ao trocar o tipo de pagamento, reajusta o valor conforme o procedimento
+   * já selecionado e o novo plano.
+   */
+  const handleChangePlanType = (plan: PatientPlanType) => {
+    setPlanType(plan)
+    if (procedureId) {
+      applyProcedureValue(procedureId, plan)
     }
   }
 
@@ -222,6 +285,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       time,
       duration,
       value,
+      planType,
       professionalName,
       status,
       notes,
@@ -286,47 +350,87 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
             )}
           </div>
 
-          {/* Procedimento + Profissional */}
+          {/* Procedimento (combobox digitável) + Profissional */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-xs font-semibold text-slate-700">
                 Procedimento <span className="text-red-500">*</span>
               </Label>
-              <Select value={procedureId} onValueChange={handleSelectProcedure}>
-                <SelectTrigger className="h-10 rounded-xl mt-1 border-slate-300 text-xs font-semibold">
-                  <SelectValue
-                    placeholder={proceduresLoading ? 'Carregando...' : 'Selecione o procedimento'}
+              <Popover open={procedureComboboxOpen} onOpenChange={setProcedureComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    role="combobox"
+                    aria-expanded={procedureComboboxOpen}
+                    className="flex h-10 w-full items-center justify-between rounded-xl mt-1 border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-800 text-left hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
                   >
-                    {procedureName ||
-                      (proceduresLoading ? 'Carregando...' : 'Selecione o procedimento')}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {procedures.length === 0 && !proceduresLoading && (
-                    <SelectItem value="__none" disabled>
-                      Nenhum procedimento ativo
-                    </SelectItem>
-                  )}
-                  {procedures.map((p) => {
-                    const color = getAppointmentColor(p.name)
-                    return (
-                      <SelectItem key={p.id} value={p.id} className="text-xs font-medium">
-                        <span className="flex items-center gap-2">
-                          <span
-                            className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
-                            style={{ backgroundColor: color.hex }}
-                          />
-                          <span className="flex-1 truncate">{p.name}</span>
-                          <span className="text-slate-400 text-[10px]">
-                            {p.duration}min • Part: {formatCurrency(p.valueParticular)} • SUS:{' '}
-                            {formatCurrency(p.valueSUS)} • Conv: {formatCurrency(p.valueConvenio)}
-                          </span>
-                        </span>
-                      </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
+                    <span className="truncate">
+                      {procedureName ||
+                        (proceduresLoading
+                          ? 'Carregando...'
+                          : 'Digite ou selecione o procedimento')}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      placeholder="Digite parte do nome do procedimento..."
+                      value={procedureSearch}
+                      onValueChange={(v) => {
+                        setProcedureSearch(v)
+                        // Ao digitar, libera o nome para edição manual sem
+                        // vincular a um procedimento da lista até que ele seja
+                        // selecionado no dropdown.
+                        setProcedureName(v)
+                        setProcedureId('')
+                        setValueSourceLabel('')
+                      }}
+                    />
+                    <CommandList>
+                      {procedures.length === 0 && !proceduresLoading && (
+                        <CommandEmpty>Nenhum procedimento ativo</CommandEmpty>
+                      )}
+                      {proceduresLoading && (
+                        <CommandEmpty>Carregando procedimentos...</CommandEmpty>
+                      )}
+                      {!proceduresLoading && filteredProcedures.length === 0 && (
+                        <CommandEmpty>Nenhum procedimento encontrado</CommandEmpty>
+                      )}
+                      <CommandGroup>
+                        {filteredProcedures.map((p) => {
+                          const color = getAppointmentColor(p.name)
+                          return (
+                            <CommandItem
+                              key={p.id}
+                              value={p.id}
+                              onSelect={() => handleSelectProcedure(p.id)}
+                              className="text-xs font-medium"
+                            >
+                              <span className="flex items-center gap-2 w-full">
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+                                  style={{ backgroundColor: color.hex }}
+                                />
+                                <span className="flex-1 truncate">{p.name}</span>
+                                <span className="text-slate-400 text-[10px]">
+                                  {p.duration}min • Part: {formatCurrency(p.valueParticular)} • SUS:{' '}
+                                  {formatCurrency(p.valueSUS)} • Conv:{' '}
+                                  {formatCurrency(p.valueConvenio)}
+                                </span>
+                                {procedureId === p.id && (
+                                  <Check className="h-3.5 w-3.5 text-teal-600 shrink-0" />
+                                )}
+                              </span>
+                            </CommandItem>
+                          )
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               {/* Editar nome livremente caso o procedimento não esteja na lista */}
               {procedureId && (
                 <Input
@@ -358,8 +462,49 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
             </div>
           </div>
 
-          {/* Data, Hora, Duração */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Tipo de Pagamento + Duração */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">
+                Tipo de Pagamento <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={planType}
+                onValueChange={(v: PatientPlanType) => handleChangePlanType(v)}
+              >
+                <SelectTrigger className="h-10 rounded-xl mt-1 border-slate-300 text-xs font-semibold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PLAN_OPTIONS.map((plan) => (
+                    <SelectItem key={plan} value={plan}>
+                      {plan}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">
+                Duração (min) <span className="text-slate-400 font-normal">editável</span>
+              </Label>
+              <div className="relative">
+                <Clock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Input
+                  type="number"
+                  min={5}
+                  step={5}
+                  value={duration}
+                  onChange={(e) => setDuration(Number(e.target.value) || 0)}
+                  className="h-10 rounded-xl mt-1 text-xs border-slate-300 pl-9"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Data, Hora */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-xs font-semibold text-slate-700">
                 Data <span className="text-red-500">*</span>
@@ -382,23 +527,6 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                 onChange={(e) => setTime(e.target.value)}
                 className="h-10 rounded-xl mt-1 text-xs border-slate-300"
               />
-            </div>
-
-            <div>
-              <Label className="text-xs font-semibold text-slate-700">
-                Duração (min) <span className="text-slate-400 font-normal">editável</span>
-              </Label>
-              <div className="relative">
-                <Clock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <Input
-                  type="number"
-                  min={5}
-                  step={5}
-                  value={duration}
-                  onChange={(e) => setDuration(Number(e.target.value) || 0)}
-                  className="h-10 rounded-xl mt-1 text-xs border-slate-300 pl-9"
-                />
-              </div>
             </div>
           </div>
 
