@@ -19,6 +19,12 @@ import {
   Stethoscope,
   ArrowUpDown,
   Printer,
+  Search,
+  CheckCircle2,
+  AlertCircle,
+  Package,
+  Receipt,
+  Check,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { CompareAudiometriesModal } from '@/components/CompareAudiometriesModal'
@@ -44,6 +50,14 @@ import {
   getAvatarColor,
   calculateAge,
 } from '@/lib/formatters'
+import {
+  AppointmentProcedureItem,
+  getProcedureValueByPlan,
+  Procedure,
+  StockItem,
+  Patient,
+} from '@/types'
+import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -999,86 +1013,10 @@ export default function Prontuario() {
               )}
             </TabsContent>
 
-            {/* 5. ABA FINANCEIRO */}
-            <TabsContent value="financeiro" className="space-y-4 pt-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900">Histórico Financeiro</h3>
-                <Button
-                  size="sm"
-                  onClick={() => navigate('/financeiro')}
-                  className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-9"
-                >
-                  + Novo Orçamento / Venda
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Orçamentos */}
-                <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Orçamentos ({patientBudgets.length})
-                  </h4>
-                  {patientBudgets.length === 0 ? (
-                    <p className="text-xs text-slate-400">Nenhum orçamento emitido.</p>
-                  ) : (
-                    patientBudgets.map((b) => (
-                      <div
-                        key={b.id}
-                        className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between text-xs"
-                      >
-                        <div>
-                          <span className="font-bold text-slate-800">#{b.number}</span>
-                          <span className="text-slate-500 ml-2">
-                            {formatCurrency(b.totalValue)}
-                          </span>
-                        </div>
-                        <Badge variant="outline" className="text-[10px]">
-                          {b.status}
-                        </Badge>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {/* Parcelas */}
-                <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Parcelas ({patientInstallments.length})
-                  </h4>
-                  {patientInstallments.length === 0 ? (
-                    <p className="text-xs text-slate-400">Nenhuma parcela cadastrada.</p>
-                  ) : (
-                    patientInstallments.map((inst) => (
-                      <div
-                        key={inst.id}
-                        className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between text-xs"
-                      >
-                        <div>
-                          <span className="font-bold text-slate-800">
-                            {inst.installmentNumber}/{inst.totalInstallments}
-                          </span>
-                          <span className="text-slate-500 ml-2">
-                            {formatCurrency(inst.value)} • Venc: {formatDate(inst.dueDate)}
-                          </span>
-                        </div>
-                        <Badge
-                          className={`text-[10px] ${
-                            inst.status === 'Pago'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : inst.status === 'Atrasado'
-                                ? 'bg-red-50 text-red-700 border-red-200'
-                                : 'bg-amber-50 text-amber-700 border-amber-200'
-                          }`}
-                        >
-                          {inst.status}
-                        </Badge>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+            {/* 5. ABA FINANCEIRO - Interface de Lançamento no Atendimento */}
+            <TabsContent value="financeiro" className="space-y-5 pt-5">
+              <FinanceiroAtendimentoSection patient={patient} />
             </TabsContent>
-
             {/* 6. ABA EVOLUÇÃO */}
             <TabsContent value="evolucao" className="space-y-4 pt-5">
               <div className="flex items-center justify-between">
@@ -1291,6 +1229,468 @@ function InfoRow({
       >
         {value}
       </span>
+    </div>
+  )
+}
+
+/* ---------- Subcomponente: Interface de Lançamento no Atendimento (Aba Financeiro) ---------- */
+function FinanceiroAtendimentoSection({ patient }: { patient: Patient }) {
+  const { appointments, updateAppointment, addSale } = useApp()
+  const { toast } = useToast()
+
+  const today = new Date().toISOString().split('T')[0]
+
+  // Buscar agendamento do paciente para hoje não cancelado
+  const todayAppointment = React.useMemo(() => {
+    return appointments.find(
+      (a) => a.patientId === patient.id && a.date === today && a.status !== 'Cancelado',
+    )
+  }, [appointments, patient.id, today])
+
+  // Lista de itens do atendimento
+  const [items, setItems] = React.useState<AppointmentProcedureItem[]>([])
+
+  // Carregar do agendamento quando disponível
+  React.useEffect(() => {
+    if (todayAppointment) {
+      if (
+        Array.isArray(todayAppointment.proceduresList) &&
+        todayAppointment.proceduresList.length > 0
+      ) {
+        setItems(todayAppointment.proceduresList.map((it) => ({ ...it })))
+      } else if (todayAppointment.procedureId || todayAppointment.type) {
+        setItems([
+          {
+            procedureId: todayAppointment.procedureId || '',
+            procedureName: todayAppointment.type || 'Consulta / Procedimento',
+            value: todayAppointment.value ?? 0,
+            planType: todayAppointment.planType || (patient.planType as any) || 'Particular',
+          },
+        ])
+      } else {
+        setItems([])
+      }
+    } else {
+      setItems([])
+    }
+  }, [todayAppointment?.id])
+
+  // Catálogo unificado (procedimentos + estoque)
+  const [catalog, setCatalog] = React.useState<
+    Array<{
+      id: string
+      name: string
+      type: 'procedure' | 'inventory'
+      price: number
+      raw: any
+    }>
+  >([])
+  const [loadingCatalog, setLoadingCatalog] = React.useState(false)
+
+  // Carregar coleções 'procedures' e 'inventory'
+  React.useEffect(() => {
+    let isMounted = true
+    async function loadCatalog() {
+      setLoadingCatalog(true)
+      try {
+        const [procRes, invRes] = await Promise.all([
+          pb.collection('procedures').getFullList({ filter: 'active = true', sort: 'name' }),
+          pb.collection('inventory').getFullList({ sort: 'name' }),
+        ])
+
+        if (!isMounted) return
+
+        const plan = (patient.planType as any) || 'Particular'
+
+        const procItems = procRes.map((p: any) => {
+          const mappedProc: Procedure = {
+            id: p.id,
+            name: p.name,
+            duration: p.duration,
+            value: p.valueParticular ?? p.value ?? 0,
+            valueParticular: p.valueParticular ?? p.value ?? 0,
+            valueSUS: p.valueSUS ?? 0,
+            valueConvenio: p.valueConvenio ?? 0,
+            category: p.category,
+            active: p.active,
+            createdAt: p.created,
+            updatedAt: p.updated,
+          }
+          const price = getProcedureValueByPlan(mappedProc, plan)
+          return {
+            id: p.id,
+            name: p.name,
+            type: 'procedure' as const,
+            price,
+            raw: mappedProc,
+          }
+        })
+
+        const invItems = invRes.map((i: any) => ({
+          id: i.id,
+          name: `${i.name}${i.brand ? ` (${i.brand})` : ''}`,
+          type: 'inventory' as const,
+          price: Number(i.salePrice) || 0,
+          raw: i,
+        }))
+
+        setCatalog([...procItems, ...invItems])
+      } catch (err) {
+        console.error('Erro ao carregar catálogo para lançamento financeiro:', err)
+      } finally {
+        if (isMounted) setLoadingCatalog(false)
+      }
+    }
+
+    loadCatalog()
+    return () => {
+      isMounted = false
+    }
+  }, [patient.planType])
+
+  // Estado do formulário de seleção
+  const [selectedItemId, setSelectedItemId] = React.useState('')
+  const [searchTerm, setSearchTerm] = React.useState('')
+
+  const filteredCatalog = React.useMemo(() => {
+    if (!searchTerm.trim()) return catalog
+    const q = searchTerm.toLowerCase()
+    return catalog.filter((c) => c.name.toLowerCase().includes(q))
+  }, [catalog, searchTerm])
+
+  const [saving, setSaving] = React.useState(false)
+
+  // Total
+  const totalValue = React.useMemo(() => {
+    return items.reduce((acc, item) => acc + (Number(item.value) || 0), 0)
+  }, [items])
+
+  // Função auxiliar para atualizar o agendamento no state global / PB
+  const syncAppointment = (newItems: AppointmentProcedureItem[]) => {
+    if (!todayAppointment) return
+    const total = newItems.reduce((acc, item) => acc + (Number(item.value) || 0), 0)
+    updateAppointment(
+      todayAppointment.id,
+      {
+        proceduresList: newItems,
+        value: total,
+      },
+      { ignoreConflict: true },
+    )
+  }
+
+  // Adicionar item
+  const handleAddItem = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!selectedItemId) return
+
+    const catItem = catalog.find((c) => c.id === selectedItemId)
+    if (!catItem) return
+
+    const newItem: AppointmentProcedureItem = {
+      procedureId: catItem.id,
+      procedureName: catItem.name,
+      value: catItem.price,
+      planType: (patient.planType as any) || 'Particular',
+    }
+
+    const updated = [...items, newItem]
+    setItems(updated)
+    syncAppointment(updated)
+    setSelectedItemId('')
+    setSearchTerm('')
+
+    toast({
+      title: 'Item adicionado',
+      description: `${catItem.name} (${formatCurrency(catItem.price)}) adicionado ao atendimento.`,
+    })
+  }
+
+  // Remover item
+  const handleRemoveItem = (index: number) => {
+    const updated = items.filter((_, i) => i !== index)
+    setItems(updated)
+    syncAppointment(updated)
+
+    toast({
+      title: 'Item removido',
+      description: 'O item foi removido do atendimento.',
+    })
+  }
+
+  // Finalizar Atendimento e Enviar para Cobrança
+  const handleFinalizarAtendimento = async () => {
+    if (items.length === 0) {
+      toast({
+        title: 'Nenhum item adicionado',
+        description: 'Adicione ao menos um procedimento ou produto antes de finalizar.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setSaving(true)
+    try {
+      const itemsSummary = items
+        .map((it) => `${it.procedureName} (${formatCurrency(it.value)})`)
+        .join(' + ')
+
+      // 1. Criar Venda na coleção sales (e no estado)
+      addSale({
+        patientId: patient.id,
+        patientName: patient.name,
+        date: today,
+        itemsDescription: itemsSummary,
+        totalValue: totalValue,
+        paymentMethod: 'À vista',
+        installmentsCount: 1,
+        interestPercent: 0,
+        firstDueDate: today,
+        status: 'Concluída',
+      })
+
+      // 2. Atualizar agendamento status = 'Realizado', reception = ''
+      if (todayAppointment) {
+        updateAppointment(
+          todayAppointment.id,
+          {
+            status: 'Realizado',
+            reception: '',
+            proceduresList: items,
+            value: totalValue,
+          },
+          { ignoreConflict: true },
+        )
+      }
+
+      toast({
+        title: 'Atendimento finalizado com sucesso!',
+        description: `Procedimentos concluídos e venda enviada para recepção (${formatCurrency(totalValue)}).`,
+      })
+    } catch (err) {
+      console.error('Erro ao finalizar atendimento:', err)
+      toast({
+        title: 'Erro ao finalizar',
+        description: 'Não foi possível registrar a cobrança. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Banner status do Agendamento de Hoje */}
+      {todayAppointment ? (
+        <div className="p-4 rounded-xl border border-teal-200 bg-teal-50/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-teal-500 text-white shrink-0">
+              <Receipt className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="font-bold text-slate-900 flex items-center gap-2">
+                <span>
+                  Agendamento de Hoje ({formatDate(todayAppointment.date)} às{' '}
+                  {todayAppointment.time})
+                </span>
+                <Badge
+                  className={
+                    todayAppointment.status === 'Realizado'
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      : 'bg-teal-100 text-teal-800 border-teal-300'
+                  }
+                >
+                  {todayAppointment.status}
+                </Badge>
+              </div>
+              <p className="text-slate-600 mt-0.5">
+                Profissional:{' '}
+                <span className="font-medium text-slate-800">
+                  {todayAppointment.professionalName}
+                </span>{' '}
+                • Plano:{' '}
+                <span className="font-medium text-slate-800">
+                  {patient.planType || 'Particular'}
+                </span>
+              </p>
+            </div>
+          </div>
+
+          <div className="text-right sm:text-right shrink-0">
+            <span className="text-[11px] text-slate-500 block">Total Efetivado</span>
+            <span className="text-sm font-extrabold text-teal-700">
+              {formatCurrency(totalValue)}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/70 flex items-center gap-3 text-xs text-amber-800">
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+          <div>
+            <p className="font-bold">
+              Nenhum agendamento ativo encontrado para hoje ({formatDate(today)}).
+            </p>
+            <p className="text-[11px] text-amber-700">
+              Você ainda pode adicionar itens abaixo. Ao finalizar, será gerada uma venda no módulo
+              de Finanças/Recepção para o paciente.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Formulário de Lançamento */}
+      <div className="p-5 rounded-2xl border border-slate-200 bg-white shadow-sm space-y-4">
+        <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+          <Plus className="w-4 h-4 text-teal-600" />
+          Lançamento de Procedimentos e Produtos
+        </h4>
+
+        <form onSubmit={handleAddItem} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          {/* Busca / Seleção de Item */}
+          <div className="md:col-span-9 space-y-1">
+            <Label className="text-xs font-semibold text-slate-700">
+              Selecionar Procedimento (Serviços/Exames) ou Item de Estoque (Produtos)
+            </Label>
+            <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+              <SelectTrigger className="h-10 rounded-xl text-xs border-slate-300">
+                <SelectValue
+                  placeholder={
+                    loadingCatalog
+                      ? 'Carregando catálogo...'
+                      : 'Selecione um procedimento ou produto...'
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                <div className="p-2 border-b border-slate-100">
+                  <Input
+                    placeholder="Filtrar itens..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="h-8 text-xs rounded-lg"
+                  />
+                </div>
+                {filteredCatalog.length === 0 ? (
+                  <div className="p-3 text-center text-xs text-slate-400">
+                    Nenhum item encontrado
+                  </div>
+                ) : (
+                  filteredCatalog.map((item) => (
+                    <SelectItem key={item.id} value={item.id} className="text-xs">
+                      <div className="flex items-center justify-between w-full gap-4">
+                        <span className="font-medium text-slate-800">
+                          {item.type === 'inventory' ? '📦 ' : '🩺 '}
+                          {item.name}
+                        </span>
+                        <span className="font-bold text-teal-700 shrink-0">
+                          {formatCurrency(item.price)}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Botão Adicionar */}
+          <div className="md:col-span-3">
+            <Button
+              type="submit"
+              disabled={!selectedItemId}
+              className="w-full h-10 bg-teal-500 hover:bg-teal-600 text-white font-semibold text-xs rounded-xl shadow-sm flex items-center justify-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              Adicionar Item
+            </Button>
+          </div>
+        </form>
+
+        {/* Tabela compacta dos itens do atendimento atual */}
+        <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold">
+                <th className="py-2.5 px-3.5">Item / Procedimento</th>
+                <th className="py-2.5 px-3.5 text-center">Plano</th>
+                <th className="py-2.5 px-3.5 text-right">Valor Unitário</th>
+                <th className="py-2.5 px-3.5 text-center">Qtd</th>
+                <th className="py-2.5 px-3.5 text-right">Subtotal</th>
+                <th className="py-2.5 px-3.5 text-center w-12">Ação</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 bg-white">
+              {items.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-400 text-xs">
+                    Nenhum procedimento ou produto adicionado a este atendimento ainda.
+                  </td>
+                </tr>
+              ) : (
+                items.map((item, index) => (
+                  <tr
+                    key={`${item.procedureId}-${index}`}
+                    className="hover:bg-slate-50 transition-colors"
+                  >
+                    <td className="py-2.5 px-3.5 font-semibold text-slate-800">
+                      {item.procedureName}
+                    </td>
+                    <td className="py-2.5 px-3.5 text-center">
+                      <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-700">
+                        {item.planType || patient.planType || 'Particular'}
+                      </Badge>
+                    </td>
+                    <td className="py-2.5 px-3.5 text-right text-slate-600 font-mono">
+                      {formatCurrency(item.value)}
+                    </td>
+                    <td className="py-2.5 px-3.5 text-center font-medium text-slate-700">1</td>
+                    <td className="py-2.5 px-3.5 text-right font-bold text-slate-900 font-mono">
+                      {formatCurrency(item.value)}
+                    </td>
+                    <td className="py-2.5 px-3.5 text-center">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleRemoveItem(index)}
+                        className="h-7 w-7 p-0 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+            <tfoot>
+              <tr className="bg-teal-50/80 border-t-2 border-teal-200 text-slate-900 font-extrabold">
+                <td
+                  colSpan={4}
+                  className="py-3 px-3.5 text-right text-xs uppercase tracking-wider text-teal-900"
+                >
+                  Valor Total do Atendimento:
+                </td>
+                <td className="py-3 px-3.5 text-right text-sm text-teal-800 font-mono">
+                  {formatCurrency(totalValue)}
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      {/* Botão Finalizar Atendimento */}
+      <div className="flex items-center justify-end pt-2">
+        <Button
+          onClick={handleFinalizarAtendimento}
+          disabled={saving || items.length === 0}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl h-11 px-6 shadow-md transition-all flex items-center gap-2"
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          Finalizar Atendimento e Enviar para Cobrança ({formatCurrency(totalValue)})
+        </Button>
+      </div>
     </div>
   )
 }
