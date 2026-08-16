@@ -5,6 +5,7 @@ import {
   Users,
   Calendar,
   FileText,
+  Wallet,
   DollarSign,
   Package,
   BarChart3,
@@ -95,6 +96,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           name: 'Financeiro',
           path: '/financeiro',
           icon: DollarSign,
+          adminOnly: true,
+        },
+        {
+          name: 'Caixa',
+          path: '/financeiro/caixa',
+          icon: Wallet,
           adminOnly: true,
         },
         {

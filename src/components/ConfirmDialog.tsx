@@ -17,7 +17,7 @@ interface ConfirmDialogProps {
   description: string
   confirmText?: string
   cancelText?: string
-  variant?: 'danger' | 'default'
+  variant?: 'danger' | 'default' | 'success'
   onConfirm: () => void
 }
 
@@ -53,7 +53,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             className={
               variant === 'danger'
                 ? 'bg-red-600 text-white hover:bg-red-700 rounded-lg shadow-sm'
-                : 'bg-teal-500 text-white hover:bg-teal-600 rounded-lg shadow-sm'
+                : variant === 'success'
+                  ? 'bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg shadow-sm'
+                  : 'bg-teal-500 text-white hover:bg-teal-600 rounded-lg shadow-sm'
             }
           >
             {confirmText}

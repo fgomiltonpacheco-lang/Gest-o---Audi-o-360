@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T18:30:14.095Z",
+  "generatedAt": "2026-08-16T18:49:43.195Z",
   "collections": [
     {
       "name": "users",
@@ -2220,6 +2220,225 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_equipments_nome ON equipments (nome)"]
+    },
+    {
+      "name": "fechamentos_caixa",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "data",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "saldo_inicial",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "saldo_final",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_dinheiro",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_debito",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_credito",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_pix",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_convenio",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_boleto",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_entradas",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_saidas",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_vendas",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quantidade_vendas",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "diferenca",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["aberto", "fechado"]
+        },
+        {
+          "name": "observacao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "usuario",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_fechamentos_caixa_data ON fechamentos_caixa (data)",
+        "CREATE INDEX idx_fechamentos_caixa_status ON fechamentos_caixa (status)"
+      ]
+    },
+    {
+      "name": "movimentacoes_caixa",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "fechamento",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "fechamentos_caixa"
+        },
+        {
+          "name": "tipo",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["entrada", "saida"]
+        },
+        {
+          "name": "valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "descricao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "forma_pagamento",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["dinheiro", "debito", "credito", "pix", "convenio", "boleto"]
+        },
+        {
+          "name": "data",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sale",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "sales"
+        },
+        {
+          "name": "usuario",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_movimentacoes_caixa_fechamento ON movimentacoes_caixa (fechamento)",
+        "CREATE INDEX idx_movimentacoes_caixa_data ON movimentacoes_caixa (data)"
+      ]
     }
   ]
 }

@@ -713,6 +713,52 @@ export function getEquipmentStatus(
   return 'valid'
 }
 
+// ===== Módulo de Fechamento de Caixa =====
+export type FechamentoCaixaStatus = 'aberto' | 'fechado'
+export type FormaPagamentoCaixa = 'dinheiro' | 'debito' | 'credito' | 'pix' | 'convenio' | 'boleto'
+export type MovimentacaoCaixaTipo = 'entrada' | 'saida'
+
+export interface FechamentoCaixa {
+  id: string
+  data: string // YYYY-MM-DD
+  saldoInicial: number
+  saldoFinal: number
+  totalDinheiro: number
+  totalDebito: number
+  totalCredito: number
+  totalPix: number
+  totalConvenio: number
+  totalBoleto: number
+  totalEntradas: number
+  totalSaidas: number
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: FechamentoCaixaStatus
+  observacao: string
+  /** ID do usuário que abriu/fechou o caixa. */
+  usuarioId?: string
+  /** Nome do usuário (expand da relação `usuario`). */
+  usuarioNome?: string
+  created: string
+  updated: string
+}
+
+export interface MovimentacaoCaixa {
+  id: string
+  fechamentoId: string
+  tipo: MovimentacaoCaixaTipo
+  valor: number
+  descricao: string
+  formaPagamento: FormaPagamentoCaixa
+  data: string // YYYY-MM-DD
+  /** Relação opcional com a venda de origem. */
+  saleId?: string
+  usuarioId?: string
+  usuarioNome?: string
+  created: string
+}
+
 // Alertas do Sistema
 export interface SystemAlert {
   id: string

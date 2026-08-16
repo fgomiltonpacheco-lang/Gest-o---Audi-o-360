@@ -26,6 +26,11 @@ import {
   ClinicSettings,
   Equipment,
   getEquipmentStatus,
+  FechamentoCaixa,
+  MovimentacaoCaixa,
+  FechamentoCaixaStatus,
+  MovimentacaoCaixaTipo,
+  FormaPagamentoCaixa,
 } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
@@ -387,6 +392,50 @@ const mapStockMovement = (r: any): StockMovement => ({
   createdAt: toDateStr(r.created),
 })
 
+const mapFechamentoCaixa = (r: any): FechamentoCaixa => {
+  const usuario = r.expand?.usuario
+  return {
+    id: r.id,
+    data: toDateStr(r.data),
+    saldoInicial: Number(r.saldo_inicial) || 0,
+    saldoFinal: Number(r.saldo_final) || 0,
+    totalDinheiro: Number(r.total_dinheiro) || 0,
+    totalDebito: Number(r.total_debito) || 0,
+    totalCredito: Number(r.total_credito) || 0,
+    totalPix: Number(r.total_pix) || 0,
+    totalConvenio: Number(r.total_convenio) || 0,
+    totalBoleto: Number(r.total_boleto) || 0,
+    totalEntradas: Number(r.total_entradas) || 0,
+    totalSaidas: Number(r.total_saidas) || 0,
+    totalVendas: Number(r.total_vendas) || 0,
+    quantidadeVendas: Number(r.quantidade_vendas) || 0,
+    diferenca: Number(r.diferenca) || 0,
+    status: (r.status === 'fechado' ? 'fechado' : 'aberto') as FechamentoCaixaStatus,
+    observacao: r.observacao || '',
+    usuarioId: r.usuario || undefined,
+    usuarioNome: usuario?.name || undefined,
+    created: toDateStr(r.created),
+    updated: toDateStr(r.updated),
+  }
+}
+
+const mapMovimentacaoCaixa = (r: any): MovimentacaoCaixa => {
+  const usuario = r.expand?.usuario
+  return {
+    id: r.id,
+    fechamentoId: r.fechamento || '',
+    tipo: (r.tipo === 'saida' ? 'saida' : 'entrada') as MovimentacaoCaixaTipo,
+    valor: Number(r.valor) || 0,
+    descricao: r.descricao || '',
+    formaPagamento: (r.forma_pagamento || 'dinheiro') as FormaPagamentoCaixa,
+    data: toDateStr(r.data),
+    saleId: r.sale || undefined,
+    usuarioId: r.usuario || undefined,
+    usuarioNome: usuario?.name || undefined,
+    created: toDateStr(r.created),
+  }
+}
+
 // ============================================================
 // Context interface (mantida compatível com as páginas existentes)
 // ============================================================
@@ -505,6 +554,22 @@ interface AppContextType {
   cashMovements: CashFlowMovement[]
   addCashMovement: (mov: Omit<CashFlowMovement, 'id' | 'createdAt'>) => CashFlowMovement
 
+  // Fechamento de Caixa
+  fechamentosCaixa: FechamentoCaixa[]
+  fetchFechamentosCaixa: () => Promise<void>
+  addFechamentoCaixa: (
+    data: Omit<FechamentoCaixa, 'id' | 'created' | 'updated'>,
+  ) => Promise<FechamentoCaixa | null>
+  updateFechamentoCaixa: (
+    id: string,
+    data: Partial<FechamentoCaixa>,
+  ) => Promise<{ success: boolean; message?: string }>
+  movimentacoesCaixa: MovimentacaoCaixa[]
+  fetchMovimentacoesCaixa: (fechamentoId?: string) => Promise<void>
+  addMovimentacaoCaixa: (
+    data: Omit<MovimentacaoCaixa, 'id' | 'created' | 'usuarioId' | 'usuarioNome'>,
+  ) => Promise<MovimentacaoCaixa | null>
+
   // Estoque
   stockItems: StockItem[]
   addStockItem: (item: Omit<StockItem, 'id' | 'createdAt'>) => StockItem
@@ -568,6 +633,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Configurações da Clínica + Equipamentos
   const [clinicSettings, setClinicSettings] = useState<ClinicSettings | null>(null)
   const [equipments, setEquipments] = useState<Equipment[]>([])
+
+  // Fechamento de Caixa
+  const [fechamentosCaixa, setFechamentosCaixa] = useState<FechamentoCaixa[]>([])
+  const [movimentacoesCaixa, setMovimentacoesCaixa] = useState<MovimentacaoCaixa[]>([])
 
   // ---------- Carregamento de dados ----------
   const reloadAll = useCallback(async () => {
@@ -775,6 +844,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBeras([])
     setClinicSettings(null)
     setEquipments([])
+    setFechamentosCaixa([])
+    setMovimentacoesCaixa([])
     toast({
       title: 'Sessão encerrada',
       description: 'Você saiu do sistema com segurança.',
@@ -2467,6 +2538,146 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     })
   }
 
+  // ---------- Fechamento de Caixa Handlers ----------
+  const fetchFechamentosCaixa = useCallback(async () => {
+    try {
+      const list = await pb
+        .collection('fechamentos_caixa')
+        .getFullList({ sort: '-data', expand: 'usuario' })
+      setFechamentosCaixa(list.map(mapFechamentoCaixa))
+    } catch (err) {
+      console.error('Erro ao carregar fechamentos de caixa:', err)
+    }
+  }, [])
+
+  const fetchMovimentacoesCaixa = useCallback(async (fechamentoId?: string) => {
+    try {
+      let list: any[] = []
+      if (fechamentoId) {
+        list = await pb.collection('movimentacoes_caixa').getFullList({
+          filter: `fechamento = "${fechamentoId}"`,
+          sort: 'created',
+          expand: 'usuario',
+        })
+      } else {
+        list = await pb
+          .collection('movimentacoes_caixa')
+          .getFullList({ sort: '-created', expand: 'usuario' })
+      }
+      setMovimentacoesCaixa(list.map(mapMovimentacaoCaixa))
+    } catch (err) {
+      console.error('Erro ao carregar movimentações de caixa:', err)
+    }
+  }, [])
+
+  const addFechamentoCaixa = async (
+    data: Omit<FechamentoCaixa, 'id' | 'created' | 'updated'>,
+  ): Promise<FechamentoCaixa | null> => {
+    try {
+      const payload: Record<string, any> = {
+        data: data.data,
+        saldo_inicial: data.saldoInicial ?? 0,
+        saldo_final: data.saldoFinal ?? 0,
+        total_dinheiro: data.totalDinheiro ?? 0,
+        total_debito: data.totalDebito ?? 0,
+        total_credito: data.totalCredito ?? 0,
+        total_pix: data.totalPix ?? 0,
+        total_convenio: data.totalConvenio ?? 0,
+        total_boleto: data.totalBoleto ?? 0,
+        total_entradas: data.totalEntradas ?? 0,
+        total_saidas: data.totalSaidas ?? 0,
+        total_vendas: data.totalVendas ?? 0,
+        quantidade_vendas: data.quantidadeVendas ?? 0,
+        diferenca: data.diferenca ?? 0,
+        status: data.status || 'aberto',
+        observacao: data.observacao || '',
+        usuario: data.usuarioId || currentUser?.id || '',
+      }
+      const rec: any = await pb.collection('fechamentos_caixa').create(payload, {
+        expand: 'usuario',
+      })
+      const mapped = mapFechamentoCaixa(rec)
+      setFechamentosCaixa((prev) => [mapped, ...prev])
+      return mapped
+    } catch (err) {
+      console.error('Erro ao criar fechamento de caixa:', err)
+      toast({
+        title: 'Erro ao abrir caixa',
+        description: describePbError(err),
+        variant: 'destructive',
+      })
+      return null
+    }
+  }
+
+  const updateFechamentoCaixa = async (
+    id: string,
+    data: Partial<FechamentoCaixa>,
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const patch: Record<string, any> = {}
+      if (data.saldoInicial !== undefined) patch.saldo_inicial = data.saldoInicial
+      if (data.saldoFinal !== undefined) patch.saldo_final = data.saldoFinal
+      if (data.totalDinheiro !== undefined) patch.total_dinheiro = data.totalDinheiro
+      if (data.totalDebito !== undefined) patch.total_debito = data.totalDebito
+      if (data.totalCredito !== undefined) patch.total_credito = data.totalCredito
+      if (data.totalPix !== undefined) patch.total_pix = data.totalPix
+      if (data.totalConvenio !== undefined) patch.total_convenio = data.totalConvenio
+      if (data.totalBoleto !== undefined) patch.total_boleto = data.totalBoleto
+      if (data.totalEntradas !== undefined) patch.total_entradas = data.totalEntradas
+      if (data.totalSaidas !== undefined) patch.total_saidas = data.totalSaidas
+      if (data.totalVendas !== undefined) patch.total_vendas = data.totalVendas
+      if (data.quantidadeVendas !== undefined) patch.quantidade_vendas = data.quantidadeVendas
+      if (data.diferenca !== undefined) patch.diferenca = data.diferenca
+      if (data.status !== undefined) patch.status = data.status
+      if (data.observacao !== undefined) patch.observacao = data.observacao
+      if (data.usuarioId !== undefined) patch.usuario = data.usuarioId
+      const rec: any = await pb.collection('fechamentos_caixa').update(id, patch, {
+        expand: 'usuario',
+      })
+      const mapped = mapFechamentoCaixa(rec)
+      setFechamentosCaixa((prev) => prev.map((f) => (f.id === id ? mapped : f)))
+      return { success: true }
+    } catch (err) {
+      console.error('Erro ao atualizar fechamento de caixa:', err)
+      return {
+        success: false,
+        message: describePbError(err),
+      }
+    }
+  }
+
+  const addMovimentacaoCaixa = async (
+    data: Omit<MovimentacaoCaixa, 'id' | 'created' | 'usuarioId' | 'usuarioNome'>,
+  ): Promise<MovimentacaoCaixa | null> => {
+    try {
+      const payload: Record<string, any> = {
+        fechamento: data.fechamentoId || '',
+        tipo: data.tipo,
+        valor: data.valor ?? 0,
+        descricao: data.descricao || '',
+        forma_pagamento: data.formaPagamento || 'dinheiro',
+        data: data.data,
+        sale: data.saleId || '',
+        usuario: currentUser?.id || '',
+      }
+      const rec: any = await pb.collection('movimentacoes_caixa').create(payload, {
+        expand: 'usuario',
+      })
+      const mapped = mapMovimentacaoCaixa(rec)
+      setMovimentacoesCaixa((prev) => [...prev, mapped])
+      return mapped
+    } catch (err) {
+      console.error('Erro ao criar movimentação de caixa:', err)
+      toast({
+        title: 'Erro ao registrar movimentação',
+        description: describePbError(err),
+        variant: 'destructive',
+      })
+      return null
+    }
+  }
+
   return (
     <AppContext.Provider
       value={{
@@ -2533,6 +2744,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteStockItem,
         addStockEntry,
         addStockExit,
+        // Fechamento de Caixa
+        fechamentosCaixa,
+        fetchFechamentosCaixa,
+        addFechamentoCaixa,
+        updateFechamentoCaixa,
+        movimentacoesCaixa,
+        fetchMovimentacoesCaixa,
+        addMovimentacaoCaixa,
         alerts,
         unreadAlertsCount,
         resetToSeedData,

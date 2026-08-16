@@ -11,6 +11,7 @@ import Audiometria from '@/pages/Audiometria'
 import Agenda from '@/pages/Agenda'
 import Aparelhos from '@/pages/Aparelhos'
 import Financeiro from '@/pages/Financeiro'
+import Caixa from '@/pages/Caixa'
 import Vendas from '@/pages/Vendas'
 import PDV from '@/pages/PDV'
 import Estoque from '@/pages/Estoque'
@@ -143,6 +144,14 @@ export function App() {
               element={
                 <AdminRoute>
                   <Financeiro />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/financeiro/caixa"
+              element={
+                <AdminRoute>
+                  <Caixa />
                 </AdminRoute>
               }
             />
