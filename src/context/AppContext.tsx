@@ -1602,6 +1602,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Busca o registro atual para validar a senha antiga e o histórico.
         const rec: any = await pb.collection('users').getOne(currentUser.id)
 
+        // Verifica o histórico (últimas 3) ANTES de trocar a senha —
+        // rejeita reuso sem chegar a alterar a senha no PocketBase.
+        const history: any[] = Array.isArray(rec.password_history) ? rec.password_history : []
+        const candidateHash = await hashSha256Browser(newPassword)
+        if (history.includes(candidateHash)) {
+          return {
+            success: false,
+            message: 'A nova senha não pode ser igual a uma das últimas 3 senhas utilizadas.',
+          }
+        }
+
         // Atualiza a senha (PocketBase valida oldPassword automaticamente
         // quando o campo `oldPassword` é enviado junto).
         await pb.collection('users').update(currentUser.id, {
@@ -1612,22 +1623,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         // Atualiza histórico (mantém últimas 3) + password_changed_at +
         // limpa force_password_change.
-        const history: any[] = Array.isArray(rec.password_history) ? rec.password_history : []
-        // Armazena um hash SHA-256 da nova senha no histórico (últimas 3)
-        // para checagem best-effort de reuso. A verificação real de "igual
-        // às últimas 3" é feita comparando o hash da nova senha com os
-        // hashes armazenados antes de aceitar a troca.
-        if (history.length > 0) {
-          const candidateHash = await hashSha256Browser(newPassword)
-          if (history.includes(candidateHash)) {
-            return {
-              success: false,
-              message: 'A nova senha não pode ser igual a uma das últimas 3 senhas utilizadas.',
-            }
-          }
-        }
-        const newHash = await hashSha256Browser(newPassword)
-        const newHistory = [newHash, ...history].slice(0, 3)
+        const newHistory = [candidateHash, ...history].slice(0, 3)
 
         await pb.collection('users').update(currentUser.id, {
           password_history: newHistory,

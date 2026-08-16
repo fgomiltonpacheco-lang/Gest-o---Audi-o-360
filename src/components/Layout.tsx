@@ -31,6 +31,7 @@ import {
   CalendarX,
   UserPlus,
   Shield,
+  KeyRound,
   type LucideIcon,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
@@ -317,6 +318,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           name: 'Perfil',
           path: '/perfil',
           icon: Settings,
+        },
+        {
+          name: 'Alterar Senha',
+          path: '/alterar-senha',
+          icon: KeyRound,
         },
         {
           name: 'Usuários',
