@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T03:55:57.918Z",
+  "generatedAt": "2026-08-16T04:02:24.477Z",
   "collections": [
     {
       "name": "users",
@@ -1987,6 +1987,66 @@
           "required": false,
           "system": false,
           "selectValues": ["", "Condutiva", "Neurossensorial", "Mista"]
+        },
+        {
+          "name": "marital_status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "masking_air_od",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "masking_air_oe",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "masking_bone_od",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "masking_bone_oe",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "meatoscopy_od",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "meatoscopy_oe",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "srt_od",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "srt_oe",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "iprf_vocal",
+          "type": "json",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

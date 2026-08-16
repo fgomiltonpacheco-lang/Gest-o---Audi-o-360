@@ -234,6 +234,22 @@ export interface IprfData {
   oe: IprfRow
 }
 
+/**
+ * IPRF estruturado (logoaudiometria) — uma linha por orelha com
+ * intensidade (dB), reconhecimento de monossílabos (%) e dissílabos (%).
+ * Exibido na seção "I.P.R.F" do exame, no formato do PDF de referência.
+ */
+export interface IprfVocalRow {
+  intensidade: string
+  monossilabos: string
+  dissilabos: string
+}
+
+export interface IprfVocalData {
+  od: IprfVocalRow
+  oe: IprfVocalRow
+}
+
 export interface AudiometryExamFull {
   id: string
   patientId: string
@@ -268,6 +284,21 @@ export interface AudiometryExamFull {
   // IPRF simplificado (percentual por orelha)
   iprf_od: number | null
   iprf_oe: number | null
+  // IPRF estruturado (logoaudiometria — intensidade/monossílabos/dissílabos)
+  iprf_vocal: IprfVocalData
+  // SRT (Speech Reception Threshold) por orelha
+  srt_od: number | null
+  srt_oe: number | null
+  // Mascaramento (dB) — via aérea / via óssea por orelha
+  masking_air_od: number | null
+  masking_air_oe: number | null
+  masking_bone_od: number | null
+  masking_bone_oe: number | null
+  // Inspeção do meato acústico externo (texto descritivo)
+  meatoscopy_od: string
+  meatoscopy_oe: string
+  // Estado civil
+  marital_status: string
   // Laudo clínico
   loss_degree: string
   loss_type: string
@@ -301,6 +332,15 @@ export function emptyIprf(): IprfData {
     dissilabos: '',
     mascaramento: '',
     palavras: '',
+  })
+  return { od: emptyRow(), oe: emptyRow() }
+}
+
+export function emptyIprfVocal(): IprfVocalData {
+  const emptyRow = (): IprfVocalRow => ({
+    intensidade: '',
+    monossilabos: '',
+    dissilabos: '',
   })
   return { od: emptyRow(), oe: emptyRow() }
 }
@@ -341,6 +381,16 @@ export function emptyAudiometryExamFull(
     iprf: emptyIprf(),
     iprf_od: null,
     iprf_oe: null,
+    iprf_vocal: emptyIprfVocal(),
+    srt_od: null,
+    srt_oe: null,
+    masking_air_od: null,
+    masking_air_oe: null,
+    masking_bone_od: null,
+    masking_bone_oe: null,
+    meatoscopy_od: '',
+    meatoscopy_oe: '',
+    marital_status: '',
     loss_degree: '',
     loss_type: '',
     report: '',

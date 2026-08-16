@@ -360,26 +360,55 @@
     font-size: 7.5pt;
   }
 
-  .audiometry-print table {
-    font-size: 7pt;
-  }
-
-  .audiometry-print th,
-  .audiometry-print td {
-    padding: 1.5px 3px;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
   /* Garante que cores (OD vermelho / OE azul, faixa verde) apareçam na impressão */
   .audiometry-print svg,
-  #print-root svg {
+  #print-root svg,
+  .clinic-audiometry svg {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
   /* SVGs do audiograma compactos na impressão */
   .audiometry-print svg {
-    max-height: 200px;
+    max-height: 230px;
   }
+
+  /* O bloco de prévia clínica (.clinic-audiometry) é ocultado em tela quando
+     dentro do portal de impressão — apenas o conteúdo do PrintDocuments é
+     impresso. Mas quando a página é a própria Audiometria, a prévia é exibida
+     normalmente na tela. A ocultação é controlada por .no-print nas seções de
+     entrada de dados. */
+  .clinic-audiometry table {
+    font-size: 7pt;
+  }
+
+  .clinic-audiometry th,
+  .clinic-audiometry td {
+    padding: 1px 2px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* No modal de impressão, a prévia clínica (clinic-audiometry) é o conteúdo;
+     os blocos de entrada marcados com .no-print são ocultados. */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Quando imprimindo a audiometria completa, a prévia clínica traz seu próprio
+     cabeçalho/rodapé — remove o cabeçalho/rodapé genérico do PrintProvider. */
+  body:has(.audiometry-print-full) .print-provider-header,
+  body:has(.audiometry-print-full) .print-provider-footer {
+    display: none !important;
+  }
+
+  /* Audiometria completa ocupa a página inteira com margens reduzidas */
+  body:has(.audiometry-print-full) #print-root .print-body {
+    padding: 0 !important;
+  }
+}
+
+/* Em tela, a prévia clínica usa fontes um pouco maiores */
+.clinic-audiometry {
+  font-size: 11px;
 }

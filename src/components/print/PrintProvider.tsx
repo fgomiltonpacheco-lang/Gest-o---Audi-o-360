@@ -97,7 +97,7 @@ function PrintLayout({
     <div className="font-sans text-slate-800" style={{ fontFamily: 'Roboto, sans-serif' }}>
       {/* Cabeçalho */}
       <div
-        className="flex items-center justify-between border-b-2 border-navy-700 pb-3 mb-5"
+        className="flex items-center justify-between border-b-2 border-navy-700 pb-3 mb-5 print-provider-header"
         style={{ borderBottom: '2px solid #0F2B5C' }}
       >
         <div className="flex items-center gap-4">
@@ -137,7 +137,7 @@ function PrintLayout({
 
       {/* Rodapé */}
       <div
-        className="mt-8 pt-3 border-t border-slate-300 flex items-center justify-between text-[9pt] text-slate-500"
+        className="mt-8 pt-3 border-t border-slate-300 flex items-center justify-between text-[9pt] text-slate-500 print-provider-footer"
         style={{
           marginTop: '32px',
           paddingTop: '10px',

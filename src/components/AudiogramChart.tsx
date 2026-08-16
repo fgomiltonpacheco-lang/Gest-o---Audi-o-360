@@ -24,6 +24,7 @@ export const COLOR_OE = '#2563eb' // Azul para OE
 
 /** Frequências exibidas no eixo X (escala logarítmica). */
 const CHART_FREQS = [
+  '125',
   '250',
   '500',
   '750',
@@ -214,6 +215,10 @@ interface SingleEarChartProps {
   ldl?: AudiogramMap
   title?: string
   width?: number | string
+  /** Modo compacto: reduz dimensões/legendas internas (usado na impressão). */
+  compact?: boolean
+  /** Oculta a legenda interna de símbolos. */
+  hideLegend?: boolean
 }
 
 export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
@@ -223,8 +228,34 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
   ldl,
   title,
   width = '100%',
+  compact = false,
+  hideLegend = false,
 }) => {
   const color = side === 'OD' ? COLOR_OD : COLOR_OE
+
+  // Dimensões adaptáveis quando em modo compacto (impressão)
+  const W = compact ? 360 : 440
+  const H = compact ? 300 : 400
+  const PAD_L = compact ? 30 : 46
+  const PAD_R = compact ? 12 : 18
+  const PAD_T = compact ? 12 : 22
+  const PAD_B = compact ? 26 : 38
+
+  const xForFreq = (freq: string): number => {
+    const logs = CHART_FREQS.map((f) => freqLog(f))
+    const minF = logs[0]
+    const maxF = logs[logs.length - 1]
+    const span = maxF - minF || 1
+    const fl = freqLog(freq)
+    const norm = (fl - minF) / span
+    return PAD_L + norm * (W - PAD_L - PAD_R)
+  }
+
+  const yForDb = (db: number): number => {
+    const innerH = H - PAD_T - PAD_B
+    const norm = (db - DB_MIN) / (DB_MAX - DB_MIN)
+    return PAD_T + norm * innerH
+  }
 
   const buildPoints = (map: AudiogramMap, freqs: readonly string[]) =>
     freqs
@@ -300,7 +331,13 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
                 stroke={isMajor ? '#cbd5e1' : '#f1f5f9'}
                 strokeWidth={isMajor ? 1 : 0.6}
               />
-              <text x={PAD_L - 6} y={y + 3} textAnchor="end" fontSize="9" fill="#64748b">
+              <text
+                x={PAD_L - 5}
+                y={y + 3}
+                textAnchor="end"
+                fontSize={compact ? '7' : '9'}
+                fill="#64748b"
+              >
                 {db}
               </text>
             </g>
@@ -313,7 +350,13 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
           return (
             <g key={`v-${side}-${f}`}>
               <line x1={x} y1={PAD_T} x2={x} y2={H - PAD_B} stroke="#e2e8f0" strokeWidth={0.6} />
-              <text x={x} y={H - PAD_B + 14} textAnchor="middle" fontSize="9" fill="#64748b">
+              <text
+                x={x}
+                y={H - PAD_B + (compact ? 12 : 14)}
+                textAnchor="middle"
+                fontSize={compact ? '7' : '9'}
+                fill="#64748b"
+              >
                 {Number(f) >= 1000 ? `${Number(f) / 1000}k` : f}
               </text>
             </g>
@@ -381,33 +424,35 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
         })}
 
         {/* Legenda interna */}
-        <g transform={`translate(${PAD_L + 6}, ${PAD_T + 4})`}>
-          <rect x={0} y={0} width={120} height={40} fill="#ffffff" opacity={0.88} rx={3} />
-          {side === 'OD' ? (
-            <>
-              <circle cx={10} cy={11} r={4} fill="none" stroke={COLOR_OD} strokeWidth={1.5} />
-              <text x={20} y={14} fontSize="8" fill="#1e293b" fontWeight="600">
-                Aérea (○)
-              </text>
-              <path d="M 12 21 L 8 25 L 12 29" fill="none" stroke={COLOR_OD} strokeWidth={1.5} />
-              <text x={20} y={28} fontSize="8" fill="#1e293b" fontWeight="600">
-                Óssea (&lt;)
-              </text>
-            </>
-          ) : (
-            <>
-              <line x1={6} y1={7} x2={14} y2={15} stroke={COLOR_OE} strokeWidth={1.5} />
-              <line x1={6} y1={15} x2={14} y2={7} stroke={COLOR_OE} strokeWidth={1.5} />
-              <text x={20} y={14} fontSize="8" fill="#1e293b" fontWeight="600">
-                Aérea (✕)
-              </text>
-              <path d="M 8 21 L 12 25 L 8 29" fill="none" stroke={COLOR_OE} strokeWidth={1.5} />
-              <text x={20} y={28} fontSize="8" fill="#1e293b" fontWeight="600">
-                Óssea (&gt;)
-              </text>
-            </>
-          )}
-        </g>
+        {!hideLegend && (
+          <g transform={`translate(${PAD_L + 6}, ${PAD_T + 4})`}>
+            <rect x={0} y={0} width={120} height={40} fill="#ffffff" opacity={0.88} rx={3} />
+            {side === 'OD' ? (
+              <>
+                <circle cx={10} cy={11} r={4} fill="none" stroke={COLOR_OD} strokeWidth={1.5} />
+                <text x={20} y={14} fontSize="8" fill="#1e293b" fontWeight="600">
+                  Aérea (○)
+                </text>
+                <path d="M 12 21 L 8 25 L 12 29" fill="none" stroke={COLOR_OD} strokeWidth={1.5} />
+                <text x={20} y={28} fontSize="8" fill="#1e293b" fontWeight="600">
+                  Óssea (&lt;)
+                </text>
+              </>
+            ) : (
+              <>
+                <line x1={6} y1={7} x2={14} y2={15} stroke={COLOR_OE} strokeWidth={1.5} />
+                <line x1={6} y1={15} x2={14} y2={7} stroke={COLOR_OE} strokeWidth={1.5} />
+                <text x={20} y={14} fontSize="8" fill="#1e293b" fontWeight="600">
+                  Aérea (✕)
+                </text>
+                <path d="M 8 21 L 12 25 L 8 29" fill="none" stroke={COLOR_OE} strokeWidth={1.5} />
+                <text x={20} y={28} fontSize="8" fill="#1e293b" fontWeight="600">
+                  Óssea (&gt;)
+                </text>
+              </>
+            )}
+          </g>
+        )}
       </svg>
     </div>
   )
@@ -420,7 +465,13 @@ interface DualAudiogramChartProps {
   boneOE: AudiogramMap
   ldlOD?: AudiogramMap
   ldlOE?: AudiogramMap
+  srtOD?: number | null
+  srtOE?: number | null
+  ldvOD?: number | null
+  ldvOE?: number | null
   width?: number | string
+  compact?: boolean
+  hideLegend?: boolean
 }
 
 export const AudiogramChart: React.FC<DualAudiogramChartProps> = ({
@@ -430,26 +481,65 @@ export const AudiogramChart: React.FC<DualAudiogramChartProps> = ({
   boneOE,
   ldlOD,
   ldlOE,
+  srtOD,
+  srtOE,
+  ldvOD,
+  ldvOE,
+  compact = false,
+  hideLegend = false,
 }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-      <div className="border border-red-100 bg-red-50/20 p-2 rounded-xl">
+    <div
+      className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full"
+      style={compact ? { gap: '4px' } : undefined}
+    >
+      <div className={compact ? '' : 'border border-red-100 bg-red-50/20 p-2 rounded-xl'}>
         <SingleEarAudiogramChart
           side="OD"
-          title="Orelha Direita (OD) — Vermelho"
+          title={compact ? undefined : 'Orelha Direita (OD) — Vermelho'}
           air={airOD}
           bone={boneOD}
           ldl={ldlOD}
+          compact={compact}
+          hideLegend={hideLegend}
         />
+        <div
+          style={{
+            textAlign: 'center',
+            fontSize: compact ? '7pt' : '11px',
+            marginTop: '2px',
+            fontWeight: 700,
+            color: COLOR_OD,
+          }}
+        >
+          ORELHA DIREITA &nbsp;—&nbsp; SRT:{' '}
+          {srtOD === null || srtOD === undefined ? '—' : `${srtOD} dB`} &nbsp;|&nbsp; LDV:{' '}
+          {ldvOD === null || ldvOD === undefined ? '—' : `${ldvOD} dB`}
+        </div>
       </div>
-      <div className="border border-blue-100 bg-blue-50/20 p-2 rounded-xl">
+      <div className={compact ? '' : 'border border-blue-100 bg-blue-50/20 p-2 rounded-xl'}>
         <SingleEarAudiogramChart
           side="OE"
-          title="Orelha Esquerda (OE) — Azul"
+          title={compact ? undefined : 'Orelha Esquerda (OE) — Azul'}
           air={airOE}
           bone={boneOE}
           ldl={ldlOE}
+          compact={compact}
+          hideLegend={hideLegend}
         />
+        <div
+          style={{
+            textAlign: 'center',
+            fontSize: compact ? '7pt' : '11px',
+            marginTop: '2px',
+            fontWeight: 700,
+            color: COLOR_OE,
+          }}
+        >
+          ORELHA ESQUERDA &nbsp;—&nbsp; SRT:{' '}
+          {srtOE === null || srtOE === undefined ? '—' : `${srtOE} dB`} &nbsp;|&nbsp; LDV:{' '}
+          {ldvOE === null || ldvOE === undefined ? '—' : `${ldvOE} dB`}
+        </div>
       </div>
     </div>
   )
