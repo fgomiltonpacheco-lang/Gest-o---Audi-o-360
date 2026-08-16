@@ -36,6 +36,7 @@ import {
   emptyAudiometryExamFull,
 } from '@/types'
 import { calculateAge, formatDate, maskCPF } from '@/lib/formatters'
+import { mediaTritonal, mediaQuadritonal } from '@/lib/audiogram'
 
 /* ---------- Mappers ---------- */
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -681,6 +682,52 @@ export default function Audiometria() {
           ldlOD={exam.ldl_od}
           ldlOE={exam.ldl_oe}
         />
+
+        {/* Médias automáticas por orelha */}
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="p-3 rounded-xl border border-red-200 bg-red-50/50">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-red-600 mb-1">
+              OD — Orelha Direita
+            </h4>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+              <span className="text-slate-700">
+                <strong>Média Tritonal:</strong>{' '}
+                <span className="font-semibold text-slate-900">
+                  {mediaTritonal(exam.air_od) === null ? '—' : `${mediaTritonal(exam.air_od)} dB`}
+                </span>
+              </span>
+              <span className="text-slate-700">
+                <strong>Média Quadritonal:</strong>{' '}
+                <span className="font-semibold text-slate-900">
+                  {mediaQuadritonal(exam.air_od) === null
+                    ? '—'
+                    : `${mediaQuadritonal(exam.air_od)} dB`}
+                </span>
+              </span>
+            </div>
+          </div>
+          <div className="p-3 rounded-xl border border-blue-200 bg-blue-50/50">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 mb-1">
+              OE — Orelha Esquerda
+            </h4>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+              <span className="text-slate-700">
+                <strong>Média Tritonal:</strong>{' '}
+                <span className="font-semibold text-slate-900">
+                  {mediaTritonal(exam.air_oe) === null ? '—' : `${mediaTritonal(exam.air_oe)} dB`}
+                </span>
+              </span>
+              <span className="text-slate-700">
+                <strong>Média Quadritonal:</strong>{' '}
+                <span className="font-semibold text-slate-900">
+                  {mediaQuadritonal(exam.air_oe) === null
+                    ? '—'
+                    : `${mediaQuadritonal(exam.air_oe)} dB`}
+                </span>
+              </span>
+            </div>
+          </div>
+        </div>
       </Section>
 
       {/* Audiometria Vocal */}
