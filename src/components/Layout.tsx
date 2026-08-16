@@ -8,6 +8,7 @@ import {
   DollarSign,
   Package,
   BarChart3,
+  ShoppingCart,
   Menu,
   X,
   LogOut,
@@ -85,6 +86,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     {
       groupTitle: 'Gestão',
       items: [
+        {
+          name: 'Vendas',
+          path: '/vendas',
+          icon: ShoppingCart,
+        },
         {
           name: 'Financeiro',
           path: '/financeiro',

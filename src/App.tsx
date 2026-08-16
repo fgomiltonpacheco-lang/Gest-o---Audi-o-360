@@ -11,6 +11,8 @@ import Audiometria from '@/pages/Audiometria'
 import Agenda from '@/pages/Agenda'
 import Aparelhos from '@/pages/Aparelhos'
 import Financeiro from '@/pages/Financeiro'
+import Vendas from '@/pages/Vendas'
+import PDV from '@/pages/PDV'
 import Estoque from '@/pages/Estoque'
 import Relatorios from '@/pages/Relatorios'
 import Profile from '@/pages/Profile'
@@ -142,6 +144,24 @@ export function App() {
                 <AdminRoute>
                   <Financeiro />
                 </AdminRoute>
+              }
+            />
+
+            {/* ===== Módulo de Vendas / PDV ===== */}
+            <Route
+              path="/vendas/pdv"
+              element={
+                <AdminRoute>
+                  <PDV />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/vendas"
+              element={
+                <ProtectedRoute>
+                  <Vendas />
+                </ProtectedRoute>
               }
             />
 

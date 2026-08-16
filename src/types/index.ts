@@ -526,7 +526,34 @@ export interface Budget {
   createdAt: string
 }
 
-export type SaleStatus = 'Concluída' | 'Cancelada'
+export type SaleStatus = 'Pendente' | 'Pago' | 'Cancelado' | 'Estornado' | 'Concluída'
+export type SaleType = 'PDV' | 'atendimento'
+
+/** Forma de pagamento usada no PDV (mais granular que PaymentMethod legado). */
+export type PDVPaymentMethod =
+  | 'Dinheiro'
+  | 'Cartão de Débito'
+  | 'Cartão de Crédito'
+  | 'PIX'
+  | 'Convênio'
+  | 'Boleto'
+  // valores legados do Financeiro
+  | 'À vista'
+  | 'Parcelado'
+  | 'Cartão'
+
+/** Item do carrinho de vendas (PDV) — persistido no campo JSON `items` da venda. */
+export interface SaleItem {
+  id: string
+  name: string
+  /** 'procedure' (serviço/exame) ou 'inventory' (produto). */
+  type: 'procedure' | 'inventory'
+  quantity: number
+  unitPrice: number
+  subtotal: number
+  /** ID do item de estoque (apenas type=inventory) para baixa/devolução. */
+  stockItemId?: string
+}
 
 export interface Sale {
   id: string
@@ -536,12 +563,20 @@ export interface Sale {
   date: string
   itemsDescription: string
   totalValue: number
-  paymentMethod: PaymentMethod
+  paymentMethod: PDVPaymentMethod
   installmentsCount: number
   interestPercent: number
   firstDueDate?: string
   status: SaleStatus
   createdAt: string
+  // ---- Campos do módulo PDV ----
+  type?: SaleType
+  items?: SaleItem[]
+  subtotal?: number
+  discountValue?: number
+  discountPercent?: number
+  cancelReason?: string
+  appointmentId?: string
 }
 
 export type InstallmentStatus = 'Pendente' | 'Pago' | 'Atrasado'

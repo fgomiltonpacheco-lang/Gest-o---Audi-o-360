@@ -8,6 +8,8 @@ import {
   StockMovement,
   Budget,
   Sale,
+  SaleItem,
+  SaleStatus,
   Installment,
   Commission,
   CashFlowMovement,
@@ -303,12 +305,19 @@ const mapSale = (r: any): Sale => ({
   date: r.date || '',
   itemsDescription: r.itemsDescription || '',
   totalValue: Number(r.totalValue) || 0,
-  paymentMethod: r.paymentMethod || 'À vista',
+  paymentMethod: (r.paymentMethod || 'À vista') as Sale['paymentMethod'],
   installmentsCount: Number(r.installmentsCount) || 1,
   interestPercent: Number(r.interestPercent) || 0,
   firstDueDate: r.firstDueDate || '',
-  status: r.status || 'Concluída',
+  status: (r.status || 'Concluída') as Sale['status'],
   createdAt: toDateStr(r.created),
+  type: (r.type === 'PDV' ? 'PDV' : 'atendimento') as Sale['type'],
+  items: Array.isArray(r.items) ? (r.items as SaleItem[]) : undefined,
+  subtotal: r.subtotal != null ? Number(r.subtotal) : undefined,
+  discountValue: r.discountValue != null ? Number(r.discountValue) : undefined,
+  discountPercent: r.discountPercent != null ? Number(r.discountPercent) : undefined,
+  cancelReason: r.cancelReason || undefined,
+  appointmentId: r.appointmentId || undefined,
 })
 
 const mapInstallment = (r: any): Installment => ({
@@ -484,6 +493,10 @@ interface AppContextType {
 
   sales: Sale[]
   addSale: (sale: Omit<Sale, 'id' | 'createdAt' | 'number'>) => Sale
+  /** Atualiza uma venda existente (status, justificativa, etc.). */
+  updateSale: (id: string, data: Partial<Sale>) => void
+  /** Cancela/estorna uma venda, devolvendo itens de estoque ao saldo. */
+  cancelSale: (id: string, reason: string, mode: 'Cancelado' | 'Estornado') => void
   installments: Installment[]
   payInstallment: (installmentId: string, paidDate?: string) => void
   commissions: Commission[]
@@ -1885,6 +1898,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         interestPercent: newSale.interestPercent || 0,
         firstDueDate: newSale.firstDueDate || '',
         status: newSale.status,
+        type: newSale.type || 'atendimento',
+        items: newSale.items || [],
+        subtotal: newSale.subtotal ?? newSale.totalValue,
+        discountValue: newSale.discountValue ?? 0,
+        discountPercent: newSale.discountPercent ?? 0,
+        cancelReason: newSale.cancelReason || '',
+        appointmentId: newSale.appointmentId || '',
       })
       .then(async (rec: any) => {
         const mappedSale = mapSale(rec)
@@ -1925,6 +1945,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
 
     return newSale
+  }
+
+  // ---------- Atualização / Cancelamento de Vendas ----------
+  const updateSale = (id: string, data: Partial<Sale>) => {
+    setSales((prev) => prev.map((s) => (s.id === id ? { ...s, ...data } : s)))
+    const patch: any = { ...data }
+    delete patch.id
+    delete patch.createdAt
+    delete patch.number
+    pb.collection('sales')
+      .update(id, patch)
+      .catch((err) => console.error('Erro ao atualizar venda:', err))
+  }
+
+  const cancelSale = (id: string, reason: string, mode: 'Cancelado' | 'Estornado') => {
+    const sale = sales.find((s) => s.id === id)
+    if (!sale) return
+
+    // 1. Atualiza status + justificativa
+    updateSale(id, { status: mode as SaleStatus, cancelReason: reason })
+
+    // 2. Devolve itens de estoque ao saldo (apenas itens de inventário)
+    if (Array.isArray(sale.items) && sale.items.length > 0) {
+      sale.items.forEach((it: SaleItem) => {
+        if (it.type === 'inventory' && it.stockItemId) {
+          addStockEntry(
+            it.stockItemId,
+            it.quantity,
+            `Estorno da venda #${sale.number}`,
+            currentUser?.name || 'Sistema',
+            undefined,
+          )
+        }
+      })
+    }
+
+    toast({
+      title: mode === 'Estornado' ? 'Venda estornada' : 'Venda cancelada',
+      description: `Venda #${sale.number} foi ${mode === 'Estornado' ? 'estornada' : 'cancelada'} e os itens foram devolvidos ao estoque.`,
+      variant: 'destructive',
+    })
   }
 
   const convertBudgetToSale = (
@@ -2458,6 +2519,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         convertBudgetToSale,
         sales,
         addSale,
+        updateSale,
+        cancelSale,
         installments,
         payInstallment,
         commissions,
