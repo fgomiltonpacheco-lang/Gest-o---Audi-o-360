@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T21:31:01.203Z",
+  "generatedAt": "2026-08-16T21:45:39.561Z",
   "collections": [
     {
       "name": "users",
@@ -3537,6 +3537,315 @@
         "CREATE INDEX idx_audit_trail_acao ON audit_trail (acao)",
         "CREATE INDEX idx_audit_trail_entidade ON audit_trail (entidade_tipo, entidade_id)",
         "CREATE INDEX idx_audit_trail_created ON audit_trail (created)"
+      ]
+    },
+    {
+      "name": "imitanciometrias",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "paciente_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "medical_record_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_exame",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "especialista_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "equipment_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "equipments"
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["rascunho", "finalizado"]
+        },
+        {
+          "name": "tipo_curva_od",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tipo_curva_oe",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reflexos_status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "laudo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "referencias",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "paciente_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "paciente_cpf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "paciente_nascimento",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "paciente_idade",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "paciente_sexo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "especialista_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "equipment_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_imitanciometrias_paciente ON imitanciometrias (paciente_id)",
+        "CREATE INDEX idx_imitanciometrias_data ON imitanciometrias (data_exame)",
+        "CREATE INDEX idx_imitanciometrias_status ON imitanciometrias (status)"
+      ]
+    },
+    {
+      "name": "timpanometria_dados",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "imitanciometria_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "imitanciometrias"
+        },
+        {
+          "name": "orelha",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["OD", "OE"]
+        },
+        {
+          "name": "volume_meato",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "complacencia",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pressao_maxima",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tipo_curva",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["A", "Ad", "As", "B", "C", "Ad/As"]
+        },
+        {
+          "name": "pressao_pico",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_timpanometria_dados_imit ON timpanometria_dados (imitanciometria_id)",
+        "CREATE INDEX idx_timpanometria_dados_orelha ON timpanometria_dados (orelha)"
+      ]
+    },
+    {
+      "name": "reflexo_acustico_dados",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "imitanciometria_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "imitanciometrias"
+        },
+        {
+          "name": "orelha",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["OD", "OE"]
+        },
+        {
+          "name": "via",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["contra_lateral", "ipsi_lateral"]
+        },
+        {
+          "name": "frequencia_500",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "frequencia_1000",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "frequencia_2000",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "frequencia_4000",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["presente", "ausente", "elevado"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_reflexo_acustico_dados_imit ON reflexo_acustico_dados (imitanciometria_id)",
+        "CREATE INDEX idx_reflexo_acustico_dados_orelha ON reflexo_acustico_dados (orelha)"
       ]
     }
   ]

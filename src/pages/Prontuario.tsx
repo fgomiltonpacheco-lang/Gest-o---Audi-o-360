@@ -320,6 +320,28 @@ export default function Prontuario() {
     if (patient?.id) loadFullAudiometries(patient.id)
   }, [patient?.id])
 
+  // Imitanciometrias (coleção imitanciometrias — novo módulo completo)
+  const [imitanciometrias, setImitanciometrias] = useState<any[]>([])
+  const [loadingImit, setLoadingImit] = useState(false)
+  const loadImitanciometrias = async (pid: string) => {
+    setLoadingImit(true)
+    try {
+      const recs = await pb.collection('imitanciometrias').getFullList({
+        filter: `paciente_id = "${pid}"`,
+        sort: '-data_exame',
+      })
+      setImitanciometrias(recs as any[])
+    } catch (err) {
+      console.error('Erro ao carregar imitanciometrias:', err)
+      setImitanciometrias([])
+    } finally {
+      setLoadingImit(false)
+    }
+  }
+  React.useEffect(() => {
+    if (patient?.id) loadImitanciometrias(patient.id)
+  }, [patient?.id])
+
   // Impressão
   const { print } = usePrint()
 
@@ -365,7 +387,8 @@ export default function Prontuario() {
     fullAudiometries.length +
     patientAudiometries.length +
     patientTympanometries.length +
-    patientBeras.length
+    patientBeras.length +
+    imitanciometrias.length
 
   const handleSaveClinicalRecord = (e: React.FormEvent) => {
     e.preventDefault()
@@ -417,6 +440,16 @@ export default function Prontuario() {
         }
       } catch (err) {
         console.error('Erro ao excluir exame de audiometria:', err)
+      }
+    }
+    if (deleteTarget.type === 'imitanciometria') {
+      try {
+        await pb.collection('imitanciometrias').delete(deleteTarget.id)
+        if (patient?.id) {
+          await loadImitanciometrias(patient.id)
+        }
+      } catch (err) {
+        console.error('Erro ao excluir imitanciometria:', err)
       }
     }
     setDeleteTarget(null)
@@ -961,9 +994,16 @@ export default function Prontuario() {
                     <Button
                       size="sm"
                       onClick={() => setTympModalOpen(true)}
+                      className="bg-slate-600 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl h-8"
+                    >
+                      + Imitanciometria (rápida)
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => navigate(`/pacientes/${patient.id}/imitanciometria/novo`)}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl h-8"
                     >
-                      + Imitanciometria
+                      + Nova Imitanciometria
                     </Button>
                     <Button
                       size="sm"
@@ -1047,11 +1087,89 @@ export default function Prontuario() {
                 )}
               </div>
 
-              {/* Imitanciometrias */}
+              {/* Imitanciometrias (novo módulo completo — imitanciometrias) */}
               <div className="space-y-3 pt-2">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-1.5">
                   <Activity className="w-4 h-4" />
-                  Imitanciometrias ({patientTympanometries.length})
+                  Imitanciometrias ({imitanciometrias.length})
+                </h4>
+                {loadingImit ? (
+                  <p className="text-xs text-slate-400 italic">Carregando exames...</p>
+                ) : imitanciometrias.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">
+                    Nenhuma imitanciometria registrada.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {imitanciometrias.map((exam) => {
+                      const date = exam.data_exame ? formatDate(exam.data_exame) : '—'
+                      const curvaOD = exam.tipo_curva_od || '—'
+                      const curvaOE = exam.tipo_curva_oe || '—'
+                      const statusLabel = exam.status === 'finalizado' ? 'Finalizado' : 'Rascunho'
+                      return (
+                        <div
+                          key={exam.id}
+                          className="w-full text-left p-3 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:border-emerald-300 hover:shadow-sm transition-all flex items-center justify-between gap-3"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs font-extrabold text-slate-900">
+                              Imitanciometria — {date}
+                            </span>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              Curva OD: <strong>{curvaOD}</strong> • Curva OE:{' '}
+                              <strong>{curvaOE}</strong> •{' '}
+                              <span
+                                className={
+                                  exam.status === 'finalizado'
+                                    ? 'text-emerald-600 font-semibold'
+                                    : 'text-amber-600 font-semibold'
+                                }
+                              >
+                                {statusLabel}
+                              </span>
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                navigate(`/pacientes/${patient.id}/imitanciometria/${exam.id}`)
+                              }
+                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold h-7 px-3 rounded-lg"
+                            >
+                              Ver / Editar
+                            </Button>
+                            {!isSecretaria && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setDeleteTarget({
+                                    type: 'imitanciometria',
+                                    id: exam.id,
+                                    name: `Imitanciometria de ${date}`,
+                                  })
+                                  setDeleteConfirmOpen(true)
+                                }}
+                                className="h-7 w-7 p-0 text-red-500 hover:bg-red-50 rounded-lg"
+                                title="Excluir exame"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Imitanciometrias (legado — tympanometries) */}
+              <div className="space-y-3 pt-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Activity className="w-4 h-4" />
+                  Imitanciometrias (registro rápido) ({patientTympanometries.length})
                 </h4>
                 {patientTympanometries.length === 0 ? (
                   <p className="text-xs text-slate-400 italic">

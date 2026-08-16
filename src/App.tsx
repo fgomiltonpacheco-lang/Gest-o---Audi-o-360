@@ -8,6 +8,7 @@ import Index from '@/pages/Index'
 import Pacientes from '@/pages/Pacientes'
 import Prontuario from '@/pages/Prontuario'
 import Audiometria from '@/pages/Audiometria'
+import Imitanciometria from '@/pages/Imitanciometria'
 import Agenda from '@/pages/Agenda'
 import Aparelhos from '@/pages/Aparelhos'
 import Financeiro from '@/pages/Financeiro'
@@ -123,6 +124,15 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <Audiometria />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/pacientes/:id/imitanciometria/:examId?"
+              element={
+                <ProtectedRoute>
+                  <Imitanciometria />
                 </ProtectedRoute>
               }
             />

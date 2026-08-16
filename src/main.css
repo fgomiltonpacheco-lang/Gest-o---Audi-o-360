@@ -398,12 +398,15 @@
   /* Quando imprimindo a audiometria completa, a prévia clínica traz seu próprio
      cabeçalho/rodapé — remove o cabeçalho/rodapé genérico do PrintProvider. */
   body:has(.audiometry-print-full) .print-provider-header,
-  body:has(.audiometry-print-full) .print-provider-footer {
+  body:has(.audiometry-print-full) .print-provider-footer,
+  body:has(.imitanciometria-print) .print-provider-header,
+  body:has(.imitanciometria-print) .print-provider-footer {
     display: none !important;
   }
 
   /* Audiometria completa ocupa a página inteira com margens reduzidas */
-  body:has(.audiometry-print-full) #print-root .print-body {
+  body:has(.audiometry-print-full) #print-root .print-body,
+  body:has(.imitanciometria-print) #print-root .print-body {
     padding: 0 !important;
   }
 }

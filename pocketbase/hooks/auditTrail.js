@@ -126,6 +126,17 @@ onRecordCreateRequest(
             return 'Exame audiológico: ' + (r.getString('patientName') || r.getId())
           },
         },
+        imitanciometrias: {
+          modulo: 'audiometria',
+          entidade_tipo: 'imitanciometrias',
+          descricao: function (r) {
+            return (
+              'Imitanciometria: ' +
+              (r.getString('paciente_nome') || r.getId()) +
+              (r.getString('data_exame') ? ' — ' + r.getString('data_exame') : '')
+            )
+          },
+        },
         hearing_aid_tests: {
           modulo: 'audiometria',
           entidade_tipo: 'hearing_aid_tests',
@@ -336,6 +347,7 @@ onRecordCreateRequest(
   'evolutions',
   'audiometries',
   'audiometry_exams',
+  'imitanciometrias',
   'hearing_aid_tests',
   'hearing_aids',
   'sales',
@@ -474,6 +486,21 @@ onRecordUpdateRequest(
           acaoEspecial: '',
           descricao: function (r) {
             return 'Exame audiológico: ' + (r.getString('patientName') || r.getId())
+          },
+        },
+        imitanciometrias: {
+          modulo: 'audiometria',
+          entidade_tipo: 'imitanciometrias',
+          statusField: '',
+          cancelValue: '',
+          estornoValue: '',
+          acaoEspecial: '',
+          descricao: function (r) {
+            return (
+              'Imitanciometria: ' +
+              (r.getString('paciente_nome') || r.getId()) +
+              (r.getString('data_exame') ? ' — ' + r.getString('data_exame') : '')
+            )
           },
         },
         hearing_aid_tests: {
@@ -835,6 +862,7 @@ onRecordUpdateRequest(
   'evolutions',
   'audiometries',
   'audiometry_exams',
+  'imitanciometrias',
   'hearing_aid_tests',
   'hearing_aids',
   'sales',
@@ -938,6 +966,17 @@ onRecordDeleteRequest(
           entidade_tipo: 'audiometry_exams',
           descricao: function (r) {
             return 'Exame audiológico: ' + (r.getString('patientName') || r.getId())
+          },
+        },
+        imitanciometrias: {
+          modulo: 'audiometria',
+          entidade_tipo: 'imitanciometrias',
+          descricao: function (r) {
+            return (
+              'Imitanciometria: ' +
+              (r.getString('paciente_nome') || r.getId()) +
+              (r.getString('data_exame') ? ' — ' + r.getString('data_exame') : '')
+            )
           },
         },
         hearing_aid_tests: {
@@ -1135,6 +1174,7 @@ onRecordDeleteRequest(
   'evolutions',
   'audiometries',
   'audiometry_exams',
+  'imitanciometrias',
   'hearing_aid_tests',
   'hearing_aids',
   'sales',
