@@ -924,6 +924,32 @@ export default function Audiometria() {
           {determineType(exam.air_oe, exam.bone_oe)}
         </Badge>
       </div>
+
+      {/* Rodapé de ações: Salvar / Imprimir */}
+      <div className="flex flex-col sm:flex-row items-center justify-end gap-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <Button
+          variant="outline"
+          onClick={handlePrint}
+          className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10 w-full sm:w-auto"
+        >
+          <Printer className="w-4 h-4 mr-1.5" />
+          Imprimir
+        </Button>
+        {!isSecretaria && (
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold h-10 shadow-sm w-full sm:w-auto"
+          >
+            {saving ? (
+              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4 mr-1.5" />
+            )}
+            Salvar
+          </Button>
+        )}
+      </div>
     </div>
   )
 }
