@@ -50,8 +50,20 @@ interface AppointmentModalProps {
   initialTime?: string
   initialPatientId?: string
   initialPatientName?: string
-  onSave: (appData: any) => boolean
+  allowEncaixe?: boolean
+  onSave: (appData: any, options?: { ignoreConflict?: boolean }) => boolean
 }
+
+/** Gera opções de horário "HH:MM" de 30 em 30 min (06:00–23:30). */
+const TIME_OPTIONS: string[] = (() => {
+  const opts: string[] = []
+  for (let m = 6 * 60; m <= 23 * 60 + 30; m += 30) {
+    const h = Math.floor(m / 60)
+    const mm = m % 60
+    opts.push(`${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`)
+  }
+  return opts
+})()
 
 export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   open,
@@ -61,6 +73,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   initialTime,
   initialPatientId,
   initialPatientName,
+  allowEncaixe = false,
   onSave,
 }) => {
   const { patients } = useApp()
@@ -192,6 +205,13 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
     return procedures.filter((p) => p.name.toLowerCase().includes(q))
   }, [procedures, procedureSearch])
 
+  // Opções de horário (30 em 30 min). Garante que o horário atual (mesmo fora
+  // da grade regular) esteja presente para não "perder" o valor ao editar.
+  const timeOptions = useMemo(() => {
+    if (!time || TIME_OPTIONS.includes(time)) return TIME_OPTIONS
+    return [...TIME_OPTIONS, time].sort()
+  }, [time])
+
   /**
    * Reajusta o valor exibido conforme o procedimento e o tipo de pagamento
    * informados. Mantém o campo editável em seguida.
@@ -292,7 +312,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       notes,
     }
 
-    const ok = onSave(payload)
+    const ok = onSave(payload, { ignoreConflict: allowEncaixe })
     if (ok) {
       onOpenChange(false)
     }
@@ -520,14 +540,26 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
 
             <div>
               <Label className="text-xs font-semibold text-slate-700">
-                Horário <span className="text-red-500">*</span>
+                Horário <span className="text-red-500">*</span>{' '}
+                <span className="text-slate-400 font-normal">editável</span>
               </Label>
-              <Input
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className="h-10 rounded-xl mt-1 text-xs border-slate-300"
-              />
+              <Select value={time} onValueChange={setTime}>
+                <SelectTrigger className="h-10 rounded-xl mt-1 border-slate-300 text-xs font-medium">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {timeOptions.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {allowEncaixe && (
+                <p className="text-[11px] text-amber-600 font-medium mt-1">
+                  Encaixe: conflito de horário é permitido.
+                </p>
+              )}
             </div>
           </div>
 

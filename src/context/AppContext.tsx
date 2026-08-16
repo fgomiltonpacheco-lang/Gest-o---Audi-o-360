@@ -383,7 +383,10 @@ interface AppContextType {
 
   // Agenda
   appointments: Appointment[]
-  addAppointment: (app: Omit<Appointment, 'id' | 'createdAt'>) => {
+  addAppointment: (
+    app: Omit<Appointment, 'id' | 'createdAt'>,
+    options?: { ignoreConflict?: boolean },
+  ) => {
     success: boolean
     message?: string
     appointment?: Appointment
@@ -391,6 +394,7 @@ interface AppContextType {
   updateAppointment: (
     id: string,
     app: Partial<Appointment>,
+    options?: { ignoreConflict?: boolean },
   ) => { success: boolean; message?: string }
   deleteAppointment: (id: string) => void
 
@@ -915,20 +919,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ---------- Agenda Handlers ----------
   const addAppointment = (
     appData: Omit<Appointment, 'id' | 'createdAt'>,
+    options?: { ignoreConflict?: boolean },
   ): { success: boolean; message?: string; appointment?: Appointment } => {
+    // Encaixe: ignora validação de conflito de profissional.
+    const ignoreConflict = !!options?.ignoreConflict
     // Validação de conflito de profissional
-    const conflict = appointments.find((existing) => {
-      if (existing.status === 'Cancelado') return false
-      if (existing.professionalName !== appData.professionalName) return false
-      if (existing.date !== appData.date) return false
-      const [exHour, exMin] = existing.time.split(':').map(Number)
-      const [newHour, newMin] = appData.time.split(':').map(Number)
-      const existingStart = exHour * 60 + exMin
-      const existingEnd = existingStart + existing.duration
-      const newStart = newHour * 60 + newMin
-      const newEnd = newStart + appData.duration
-      return newStart < existingEnd && newEnd > existingStart
-    })
+    const conflict = ignoreConflict
+      ? undefined
+      : appointments.find((existing) => {
+          if (existing.status === 'Cancelado') return false
+          if (existing.professionalName !== appData.professionalName) return false
+          if (existing.date !== appData.date) return false
+          const [exHour, exMin] = existing.time.split(':').map(Number)
+          const [newHour, newMin] = appData.time.split(':').map(Number)
+          const existingStart = exHour * 60 + exMin
+          const existingEnd = existingStart + existing.duration
+          const newStart = newHour * 60 + newMin
+          const newEnd = newStart + appData.duration
+          return newStart < existingEnd && newEnd > existingStart
+        })
 
     if (conflict) {
       const msg = `Conflito de horário: ${appData.professionalName} já possui atendimento (${conflict.patientName}) às ${conflict.time}.`
@@ -999,16 +1008,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateAppointment = (
     id: string,
     appData: Partial<Appointment>,
+    options?: { ignoreConflict?: boolean },
   ): { success: boolean; message?: string } => {
     const current = appointments.find((a) => a.id === id)
     if (!current) return { success: false, message: 'Agendamento não encontrado' }
 
+    const ignoreConflict = !!options?.ignoreConflict
     const targetProf = appData.professionalName || current.professionalName
     const targetDate = appData.date || current.date
     const targetTime = appData.time || current.time
     const targetDur = appData.duration || current.duration
 
-    if (appData.status !== 'Cancelado') {
+    if (appData.status !== 'Cancelado' && !ignoreConflict) {
       const conflict = appointments.find((existing) => {
         if (existing.id === id || existing.status === 'Cancelado') return false
         if (existing.professionalName !== targetProf) return false

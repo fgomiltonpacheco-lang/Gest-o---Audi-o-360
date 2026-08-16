@@ -23,7 +23,10 @@ import {
   AlertTriangle,
   Lock,
   LockOpen,
+  Clock3,
 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   formatDate,
   formatCurrency,
@@ -135,6 +138,37 @@ interface BlockedDay {
   id: string
   date: string
   reason: string
+  start_time?: string
+  end_time?: string
+}
+
+/** True quando o bloqueio é parcial (possui intervalo de horário). */
+const isPartialBlock = (b: BlockedDay) => !!b.start_time && !!b.end_time
+
+/** Lista de horários "HH:MM" de 30 em 30 min (00:00–23:30). */
+const BLOCK_TIME_OPTIONS: string[] = (() => {
+  const opts: string[] = []
+  for (let m = 0; m < 24 * 60; m += 30) {
+    const h = Math.floor(m / 60)
+    const mm = m % 60
+    opts.push(`${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`)
+  }
+  return opts
+})()
+
+/**
+ * Verifica se um horário "HH:MM" cai dentro de um bloqueio parcial
+ * [start_time, end_time). O slot é considerado bloqueado quando seu início é
+ * menor que o fim do bloqueio E seu início + step é maior que o início do
+ * bloqueio (sobreposição de intervalos).
+ */
+function slotIsInPartialBlock(slotTime: string, b: BlockedDay, stepMin = 30): boolean {
+  if (!isPartialBlock(b)) return false
+  const sStart = timeToMinutes(b.start_time!)
+  const sEnd = timeToMinutes(b.end_time!)
+  const slotStart = timeToMinutes(slotTime)
+  const slotEnd = slotStart + stepMin
+  return slotStart < sEnd && slotEnd > sStart
 }
 
 // ---------- Helpers de exibição ----------
@@ -243,6 +277,12 @@ export default function Agenda() {
   const [blockedDays, setBlockedDays] = useState<BlockedDay[]>([])
   const [blockModalOpen, setBlockModalOpen] = useState(false)
   const [blockReason, setBlockReason] = useState('')
+  // Modal de bloqueio: toggle dia inteiro + horários parciais
+  const [blockAllDay, setBlockAllDay] = useState(true)
+  const [blockStartTime, setBlockStartTime] = useState('08:00')
+  const [blockEndTime, setBlockEndTime] = useState('12:00')
+  // Modal de desbloqueio (lista de bloqueios do dia)
+  const [unblockListOpen, setUnblockListOpen] = useState(false)
 
   // String da data selecionada: YYYY-MM-DD
   const selectedDateStr = selectedDate.toISOString().split('T')[0]
@@ -283,6 +323,8 @@ export default function Agenda() {
           id: r.id,
           date: r.date || '',
           reason: r.reason || '',
+          start_time: r.start_time || '',
+          end_time: r.end_time || '',
         })),
       )
     } catch (err) {
@@ -296,24 +338,53 @@ export default function Agenda() {
   }, [loadConfig, loadBlockedDays])
 
   // Helpers de bloqueio
-  const isBlocked = (dateStr: string) => blockedDays.find((b) => b.date === dateStr)
-  const selectedBlocked = isBlocked(selectedDateStr)
+  // Bloqueios totais (dia inteiro) da data.
+  const fullDayBlocksOf = (dateStr: string) =>
+    blockedDays.filter((b) => b.date === dateStr && !isPartialBlock(b))
+  // Bloqueios parciais (intervalo de horário) da data.
+  const partialBlocksOf = (dateStr: string) =>
+    blockedDays.filter((b) => b.date === dateStr && isPartialBlock(b))
+  // Indica se a data possui qualquer bloqueio.
+  const isBlocked = (dateStr: string) => blockedDays.some((b) => b.date === dateStr)
+  // Indica se a data possui bloqueio total (dia inteiro).
+  const isFullDayBlocked = (dateStr: string) => fullDayBlocksOf(dateStr).length > 0
+  // Bloqueios da data selecionada (todos)
+  const selectedBlocks = blockedDays.filter((b) => b.date === selectedDateStr)
+  const selectedHasFullDayBlock = isFullDayBlocked(selectedDateStr)
+  // Mantém compat. com código legado que esperava um único objeto.
+  const selectedBlocked = isBlocked(selectedDateStr) ? selectedBlocks[0] : undefined
 
   // Feriado na data selecionada (visão Dia)
   const selectedHoliday = useMemo(() => getHolidayOnDate(selectedDateStr), [selectedDateStr])
 
   // ---------- Bloquear / desbloquear dia ----------
   const handleBlockDay = async () => {
+    const reason = blockReason.trim()
+    const partial = !blockAllDay && blockStartTime && blockEndTime
+    if (partial && timeToMinutes(blockEndTime) <= timeToMinutes(blockStartTime)) {
+      // validação simples: horário final deve ser maior que o inicial
+      return
+    }
     try {
-      const rec: any = await pb.collection('blocked_days').create({
+      const payload: any = {
         date: selectedDateStr,
-        reason: blockReason.trim(),
+        reason,
         created_by: '',
-      })
+        start_time: partial ? blockStartTime : '',
+        end_time: partial ? blockEndTime : '',
+      }
+      const rec: any = await pb.collection('blocked_days').create(payload)
       setBlockedDays((prev) =>
-        [...prev, { id: rec.id, date: selectedDateStr, reason: blockReason.trim() }].sort((a, b) =>
-          a.date < b.date ? -1 : 1,
-        ),
+        [
+          ...prev,
+          {
+            id: rec.id,
+            date: selectedDateStr,
+            reason,
+            start_time: partial ? blockStartTime : '',
+            end_time: partial ? blockEndTime : '',
+          },
+        ].sort((a, b) => (a.date < b.date ? -1 : 1)),
       )
       setBlockModalOpen(false)
       setBlockReason('')
@@ -328,6 +399,15 @@ export default function Agenda() {
       setBlockedDays((prev) => prev.filter((b) => b.id !== id))
     } catch (err) {
       console.error('Erro ao desbloquear dia:', err)
+    }
+  }
+
+  // Quando há múltiplos bloqueios no dia, abre o seletor para escolher.
+  const openUnblockForSelected = () => {
+    if (selectedBlocks.length <= 1 && selectedBlocks[0]) {
+      handleUnblockDay(selectedBlocks[0].id)
+    } else {
+      setUnblockListOpen(true)
     }
   }
 
@@ -435,13 +515,15 @@ export default function Agenda() {
     })
   }, [appointments, selectedProfessional])
 
-  // Salvar agendamento
-  const handleSaveAppointment = (data: any) => {
+  // Salvar agendamento. `options.ignoreConflict` é repassado para o contexto,
+  // permitindo encaixes (agendar sobrepostos) quando o toggle Encaixes está
+  // ativo.
+  const handleSaveAppointment = (data: any, options?: { ignoreConflict?: boolean }) => {
     if (appointmentToEdit) {
-      const res = updateAppointment(appointmentToEdit.id, data)
+      const res = updateAppointment(appointmentToEdit.id, data, options)
       return res.success
     } else {
-      const res = addAppointment(data)
+      const res = addAppointment(data, options)
       return res.success
     }
   }
@@ -612,13 +694,22 @@ export default function Agenda() {
                 Feriado: {selectedHoliday.name}
               </Badge>
             )}
-            {viewMode === 'dia' && selectedBlocked && (
+            {viewMode === 'dia' && selectedHasFullDayBlock && (
               <Badge
                 variant="outline"
                 className="bg-slate-200 text-slate-700 border-slate-300 font-bold text-[11px]"
               >
                 <Lock className="w-3 h-3 mr-1" />
                 Dia bloqueado
+              </Badge>
+            )}
+            {viewMode === 'dia' && partialBlocksOf(selectedDateStr).length > 0 && (
+              <Badge
+                variant="outline"
+                className="bg-amber-50 text-amber-700 border-amber-200 font-bold text-[11px]"
+              >
+                <Clock3 className="w-3 h-3 mr-1" />
+                {partialBlocksOf(selectedDateStr).length} bloqueio(s) parcial(is)
               </Badge>
             )}
           </div>
@@ -734,7 +825,7 @@ export default function Agenda() {
           {viewMode === 'dia' &&
             (selectedBlocked ? (
               <button
-                onClick={() => handleUnblockDay(selectedBlocked.id)}
+                onClick={openUnblockForSelected}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border bg-white text-slate-600 hover:bg-slate-50 border-slate-300"
                 title="Desbloquear dia"
               >
@@ -745,6 +836,9 @@ export default function Agenda() {
               <button
                 onClick={() => {
                   setBlockReason('')
+                  setBlockAllDay(true)
+                  setBlockStartTime('08:00')
+                  setBlockEndTime('12:00')
                   setBlockModalOpen(true)
                 }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border bg-white text-slate-600 hover:bg-slate-50 border-slate-300"
@@ -774,21 +868,23 @@ export default function Agenda() {
       {/* 1. VISÃO DIA */}
       {viewMode === 'dia' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
-          {selectedBlocked ? (
-            // Dia bloqueado: card centralizado em vez dos slots
+          {selectedHasFullDayBlock ? (
+            // Dia totalmente bloqueado: card centralizado em vez dos slots.
+            // (Bloqueios parciais no mesmo dia ainda são exibidos dentro da
+            // grade como slots marcados; o dia inteiro prevalece.)
             <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
               <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
                 <Lock className="w-8 h-8 text-slate-400" />
               </div>
               <h3 className="text-lg font-bold text-slate-700">Dia bloqueado</h3>
               <p className="text-sm text-slate-500 mt-1">
-                {selectedBlocked.reason
+                {selectedBlocked?.reason
                   ? `Motivo: ${selectedBlocked.reason}`
                   : 'Sem motivo informado.'}
               </p>
               <p className="text-xs text-slate-400 mt-0.5 capitalize">{periodLabel}</p>
               <Button
-                onClick={() => handleUnblockDay(selectedBlocked.id)}
+                onClick={openUnblockForSelected}
                 variant="outline"
                 className="mt-5 rounded-xl border-slate-300 text-xs font-semibold h-9 flex items-center gap-1.5"
               >
@@ -807,15 +903,21 @@ export default function Agenda() {
                 const matchedApps = appsByTime.get(time) || []
                 const isBusy = busySlots.has(time)
                 const showBusyStyle = isBusy && matchedApps.length === 0
+                // Bloqueio parcial que cobre este slot.
+                const partialBlockHere = partialBlocksOf(selectedDateStr).find((b) =>
+                  slotIsInPartialBlock(time, b, slotMinutes || 30),
+                )
                 return (
                   <div
                     key={time}
                     className={`py-2.5 flex items-start gap-4 transition-colors group rounded-xl px-2 ${
-                      showBusyStyle
-                        ? allowEncaixe
-                          ? 'bg-amber-50/50 hover:bg-amber-50'
-                          : 'bg-slate-100/60 hover:bg-slate-100/80'
-                        : 'hover:bg-slate-50/70'
+                      partialBlockHere
+                        ? 'bg-slate-100/70 hover:bg-slate-100'
+                        : showBusyStyle
+                          ? allowEncaixe
+                            ? 'bg-amber-50/50 hover:bg-amber-50'
+                            : 'bg-slate-100/60 hover:bg-slate-100/80'
+                          : 'hover:bg-slate-50/70'
                     }`}
                   >
                     <span className="w-14 text-xs font-bold text-slate-400 shrink-0 pt-1 font-mono">
@@ -824,7 +926,16 @@ export default function Agenda() {
 
                     <div className="flex-1 min-h-[44px] flex flex-wrap gap-3">
                       {matchedApps.length === 0 ? (
-                        isBusy ? (
+                        partialBlockHere ? (
+                          <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5 py-1">
+                            <Lock className="w-3.5 h-3.5 text-slate-400" />
+                            Bloqueado
+                            {partialBlockHere.reason ? `: ${partialBlockHere.reason}` : ''}
+                            <span className="text-slate-300 font-mono">
+                              ({partialBlockHere.start_time}–{partialBlockHere.end_time})
+                            </span>
+                          </span>
+                        ) : isBusy ? (
                           allowEncaixe ? (
                             <button
                               onClick={() => {
@@ -970,18 +1081,22 @@ export default function Agenda() {
               const dStr = d.toISOString().split('T')[0]
               const isToday = dStr === new Date().toISOString().split('T')[0]
               const dayApps = filteredAppointments.filter((a) => a.date === dStr)
-              const blocked = isBlocked(dStr)
+              const dayFullBlocked = isFullDayBlocked(dStr)
+              const dayPartialBlocks = partialBlocksOf(dStr)
+              const dayBlocked = isBlocked(dStr)
               const holiday = getHolidayOnDate(dStr)
 
               return (
                 <div
                   key={index}
                   className={`rounded-xl border p-2.5 min-h-[400px] flex flex-col justify-between ${
-                    blocked
+                    dayFullBlocked
                       ? 'border-slate-300 bg-slate-100/80'
-                      : isToday
-                        ? 'border-teal-400 bg-teal-50/20'
-                        : 'border-slate-200 bg-slate-50/40'
+                      : dayPartialBlocks.length > 0
+                        ? 'border-amber-200 bg-amber-50/30'
+                        : isToday
+                          ? 'border-teal-400 bg-teal-50/20'
+                          : 'border-slate-200 bg-slate-50/40'
                   }`}
                 >
                   <div>
@@ -996,23 +1111,43 @@ export default function Agenda() {
                       >
                         {d.getDate()}
                       </span>
-                      {blocked && (
+                      {dayFullBlocked && (
                         <div className="flex items-center justify-center mt-1">
                           <Lock className="w-3 h-3 text-slate-400" />
                         </div>
                       )}
-                      {holiday && !blocked && (
+                      {!dayFullBlocked && dayPartialBlocks.length > 0 && (
+                        <div className="flex items-center justify-center mt-1">
+                          <Clock3 className="w-3 h-3 text-amber-500" />
+                        </div>
+                      )}
+                      {holiday && !dayBlocked && (
                         <span className="block text-[9px] italic text-red-600 mt-0.5 leading-tight">
                           {holiday.name}
                         </span>
                       )}
                     </div>
 
-                    {blocked ? (
+                    {dayFullBlocked ? (
                       <div className="mt-2.5 text-center">
                         <p className="text-[10px] font-semibold text-slate-500 italic">
-                          {blocked.reason ? `Bloqueado: ${blocked.reason}` : 'Bloqueado'}
+                          {fullDayBlocksOf(dStr)[0]?.reason
+                            ? `Bloqueado: ${fullDayBlocksOf(dStr)[0]?.reason}`
+                            : 'Bloqueado'}
                         </p>
+                      </div>
+                    ) : dayPartialBlocks.length > 0 ? (
+                      <div className="mt-2.5 space-y-1">
+                        {dayPartialBlocks.map((pb) => (
+                          <p
+                            key={pb.id}
+                            className="text-[9px] font-semibold text-amber-700 italic leading-tight"
+                          >
+                            <Clock3 className="w-2.5 h-2.5 inline mr-0.5 -mt-0.5" />
+                            {pb.start_time}–{pb.end_time}
+                            {pb.reason ? `: ${pb.reason}` : ''}
+                          </p>
+                        ))}
                       </div>
                     ) : (
                       <div className="space-y-1.5 mt-2.5">
@@ -1066,7 +1201,7 @@ export default function Agenda() {
                     )}
                   </div>
 
-                  {!blocked && (
+                  {!dayFullBlocked && (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -1105,7 +1240,9 @@ export default function Agenda() {
               const dStr = item.date.toISOString().split('T')[0]
               const isToday = dStr === new Date().toISOString().split('T')[0]
               const dayApps = filteredAppointments.filter((a) => a.date === dStr)
-              const blocked = isBlocked(dStr)
+              const dayFullBlocked = isFullDayBlocked(dStr)
+              const dayPartialCount = partialBlocksOf(dStr).length
+              const dayBlocked = isBlocked(dStr)
               const holiday = monthHolidays.get(dStr)
 
               return (
@@ -1116,11 +1253,13 @@ export default function Agenda() {
                     setViewMode('dia')
                   }}
                   className={`min-h-[90px] p-2 rounded-xl border text-left cursor-pointer transition-all hover:border-teal-400 ${
-                    blocked
+                    dayFullBlocked
                       ? 'bg-slate-100 border-slate-300'
-                      : item.inCurrentMonth
-                        ? 'bg-white border-slate-200'
-                        : 'bg-slate-50 text-slate-300 border-transparent'
+                      : dayPartialCount > 0
+                        ? 'bg-amber-50/40 border-amber-200'
+                        : item.inCurrentMonth
+                          ? 'bg-white border-slate-200'
+                          : 'bg-slate-50 text-slate-300 border-transparent'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -1131,22 +1270,33 @@ export default function Agenda() {
                     >
                       {item.date.getDate()}
                     </span>
-                    {blocked && <Lock className="w-3 h-3 text-slate-400" />}
+                    {dayFullBlocked && <Lock className="w-3 h-3 text-slate-400" />}
+                    {!dayFullBlocked && dayPartialCount > 0 && (
+                      <Clock3 className="w-3 h-3 text-amber-500" />
+                    )}
                   </div>
 
-                  {blocked && (
+                  {dayFullBlocked && (
                     <p className="text-[9px] text-slate-500 italic mt-1 truncate">
-                      {blocked.reason ? `Bloqueado: ${blocked.reason}` : 'Bloqueado'}
+                      {fullDayBlocksOf(dStr)[0]?.reason
+                        ? `Bloqueado: ${fullDayBlocksOf(dStr)[0]?.reason}`
+                        : 'Bloqueado'}
                     </p>
                   )}
 
-                  {!blocked && holiday && (
+                  {!dayFullBlocked && dayPartialCount > 0 && (
+                    <p className="text-[9px] text-amber-700 italic mt-1 truncate">
+                      {dayPartialCount} bloqueio(s) parcial(is)
+                    </p>
+                  )}
+
+                  {!dayBlocked && holiday && (
                     <p className="text-[9px] italic text-red-600 mt-1 leading-tight line-clamp-2">
                       {holiday.name}
                     </p>
                   )}
 
-                  {!blocked && (
+                  {!dayBlocked && (
                     <div className="space-y-1 mt-1.5 overflow-hidden">
                       {dayApps.slice(0, 2).map((app) => {
                         const plan: PatientPlanType = app.planType || 'Particular'
@@ -1371,6 +1521,7 @@ export default function Agenda() {
         appointmentToEdit={appointmentToEdit}
         initialDate={modalInitialDate}
         initialTime={modalInitialTime}
+        allowEncaixe={allowEncaixe && !appointmentToEdit}
         onSave={handleSaveAppointment}
       />
 
@@ -1425,12 +1576,72 @@ export default function Agenda() {
                 className="h-10 rounded-xl mt-1 text-sm border-slate-300 bg-slate-50 font-mono"
               />
             </div>
+
+            {/* Toggle Dia inteiro */}
+            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <Clock3 className="w-4 h-4 text-slate-500" />
+                <Label className="text-xs font-semibold text-slate-700 m-0 cursor-pointer">
+                  Dia inteiro
+                </Label>
+              </div>
+              <Switch checked={blockAllDay} onCheckedChange={setBlockAllDay} />
+            </div>
+
+            {/* Horários parciais (somente quando "Dia inteiro" desligado) */}
+            {!blockAllDay && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">
+                    Hora inicial <span className="text-red-500">*</span>
+                  </Label>
+                  <Select value={blockStartTime} onValueChange={setBlockStartTime}>
+                    <SelectTrigger className="h-10 rounded-xl mt-1 border-slate-300 text-xs font-medium">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      {BLOCK_TIME_OPTIONS.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">
+                    Hora final <span className="text-red-500">*</span>
+                  </Label>
+                  <Select value={blockEndTime} onValueChange={setBlockEndTime}>
+                    <SelectTrigger className="h-10 rounded-xl mt-1 border-slate-300 text-xs font-medium">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      {BLOCK_TIME_OPTIONS.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {!blockAllDay &&
+                  blockStartTime &&
+                  blockEndTime &&
+                  timeToMinutes(blockEndTime) <= timeToMinutes(blockStartTime) && (
+                    <p className="col-span-2 text-[11px] text-red-600 font-medium -mt-1">
+                      A hora final deve ser maior que a inicial.
+                    </p>
+                  )}
+              </div>
+            )}
+
             <div>
               <Label className="text-xs font-semibold text-slate-700">Motivo</Label>
               <Input
                 value={blockReason}
                 onChange={(e) => setBlockReason(e.target.value)}
-                placeholder="Ex.: Feriado, Recesso, Manutenção..."
+                placeholder="Ex.: Feriado, Recesso, Manutenção, Almoço..."
                 className="h-10 rounded-xl mt-1 text-sm border-slate-300"
               />
             </div>
@@ -1447,7 +1658,85 @@ export default function Agenda() {
               onClick={handleBlockDay}
               className="bg-slate-700 hover:bg-slate-800 text-white font-semibold rounded-xl h-10"
             >
-              Bloquear dia
+              {blockAllDay ? 'Bloquear dia' : 'Bloquear horário'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Desbloquear (lista de bloqueios do dia) */}
+      <Dialog open={unblockListOpen} onOpenChange={setUnblockListOpen}>
+        <DialogContent className="max-w-md w-full rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+          <DialogHeader className="border-b border-slate-100 pb-3">
+            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <LockOpen className="w-5 h-5 text-slate-500" />
+              <span>Desbloquear — {formatDate(selectedDateStr)}</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="pt-2">
+            {selectedBlocks.length === 0 ? (
+              <p className="text-xs text-slate-500 py-6 text-center">
+                Nenhum bloqueio encontrado para este dia.
+              </p>
+            ) : (
+              <ScrollArea className="max-h-72">
+                <ul className="space-y-2">
+                  {selectedBlocks.map((b) => {
+                    const partial = isPartialBlock(b)
+                    return (
+                      <li
+                        key={b.id}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2.5"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            {partial ? (
+                              <Clock3 className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            ) : (
+                              <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            )}
+                            <span className="text-xs font-bold text-slate-800">
+                              {partial ? 'Bloqueio parcial' : 'Dia inteiro'}
+                            </span>
+                            {partial && (
+                              <span className="text-[11px] text-slate-500 font-mono">
+                                {b.start_time}–{b.end_time}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                            {b.reason || 'Sem motivo informado'}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            handleUnblockDay(b.id)
+                            // Fecha o modal se não houver mais bloqueios.
+                            if (selectedBlocks.length <= 1) {
+                              setUnblockListOpen(false)
+                            }
+                          }}
+                          className="h-8 px-2 text-[11px] font-semibold rounded-lg border-slate-300 text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 mr-1" />
+                          Remover
+                        </Button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </ScrollArea>
+            )}
+          </div>
+          <DialogFooter className="pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setUnblockListOpen(false)}
+              className="rounded-xl border-slate-300 text-xs font-semibold h-10"
+            >
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>

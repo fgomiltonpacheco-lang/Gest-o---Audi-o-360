@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T02:02:00.444Z",
+  "generatedAt": "2026-08-16T02:12:54.268Z",
   "collections": [
     {
       "name": "users",
@@ -1697,9 +1697,21 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "start_time",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "end_time",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": ["CREATE UNIQUE INDEX idx_blocked_days_date ON blocked_days (date)"]
+      "indexes": ["CREATE INDEX `idx_blocked_days_date` ON `blocked_days` (date)"]
     },
     {
       "name": "clinic_config",
