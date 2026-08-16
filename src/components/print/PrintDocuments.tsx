@@ -18,7 +18,6 @@ import { SingleEarAudiogramChart } from '@/components/AudiogramChart'
 import { mediaTritonal, mediaQuadritonal } from '@/lib/audiogram'
 
 const FREQUENCIES_AIR = [
-  '125',
   '250',
   '500',
   '750',
@@ -33,7 +32,7 @@ const FREQUENCIES_AIR = [
 const FREQUENCIES_BONE = ['500', '1000', '2000', '3000', '4000']
 const REFLEX_FREQS = ['500', '1000', '2000', '4000']
 
-/** Frequências exibidas nas tabelas impressas (sem 125 Hz). */
+/** Frequências exibidas nas tabelas impressas. */
 const PRINT_AIR_FREQS = [
   '250',
   '500',

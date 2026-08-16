@@ -23,7 +23,6 @@ export const COLOR_OE = '#2563eb' // Azul
 
 /** Frequências do eixo X (escala logarítmica). */
 export const CHART_FREQS = [
-  '125',
   '250',
   '500',
   '750',

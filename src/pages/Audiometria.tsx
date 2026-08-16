@@ -47,9 +47,8 @@ import { calculateAge, formatDate, maskCPF } from '@/lib/formatters'
 import { mediaTritonal, mediaQuadritonal } from '@/lib/audiogram'
 import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
 
-/* Todas as 11 frequências da grade horizontal conforme a imagem clínica */
+/* Frequências da grade horizontal (via aérea e LDL). */
 const ALL_INPUT_FREQS = [
-  '125',
   '250',
   '500',
   '750',
@@ -61,6 +60,9 @@ const ALL_INPUT_FREQS = [
   '6000',
   '8000',
 ] as const
+
+/* Via Óssea: apenas 500, 1000, 2000, 3000 e 4000 Hz. */
+const BONE_FREQ_SET = new Set<string>(BONE_FREQS)
 
 const DEFAULT_AUDIOMETER = 'AD229b'
 const SPECIALIST_NAME = 'MILTON SOARES PACHECO'
@@ -1184,12 +1186,15 @@ function EarAudiometrySection({
               })}
             </tr>
 
-            {/* 3. Linha Óssea (Inputs dB) */}
+            {/* 3. Linha Óssea (Inputs dB) — apenas 500, 1000, 2000, 3000 e 4000 Hz */}
             <tr>
               <td className="py-2 px-3 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
                 Óssea
               </td>
               {ALL_INPUT_FREQS.map((f) => {
+                if (!BONE_FREQ_SET.has(f)) {
+                  return <td key={f} className="p-1.5 border-r border-slate-200" />
+                }
                 const dbVal = boneMap[f]?.db
                 return (
                   <td key={f} className="p-1.5 border-r border-slate-200 text-center align-middle">

@@ -197,7 +197,6 @@ export interface AudiometryExam {
 
 // ===== Módulo de Audiometria Completa (audiometry_exams) =====
 export const AIR_FREQS = [
-  '125',
   '250',
   '500',
   '750',
