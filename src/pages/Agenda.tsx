@@ -264,6 +264,15 @@ export default function Agenda() {
   const [modalInitialPatientId, setModalInitialPatientId] = useState<string>('')
   const [modalInitialPatientName, setModalInitialPatientName] = useState<string>('')
 
+  // Contexto de "Agendar Retorno" vindo do prontuário: guarda o paciente
+  // que deve ser pré-preenchido ao criar um novo agendamento. O fluxo é:
+  // prontuário -> abre a Agenda em visão de mês -> usuário escolhe o dia ->
+  // visão de dia -> clica num slot -> modal abre com paciente pré-preenchido.
+  const [retornoPatient, setRetornoPatient] = useState<{
+    patientId: string
+    patientName: string
+  } | null>(null)
+
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [appointmentToDelete, setAppointmentToDelete] = useState<Appointment | null>(null)
 
@@ -335,7 +344,11 @@ export default function Agenda() {
     loadBlockedDays()
   }, [loadConfig, loadBlockedDays])
 
-  // Tratar estado vindo de navegação externa (ex.: clicar em "Agendar Retorno" no prontuário)
+  // Tratar estado vindo de navegação externa (ex.: clicar em "Agendar Retorno" no prontuário).
+  // Em vez de abrir o modal imediatamente, guardamos os dados do paciente e
+  // exibimos a visão de mês para o usuário escolher o dia primeiro. Ao clicar
+  // num dia, a visão de dia é exibida com todos os horários; ao clicar num
+  // slot, o modal abre com o paciente pré-preenchido.
   useEffect(() => {
     if (location.state && (location.state as any).openModal) {
       const state = location.state as {
@@ -344,12 +357,14 @@ export default function Agenda() {
         patientName?: string
       }
       setAppointmentToEdit(null)
-      setModalInitialDate(new Date().toISOString().split('T')[0])
-      setModalInitialTime('09:00')
-      setModalInitialPatientId(state.patientId || '')
-      setModalInitialPatientName(state.patientName || '')
-      setModalOpen(true)
-      // Limpar o estado do history para não reabrir o modal em re-render ou navegações
+      setModalInitialPatientId('')
+      setModalInitialPatientName('')
+      setRetornoPatient({
+        patientId: state.patientId || '',
+        patientName: state.patientName || '',
+      })
+      setViewMode('mes')
+      // Limpar o estado do history para não reabrir o fluxo em re-render ou navegações
       window.history.replaceState({}, document.title)
     }
   }, [location.state])
@@ -960,8 +975,8 @@ export default function Agenda() {
                                 setAppointmentToEdit(null)
                                 setModalInitialDate(selectedDateStr)
                                 setModalInitialTime(time)
-                                setModalInitialPatientId('')
-                                setModalInitialPatientName('')
+                                setModalInitialPatientId(retornoPatient?.patientId || '')
+                                setModalInitialPatientName(retornoPatient?.patientName || '')
                                 setModalOpen(true)
                               }}
                               className="text-[11px] text-amber-700 font-semibold flex items-center gap-1 hover:underline py-1"
@@ -980,8 +995,8 @@ export default function Agenda() {
                               setAppointmentToEdit(null)
                               setModalInitialDate(selectedDateStr)
                               setModalInitialTime(time)
-                              setModalInitialPatientId('')
-                              setModalInitialPatientName('')
+                              setModalInitialPatientId(retornoPatient?.patientId || '')
+                              setModalInitialPatientName(retornoPatient?.patientName || '')
                               setModalOpen(true)
                             }}
                             className="opacity-0 group-hover:opacity-100 text-[11px] text-teal-600 font-semibold flex items-center gap-1 hover:underline py-1"
@@ -1546,6 +1561,9 @@ export default function Agenda() {
           if (!open) {
             setModalInitialPatientId('')
             setModalInitialPatientName('')
+            // Limpa o contexto de "Agendar Retorno" ao fechar o modal
+            // (seja após salvar ou cancelar) para não persistir.
+            setRetornoPatient(null)
           }
         }}
         appointmentToEdit={appointmentToEdit}
