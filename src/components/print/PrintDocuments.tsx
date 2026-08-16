@@ -736,59 +736,6 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
         </table>
       </div>
 
-      {/* Mascaramento */}
-      <div style={{ marginBottom: '3px', breakInside: 'avoid' }}>
-        <div style={{ fontSize: '7.5pt', fontWeight: 700, color: '#0F2B5C', marginBottom: '1px' }}>
-          MASCARAMENTO
-        </div>
-        <table style={{ borderCollapse: 'collapse', width: '60%' }}>
-          <thead>
-            <tr>
-              <th style={thStyle}></th>
-              <th style={{ ...thStyle, color: '#dc2626' }}>O.D.</th>
-              <th style={{ ...thStyle, color: '#2563eb' }}>O.E.</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 600 }}>V.A.:</td>
-              <td style={tdStyle}>{fmtDb(exam.masking_air_od)}</td>
-              <td style={tdStyle}>{fmtDb(exam.masking_air_oe)}</td>
-            </tr>
-            <tr>
-              <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 600 }}>V.O.:</td>
-              <td style={tdStyle}>{fmtDb(exam.masking_bone_od)}</td>
-              <td style={tdStyle}>{fmtDb(exam.masking_bone_oe)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* Inspeção do Meato Acústico Externo */}
-      <div style={{ marginBottom: '3px', breakInside: 'avoid' }}>
-        <div style={{ fontSize: '7.5pt', fontWeight: 700, color: '#0F2B5C', marginBottom: '1px' }}>
-          INSPEÇÃO DO MEATO ACÚSTICO EXTERNO
-        </div>
-        <div
-          style={{
-            border: '1px solid #94a3b8',
-            padding: '2px 4px',
-            fontSize: '7pt',
-            display: 'flex',
-            gap: '12px',
-          }}
-        >
-          <div style={{ flex: 1 }}>
-            <strong style={{ color: '#dc2626' }}>ORELHA DIREITA:</strong>{' '}
-            {exam.meatoscopy_od || 'Em condições de exame'}
-          </div>
-          <div style={{ flex: 1 }}>
-            <strong style={{ color: '#2563eb' }}>ORELHA ESQUERDA:</strong>{' '}
-            {exam.meatoscopy_oe || 'Em condições de exame'}
-          </div>
-        </div>
-      </div>
-
       {/* Grau, Tipo e Configuração */}
       {(exam.loss_degree || exam.loss_type || exam.loss_configuration) && (
         <div style={{ fontSize: '7pt', marginBottom: '2px' }}>

@@ -23,7 +23,6 @@ import {
   Save,
   Printer,
   Activity,
-  Ear,
   FileText,
   Wand2,
   Loader2,
@@ -728,119 +727,6 @@ export default function Audiometria() {
           </div>
         </Section>
 
-        {/* Mascaramento */}
-        <Section title="Mascaramento" icon={<Activity className="w-4 h-4 text-teal-600" />}>
-          <div className="overflow-x-auto border border-slate-300 rounded-lg bg-white shadow-sm">
-            <table className="w-full text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-slate-300 bg-slate-50">
-                  <th className="py-2 px-3 text-left font-bold text-slate-700 border-r border-slate-200">
-                    Via
-                  </th>
-                  <th className="py-2 px-3 text-center font-semibold text-red-600 border-r border-slate-200">
-                    O.D. (dB)
-                  </th>
-                  <th className="py-2 px-3 text-center font-semibold text-blue-600">O.E. (dB)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                <tr>
-                  <td className="py-2 px-3 font-bold text-slate-700 border-r border-slate-200">
-                    V.A. (Via Aérea)
-                  </td>
-                  <td className="p-2 border-r border-slate-200 text-center">
-                    <Input
-                      type="number"
-                      value={exam.masking_air_od ?? ''}
-                      onChange={(e) =>
-                        setField(
-                          'masking_air_od',
-                          e.target.value === '' ? null : Number(e.target.value),
-                        )
-                      }
-                      disabled={isSecretaria}
-                      className="w-20 h-8 mx-auto text-center text-[11px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white"
-                    />
-                  </td>
-                  <td className="p-2 text-center">
-                    <Input
-                      type="number"
-                      value={exam.masking_air_oe ?? ''}
-                      onChange={(e) =>
-                        setField(
-                          'masking_air_oe',
-                          e.target.value === '' ? null : Number(e.target.value),
-                        )
-                      }
-                      disabled={isSecretaria}
-                      className="w-20 h-8 mx-auto text-center text-[11px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white"
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-3 font-bold text-slate-700 border-r border-slate-200">
-                    V.O. (Via Óssea)
-                  </td>
-                  <td className="p-2 border-r border-slate-200 text-center">
-                    <Input
-                      type="number"
-                      value={exam.masking_bone_od ?? ''}
-                      onChange={(e) =>
-                        setField(
-                          'masking_bone_od',
-                          e.target.value === '' ? null : Number(e.target.value),
-                        )
-                      }
-                      disabled={isSecretaria}
-                      className="w-20 h-8 mx-auto text-center text-[11px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white"
-                    />
-                  </td>
-                  <td className="p-2 text-center">
-                    <Input
-                      type="number"
-                      value={exam.masking_bone_oe ?? ''}
-                      onChange={(e) =>
-                        setField(
-                          'masking_bone_oe',
-                          e.target.value === '' ? null : Number(e.target.value),
-                        )
-                      }
-                      disabled={isSecretaria}
-                      className="w-20 h-8 mx-auto text-center text-[11px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white"
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </Section>
-
-        {/* Meatoscopia */}
-        <Section
-          title="Inspeção do Meato Acústico Externo"
-          icon={<Ear className="w-4 h-4 text-teal-600" />}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {(['OD', 'OE'] as const).map((side) => {
-              const color = side === 'OD' ? 'text-red-600' : 'text-blue-600'
-              const key = side === 'OD' ? 'meatoscopy_od' : 'meatoscopy_oe'
-              return (
-                <Field key={side} label={`Orelha ${side === 'OD' ? 'Direita' : 'Esquerda'}`}>
-                  <Textarea
-                    value={exam[key]}
-                    onChange={(e) => setField(key as any, e.target.value)}
-                    disabled={isSecretaria}
-                    rows={2}
-                    placeholder="Ex.: Em condições de exame"
-                    className="rounded-xl text-xs border-slate-300 resize-y"
-                  />
-                  <span className={`text-[10px] font-bold ${color}`}>{side}</span>
-                </Field>
-              )
-            })}
-          </div>
-        </Section>
-
         {/* Grau / Tipo / Configuração / Parecer */}
         <Section title="Parecer Audiológico" icon={<FileText className="w-4 h-4 text-teal-600" />}>
           <div className="space-y-3">
@@ -1487,24 +1373,6 @@ function ExamPreview({
         {/* IPRF */}
         <IprfTable exam={exam} />
 
-        {/* Mascaramento */}
-        <MaskingTable exam={exam} />
-
-        {/* Inspeção do Meato Acústico Externo */}
-        <div>
-          <SectionLabel>INSPEÇÃO DO MEATO ACÚSTICO EXTERNO</SectionLabel>
-          <div className="border border-slate-300 rounded-md p-2 text-[11px] text-slate-800 space-y-1">
-            <div>
-              <strong style={{ color: '#dc2626' }}>ORELHA DIREITA:</strong>{' '}
-              {exam.meatoscopy_od || 'Em condições de exame'}
-            </div>
-            <div>
-              <strong style={{ color: '#2563eb' }}>ORELHA ESQUERDA:</strong>{' '}
-              {exam.meatoscopy_oe || 'Em condições de exame'}
-            </div>
-          </div>
-        </div>
-
         {/* Grau / Tipo / Configuração */}
         {(exam.loss_degree || exam.loss_type || exam.loss_configuration) && (
           <div className="text-[11px] text-slate-800">
@@ -1714,42 +1582,6 @@ function IprfTable({ exam }: { exam: AudiometryExamFull }) {
             <td className={`${td} text-left font-semibold`}>Monossílabos / Dissílabos</td>
             <td className={td}>{fmtIprf(odRow)}</td>
             <td className={td}>{fmtIprf(oeRow)}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function MaskingTable({ exam }: { exam: AudiometryExamFull }) {
-  const th = 'border border-slate-400 bg-slate-100 text-[10px] font-bold text-center px-1 py-0.5'
-  const td = 'border border-slate-400 text-[10px] text-center px-1 py-0.5'
-  const fmtDb = (v: number | null) => (v === null ? '- dB' : `${v} dB`)
-  return (
-    <div>
-      <SectionLabel>MASCARAMENTO</SectionLabel>
-      <table className="w-full border-collapse" style={{ maxWidth: 480 }}>
-        <thead>
-          <tr>
-            <th className={th}></th>
-            <th className={th} style={{ color: '#dc2626' }}>
-              O.D.
-            </th>
-            <th className={th} style={{ color: '#2563eb' }}>
-              O.E.
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td className={`${td} text-left font-semibold`}>V.A.:</td>
-            <td className={td}>{fmtDb(exam.masking_air_od)}</td>
-            <td className={td}>{fmtDb(exam.masking_air_oe)}</td>
-          </tr>
-          <tr>
-            <td className={`${td} text-left font-semibold`}>V.O.:</td>
-            <td className={td}>{fmtDb(exam.masking_bone_od)}</td>
-            <td className={td}>{fmtDb(exam.masking_bone_oe)}</td>
           </tr>
         </tbody>
       </table>
