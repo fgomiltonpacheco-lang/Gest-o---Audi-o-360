@@ -873,6 +873,91 @@ export interface NFServicoComissao {
   updated: string
 }
 
+// ===== Módulo de Controle de Inadimplência (Contas a Receber) =====
+
+/** Forma de pagamento que gera uma conta a receber. */
+export type ContaReceberForma = 'convênio' | 'boleto' | 'parcelado' | 'promissória'
+
+/** Status de uma conta a receber. */
+export type ContaReceberStatus =
+  | 'a_receber'
+  | 'recebido_parcial'
+  | 'recebido_total'
+  | 'vencido'
+  | 'renegociado'
+  | 'cancelado'
+
+/** Origem da conta a receber. */
+export type ContaReceberOrigem = 'pdv' | 'b2b'
+
+/** Forma de recebimento de uma conta a receber. */
+export type FormaRecebimento = 'dinheiro' | 'cartao' | 'pix' | 'transferencia' | 'cheque'
+
+export interface ContaReceber {
+  id: string
+  venda_id: string
+  venda_origem: ContaReceberOrigem
+  paciente_id: string
+  empresa_parceira_id: string
+  cliente_nome: string
+  cliente_telefone: string
+  descricao: string
+  valor_original: number
+  valor_recebido: number
+  valor_restante: number
+  forma_pagamento: ContaReceberForma
+  numero_parcelas: number
+  parcela_atual: number
+  data_venda: string // YYYY-MM-DD
+  data_vencimento: string // YYYY-MM-DD
+  data_recebimento?: string // YYYY-MM-DD
+  status: ContaReceberStatus
+  observacoes?: string
+  /** ID da conta original (quando esta é fruto de renegociação). */
+  conta_origem_id?: string
+  motivo_renegociacao?: string
+  motivo_cancelamento?: string
+  usuario_id?: string
+  created: string
+  updated: string
+}
+
+export interface Recebimento {
+  id: string
+  conta_receber_id: string
+  valor: number
+  data_recebimento: string // YYYY-MM-DD
+  forma_recebimento: FormaRecebimento
+  observacoes?: string
+  usuario_id?: string
+  usuario_nome?: string
+  created: string
+}
+
+export const CONTA_RECEBER_STATUS_LABELS: Record<ContaReceberStatus, string> = {
+  a_receber: 'A Receber',
+  recebido_parcial: 'Recebido Parcial',
+  recebido_total: 'Recebido Total',
+  vencido: 'Vencido',
+  renegociado: 'Renegociado',
+  cancelado: 'Cancelado',
+}
+
+export const CONTA_RECEBER_FORMA_LABELS: Record<ContaReceberForma, string> = {
+  convênio: 'Convênio',
+  boleto: 'Boleto',
+  parcelado: 'Parcelado',
+  promissória: 'Promissória',
+}
+
+export const FORMA_RECEBIMENTO_LABELS: Record<FormaRecebimento, string> = {
+  dinheiro: 'Dinheiro',
+  cartao: 'Cartão',
+  pix: 'PIX',
+  transferencia: 'Transferência',
+  cheque: 'Cheque',
+}
+
 // Alertas do Sistema
 export interface SystemAlert {
   id: string

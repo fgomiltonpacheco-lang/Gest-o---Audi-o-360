@@ -40,6 +40,12 @@ import {
   TipoConsentimento,
   PolicyTexts,
   TEXTO_PADRAO_CONSENTIMENTO,
+  ContaReceber,
+  Recebimento,
+  ContaReceberForma,
+  ContaReceberStatus,
+  ContaReceberOrigem,
+  FormaRecebimento,
 } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
@@ -534,6 +540,46 @@ const mapNfseB2BConfig = (r: any): NfseB2BConfig => ({
   updated: toDateStr(r.updated),
 })
 
+const mapContaReceber = (r: any): ContaReceber => ({
+  id: r.id,
+  venda_id: r.venda_id || '',
+  venda_origem: (r.venda_origem === 'b2b' ? 'b2b' : 'pdv') as ContaReceberOrigem,
+  paciente_id: r.paciente_id || r.paciente || '',
+  empresa_parceira_id: r.empresa_parceira_id || r.empresa_parceira || '',
+  cliente_nome: r.cliente_nome || '',
+  cliente_telefone: r.cliente_telefone || '',
+  descricao: r.descricao || '',
+  valor_original: Number(r.valor_original) || 0,
+  valor_recebido: Number(r.valor_recebido) || 0,
+  valor_restante: Number(r.valor_restante) || 0,
+  forma_pagamento: (r.forma_pagamento || 'boleto') as ContaReceberForma,
+  numero_parcelas: Number(r.numero_parcelas) || 1,
+  parcela_atual: Number(r.parcela_atual) || 1,
+  data_venda: toDateStr(r.data_venda),
+  data_vencimento: toDateStr(r.data_vencimento),
+  data_recebimento: r.data_recebimento ? toDateStr(r.data_recebimento) : undefined,
+  status: (r.status || 'a_receber') as ContaReceberStatus,
+  observacoes: r.observacoes || '',
+  conta_origem_id: r.conta_origem_id || '',
+  motivo_renegociacao: r.motivo_renegociacao || '',
+  motivo_cancelamento: r.motivo_cancelamento || '',
+  usuario_id: r.usuario_id || r.usuario || '',
+  created: toDateStr(r.created),
+  updated: toDateStr(r.updated),
+})
+
+const mapRecebimento = (r: any): Recebimento => ({
+  id: r.id,
+  conta_receber_id: r.conta_receber_id || r.conta_receber || '',
+  valor: Number(r.valor) || 0,
+  data_recebimento: toDateStr(r.data_recebimento),
+  forma_recebimento: (r.forma_recebimento || 'dinheiro') as FormaRecebimento,
+  observacoes: r.observacoes || '',
+  usuario_id: r.usuario_id || r.usuario || '',
+  usuario_nome: r.usuario_nome || '',
+  created: toDateStr(r.created),
+})
+
 const mapVendaB2B = (r: any): VendaB2B => {
   const itens = Array.isArray(r.expand?.itens_venda_b2b_venda_b2b_id)
     ? r.expand.itens_venda_b2b_venda_b2b_id.map(mapItemVendaB2B)
@@ -787,6 +833,33 @@ interface AppContextType {
   fetchLgpdPolicyTexts: () => Promise<PolicyTexts>
   saveLgpdPolicyTexts: (texts: PolicyTexts) => Promise<{ success: boolean; message?: string }>
 
+  // Controle de Inadimplência (Contas a Receber)
+  contasReceber: ContaReceber[]
+  fetchContasReceber: () => Promise<void>
+  registrarRecebimento: (
+    contaId: string,
+    data: {
+      valor: number
+      data_recebimento: string
+      forma_recebimento: FormaRecebimento
+      observacoes?: string
+    },
+  ) => Promise<{ success: boolean; message?: string }>
+  renegociarConta: (
+    contaId: string,
+    data: {
+      novo_vencimento: string
+      novo_valor: number
+      novo_numero_parcelas: number
+      motivo: string
+    },
+  ) => Promise<{ success: boolean; message?: string }>
+  cancelarConta: (
+    contaId: string,
+    motivo: string,
+  ) => Promise<{ success: boolean; message?: string }>
+  fetchRecebimentos: (contaId: string) => Promise<Recebimento[]>
+
   // Utilitário para recarregar dados do banco
   resetToSeedData: () => void
 }
@@ -836,6 +909,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [nfServicoComissao, setNfServicoComissao] = useState<NFServicoComissao[]>([])
   const [nfseB2BConfig, setNfseB2BConfig] = useState<NfseB2BConfig | null>(null)
 
+  // Contas a Receber (Controle de Inadimplência)
+  const [contasReceber, setContasReceber] = useState<ContaReceber[]>([])
+
   // ---------- Carregamento de dados ----------
   const reloadAll = useCallback(async () => {
     setDataLoading(true)
@@ -860,6 +936,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         bera,
         clinicSet,
         equips,
+        contasRec,
       ] = await Promise.all([
         pb.collection('patients').getFullList({ sort: '-created' }),
         pb.collection('appointments').getFullList({ sort: '-created' }),
@@ -881,6 +958,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Configurações: lista paginada (1) — singleton; cria automaticamente se vazio.
         pb.collection('clinic_settings').getList(1, 1, { sort: '-created' }),
         pb.collection('equipments').getFullList({ sort: 'nome' }),
+        pb.collection('contas_receber').getFullList({ sort: '-data_vencimento' }),
       ])
 
       const maintList = maints.map(mapMaintenance)
@@ -946,6 +1024,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           proxima_calibracao: e.proxima_calibracao || '',
         })),
       )
+
+      // ---- Contas a Receber ----
+      setContasReceber(contasRec.map(mapContaReceber))
     } catch (err) {
       console.error('Erro ao carregar dados do PocketBase:', err)
     } finally {
@@ -1048,6 +1129,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setEmpresasParceiras([])
     setNfServicoComissao([])
     setNfseB2BConfig(null)
+    setContasReceber([])
     toast({
       title: 'Sessão encerrada',
       description: 'Você saiu do sistema com segurança.',
@@ -2226,6 +2308,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return [...createdInsts, ...filtered]
           })
         }
+
+        // ---- Integração Controle de Inadimplência ----
+        // Vendas no PDV com forma "Convênio" ou "Boleto" geram 1 conta a
+        // receber; vendas "Parcelado" geram N contas (uma por parcela).
+        const pat = patients.find((p) => p.id === newSale.patientId)
+        const descResumida =
+          newSale.itemsDescription || `Venda #${nextNum} - ${newSale.patientName}`
+        const baseVenc = newSale.firstDueDate || newSale.date
+        if (newSale.paymentMethod === 'Convênio' || newSale.paymentMethod === 'Boleto') {
+          const forma = newSale.paymentMethod === 'Convênio' ? 'convênio' : 'boleto'
+          criarContasReceberDeVenda(realSaleId, 'pdv', {
+            pacienteId: newSale.patientId,
+            pacienteNome: newSale.patientName,
+            pacienteTelefone: pat?.mobile || pat?.phone || '',
+            descricao: descResumida,
+            valor: newSale.totalValue,
+            forma,
+            numeroParcelas: 1,
+            dataVenda: newSale.date,
+            primeiroVencimento: baseVenc,
+          }).catch((e) => console.error('Erro ao gerar conta a receber (PDV):', e))
+        } else if (newSale.paymentMethod === 'Parcelado') {
+          criarContasReceberDeVenda(realSaleId, 'pdv', {
+            pacienteId: newSale.patientId,
+            pacienteNome: newSale.patientName,
+            pacienteTelefone: pat?.mobile || pat?.phone || '',
+            descricao: descResumida,
+            valor: newSale.totalValue,
+            forma: 'parcelado',
+            numeroParcelas: Math.max(1, newSale.installmentsCount || 1),
+            dataVenda: newSale.date,
+            primeiroVencimento: baseVenc,
+          }).catch((e) => console.error('Erro ao gerar contas a receber (Parcelado):', e))
+        }
       })
       .catch((err) => {
         console.error('Erro ao criar venda:', err)
@@ -3266,6 +3382,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         data_recebimento_comissao: undefined,
       })
       await fetchVendasB2B()
+
+      // ---- Integração Controle de Inadimplência ----
+      // Ao emitir a NFS-e de Comissão, a empresa parceira passa a dever o
+      // repasse (70%) à Audição360. Cria uma conta a receber para esse valor.
+      const venda = vendasB2B.find((v) => v.id === data.venda_b2b_id)
+      if (venda && venda.valor_repasse > 0) {
+        const empresa = empresasParceiras.find((e) => e.id === venda.cliente_empresa_id)
+        // Vencimento do repasse: 30 dias após a emissão da NF.
+        const venc = new Date()
+        venc.setDate(venc.getDate() + 30)
+        criarContasReceberDeVenda(venda.id, 'b2b', {
+          empresaId: venda.cliente_empresa_id,
+          empresaNome: venda.cliente_empresa_nome,
+          empresaTelefone: empresa?.telefone || '',
+          descricao: `Repasse de comissão — Venda B2B ${venda.numero_venda}`,
+          valor: venda.valor_repasse,
+          forma: 'boleto',
+          numeroParcelas: 1,
+          dataVenda: venda.data_venda,
+          primeiroVencimento: venc.toISOString().split('T')[0],
+        }).catch((e) => console.error('Erro ao gerar conta a receber (B2B repasse):', e))
+      }
+
       toast({ title: 'NFS-e de Comissão emitida', description: `NFS-e ${data.numero_nfse}` })
       return mapped
     } catch (err) {
@@ -3615,6 +3754,265 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [],
   )
 
+  // ---------- Controle de Inadimplência (Contas a Receber) ----------
+  const fetchContasReceber = useCallback(async () => {
+    try {
+      const list = await pb.collection('contas_receber').getFullList({ sort: '-data_vencimento' })
+      setContasReceber(list.map(mapContaReceber))
+    } catch (err) {
+      console.error('Erro ao carregar contas a receber:', err)
+    }
+  }, [])
+
+  const fetchRecebimentos = useCallback(async (contaId: string): Promise<Recebimento[]> => {
+    if (!contaId) return []
+    try {
+      const list = await pb.collection('recebimentos').getFullList({
+        filter: `conta_receber_id = "${contaId}"`,
+        sort: '-data_recebimento',
+      })
+      return list.map(mapRecebimento)
+    } catch (err) {
+      console.error('Erro ao carregar recebimentos:', err)
+      return []
+    }
+  }, [])
+
+  /**
+   * Cria uma ou mais contas a receber a partir de uma venda (PDV ou B2B).
+   * Chamado automaticamente após a criação da venda.
+   * - Convênio / Boleto / Promissória: 1 conta com o valor total.
+   * - Parcelado: N contas, uma por parcela, vencimentos mensais.
+   */
+  const criarContasReceberDeVenda = useCallback(
+    async (
+      vendaId: string,
+      origem: ContaReceberOrigem,
+      params: {
+        pacienteId?: string
+        pacienteNome?: string
+        pacienteTelefone?: string
+        empresaId?: string
+        empresaNome?: string
+        empresaTelefone?: string
+        descricao: string
+        valor: number
+        forma: ContaReceberForma
+        numeroParcelas: number
+        dataVenda: string
+        primeiroVencimento: string
+      },
+    ) => {
+      const parcelas = Math.max(1, params.numeroParcelas || 1)
+      const baseVenc = new Date(params.primeiroVencimento + 'T00:00:00')
+      if (isNaN(baseVenc.getTime())) return
+      const valorParcela = params.valor / parcelas
+      const usuarioId = currentUser?.id || ''
+      const cliente_nome = params.pacienteNome || params.empresaNome || 'Venda avulsa'
+      const cliente_telefone = params.pacienteTelefone || params.empresaTelefone || ''
+      const pacienteId = params.pacienteId || ''
+      const empresaId = params.empresaId || ''
+
+      for (let i = 1; i <= parcelas; i++) {
+        const venc = new Date(baseVenc)
+        venc.setMonth(venc.getMonth() + (i - 1))
+        const vencStr = venc.toISOString().split('T')[0]
+        try {
+          const rec: any = await pb.collection('contas_receber').create({
+            venda_id: vendaId,
+            venda_origem: origem,
+            paciente_id: pacienteId,
+            empresa_parceira_id: empresaId,
+            cliente_nome,
+            cliente_telefone,
+            descricao:
+              parcelas > 1 ? `${params.descricao} (Parcela ${i}/${parcelas})` : params.descricao,
+            valor_original: valorParcela,
+            valor_recebido: 0,
+            valor_restante: valorParcela,
+            forma_pagamento: params.forma,
+            numero_parcelas: parcelas,
+            parcela_atual: i,
+            data_venda: params.dataVenda,
+            data_vencimento: vencStr,
+            status: 'a_receber',
+            observacoes: '',
+            usuario_id: usuarioId,
+          })
+          setContasReceber((prev) => [mapContaReceber(rec), ...prev])
+        } catch (err) {
+          console.error('Erro ao criar conta a receber:', err)
+        }
+      }
+    },
+    [currentUser?.id],
+  )
+
+  const registrarRecebimento = useCallback(
+    async (
+      contaId: string,
+      data: {
+        valor: number
+        data_recebimento: string
+        forma_recebimento: FormaRecebimento
+        observacoes?: string
+      },
+    ): Promise<{ success: boolean; message?: string }> => {
+      try {
+        const conta = contasReceber.find((c) => c.id === contaId)
+        if (!conta) return { success: false, message: 'Conta não encontrada.' }
+        const valor = Number(data.valor) || 0
+        if (valor <= 0) return { success: false, message: 'Informe um valor válido.' }
+        if (valor > conta.valor_restante + 0.01) {
+          return { success: false, message: 'Valor maior que o restante da conta.' }
+        }
+
+        // Cria o recebimento
+        await pb.collection('recebimentos').create({
+          conta_receber_id: contaId,
+          valor,
+          data_recebimento: data.data_recebimento,
+          forma_recebimento: data.forma_recebimento,
+          observacoes: data.observacoes || '',
+          usuario_id: currentUser?.id || '',
+          usuario_nome: currentUser?.name || '',
+        })
+
+        // Atualiza a conta
+        const novoRecebido = conta.valor_recebido + valor
+        const novoRestante = Math.max(0, conta.valor_original - novoRecebido)
+        const novoStatus: ContaReceberStatus =
+          novoRestante <= 0.01 ? 'recebido_total' : 'recebido_parcial'
+        const updated: any = await pb.collection('contas_receber').update(contaId, {
+          valor_recebido: novoRecebido,
+          valor_restante: novoRestante,
+          status: novoStatus,
+          data_recebimento: novoStatus === 'recebido_total' ? data.data_recebimento : '',
+        })
+        const mapped = mapContaReceber(updated)
+        setContasReceber((prev) => prev.map((c) => (c.id === contaId ? mapped : c)))
+        toast({
+          title:
+            novoStatus === 'recebido_total'
+              ? 'Recebimento total registrado'
+              : 'Recebimento parcial registrado',
+          description: `R$ ${valor.toFixed(2)} • ${conta.cliente_nome}`,
+        })
+        return { success: true }
+      } catch (err) {
+        console.error('Erro ao registrar recebimento:', err)
+        return { success: false, message: describePbError(err) }
+      }
+    },
+    [contasReceber, currentUser?.id, currentUser?.name],
+  )
+
+  const renegociarConta = useCallback(
+    async (
+      contaId: string,
+      data: {
+        novo_vencimento: string
+        novo_valor: number
+        novo_numero_parcelas: number
+        motivo: string
+      },
+    ): Promise<{ success: boolean; message?: string }> => {
+      try {
+        if (!data.motivo?.trim()) {
+          return { success: false, message: 'Informe o motivo da renegociação.' }
+        }
+        const conta = contasReceber.find((c) => c.id === contaId)
+        if (!conta) return { success: false, message: 'Conta não encontrada.' }
+
+        // Marca a conta original como renegociada
+        const origUpdated: any = await pb.collection('contas_receber').update(contaId, {
+          status: 'renegociado',
+          motivo_renegociacao: data.motivo.trim(),
+        })
+        setContasReceber((prev) =>
+          prev.map((c) => (c.id === contaId ? mapContaReceber(origUpdated) : c)),
+        )
+
+        // Cria nova conta com os termos renegociados
+        const parcelas = Math.max(1, data.novo_numero_parcelas || 1)
+        const baseVenc = new Date(data.novo_vencimento + 'T00:00:00')
+        const valorParcela = (Number(data.novo_valor) || conta.valor_restante) / parcelas
+        const usuarioId = currentUser?.id || ''
+        const novasContas: ContaReceber[] = []
+        for (let i = 1; i <= parcelas; i++) {
+          const venc = new Date(baseVenc)
+          venc.setMonth(venc.getMonth() + (i - 1))
+          const vencStr = venc.toISOString().split('T')[0]
+          const rec: any = await pb.collection('contas_receber').create({
+            venda_id: conta.venda_id,
+            venda_origem: conta.venda_origem,
+            paciente_id: conta.paciente_id,
+            empresa_parceira_id: conta.empresa_parceira_id,
+            cliente_nome: conta.cliente_nome,
+            cliente_telefone: conta.cliente_telefone,
+            descricao:
+              parcelas > 1
+                ? `${conta.descricao} — Renegociada (Parcela ${i}/${parcelas})`
+                : `${conta.descricao} — Renegociada`,
+            valor_original: valorParcela,
+            valor_recebido: 0,
+            valor_restante: valorParcela,
+            forma_pagamento: conta.forma_pagamento,
+            numero_parcelas: parcelas,
+            parcela_atual: i,
+            data_venda: conta.data_venda,
+            data_vencimento: vencStr,
+            status: 'a_receber',
+            observacoes: `Renegociação da conta ${contaId}. Motivo: ${data.motivo.trim()}`,
+            conta_origem_id: contaId,
+            motivo_renegociacao: data.motivo.trim(),
+            usuario_id: usuarioId,
+          })
+          novasContas.push(mapContaReceber(rec))
+        }
+        setContasReceber((prev) => [...novasContas, ...prev])
+        toast({
+          title: 'Renegociação concluída',
+          description: `${parcelas} nova(s) conta(s) criada(s) a partir de ${conta.cliente_nome}.`,
+        })
+        return { success: true }
+      } catch (err) {
+        console.error('Erro ao renegociar conta:', err)
+        return { success: false, message: describePbError(err) }
+      }
+    },
+    [contasReceber, currentUser?.id],
+  )
+
+  const cancelarConta = useCallback(
+    async (contaId: string, motivo: string): Promise<{ success: boolean; message?: string }> => {
+      try {
+        if (!motivo?.trim()) {
+          return { success: false, message: 'Informe o motivo do cancelamento.' }
+        }
+        const conta = contasReceber.find((c) => c.id === contaId)
+        if (!conta) return { success: false, message: 'Conta não encontrada.' }
+        const updated: any = await pb.collection('contas_receber').update(contaId, {
+          status: 'cancelado',
+          motivo_cancelamento: motivo.trim(),
+        })
+        setContasReceber((prev) =>
+          prev.map((c) => (c.id === contaId ? mapContaReceber(updated) : c)),
+        )
+        toast({
+          title: 'Conta cancelada',
+          description: `Conta de ${conta.cliente_nome} cancelada. Registro salvo na auditoria.`,
+          variant: 'destructive',
+        })
+        return { success: true }
+      } catch (err) {
+        console.error('Erro ao cancelar conta:', err)
+        return { success: false, message: describePbError(err) }
+      }
+    },
+    [contasReceber],
+  )
+
   return (
     <AppContext.Provider
       value={{
@@ -3714,6 +4112,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         revogarConsentimento,
         fetchLgpdPolicyTexts,
         saveLgpdPolicyTexts,
+        // Contas a Receber
+        contasReceber,
+        fetchContasReceber,
+        registrarRecebimento,
+        renegociarConta,
+        cancelarConta,
+        fetchRecebimentos,
         alerts,
         unreadAlertsCount,
         resetToSeedData,

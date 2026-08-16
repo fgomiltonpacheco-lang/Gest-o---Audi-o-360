@@ -5,7 +5,8 @@
 // Registra, de forma imutável, TODAS as ações críticas realizadas por
 // todos os usuários em todos os módulos (pacientes, agenda, prontuário,
 // audiometria, vendas PDV/B2B, caixa, estoque, configurações, exames,
-// aparelhos, parceiros, NF) na coleção `audit_trail`.
+// aparelhos, parceiros, NF, contas a receber/recebimentos) na coleção
+// `audit_trail`.
 //
 // Princípios:
 //  1. BEST-EFFORT: se o log falhar, a operação original NÃO é bloqueada
@@ -255,6 +256,31 @@ onRecordCreateRequest(
             return 'NF de serviço: ' + (r.getString('numero_nfse') || r.getId())
           },
         },
+        contas_receber: {
+          modulo: 'caixa',
+          entidade_tipo: 'contas_receber',
+          descricao: function (r) {
+            return (
+              'Conta a receber: ' +
+              (r.getString('cliente_nome') || '') +
+              ' — R$ ' +
+              (r.get('valor_original') || 0)
+            )
+          },
+        },
+        recebimentos: {
+          modulo: 'caixa',
+          entidade_tipo: 'recebimentos',
+          descricao: function (r) {
+            return (
+              'Recebimento: R$ ' +
+              (r.get('valor') || 0) +
+              ' (conta ' +
+              (r.getString('conta_receber_id') || '') +
+              ')'
+            )
+          },
+        },
       }
 
       var meta = META[collectionName]
@@ -361,6 +387,8 @@ onRecordCreateRequest(
   'equipments',
   'clinic_settings',
   'nf_servico_comissao',
+  'contas_receber',
+  'recebimentos',
 )
 
 // ============================================================
@@ -673,6 +701,39 @@ onRecordUpdateRequest(
             return 'NF de serviço: ' + (r.getString('numero_nfse') || r.getId())
           },
         },
+        contas_receber: {
+          modulo: 'caixa',
+          entidade_tipo: 'contas_receber',
+          statusField: 'status',
+          cancelValue: 'cancelado',
+          estornoValue: '',
+          acaoEspecial: '',
+          descricao: function (r) {
+            return (
+              'Conta a receber: ' +
+              (r.getString('cliente_nome') || '') +
+              ' — R$ ' +
+              (r.get('valor_original') || 0)
+            )
+          },
+        },
+        recebimentos: {
+          modulo: 'caixa',
+          entidade_tipo: 'recebimentos',
+          statusField: '',
+          cancelValue: '',
+          estornoValue: '',
+          acaoEspecial: '',
+          descricao: function (r) {
+            return (
+              'Recebimento: R$ ' +
+              (r.get('valor') || 0) +
+              ' (conta ' +
+              (r.getString('conta_receber_id') || '') +
+              ')'
+            )
+          },
+        },
       }
 
       var meta = META[collectionName]
@@ -810,7 +871,11 @@ onRecordUpdateRequest(
           ) {
             acao = 'cancelar'
             try {
-              var mv = e.record.getString('cancelReason') || e.record.getString('observacoes') || ''
+              var mv =
+                e.record.getString('motivo_cancelamento') ||
+                e.record.getString('cancelReason') ||
+                e.record.getString('observacoes') ||
+                ''
               if (mv) contexto = { motivo: mv }
             } catch (_) {}
           } else if (
@@ -876,6 +941,8 @@ onRecordUpdateRequest(
   'equipments',
   'clinic_settings',
   'nf_servico_comissao',
+  'contas_receber',
+  'recebimentos',
 )
 
 // ============================================================
@@ -1083,6 +1150,31 @@ onRecordDeleteRequest(
             return 'NF de serviço: ' + (r.getString('numero_nfse') || r.getId())
           },
         },
+        contas_receber: {
+          modulo: 'caixa',
+          entidade_tipo: 'contas_receber',
+          descricao: function (r) {
+            return (
+              'Conta a receber: ' +
+              (r.getString('cliente_nome') || '') +
+              ' — R$ ' +
+              (r.get('valor_original') || 0)
+            )
+          },
+        },
+        recebimentos: {
+          modulo: 'caixa',
+          entidade_tipo: 'recebimentos',
+          descricao: function (r) {
+            return (
+              'Recebimento: R$ ' +
+              (r.get('valor') || 0) +
+              ' (conta ' +
+              (r.getString('conta_receber_id') || '') +
+              ')'
+            )
+          },
+        },
       }
 
       var meta = META[collectionName]
@@ -1188,4 +1280,6 @@ onRecordDeleteRequest(
   'equipments',
   'clinic_settings',
   'nf_servico_comissao',
+  'contas_receber',
+  'recebimentos',
 )

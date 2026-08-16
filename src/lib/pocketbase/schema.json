@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T22:19:02.507Z",
+  "generatedAt": "2026-08-16T22:36:14.470Z",
   "collections": [
     {
       "name": "users",
@@ -3846,6 +3846,262 @@
       "indexes": [
         "CREATE INDEX idx_reflexo_acustico_dados_imit ON reflexo_acustico_dados (imitanciometria_id)",
         "CREATE INDEX idx_reflexo_acustico_dados_orelha ON reflexo_acustico_dados (orelha)"
+      ]
+    },
+    {
+      "name": "contas_receber",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "venda_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "venda_origem",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["pdv", "b2b"]
+        },
+        {
+          "name": "paciente_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "empresa_parceira_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "empresas_parceiras"
+        },
+        {
+          "name": "cliente_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cliente_telefone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "descricao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_original",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_recebido",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_restante",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "forma_pagamento",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["convênio", "boleto", "parcelado", "promissória"]
+        },
+        {
+          "name": "numero_parcelas",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "parcela_atual",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_venda",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_vencimento",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_recebimento",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "a_receber",
+            "recebido_parcial",
+            "recebido_total",
+            "vencido",
+            "renegociado",
+            "cancelado"
+          ]
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "conta_origem_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "motivo_renegociacao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "motivo_cancelamento",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "usuario_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_contas_receber_status ON contas_receber (status)",
+        "CREATE INDEX idx_contas_receber_vencimento ON contas_receber (data_vencimento)",
+        "CREATE INDEX idx_contas_receber_venda ON contas_receber (venda_id)",
+        "CREATE INDEX idx_contas_receber_paciente ON contas_receber (paciente_id)",
+        "CREATE INDEX idx_contas_receber_empresa ON contas_receber (empresa_parceira_id)",
+        "CREATE INDEX idx_contas_receber_origem ON contas_receber (conta_origem_id)"
+      ]
+    },
+    {
+      "name": "recebimentos",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "conta_receber_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "contas_receber"
+        },
+        {
+          "name": "valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_recebimento",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "forma_recebimento",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["dinheiro", "cartao", "pix", "transferencia", "cheque"]
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "usuario_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "usuario_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_recebimentos_conta ON recebimentos (conta_receber_id)",
+        "CREATE INDEX idx_recebimentos_data ON recebimentos (data_recebimento)"
       ]
     }
   ]
