@@ -115,6 +115,109 @@ export function maskCEP(value: string): string {
   return `${digits.slice(0, 5)}-${digits.slice(5, 8)}`
 }
 
+/**
+ * Mapa de palavras-chave -> cor para procedimentos/agendamentos.
+ * Os nomes dos procedimentos agora vêm do banco (`procedures.name`) e podem
+ * diferir dos tipos legados (ex.: "Audiometria Tonal Liminar"). Esta função
+ * faz um fallback por substring para que novos nomes ainda recebam uma cor.
+ */
+const APPOINTMENT_COLOR_KEYWORDS: {
+  test: RegExp
+  color: { bg: string; text: string; border: string; hex: string }
+}[] = [
+  {
+    test: /avalia/i,
+    color: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', hex: '#2563eb' },
+  },
+  {
+    test: /audiometria/i,
+    color: { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200', hex: '#06b6d4' },
+  },
+  {
+    test: /imitanc/i,
+    color: {
+      bg: 'bg-emerald-50',
+      text: 'text-emerald-700',
+      border: 'border-emerald-200',
+      hex: '#10b981',
+    },
+  },
+  {
+    test: /logoaudi/i,
+    color: {
+      bg: 'bg-purple-50',
+      text: 'text-purple-700',
+      border: 'border-purple-200',
+      hex: '#8b5cf6',
+    },
+  },
+  {
+    test: /bera|peate/i,
+    color: { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200', hex: '#ec4899' },
+  },
+  {
+    test: /adapta/i,
+    color: {
+      bg: 'bg-orange-50',
+      text: 'text-orange-700',
+      border: 'border-orange-200',
+      hex: '#f97316',
+    },
+  },
+  {
+    test: /retorno|ajuste/i,
+    color: {
+      bg: 'bg-amber-50',
+      text: 'text-amber-700',
+      border: 'border-amber-200',
+      hex: '#eab308',
+    },
+  },
+  {
+    test: /manuten/i,
+    color: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', hex: '#ef4444' },
+  },
+  {
+    test: /entrega/i,
+    color: { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200', hex: '#14b8a6' },
+  },
+  {
+    test: /orienta/i,
+    color: {
+      bg: 'bg-indigo-50',
+      text: 'text-indigo-700',
+      border: 'border-indigo-200',
+      hex: '#6366f1',
+    },
+  },
+  {
+    test: /1º|primeiro/i,
+    color: { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200', hex: '#0284c7' },
+  },
+]
+
+const DEFAULT_APPOINTMENT_COLOR = {
+  bg: 'bg-teal-50',
+  text: 'text-navy-700',
+  border: 'border-teal-200',
+  hex: '#14b8a6',
+}
+
+export function getAppointmentColor(type?: string): {
+  bg: string
+  text: string
+  border: string
+  hex: string
+} {
+  if (!type) return DEFAULT_APPOINTMENT_COLOR
+  // 1. Correspondência exata no mapa legado
+  const exact = APPOINTMENT_TYPE_COLORS[type]
+  if (exact) return exact
+  // 2. Fallback por palavra-chave
+  const found = APPOINTMENT_COLOR_KEYWORDS.find((k) => k.test.test(type))
+  return found ? found.color : DEFAULT_APPOINTMENT_COLOR
+}
+
 // Cores dos 10 tipos de atendimento
 export const APPOINTMENT_TYPE_COLORS: Record<
   string,

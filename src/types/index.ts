@@ -56,6 +56,9 @@ export interface Patient {
   lastVisit?: string
 }
 
+// Tipo de atendimento agora é livre (texto) — vem do nome do procedimento
+// cadastrado em `procedures`. Mantemos a união apenas como referência para os
+// tipos legados; novos agendamentos podem usar qualquer nome de procedimento.
 export type AppointmentType =
   | 'Avaliação auditiva'
   | 'Audiometria'
@@ -67,18 +70,36 @@ export type AppointmentType =
   | 'Manutenção'
   | 'Entrega de aparelho'
   | 'Orientação'
+  // Permite nomes de procedimentos cadastrados (ex.: "Audiometria Tonal Liminar")
+  | (string & {})
 
 export type AppointmentStatus = 'Agendado' | 'Confirmado' | 'Realizado' | 'Faltou' | 'Cancelado'
+
+export interface Procedure {
+  id: string
+  name: string
+  duration: number // minutos
+  value: number // R$
+  category?: string
+  active: boolean
+  createdAt: string
+  updatedAt: string
+}
 
 export interface Appointment {
   id: string
   patientId: string
   patientName: string
   patientPhone?: string
-  type: AppointmentType
+  /** Vínculo com a coleção `procedures` (vazio para agendamentos legados). */
+  procedureId?: string
+  /** Nome do procedimento exibido (fallback do antigo campo "type"). */
+  type: string
   date: string // YYYY-MM-DD
   time: string // HH:mm
-  duration: number // minutes: 15, 30, 45, 60, 90
+  duration: number // minutes
+  /** Valor (R$) preenchido automaticamente a partir do procedimento. */
+  value?: number
   professionalName: string
   status: AppointmentStatus
   notes?: string

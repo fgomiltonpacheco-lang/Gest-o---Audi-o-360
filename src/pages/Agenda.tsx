@@ -18,7 +18,7 @@ import {
   CalendarDays,
   Grid,
 } from 'lucide-react'
-import { formatDate, APPOINTMENT_TYPE_COLORS } from '@/lib/formatters'
+import { formatDate, APPOINTMENT_TYPE_COLORS, getAppointmentColor } from '@/lib/formatters'
 import { Appointment, AppointmentType, AppointmentStatus } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -386,11 +386,7 @@ export default function Agenda() {
                       </button>
                     ) : (
                       matchedApps.map((app) => {
-                        const typeConfig = APPOINTMENT_TYPE_COLORS[app.type] || {
-                          bg: 'bg-teal-50',
-                          text: 'text-navy-700',
-                          border: 'border-teal-200',
-                        }
+                        const typeConfig = getAppointmentColor(app.type)
                         return (
                           <div
                             key={app.id}
@@ -500,11 +496,7 @@ export default function Agenda() {
 
                     <div className="space-y-1.5 mt-2.5">
                       {dayApps.map((app) => {
-                        const typeConfig = APPOINTMENT_TYPE_COLORS[app.type] || {
-                          bg: 'bg-teal-50',
-                          text: 'text-navy-700',
-                          border: 'border-teal-200',
-                        }
+                        const typeConfig = getAppointmentColor(app.type)
                         return (
                           <div
                             key={app.id}
@@ -635,11 +627,7 @@ export default function Agenda() {
                   </tr>
                 ) : (
                   filteredAppointments.map((app) => {
-                    const typeConfig = APPOINTMENT_TYPE_COLORS[app.type] || {
-                      bg: 'bg-teal-50',
-                      text: 'text-navy-700',
-                      border: 'border-teal-200',
-                    }
+                    const typeConfig = getAppointmentColor(app.type)
                     return (
                       <tr key={app.id} className="hover:bg-teal-50/40 transition-colors">
                         <td className="py-3.5 px-4 font-mono text-xs text-slate-700">

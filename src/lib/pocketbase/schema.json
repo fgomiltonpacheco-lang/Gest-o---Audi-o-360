@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T00:49:44.270Z",
+  "generatedAt": "2026-08-16T00:54:18.459Z",
   "collections": [
     {
       "name": "users",
@@ -325,6 +325,19 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "procedureId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "procedures"
+        },
+        {
+          "name": "value",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX idx_appointments_date ON appointments (date)"]

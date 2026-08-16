@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -17,25 +17,13 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Appointment, AppointmentType, AppointmentStatus } from '@/types'
+import { Appointment, AppointmentStatus, Procedure } from '@/types'
 import { useApp } from '@/context/AppContext'
-import { APPOINTMENT_TYPE_COLORS } from '@/lib/formatters'
-import { Calendar, Clock, User, AlertCircle } from 'lucide-react'
+import { getAppointmentColor } from '@/lib/formatters'
+import { Calendar, Clock, User, AlertCircle, DollarSign } from 'lucide-react'
+import pb from '@/lib/pocketbase/client'
 
-const APPOINTMENT_TYPES: AppointmentType[] = [
-  'Avaliação auditiva',
-  'Audiometria',
-  'Imitanciometria',
-  'Logoaudiometria',
-  'BERA',
-  'Adaptação de aparelho',
-  'Retorno/ajuste',
-  'Manutenção',
-  'Entrega de aparelho',
-  'Orientação',
-]
-
-const DURATIONS = [15, 30, 45, 60, 90]
+const DURATIONS = [15, 30, 45, 60, 90, 120]
 const STATUSES: AppointmentStatus[] = ['Agendado', 'Confirmado', 'Realizado', 'Faltou', 'Cancelado']
 
 interface AppointmentModalProps {
@@ -64,33 +52,74 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   const [patientId, setPatientId] = useState('')
   const [patientSearch, setPatientSearch] = useState('')
   const [patientDropdownOpen, setPatientDropdownOpen] = useState(false)
-  const [type, setType] = useState<AppointmentType>('Avaliação auditiva')
+  const [procedureId, setProcedureId] = useState<string>('')
+  const [procedureName, setProcedureName] = useState<string>('')
   const [date, setDate] = useState('')
   const [time, setTime] = useState('09:00')
   const [duration, setDuration] = useState<number>(60)
+  const [value, setValue] = useState<number>(0)
   const [professionalName, setProfessionalName] = useState('Milton Soares Pacheco')
   const [status, setStatus] = useState<AppointmentStatus>('Agendado')
   const [notes, setNotes] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
 
+  const [procedures, setProcedures] = useState<Procedure[]>([])
+  const [proceduresLoading, setProceduresLoading] = useState(false)
+
+  const loadProcedures = useCallback(async () => {
+    setProceduresLoading(true)
+    try {
+      const records = await pb.collection('procedures').getFullList({
+        filter: 'active = true',
+        sort: 'name',
+      })
+      const rows: Procedure[] = records.map((r: any) => ({
+        id: r.id,
+        name: r.name || '',
+        duration: Number(r.duration) || 30,
+        value: Number(r.value) || 0,
+        category: r.category || '',
+        active: r.active !== false,
+        createdAt: r.created || '',
+        updatedAt: r.updated || '',
+      }))
+      setProcedures(rows)
+    } catch (err) {
+      console.error('Erro ao carregar procedimentos:', err)
+      setProcedures([])
+    } finally {
+      setProceduresLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (open) {
+      loadProcedures()
+    }
+  }, [open, loadProcedures])
+
   useEffect(() => {
     if (appointmentToEdit) {
       setPatientId(appointmentToEdit.patientId)
       setPatientSearch(appointmentToEdit.patientName)
-      setType(appointmentToEdit.type)
+      setProcedureId(appointmentToEdit.procedureId || '')
+      setProcedureName(appointmentToEdit.type || '')
       setDate(appointmentToEdit.date)
       setTime(appointmentToEdit.time)
       setDuration(appointmentToEdit.duration)
+      setValue(appointmentToEdit.value ?? 0)
       setProfessionalName(appointmentToEdit.professionalName)
       setStatus(appointmentToEdit.status)
       setNotes(appointmentToEdit.notes || '')
     } else {
       setPatientId(initialPatientId || '')
       setPatientSearch(initialPatientName || '')
-      setType('Avaliação auditiva')
+      setProcedureId('')
+      setProcedureName('')
       setDate(initialDate || new Date().toISOString().split('T')[0])
       setTime(initialTime || '09:00')
       setDuration(60)
+      setValue(0)
       setProfessionalName('Milton Soares Pacheco')
       setStatus('Agendado')
       setNotes('')
@@ -111,12 +140,28 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
     setPatientDropdownOpen(false)
   }
 
+  // Ao selecionar um procedimento, preenche nome/duração/valor automaticamente.
+  // Os campos continuam editáveis depois.
+  const handleSelectProcedure = (procId: string) => {
+    const proc = procedures.find((p) => p.id === procId)
+    if (proc) {
+      setProcedureId(proc.id)
+      setProcedureName(proc.name)
+      setDuration(proc.duration)
+      setValue(proc.value)
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage('')
 
     if (!patientId && !patientSearch.trim()) {
       setErrorMessage('Selecione ou informe o paciente.')
+      return
+    }
+    if (!procedureName.trim()) {
+      setErrorMessage('Selecione um procedimento.')
       return
     }
     if (!date) {
@@ -136,10 +181,12 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       patientId: patientId || `pat-temp-${Date.now()}`,
       patientName,
       patientPhone,
-      type,
+      procedureId: procedureId || '',
+      type: procedureName.trim(),
       date,
       time,
       duration,
+      value,
       professionalName,
       status,
       notes,
@@ -153,7 +200,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl w-full rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+      <DialogContent className="max-w-xl w-full rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 max-h-[92vh] overflow-y-auto">
         <DialogHeader className="border-b border-slate-100 pb-3">
           <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-teal-600" />
@@ -204,33 +251,55 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
             )}
           </div>
 
-          {/* Tipo de Atendimento + Profissional */}
+          {/* Procedimento + Profissional */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-xs font-semibold text-slate-700">
-                Tipo de Atendimento <span className="text-red-500">*</span>
+                Procedimento <span className="text-red-500">*</span>
               </Label>
-              <Select value={type} onValueChange={(val: AppointmentType) => setType(val)}>
+              <Select value={procedureId} onValueChange={handleSelectProcedure}>
                 <SelectTrigger className="h-10 rounded-xl mt-1 border-slate-300 text-xs font-semibold">
-                  <SelectValue />
+                  <SelectValue
+                    placeholder={proceduresLoading ? 'Carregando...' : 'Selecione o procedimento'}
+                  >
+                    {procedureName ||
+                      (proceduresLoading ? 'Carregando...' : 'Selecione o procedimento')}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {APPOINTMENT_TYPES.map((t) => {
-                    const color = APPOINTMENT_TYPE_COLORS[t]
+                  {procedures.length === 0 && !proceduresLoading && (
+                    <SelectItem value="__none" disabled>
+                      Nenhum procedimento ativo
+                    </SelectItem>
+                  )}
+                  {procedures.map((p) => {
+                    const color = getAppointmentColor(p.name)
                     return (
-                      <SelectItem key={t} value={t} className="text-xs font-medium">
+                      <SelectItem key={p.id} value={p.id} className="text-xs font-medium">
                         <span className="flex items-center gap-2">
                           <span
-                            className="w-2.5 h-2.5 rounded-full inline-block"
+                            className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
                             style={{ backgroundColor: color.hex }}
                           />
-                          {t}
+                          <span className="flex-1 truncate">{p.name}</span>
+                          <span className="text-slate-400 text-[10px]">
+                            {p.duration}min • R$ {Number(p.value).toFixed(0)}
+                          </span>
                         </span>
                       </SelectItem>
                     )
                   })}
                 </SelectContent>
               </Select>
+              {/* Editar nome livremente caso o procedimento não esteja na lista */}
+              {procedureId && (
+                <Input
+                  value={procedureName}
+                  onChange={(e) => setProcedureName(e.target.value)}
+                  placeholder="Nome do procedimento"
+                  className="h-8 rounded-lg mt-1 text-[11px] border-slate-200"
+                />
+              )}
             </div>
 
             <div>
@@ -253,7 +322,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
             </div>
           </div>
 
-          {/* Data, Hora e Duração */}
+          {/* Data, Hora, Duração */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <Label className="text-xs font-semibold text-slate-700">
@@ -280,19 +349,38 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
             </div>
 
             <div>
-              <Label className="text-xs font-semibold text-slate-700">Duração (min)</Label>
-              <Select value={String(duration)} onValueChange={(val) => setDuration(Number(val))}>
-                <SelectTrigger className="h-10 rounded-xl mt-1 border-slate-300 text-xs font-medium">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DURATIONS.map((dur) => (
-                    <SelectItem key={dur} value={String(dur)}>
-                      {dur} minutos
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-xs font-semibold text-slate-700">
+                Duração (min) <span className="text-slate-400 font-normal">editável</span>
+              </Label>
+              <div className="relative">
+                <Clock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Input
+                  type="number"
+                  min={5}
+                  step={5}
+                  value={duration}
+                  onChange={(e) => setDuration(Number(e.target.value) || 0)}
+                  className="h-10 rounded-xl mt-1 text-xs border-slate-300 pl-9"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Valor */}
+          <div>
+            <Label className="text-xs font-semibold text-slate-700">
+              Valor (R$) <span className="text-slate-400 font-normal">editável</span>
+            </Label>
+            <div className="relative max-w-[240px]">
+              <DollarSign className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={value}
+                onChange={(e) => setValue(Number(e.target.value) || 0)}
+                className="h-10 rounded-xl mt-1 text-xs border-slate-300 pl-9"
+              />
             </div>
           </div>
 
