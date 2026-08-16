@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import {
   Package,
@@ -17,7 +18,15 @@ import {
   Boxes,
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/formatters'
-import { StockItem, StockCategory, BatterySize, AccessorySubcategory } from '@/types'
+import {
+  StockItem,
+  StockCategory,
+  BatterySize,
+  AccessorySubcategory,
+  InventoryCategoria,
+  INVENTORY_CATEGORIAS,
+  INVENTORY_CATEGORIA_LABELS,
+} from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -38,6 +47,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { useToast } from '@/hooks/use-toast'
 
 const CATEGORIES: StockCategory[] = ['Aparelhos auditivos', 'Pilhas', 'Moldes', 'Acessórios']
 const BATTERY_SIZES: BatterySize[] = ['10', '13', '312', '675']
@@ -60,11 +70,30 @@ export default function Estoque() {
     addStockEntry,
     addStockExit,
   } = useApp()
+  const { toast } = useToast()
 
   // Filtros
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('todos')
   const [statusFilter, setStatusFilter] = useState('todos')
+  // Toggles de alerta (baixo mínimo / validade vencendo-vencidos)
+  const [onlyBelowMin, setOnlyBelowMin] = useState(false)
+  const [onlyExpiring, setOnlyExpiring] = useState(false)
+
+  // Permite que alertas do sino naveguem para /estoque?f=<filtro>
+  const [searchParams, setSearchParams] = useSearchParams()
+  useEffect(() => {
+    const f = searchParams.get('f')
+    if (!f) return
+    if (f === 'baixo' || f === 'zerado') {
+      setOnlyBelowMin(true)
+      setStatusFilter('critico')
+    } else if (f === 'vencendo' || f === 'vencido') {
+      setOnlyExpiring(true)
+    }
+    // limpa o parâmetro para não recair em filtros ao recarregar
+    setSearchParams({}, { replace: true })
+  }, [searchParams, setSearchParams])
 
   // Modais
   const [itemModalOpen, setItemModalOpen] = useState(false)
@@ -103,13 +132,59 @@ export default function Estoque() {
   const [salePrice, setSalePrice] = useState<number>(30)
   const [notes, setNotes] = useState('')
 
+  // Novos campos de controle de estoque/validade
+  const [estoqueMinimo, setEstoqueMinimo] = useState<number>(0)
+  const [dataValidade, setDataValidade] = useState('')
+  const [lote, setLote] = useState('')
+  const [fabricante, setFabricante] = useState('')
+  const [diasAlertaValidade, setDiasAlertaValidade] = useState<number>(30)
+  const [categoria, setCategoria] = useState<InventoryCategoria | ''>('')
+  const [unidadeMedida, setUnidadeMedida] = useState('un')
+
   // Confirmação de Exclusão
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<StockItem | null>(null)
 
+  // Helpers de status de validade
+  const hoje0h = useMemo(() => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    return d
+  }, [])
+
+  /** Dias até o vencimento (negativo = vencido). null se sem validade. */
+  function diasParaVencer(item: StockItem): number | null {
+    if (!item.dataValidade) return null
+    const v = new Date(item.dataValidade + 'T00:00:00')
+    if (isNaN(v.getTime())) return null
+    return Math.ceil((v.getTime() - hoje0h.getTime()) / (1000 * 60 * 60 * 24))
+  }
+
+  function estoqueStatus(item: StockItem): 'zerado' | 'baixo' | 'ok' | 'na' {
+    if (item.categoria === 'servico') return 'na'
+    if (Number(item.currentQuantity) <= 0) return 'zerado'
+    const min = item.estoqueMinimo ?? item.minQuantity ?? 0
+    if (min > 0 && Number(item.currentQuantity) < min) return 'baixo'
+    return 'ok'
+  }
+
+  function validadeStatus(item: StockItem): 'vencido' | 'vencendo' | 'valido' | 'na' {
+    if (item.categoria === 'servico' || !item.dataValidade) return 'na'
+    const d = diasParaVencer(item)
+    if (d === null) return 'na'
+    if (d < 0) return 'vencido'
+    const diasAlerta = item.diasAlertaValidade ?? 30
+    if (d <= diasAlerta) return 'vencendo'
+    return 'valido'
+  }
+
   // Itens em estado crítico (abaixo do mínimo)
   const criticalItems = useMemo(() => {
-    return stockItems.filter((it) => it.currentQuantity < it.minQuantity)
+    return stockItems.filter(
+      (it) =>
+        it.categoria !== 'servico' &&
+        Number(it.currentQuantity) < (it.estoqueMinimo ?? it.minQuantity ?? 0),
+    )
   }, [stockItems])
 
   // Filtragem
@@ -120,16 +195,26 @@ export default function Estoque() {
         !q ||
         it.name.toLowerCase().includes(q) ||
         (it.brand || '').toLowerCase().includes(q) ||
-        (it.supplier || '').toLowerCase().includes(q)
+        (it.supplier || '').toLowerCase().includes(q) ||
+        (it.fabricante || '').toLowerCase().includes(q) ||
+        (it.lote || '').toLowerCase().includes(q)
 
       const matchesCat = categoryFilter === 'todos' || it.category === categoryFilter
-      const isBelow = it.currentQuantity < it.minQuantity
+      const min = it.estoqueMinimo ?? it.minQuantity ?? 0
+      const isBelow = it.categoria !== 'servico' && Number(it.currentQuantity) < min
       const matchesStatus =
         statusFilter === 'todos' ? true : statusFilter === 'critico' ? isBelow : !isBelow
 
-      return matchesSearch && matchesCat && matchesStatus
+      // Toggle: apenas itens abaixo do mínimo
+      const matchesBelowMin = !onlyBelowMin || isBelow
+      // Toggle: apenas itens vencendo/vencidos
+      const vStatus = validadeStatus(it)
+      const matchesExpiring = !onlyExpiring || vStatus === 'vencendo' || vStatus === 'vencido'
+
+      return matchesSearch && matchesCat && matchesStatus && matchesBelowMin && matchesExpiring
     })
-  }, [stockItems, search, categoryFilter, statusFilter])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stockItems, search, categoryFilter, statusFilter, onlyBelowMin, onlyExpiring, hoje0h])
 
   const openNewItem = () => {
     setItemToEdit(null)
@@ -146,6 +231,13 @@ export default function Estoque() {
     setCostPrice(15)
     setSalePrice(30)
     setNotes('')
+    setEstoqueMinimo(0)
+    setDataValidade('')
+    setLote('')
+    setFabricante('')
+    setDiasAlertaValidade(30)
+    setCategoria('')
+    setUnidadeMedida('un')
     setItemModalOpen(true)
   }
 
@@ -164,12 +256,29 @@ export default function Estoque() {
     setCostPrice(item.costPrice)
     setSalePrice(item.salePrice)
     setNotes(item.notes || '')
+    setEstoqueMinimo(item.estoqueMinimo ?? 0)
+    setDataValidade(item.dataValidade || '')
+    setLote(item.lote || '')
+    setFabricante(item.fabricante || '')
+    setDiasAlertaValidade(item.diasAlertaValidade ?? 30)
+    setCategoria(item.categoria || '')
+    setUnidadeMedida(item.unidadeMedida || 'un')
     setItemModalOpen(true)
   }
 
   const handleSaveItem = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
+
+    // Regra 5: lote obrigatório para produtos com data_validade preenchida
+    if (dataValidade && !lote.trim()) {
+      toast({
+        title: 'Lote obrigatório',
+        description: 'Para produtos com data de validade, o número do lote é obrigatório.',
+        variant: 'destructive',
+      })
+      return
+    }
 
     const payload = {
       name: name.trim(),
@@ -185,6 +294,14 @@ export default function Estoque() {
       costPrice: Number(costPrice),
       salePrice: Number(salePrice),
       notes: notes.trim() || undefined,
+      // Novos campos
+      estoqueMinimo: Number(estoqueMinimo) || 0,
+      dataValidade: dataValidade || undefined,
+      lote: lote.trim() || undefined,
+      fabricante: fabricante.trim() || undefined,
+      diasAlertaValidade: Number(diasAlertaValidade) || 30,
+      categoria: categoria || undefined,
+      unidadeMedida: unidadeMedida.trim() || undefined,
     }
 
     if (itemToEdit) {
@@ -312,6 +429,46 @@ export default function Estoque() {
         </div>
       </div>
 
+      {/* Toggles de alerta rápida */}
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setOnlyBelowMin((v) => !v)}
+          className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-semibold border transition-colors ${
+            onlyBelowMin
+              ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+              : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'
+          }`}
+        >
+          <AlertTriangle className="w-3.5 h-3.5" />
+          Abaixo do mínimo
+        </button>
+        <button
+          type="button"
+          onClick={() => setOnlyExpiring((v) => !v)}
+          className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-semibold border transition-colors ${
+            onlyExpiring
+              ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+              : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'
+          }`}
+        >
+          <AlertTriangle className="w-3.5 h-3.5" />
+          Vencendo / Vencidos
+        </button>
+        {(onlyBelowMin || onlyExpiring) && (
+          <button
+            type="button"
+            onClick={() => {
+              setOnlyBelowMin(false)
+              setOnlyExpiring(false)
+            }}
+            className="inline-flex items-center gap-1 h-9 px-3 rounded-xl text-xs font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50"
+          >
+            Limpar filtros
+          </button>
+        )}
+      </div>
+
       {/* Tabela de Estoque */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -321,23 +478,28 @@ export default function Estoque() {
                 <th className="py-3.5 px-4">Item & Especificação</th>
                 <th className="py-3.5 px-4">Categoria</th>
                 <th className="py-3.5 px-4 text-center">Qtd Atual</th>
-                <th className="py-3.5 px-4 text-center">Qtd Mínima</th>
+                <th className="py-3.5 px-4 text-center">Estoque Mínimo</th>
+                <th className="py-3.5 px-4 text-center">Status Estoque</th>
+                <th className="py-3.5 px-4 text-center">Validade</th>
+                <th className="py-3.5 px-4 text-center">Status Validade</th>
                 <th className="py-3.5 px-4">Fornecedor</th>
                 <th className="py-3.5 px-4">Custo / Venda</th>
-                <th className="py-3.5 px-4">Status</th>
                 <th className="py-3.5 px-4 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400 text-xs">
+                  <td colSpan={10} className="py-12 text-center text-slate-400 text-xs">
                     Nenhum item localizado no estoque com os filtros selecionados.
                   </td>
                 </tr>
               ) : (
                 filteredItems.map((item) => {
-                  const isBelowMin = item.currentQuantity < item.minQuantity
+                  const stStatus = estoqueStatus(item)
+                  const vlStatus = validadeStatus(item)
+                  const isBelowMin = stStatus === 'baixo' || stStatus === 'zerado'
+                  const dVencer = diasParaVencer(item)
                   return (
                     <tr key={item.id} className="hover:bg-teal-50/40 transition-colors">
                       <td className="py-3.5 px-4">
@@ -377,7 +539,56 @@ export default function Estoque() {
                       </td>
 
                       <td className="py-3.5 px-4 text-center text-xs text-slate-500 font-medium">
-                        {item.minQuantity} un
+                        {item.categoria === 'servico' ? (
+                          <span className="text-slate-300">—</span>
+                        ) : (
+                          <span>{item.estoqueMinimo ?? item.minQuantity ?? 0} un</span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-center">
+                        {stStatus === 'na' ? (
+                          <span className="text-[11px] text-slate-400">Sem controle</span>
+                        ) : stStatus === 'zerado' ? (
+                          <Badge className="bg-red-100 text-red-700 border-red-200 font-bold">
+                            Zerado
+                          </Badge>
+                        ) : stStatus === 'baixo' ? (
+                          <Badge className="bg-amber-100 text-amber-700 border-amber-200 font-bold">
+                            Abaixo do mínimo
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 font-bold">
+                            OK
+                          </Badge>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-center text-xs text-slate-600">
+                        {item.dataValidade ? formatDate(item.dataValidade) : '—'}
+                        {item.lote ? (
+                          <div className="text-[10px] text-slate-400">Lote: {item.lote}</div>
+                        ) : null}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-center">
+                        {vlStatus === 'na' ? (
+                          <Badge className="bg-slate-100 text-slate-500 border-slate-200 font-bold">
+                            Sem validade
+                          </Badge>
+                        ) : vlStatus === 'vencido' ? (
+                          <Badge className="bg-red-100 text-red-700 border-red-200 font-bold">
+                            Vencido
+                          </Badge>
+                        ) : vlStatus === 'vencendo' ? (
+                          <Badge className="bg-amber-100 text-amber-700 border-amber-200 font-bold">
+                            Vence em {dVencer}d
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 font-bold">
+                            Válido
+                          </Badge>
+                        )}
                       </td>
 
                       <td className="py-3.5 px-4 text-xs text-slate-600">{item.supplier || '—'}</td>
@@ -389,19 +600,6 @@ export default function Estoque() {
                         <div className="font-bold text-emerald-700">
                           Venda: {formatCurrency(item.salePrice)}
                         </div>
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <Badge
-                          variant="outline"
-                          className={
-                            isBelowMin
-                              ? 'bg-red-50 text-red-700 border-red-200 font-bold animate-pulse'
-                              : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          }
-                        >
-                          {isBelowMin ? 'Abaixo do Mínimo' : 'OK'}
-                        </Badge>
                       </td>
 
                       <td className="py-3.5 px-4 text-right">
@@ -613,6 +811,52 @@ export default function Estoque() {
               </div>
             )}
 
+            {/* Categoria operacional + unidade de medida */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Categoria (controle)</Label>
+                <Select
+                  value={categoria || 'none'}
+                  onValueChange={(v) => setCategoria(v === 'none' ? '' : (v as InventoryCategoria))}
+                >
+                  <SelectTrigger className="h-10 rounded-xl mt-1 text-xs">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Não definida —</SelectItem>
+                    {INVENTORY_CATEGORIAS.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {INVENTORY_CATEGORIA_LABELS[c]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {categoria === 'servico' && (
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Serviços não têm controle de estoque mínimo nem validade.
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Unidade de Medida</Label>
+                <Input
+                  value={unidadeMedida}
+                  onChange={(e) => setUnidadeMedida(e.target.value)}
+                  placeholder="Ex: un, cx, par"
+                  className="h-10 rounded-xl mt-1 text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Fabricante</Label>
+                <Input
+                  value={fabricante}
+                  onChange={(e) => setFabricante(e.target.value)}
+                  placeholder="Ex: Phonak, Widex"
+                  className="h-10 rounded-xl mt-1 text-xs"
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
                 <Label className="text-xs font-semibold text-slate-700">Qtd Mínima</Label>
@@ -659,6 +903,54 @@ export default function Estoque() {
                   onChange={(e) => setSalePrice(Number(e.target.value))}
                   required
                   className="h-10 rounded-xl mt-1 text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Estoque mínimo + controle de validade */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Estoque Mínimo</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={estoqueMinimo}
+                  onChange={(e) => setEstoqueMinimo(Number(e.target.value))}
+                  className="h-9 rounded-lg mt-1 text-xs bg-white"
+                  disabled={categoria === 'servico'}
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Data de Validade</Label>
+                <Input
+                  type="date"
+                  value={dataValidade}
+                  onChange={(e) => setDataValidade(e.target.value)}
+                  className="h-9 rounded-lg mt-1 text-xs bg-white"
+                  disabled={categoria === 'servico'}
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">
+                  Lote {dataValidade && <span className="text-red-500">*</span>}
+                </Label>
+                <Input
+                  value={lote}
+                  onChange={(e) => setLote(e.target.value)}
+                  placeholder="Nº do lote"
+                  className="h-9 rounded-lg mt-1 text-xs bg-white"
+                  disabled={categoria === 'servico'}
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Alerta antes (dias)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={diasAlertaValidade}
+                  onChange={(e) => setDiasAlertaValidade(Number(e.target.value))}
+                  className="h-9 rounded-lg mt-1 text-xs bg-white"
+                  disabled={categoria === 'servico'}
                 />
               </div>
             </div>

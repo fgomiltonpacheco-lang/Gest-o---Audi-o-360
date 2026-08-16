@@ -33,6 +33,13 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({ open, 
 
   const calibrationCount = alerts.filter((a) => a.type === 'calibration').length
 
+  // Contagens por subcategoria de alerta de estoque
+  const stockAlerts = alerts.filter((a) => a.type === 'stock')
+  const stockZerado = stockAlerts.filter((a) => a.subtype === 'zerado').length
+  const stockBaixo = stockAlerts.filter((a) => a.subtype === 'baixo').length
+  const validadeVencido = stockAlerts.filter((a) => a.subtype === 'vencido').length
+  const validadeVencendo = stockAlerts.filter((a) => a.subtype === 'vencendo').length
+
   const getAlertIcon = (type: string) => {
     switch (type) {
       case 'warranty':
@@ -137,6 +144,60 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({ open, 
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {/* Resumo de alertas de estoque (badges com contagem) */}
+          {(stockZerado > 0 || stockBaixo > 0 || validadeVencido > 0 || validadeVencendo > 0) && (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleNavigate('/estoque?f=zerado')}
+                className="flex items-center gap-2 p-3 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 transition-colors text-left"
+              >
+                <PackageX className="w-5 h-5 text-red-600 shrink-0" />
+                <div>
+                  <div className="text-lg font-extrabold text-red-700 leading-none">
+                    {stockZerado}
+                  </div>
+                  <div className="text-[10px] text-red-600 font-medium">Estoque zerado</div>
+                </div>
+              </button>
+              <button
+                onClick={() => handleNavigate('/estoque?f=baixo')}
+                className="flex items-center gap-2 p-3 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors text-left"
+              >
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                <div>
+                  <div className="text-lg font-extrabold text-amber-700 leading-none">
+                    {stockBaixo}
+                  </div>
+                  <div className="text-[10px] text-amber-600 font-medium">Estoque baixo</div>
+                </div>
+              </button>
+              <button
+                onClick={() => handleNavigate('/estoque?f=vencido')}
+                className="flex items-center gap-2 p-3 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 transition-colors text-left"
+              >
+                <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+                <div>
+                  <div className="text-lg font-extrabold text-red-700 leading-none">
+                    {validadeVencido}
+                  </div>
+                  <div className="text-[10px] text-red-600 font-medium">Validade vencida</div>
+                </div>
+              </button>
+              <button
+                onClick={() => handleNavigate('/estoque?f=vencendo')}
+                className="flex items-center gap-2 p-3 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors text-left"
+              >
+                <Clock className="w-5 h-5 text-amber-600 shrink-0" />
+                <div>
+                  <div className="text-lg font-extrabold text-amber-700 leading-none">
+                    {validadeVencendo}
+                  </div>
+                  <div className="text-[10px] text-amber-600 font-medium">Validade próxima</div>
+                </div>
+              </button>
+            </div>
+          )}
+
           {filteredAlerts.length === 0 ? (
             <div className="text-center py-12 px-4">
               <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-3">

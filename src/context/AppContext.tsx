@@ -392,6 +392,13 @@ const mapStockItem = (r: any, movements: StockMovement[]): StockItem => ({
   notes: r.notes || '',
   movements,
   createdAt: toDateStr(r.created),
+  estoqueMinimo: Number(r.estoque_minimo) || 0,
+  dataValidade: r.data_validade ? toDateStr(r.data_validade) : undefined,
+  lote: r.lote || undefined,
+  fabricante: r.fabricante || undefined,
+  diasAlertaValidade: Number(r.dias_alerta_validade) || 30,
+  categoria: (r.categoria as StockItem['categoria']) || undefined,
+  unidadeMedida: r.unidade_medida || undefined,
 })
 
 const mapStockMovement = (r: any): StockMovement => ({
@@ -2534,6 +2541,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         salePrice: itemData.salePrice,
         notes: itemData.notes || '',
         created: nowIso(),
+        estoque_minimo: itemData.estoqueMinimo ?? 0,
+        data_validade: itemData.dataValidade || '',
+        lote: itemData.lote || '',
+        fabricante: itemData.fabricante || '',
+        dias_alerta_validade: itemData.diasAlertaValidade ?? 30,
+        categoria: itemData.categoria || '',
+        unidade_medida: itemData.unidadeMedida || '',
       },
       ...prev,
     ])
@@ -2557,6 +2571,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         costPrice: itemData.costPrice,
         salePrice: itemData.salePrice,
         notes: itemData.notes || '',
+        estoque_minimo: itemData.estoqueMinimo ?? 0,
+        data_validade: itemData.dataValidade || null,
+        lote: itemData.lote || '',
+        fabricante: itemData.fabricante || '',
+        dias_alerta_validade: itemData.diasAlertaValidade ?? 30,
+        categoria: itemData.categoria || '',
+        unidade_medida: itemData.unidadeMedida || '',
       })
       .then(async (rec: any) => {
         const realId = rec.id
@@ -2594,6 +2615,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     delete patch.id
     delete patch.createdAt
     delete patch.movements
+    // Mapeia campos camelCase do StockItem para os nomes snake_case do banco.
+    if (itemData.estoqueMinimo !== undefined) {
+      patch.estoque_minimo = itemData.estoqueMinimo
+      delete patch.estoqueMinimo
+    }
+    if (itemData.dataValidade !== undefined) {
+      patch.data_validade = itemData.dataValidade || null
+      delete patch.dataValidade
+    }
+    if (itemData.lote !== undefined) {
+      patch.lote = itemData.lote
+      delete patch.lote
+    }
+    if (itemData.fabricante !== undefined) {
+      patch.fabricante = itemData.fabricante
+      delete patch.fabricante
+    }
+    if (itemData.diasAlertaValidade !== undefined) {
+      patch.dias_alerta_validade = itemData.diasAlertaValidade
+      delete patch.diasAlertaValidade
+    }
+    if (itemData.categoria !== undefined) {
+      patch.categoria = itemData.categoria
+      delete patch.categoria
+    }
+    if (itemData.unidadeMedida !== undefined) {
+      patch.unidade_medida = itemData.unidadeMedida
+      delete patch.unidadeMedida
+    }
     pb.collection('inventory')
       .update(id, patch)
       .catch((err) => console.error('Erro ao atualizar item de estoque:', err))
@@ -2689,11 +2739,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const movDate = date || todayStr()
+    const newQty = Number(target.currentQuantity) - quantity
     setStockRaw((prev) =>
       prev.map((it) =>
         it.id === itemId ? { ...it, currentQuantity: Number(it.currentQuantity) - quantity } : it,
       ),
     )
+    // Regra 1: ao registrar uma venda (PDV/B2B/teste), verifica se o estoque
+    // ficou abaixo do mínimo e gera alerta imediato (toast).
+    // Regra 3: produtos com categoria 'servico' não têm controle de estoque.
+    const isServico = (target as any).categoria === 'servico'
+    if (!isServico) {
+      const min = Number((target as any).estoque_minimo) || Number(target.minQuantity) || 0
+      if (newQty <= 0) {
+        toast({
+          title: '⚠ Estoque zerado',
+          description: `${target.name} ficou com saldo zero após esta saída.`,
+          variant: 'destructive',
+        })
+      } else if (min > 0 && newQty < min) {
+        toast({
+          title: '⚠ Estoque abaixo do mínimo',
+          description: `${target.name} ficou com ${newQty} un (mínimo: ${min} un).`,
+        })
+      }
+    }
     const tempId = `temp-mov-${Date.now()}`
     const newMov: StockMovement = {
       id: tempId,
@@ -2711,6 +2781,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       title: 'Saída de estoque registrada',
       description: `-${quantity} unidades baixadas do estoque.`,
     })
+
+    // Regra 1: alerta imediato quando o estoque fica abaixo do mínimo após
+    // uma venda/baixa (PDV, B2B, teste convertido). Produtos 'servico' não
+    // têm controle de estoque mínimo.
+    if (target.categoria !== 'servico') {
+      const novoSaldo = Number(target.currentQuantity) - quantity
+      const min = Number(target.estoque_minimo) || Number(target.minQuantity) || 0
+      if (novoSaldo <= 0) {
+        toast({
+          title: 'Estoque zerado',
+          description: `${target.name} ficou sem saldo após esta baixa.`,
+          variant: 'destructive',
+        })
+      } else if (min > 0 && novoSaldo < min) {
+        toast({
+          title: 'Estoque abaixo do mínimo',
+          description: `${target.name} está com ${novoSaldo} un (mínimo: ${min} un).`,
+          variant: 'default',
+        })
+      }
+    }
 
     pb.collection('inventory_movements')
       .create({
@@ -2809,17 +2900,76 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     })
 
+    // ---- Alertas de estoque (mínimo e validade) ----
+    // Regra 3: produtos com categoria 'servico' não têm controle de estoque
+    // mínimo nem validade.
+    const hoje0h = new Date()
+    hoje0h.setHours(0, 0, 0, 0)
     stockItems.forEach((stk) => {
-      if (stk.currentQuantity < stk.minQuantity) {
+      const isServico = stk.categoria === 'servico'
+      const min = stk.estoqueMinimo ?? stk.minQuantity ?? 0
+      if (!isServico && stk.currentQuantity <= 0) {
+        // Estoque zerado (badge vermelho)
         list.push({
-          id: `alert-stk-${stk.id}`,
+          id: `alert-stk-zero-${stk.id}`,
           type: 'stock',
-          severity: stk.currentQuantity === 0 ? 'danger' : 'warning',
-          title: `Estoque crítico: ${stk.name}`,
-          description: `Saldo atual (${stk.currentQuantity} un) está abaixo do mínimo configurado (${stk.minQuantity} un).`,
-          linkUrl: `/estoque`,
+          subtype: 'zerado',
+          severity: 'danger',
+          title: `Estoque zerado: ${stk.name}`,
+          description: `Saldo atual de ${stk.name} é zero. Reposição necessária.`,
+          linkUrl: `/estoque?f=zerado`,
           targetId: stk.id,
         })
+      } else if (!isServico && min > 0 && stk.currentQuantity < min) {
+        // Estoque baixo (badge amarelo)
+        list.push({
+          id: `alert-stk-baixo-${stk.id}`,
+          type: 'stock',
+          subtype: 'baixo',
+          severity: 'warning',
+          title: `Estoque baixo: ${stk.name}`,
+          description: `Saldo atual (${stk.currentQuantity} un) abaixo do mínimo (${min} un).`,
+          linkUrl: `/estoque?f=baixo`,
+          targetId: stk.id,
+        })
+      }
+
+      // Alertas de validade (apenas produtos perecíveis com data_validade)
+      if (!isServico && stk.dataValidade) {
+        const validade = new Date(stk.dataValidade + 'T00:00:00')
+        if (!isNaN(validade.getTime())) {
+          const diffDias = Math.ceil(
+            (validade.getTime() - hoje0h.getTime()) / (1000 * 60 * 60 * 24),
+          )
+          const diasAlerta = stk.diasAlertaValidade ?? 30
+          if (diffDias < 0) {
+            // Vencido (badge vermelho)
+            list.push({
+              id: `alert-stk-vencido-${stk.id}`,
+              type: 'stock',
+              subtype: 'vencido',
+              severity: 'danger',
+              title: `Produto vencido: ${stk.name}`,
+              description: `${stk.name} venceu em ${formatDateBR(stk.dataValidade)} (lote ${stk.lote || '—'}).`,
+              linkUrl: `/estoque?f=vencido`,
+              targetId: stk.id,
+              date: stk.dataValidade,
+            })
+          } else if (diffDias <= diasAlerta) {
+            // Vencendo (badge amarelo)
+            list.push({
+              id: `alert-stk-vencendo-${stk.id}`,
+              type: 'stock',
+              subtype: 'vencendo',
+              severity: 'warning',
+              title: `Validade próxima: ${stk.name}`,
+              description: `${stk.name} vence em ${diffDias} dia(s) (${formatDateBR(stk.dataValidade)}, lote ${stk.lote || '—'}).`,
+              linkUrl: `/estoque?f=vencendo`,
+              targetId: stk.id,
+              date: stk.dataValidade,
+            })
+          }
+        }
       }
     })
 

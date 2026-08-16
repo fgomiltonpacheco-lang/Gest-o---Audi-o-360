@@ -638,6 +638,43 @@ export type AccessorySubcategory =
   | 'Carregadores'
   | 'Outros'
 
+/**
+ * Categoria de inventário (enum `categoria` na coleção `inventory`).
+ * Usada para controle de estoque mínimo, validade e relatórios.
+ * - 'servico' não possui controle de estoque mínimo nem validade.
+ */
+export type InventoryCategoria =
+  | 'aparelho'
+  | 'consumivel'
+  | 'servico'
+  | 'acessorio'
+  | 'bateria'
+  | 'molde'
+  | 'filtro'
+
+export const INVENTORY_CATEGORIAS: InventoryCategoria[] = [
+  'aparelho',
+  'consumivel',
+  'servico',
+  'acessorio',
+  'bateria',
+  'molde',
+  'filtro',
+]
+
+export const INVENTORY_CATEGORIA_LABELS: Record<InventoryCategoria, string> = {
+  aparelho: 'Aparelho',
+  consumivel: 'Consumível',
+  servico: 'Serviço',
+  acessorio: 'Acessório',
+  bateria: 'Bateria',
+  molde: 'Molde',
+  filtro: 'Filtro',
+}
+
+/** Subcategoria de alerta de estoque/validade exibida no sino de notificações. */
+export type StockAlertSubtype = 'baixo' | 'zerado' | 'vencido' | 'vencendo'
+
 export interface StockMovement {
   id: string
   stockItemId: string
@@ -668,6 +705,21 @@ export interface StockItem {
   notes?: string
   movements?: StockMovement[]
   createdAt: string
+  // ---- Controle de estoque mínimo e validade ----
+  /** Quantidade mínima antes de alertar (default 0). */
+  estoqueMinimo?: number
+  /** Data de validade (YYYY-MM-DD) para produtos perecíveis. */
+  dataValidade?: string
+  /** Número do lote (obrigatório quando dataValidade é preenchida). */
+  lote?: string
+  /** Fabricante do produto. */
+  fabricante?: string
+  /** Quantos dias antes do vencimento alertar (default 30). */
+  diasAlertaValidade?: number
+  /** Categoria de inventário (enum). Itens 'servico' não têm controle de estoque. */
+  categoria?: InventoryCategoria
+  /** Unidade de medida (ex.: 'un', 'cx', 'par'). */
+  unidadeMedida?: string
 }
 
 // ===== Módulo de Configurações da Clínica =====
@@ -968,6 +1020,8 @@ export interface SystemAlert {
   linkUrl: string
   targetId?: string
   date?: string
+  /** Subcategoria do alerta de estoque (baixo/zerado/vencido/vencendo). */
+  subtype?: string
 }
 
 // ===== LGPD — Consentimentos, Auditoria e Política de Privacidade =====
