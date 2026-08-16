@@ -635,10 +635,53 @@ export interface StockItem {
   createdAt: string
 }
 
+// ===== Módulo de Configurações da Clínica =====
+
+/** Registro singleton (um por clínica) com os dados cadastrais. */
+export interface ClinicSettings {
+  id: string
+  nome: string
+  endereco: string
+  telefone: string
+  email: string
+}
+
+/** Equipamento clínico (audiômetro, etc.) com controle de calibração. */
+export interface Equipment {
+  id: string
+  nome: string
+  /** Data da última calibração (YYYY-MM-DD). */
+  data_calibracao: string
+  /** Próxima calibração (YYYY-MM-DD) — calculada: última + 1 ano. */
+  proxima_calibracao: string
+}
+
+/** Status derivado da calibração do equipamento. */
+export type EquipmentCalibrationStatus = 'valid' | 'expiring' | 'expired'
+
+/**
+ * Calcula o status de calibração de um equipamento.
+ * - `expired`: próxima calibração no passado
+ * - `expiring`: próxima calibração nos próximos 30 dias
+ * - `valid`: fora da janela de alerta
+ */
+export function getEquipmentStatus(
+  proxima_calibracao: string,
+  ref: Date = new Date(),
+): EquipmentCalibrationStatus {
+  if (!proxima_calibracao) return 'valid'
+  const next = new Date(proxima_calibracao + 'T00:00:00')
+  if (isNaN(next.getTime())) return 'valid'
+  const diffDays = Math.ceil((next.getTime() - ref.getTime()) / (1000 * 60 * 60 * 24))
+  if (diffDays < 0) return 'expired'
+  if (diffDays <= 30) return 'expiring'
+  return 'valid'
+}
+
 // Alertas do Sistema
 export interface SystemAlert {
   id: string
-  type: 'warranty' | 'followup' | 'installment' | 'stock'
+  type: 'warranty' | 'followup' | 'installment' | 'stock' | 'calibration'
   severity: 'warning' | 'danger' | 'info'
   title: string
   description: string

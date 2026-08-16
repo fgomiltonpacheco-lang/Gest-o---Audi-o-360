@@ -11,6 +11,7 @@ import {
   IprfVocalRow,
   AIR_FREQS,
   BONE_FREQS,
+  ClinicSettings,
 } from '@/types'
 import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
 import { formatDate, maskCPF, calculateAge } from '@/lib/formatters'
@@ -354,7 +355,19 @@ const emptyIprfVocalRow = (): IprfVocalRow => ({
   niveis: '',
 })
 
-export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
+export function AudiometriaFullPrint({
+  exam,
+  clinicSettings,
+}: {
+  exam: AudiometryExamFull
+  clinicSettings?: ClinicSettings | null
+}) {
+  // Dados da clínica: usa os valores dinâmicos de Configurações quando
+  // disponíveis, mantendo os defaults hardcoded como fallback.
+  const clinicName = clinicSettings?.nome?.trim() || CLINIC_NAME
+  const clinicAddress = clinicSettings?.endereco?.trim() || CLINIC_ADDRESS
+  const clinicPhone = clinicSettings?.telefone?.trim() || CLINIC_PHONE
+
   const thStyle: React.CSSProperties = {
     border: '1px solid #94a3b8',
     padding: '1px 2px',
@@ -443,15 +456,15 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <img
             src={logoImg}
-            alt="Audição360"
+            alt={clinicName}
             style={{ maxHeight: '34px', maxWidth: '120px', objectFit: 'contain' }}
           />
           <div>
-            <div style={{ fontSize: '11pt', fontWeight: 800, color: '#0F2B5C' }}>{CLINIC_NAME}</div>
+            <div style={{ fontSize: '11pt', fontWeight: 800, color: '#0F2B5C' }}>{clinicName}</div>
             <div style={{ fontSize: '7pt', color: '#64748b', lineHeight: 1.25 }}>
-              {CLINIC_ADDRESS}
+              {clinicAddress}
               <br />
-              Telefone: {CLINIC_PHONE}
+              Telefone: {clinicPhone}
             </div>
           </div>
         </div>
@@ -818,7 +831,7 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
           paddingTop: '2px',
         }}
       >
-        {CLINIC_ADDRESS} &nbsp;•&nbsp; {CLINIC_PHONE}
+        {clinicAddress} &nbsp;•&nbsp; {clinicPhone}
       </div>
     </div>
   )

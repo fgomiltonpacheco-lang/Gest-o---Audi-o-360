@@ -35,7 +35,23 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Settings, Clock, CalendarOff, Plus, Trash2, Save, Lock, Download } from 'lucide-react'
+import {
+  Settings,
+  Clock,
+  CalendarOff,
+  Plus,
+  Trash2,
+  Save,
+  Lock,
+  Download,
+  Building2,
+  Stethoscope,
+  Pencil,
+  AlertTriangle,
+} from 'lucide-react'
+import type { Equipment } from '@/types'
+import { getEquipmentStatus } from '@/types'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 
 // ============================================================
 // Tipos e constantes
@@ -111,7 +127,15 @@ function describeError(error: unknown): string {
 }
 
 export default function Configuracoes() {
-  const { currentUser } = useApp()
+  const {
+    currentUser,
+    clinicSettings,
+    saveClinicSettings,
+    equipments,
+    addEquipment,
+    updateEquipment,
+    deleteEquipment,
+  } = useApp()
   const { toast } = useToast()
 
   // Horários de funcionamento
@@ -127,6 +151,104 @@ export default function Configuracoes() {
   const [blockOpen, setBlockOpen] = useState(false)
   const [blockDate, setBlockDate] = useState<string>(new Date().toISOString().split('T')[0])
   const [blockReason, setBlockReason] = useState<string>('')
+
+  // ---- Dados da clínica ----
+  const [clinicNome, setClinicNome] = useState('')
+  const [clinicEndereco, setClinicEndereco] = useState('')
+  const [clinicTelefone, setClinicTelefone] = useState('')
+  const [clinicEmail, setClinicEmail] = useState('')
+  const [clinicSaving, setClinicSaving] = useState(false)
+
+  // Sincroniza formulário de dados da clínica quando o singleton é carregado.
+  useEffect(() => {
+    if (clinicSettings) {
+      setClinicNome(clinicSettings.nome || '')
+      setClinicEndereco(clinicSettings.endereco || '')
+      setClinicTelefone(clinicSettings.telefone || '')
+      setClinicEmail(clinicSettings.email || '')
+    }
+  }, [clinicSettings])
+
+  const handleSaveClinic = async () => {
+    setClinicSaving(true)
+    const res = await saveClinicSettings({
+      nome: clinicNome,
+      endereco: clinicEndereco,
+      telefone: clinicTelefone,
+      email: clinicEmail,
+    })
+    setClinicSaving(false)
+    if (!res.success) {
+      toast({
+        title: 'Erro ao salvar',
+        description: res.message || 'Não foi possível salvar os dados da clínica.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  // ---- Equipamentos ----
+  const [eqOpen, setEqOpen] = useState(false)
+  const [eqEditing, setEqEditing] = useState<Equipment | null>(null)
+  const [eqNome, setEqNome] = useState('')
+  const [eqDataCalib, setEqDataCalib] = useState('')
+  const [eqSaving, setEqSaving] = useState(false)
+  const [eqDelete, setEqDelete] = useState<Equipment | null>(null)
+  const [eqDeleting, setEqDeleting] = useState(false)
+
+  const openNewEquipment = () => {
+    setEqEditing(null)
+    setEqNome('')
+    setEqDataCalib(new Date().toISOString().split('T')[0])
+    setEqOpen(true)
+  }
+
+  const openEditEquipment = (eq: Equipment) => {
+    setEqEditing(eq)
+    setEqNome(eq.nome)
+    setEqDataCalib(eq.data_calibracao)
+    setEqOpen(true)
+  }
+
+  const handleSaveEquipment = async () => {
+    if (!eqNome.trim()) {
+      toast({ title: 'Informe o nome do equipamento.', variant: 'destructive' })
+      return
+    }
+    if (!eqDataCalib) {
+      toast({ title: 'Informe a data da última calibração.', variant: 'destructive' })
+      return
+    }
+    setEqSaving(true)
+    const res = eqEditing
+      ? await updateEquipment(eqEditing.id, { nome: eqNome, data_calibracao: eqDataCalib })
+      : await addEquipment({ nome: eqNome, data_calibracao: eqDataCalib })
+    setEqSaving(false)
+    if (res.success) {
+      setEqOpen(false)
+    } else {
+      toast({ title: 'Erro ao salvar', description: res.message, variant: 'destructive' })
+    }
+  }
+
+  const handleDeleteEquipment = async () => {
+    if (!eqDelete) return
+    setEqDeleting(true)
+    const res = await deleteEquipment(eqDelete.id)
+    setEqDeleting(false)
+    if (!res.success) {
+      toast({ title: 'Erro ao excluir', description: res.message, variant: 'destructive' })
+    }
+  }
+
+  // Computa próxima calibração (última + 1 ano) para preview no modal.
+  const previewProxima = (() => {
+    if (!eqDataCalib) return ''
+    const d = new Date(eqDataCalib + 'T00:00:00')
+    if (isNaN(d.getTime())) return ''
+    d.setFullYear(d.getFullYear() + 1)
+    return d.toISOString().split('T')[0]
+  })()
 
   const loadConfig = useCallback(async () => {
     setHoursLoading(true)
@@ -330,14 +452,28 @@ export default function Configuracoes() {
               Configurações
             </h1>
             <p className="text-sm text-slate-500">
-              Horários de funcionamento e bloqueios da agenda
+              Dados da clínica, equipamentos, horários e bloqueios da agenda
             </p>
           </div>
         </div>
       </div>
 
-      <Tabs defaultValue="hours" className="w-full">
-        <TabsList className="bg-slate-100 rounded-xl p-1 h-auto">
+      <Tabs defaultValue="clinic" className="w-full">
+        <TabsList className="bg-slate-100 rounded-xl p-1 h-auto flex flex-wrap">
+          <TabsTrigger
+            value="clinic"
+            className="rounded-lg text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm px-4 py-2"
+          >
+            <Building2 className="w-3.5 h-3.5 mr-1.5" />
+            Dados da Clínica
+          </TabsTrigger>
+          <TabsTrigger
+            value="equipments"
+            className="rounded-lg text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm px-4 py-2"
+          >
+            <Stethoscope className="w-3.5 h-3.5 mr-1.5" />
+            Equipamentos
+          </TabsTrigger>
           <TabsTrigger
             value="hours"
             className="rounded-lg text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm px-4 py-2"
@@ -353,6 +489,184 @@ export default function Configuracoes() {
             Feriados e Bloqueios
           </TabsTrigger>
         </TabsList>
+
+        {/* ============ ABA: DADOS DA CLÍNICA ============ */}
+        <TabsContent value="clinic" className="mt-4">
+          <Card className="rounded-2xl border-slate-200 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-bold text-slate-900">Dados da Clínica</CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                Informações cadastrais usadas no cabeçalho dos laudos impressos (audiometria e
+                futuros exames).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <Label className="text-xs font-semibold text-slate-700">
+                    Nome da Clínica <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    value={clinicNome}
+                    onChange={(e) => setClinicNome(e.target.value)}
+                    placeholder="Ex.: Audição360"
+                    className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label className="text-xs font-semibold text-slate-700">Endereço completo</Label>
+                  <Input
+                    value={clinicEndereco}
+                    onChange={(e) => setClinicEndereco(e.target.value)}
+                    placeholder="Rua, número, bairro, cidade - UF, CEP"
+                    className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">Telefone</Label>
+                  <Input
+                    value={clinicTelefone}
+                    onChange={(e) => setClinicTelefone(e.target.value)}
+                    placeholder="(00) 0000-0000"
+                    className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">E-mail</Label>
+                  <Input
+                    type="email"
+                    value={clinicEmail}
+                    onChange={(e) => setClinicEmail(e.target.value)}
+                    placeholder="contato@clinica.com.br"
+                    className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-2 border-t border-slate-100">
+                <Button
+                  onClick={handleSaveClinic}
+                  disabled={clinicSaving}
+                  className="bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-xl shadow-sm flex items-center gap-2 h-10 px-5"
+                >
+                  <Save className="w-4 h-4" />
+                  {clinicSaving ? 'Salvando...' : 'Salvar'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ============ ABA: EQUIPAMENTOS ============ */}
+        <TabsContent value="equipments" className="mt-4">
+          <Card className="rounded-2xl border-slate-200 shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <CardTitle className="text-lg font-bold text-slate-900">Equipamentos</CardTitle>
+                  <CardDescription className="text-xs text-slate-500">
+                    Cadastro de audiômetros e demais equipamentos com controle de calibração. A
+                    próxima calibração é calculada automaticamente (última + 1 ano).
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={openNewEquipment}
+                  className="bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-xl shadow-sm flex items-center gap-1.5 h-9"
+                >
+                  <Plus className="w-4 h-4" />
+                  Novo Equipamento
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50 hover:bg-slate-50">
+                      <TableHead className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                        Nome
+                      </TableHead>
+                      <TableHead className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                        Data de Calibração
+                      </TableHead>
+                      <TableHead className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                        Próxima Calibração
+                      </TableHead>
+                      <TableHead className="text-xs font-bold text-slate-600 uppercase tracking-wider text-right">
+                        Ações
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {equipments.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-sm text-slate-400 py-10">
+                          Nenhum equipamento cadastrado. Clique em "Novo Equipamento".
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      equipments.map((eq) => {
+                        const status = getEquipmentStatus(eq.proxima_calibracao)
+                        return (
+                          <TableRow key={eq.id} className="group">
+                            <TableCell className="text-sm font-semibold text-slate-800">
+                              {eq.nome}
+                            </TableCell>
+                            <TableCell className="text-sm text-slate-600 font-mono">
+                              {eq.data_calibracao ? formatDate(eq.data_calibracao) : '—'}
+                            </TableCell>
+                            <TableCell>
+                              {status === 'expired' ? (
+                                <Badge className="text-[11px] font-semibold bg-red-100 text-red-700 border-red-200 hover:bg-red-100">
+                                  Vencido
+                                </Badge>
+                              ) : status === 'expiring' ? (
+                                <Badge className="text-[11px] font-semibold bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100">
+                                  Vencendo
+                                </Badge>
+                              ) : (
+                                <Badge className="text-[11px] font-semibold bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
+                                  Válido
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm text-slate-600 font-mono">
+                              {eq.proxima_calibracao ? formatDate(eq.proxima_calibracao) : '—'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => openEditEquipment(eq)}
+                                  className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 rounded-lg"
+                                  title="Editar"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setEqDelete(eq)}
+                                  className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 rounded-lg"
+                                  title="Excluir"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* ============ ABA: HORÁRIOS ============ */}
         <TabsContent value="hours" className="mt-4">
@@ -663,6 +977,83 @@ export default function Configuracoes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal: Novo/Editar equipamento */}
+      <Dialog open={eqOpen} onOpenChange={setEqOpen}>
+        <DialogContent className="max-w-md w-full rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+          <DialogHeader className="border-b border-slate-100 pb-3">
+            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <Stethoscope className="w-5 h-5 text-teal-500" />
+              <span>{eqEditing ? 'Editar Equipamento' : 'Novo Equipamento'}</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">
+                Nome do equipamento <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                value={eqNome}
+                onChange={(e) => setEqNome(e.target.value)}
+                placeholder="Ex.: AD229b, AT235..."
+                className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">
+                Data da última calibração <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                type="date"
+                value={eqDataCalib}
+                onChange={(e) => setEqDataCalib(e.target.value)}
+                className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+              />
+            </div>
+            {previewProxima && (
+              <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                  Próxima calibração (calculada)
+                </p>
+                <p className="text-sm font-bold text-slate-800 font-mono mt-0.5">
+                  {formatDate(previewProxima)}
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setEqOpen(false)}
+              className="rounded-xl border-slate-300 text-xs font-semibold h-10"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveEquipment}
+              disabled={eqSaving}
+              className="bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-xl h-10"
+            >
+              {eqSaving ? 'Salvando...' : eqEditing ? 'Salvar alterações' : 'Cadastrar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmação de exclusão de equipamento */}
+      <ConfirmDialog
+        open={!!eqDelete}
+        onOpenChange={(o) => !o && setEqDelete(null)}
+        title="Excluir equipamento"
+        description={
+          eqDelete
+            ? `Tem certeza que deseja excluir o equipamento "${eqDelete.nome}"? Esta ação não pode ser desfeita.`
+            : ''
+        }
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        onConfirm={handleDeleteEquipment}
+      />
     </div>
   )
 }

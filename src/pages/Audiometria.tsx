@@ -27,7 +27,9 @@ import {
   Wand2,
   Loader2,
   RotateCcw,
+  AlertTriangle,
 } from 'lucide-react'
+import { getEquipmentStatus } from '@/types'
 import {
   AIR_FREQS,
   BONE_FREQS,
@@ -307,7 +309,7 @@ type ExamState = Omit<AudiometryExamFull, 'id' | 'created' | 'updated'> & { id?:
 export default function Audiometria() {
   const { id, examId } = useParams<{ id: string; examId?: string }>()
   const navigate = useNavigate()
-  const { getPatient, currentUser } = useApp()
+  const { getPatient, currentUser, equipments, clinicSettings } = useApp()
   const { toast } = useToast()
   const { print } = usePrint()
 
@@ -364,6 +366,31 @@ export default function Audiometria() {
       }))
     }
   }, [patient?.id, isNew])
+
+  // ---------- Equipamentos (audiômetro) ----------
+  // Pré-seleciona automaticamente quando há apenas 1 equipamento cadastrado,
+  // ou sincroniza a data de calibração do equipamento selecionado.
+  const selectedEquipment = useMemo(
+    () => equipments.find((e) => e.nome === exam.audiometer) || null,
+    [equipments, exam.audiometer],
+  )
+
+  useEffect(() => {
+    // Se ainda não há audiômetro definido e existe apenas 1 equipamento, pré-seleciona.
+    if (equipments.length === 1 && !selectedEquipment) {
+      const eq = equipments[0]
+      setExam((prev) => ({
+        ...prev,
+        audiometer: eq.nome,
+        calibration: eq.data_calibracao || prev.calibration,
+      }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [equipments])
+
+  const equipmentStatus = selectedEquipment
+    ? getEquipmentStatus(selectedEquipment.proxima_calibracao)
+    : 'valid'
 
   const patientAgeDetailed = useMemo(() => detailedAge(exam.dob, exam.date), [exam.dob, exam.date])
 
@@ -501,7 +528,7 @@ export default function Audiometria() {
     print({
       title: 'Audiometria',
       subtitle: `${patient?.name || ''} — ${formatDate(exam.date)}`,
-      body: <AudiometriaFullPrint exam={fullExam} />,
+      body: <AudiometriaFullPrint exam={fullExam} clinicSettings={clinicSettings} />,
     })
   }
 
@@ -563,11 +590,88 @@ export default function Audiometria() {
 
       {/* Prévia do exame (formato clínico compacto — visível na impressão) */}
       <div className="hidden print:block">
-        <ExamPreview exam={exam as AudiometryExamFull} patientAgeDetailed={patientAgeDetailed} />
+        <ExamPreview
+          exam={exam as AudiometryExamFull}
+          patientAgeDetailed={patientAgeDetailed}
+          clinicSettings={clinicSettings}
+        />
       </div>
 
       {/* ===================== Entrada de Dados por Orelha ===================== */}
       <div className="no-print space-y-3">
+        {/* Seletor de equipamento (audiômetro) */}
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+            <div className="flex-1">
+              <Field label="Audiômetro (equipamento)">
+                {equipments.length === 0 ? (
+                  <Input
+                    value={exam.audiometer || ''}
+                    onChange={(e) => setField('audiometer', e.target.value)}
+                    placeholder="Nenhum equipamento cadastrado — digite o nome"
+                    disabled={isSecretaria}
+                    className="h-9 rounded-xl text-xs font-medium border-slate-300 bg-white"
+                  />
+                ) : (
+                  <Select
+                    value={exam.audiometer || '__none'}
+                    onValueChange={(v) => {
+                      const eq = equipments.find((e) => e.nome === v)
+                      setExam((prev) => ({
+                        ...prev,
+                        audiometer: v === '__none' ? '' : v,
+                        calibration: eq?.data_calibracao || prev.calibration,
+                      }))
+                    }}
+                    disabled={isSecretaria}
+                  >
+                    <SelectTrigger className="h-9 rounded-xl text-xs font-medium border-slate-300 bg-white">
+                      <SelectValue placeholder="Selecione o equipamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">—</SelectItem>
+                      {equipments.map((eq) => (
+                        <SelectItem key={eq.id} value={eq.nome}>
+                          {eq.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </Field>
+            </div>
+            <div className="sm:w-48">
+              <Field label="Data da Calibração">
+                <Input
+                  type="date"
+                  value={exam.calibration || ''}
+                  onChange={(e) => setField('calibration', e.target.value)}
+                  disabled={isSecretaria}
+                  className="h-9 rounded-xl text-xs font-medium border-slate-300 bg-white"
+                />
+              </Field>
+            </div>
+          </div>
+          {selectedEquipment && equipmentStatus === 'expired' && (
+            <div className="mt-2 flex items-center gap-2 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>
+                Calibração do equipamento {selectedEquipment.nome} está vencida desde{' '}
+                {formatDate(selectedEquipment.proxima_calibracao)}. Renove a calibração antes de
+                utilizar.
+              </span>
+            </div>
+          )}
+          {selectedEquipment && equipmentStatus === 'expiring' && (
+            <div className="mt-2 flex items-center gap-2 text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>
+                Calibração do equipamento {selectedEquipment.nome} vence em{' '}
+                {formatDate(selectedEquipment.proxima_calibracao)}.
+              </span>
+            </div>
+          )}
+        </div>
         {/* Audiometria Orelha Direita (VERMELHO) */}
         <EarAudiometrySection
           side="OD"
@@ -1262,14 +1366,20 @@ function EarAudiometrySection({
 function ExamPreview({
   exam,
   patientAgeDetailed,
+  clinicSettings,
 }: {
   exam: AudiometryExamFull
   patientAgeDetailed: string
+  clinicSettings?: { nome: string; endereco: string; telefone: string; email: string } | null
 }) {
   const odTrito = mediaTritonal(exam.air_od)
   const odQuadri = mediaQuadritonal(exam.air_od)
   const oeTrito = mediaTritonal(exam.air_oe)
   const oeQuadri = mediaQuadritonal(exam.air_oe)
+
+  const clinicName = clinicSettings?.nome?.trim() || 'Audição360'
+  const clinicAddress = clinicSettings?.endereco?.trim() || CLINIC_ADDRESS
+  const clinicPhone = clinicSettings?.telefone?.trim() || CLINIC_PHONE
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 clinic-audiometry">
@@ -1277,15 +1387,15 @@ function ExamPreview({
         {/* Cabeçalho da clínica com logo */}
         <div className="flex items-start justify-between border-b-2 border-navy-700 pb-3">
           <div className="flex items-center gap-3">
-            <img src={logoImg} alt="Audição360" className="max-h-12 max-w-[140px] object-contain" />
+            <img src={logoImg} alt={clinicName} className="max-h-12 max-w-[140px] object-contain" />
             <div>
               <h2 className="text-lg font-extrabold tracking-tight" style={{ color: '#0F2B5C' }}>
-                Audição360
+                {clinicName}
               </h2>
               <p className="text-[11px] text-slate-500 leading-tight">
-                {CLINIC_ADDRESS}
+                {clinicAddress}
                 <br />
-                Telefone: {CLINIC_PHONE}
+                Telefone: {clinicPhone}
               </p>
             </div>
           </div>

@@ -16,6 +16,7 @@ import {
   Settings,
   UserCog,
   ListChecks,
+  SlidersHorizontal,
   type LucideIcon,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
@@ -106,6 +107,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           icon: BarChart3,
           adminOnly: true,
         },
+        {
+          name: 'Configurações',
+          path: '/configuracoes',
+          icon: SlidersHorizontal,
+          adminOnly: true,
+        },
       ],
     },
     {
@@ -115,12 +122,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           name: 'Perfil',
           path: '/perfil',
           icon: Settings,
-        },
-        {
-          name: 'Configurações',
-          path: '/configuracoes',
-          icon: Settings,
-          adminOnly: true,
         },
         {
           name: 'Usuários',

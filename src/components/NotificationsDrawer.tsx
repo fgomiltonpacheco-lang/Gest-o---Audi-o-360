@@ -4,7 +4,15 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useApp } from '@/context/AppContext'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Clock, PackageX, CreditCard, ChevronRight, ShieldAlert } from 'lucide-react'
+import {
+  AlertTriangle,
+  Clock,
+  PackageX,
+  CreditCard,
+  ChevronRight,
+  ShieldAlert,
+  Stethoscope,
+} from 'lucide-react'
 
 interface NotificationsDrawerProps {
   open: boolean
@@ -14,14 +22,16 @@ interface NotificationsDrawerProps {
 export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({ open, onOpenChange }) => {
   const { alerts } = useApp()
   const navigate = useNavigate()
-  const [filter, setFilter] = useState<'all' | 'warranty' | 'installment' | 'stock' | 'followup'>(
-    'all',
-  )
+  const [filter, setFilter] = useState<
+    'all' | 'warranty' | 'installment' | 'stock' | 'followup' | 'calibration'
+  >('all')
 
   const filteredAlerts = alerts.filter((a) => {
     if (filter === 'all') return true
     return a.type === filter
   })
+
+  const calibrationCount = alerts.filter((a) => a.type === 'calibration').length
 
   const getAlertIcon = (type: string) => {
     switch (type) {
@@ -33,6 +43,8 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({ open, 
         return <PackageX className="w-5 h-5 text-orange-600" />
       case 'followup':
         return <Clock className="w-5 h-5 text-teal-600" />
+      case 'calibration':
+        return <Stethoscope className="w-5 h-5 text-fuchsia-600" />
       default:
         return <AlertTriangle className="w-5 h-5 text-slate-600" />
     }
@@ -110,6 +122,16 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({ open, 
               }`}
             >
               Follow-ups
+            </button>
+            <button
+              onClick={() => setFilter('calibration')}
+              className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
+                filter === 'calibration'
+                  ? 'bg-fuchsia-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Calibração{calibrationCount > 0 ? ` (${calibrationCount})` : ''}
             </button>
           </div>
         </SheetHeader>

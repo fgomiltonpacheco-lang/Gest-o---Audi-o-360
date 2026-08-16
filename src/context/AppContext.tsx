@@ -21,6 +21,9 @@ import {
   AidAdjustment,
   AppointmentProcedureItem,
   PatientPlanType,
+  ClinicSettings,
+  Equipment,
+  getEquipmentStatus,
 } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
@@ -45,6 +48,26 @@ function todayStr(): string {
 
 function nowIso(): string {
   return new Date().toISOString()
+}
+
+/** Formata YYYY-MM-DD -> DD/MM/YYYY para exibição em alertas. */
+function formatDateBR(dateStr: string): string {
+  if (!dateStr) return ''
+  const [y, m, d] = dateStr.split('-')
+  if (!y || !m || !d) return dateStr
+  return `${d}/${m}/${y}`
+}
+
+/**
+ * Calcula a próxima calibração (última calibração + 1 ano) no formato YYYY-MM-DD.
+ * Usado ao criar/atualizar equipamentos.
+ */
+function computeNextCalibration(dataCalibracao: string): string {
+  if (!dataCalibracao) return ''
+  const d = new Date(dataCalibracao + 'T00:00:00')
+  if (isNaN(d.getTime())) return ''
+  d.setFullYear(d.getFullYear() + 1)
+  return d.toISOString().split('T')[0]
 }
 
 /**
@@ -375,6 +398,21 @@ interface AppContextType {
   uploadAvatar: (file: File) => Promise<{ success: boolean; message?: string }>
   dataLoading: boolean
 
+  // Configurações da Clínica
+  clinicSettings: ClinicSettings | null
+  saveClinicSettings: (
+    data: Omit<ClinicSettings, 'id'>,
+  ) => Promise<{ success: boolean; message?: string }>
+  equipments: Equipment[]
+  addEquipment: (
+    eq: Omit<Equipment, 'id' | 'proxima_calibracao'>,
+  ) => Promise<{ success: boolean; message?: string }>
+  updateEquipment: (
+    id: string,
+    eq: Partial<Omit<Equipment, 'id'>>,
+  ) => Promise<{ success: boolean; message?: string }>
+  deleteEquipment: (id: string) => Promise<{ success: boolean; message?: string }>
+
   // Pacientes
   patients: Patient[]
   addPatient: (patient: Omit<Patient, 'id' | 'createdAt'>) => Patient
@@ -514,6 +552,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [tympanometries, setTympanometries] = useState<TympanometryExam[]>([])
   const [beras, setBeras] = useState<BeraExam[]>([])
 
+  // Configurações da Clínica + Equipamentos
+  const [clinicSettings, setClinicSettings] = useState<ClinicSettings | null>(null)
+  const [equipments, setEquipments] = useState<Equipment[]>([])
+
   // ---------- Carregamento de dados ----------
   const reloadAll = useCallback(async () => {
     setDataLoading(true)
@@ -536,6 +578,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         aud,
         tymp,
         bera,
+        clinicSet,
+        equips,
       ] = await Promise.all([
         pb.collection('patients').getFullList({ sort: '-created' }),
         pb.collection('appointments').getFullList({ sort: '-created' }),
@@ -554,6 +598,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         pb.collection('audiometries').getFullList({ sort: '-created' }),
         pb.collection('tympanometries').getFullList({ sort: '-created' }),
         pb.collection('beras').getFullList({ sort: '-created' }),
+        // Configurações: lista paginada (1) — singleton; cria automaticamente se vazio.
+        pb.collection('clinic_settings').getList(1, 1, { sort: '-created' }),
+        pb.collection('equipments').getFullList({ sort: 'nome' }),
       ])
 
       const maintList = maints.map(mapMaintenance)
@@ -584,6 +631,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setAudiometries(aud.map(mapAudiometry))
       setTympanometries(tymp.map(mapTympanometry))
       setBeras(bera.map(mapBera))
+
+      // ---- Configurações da clínica (singleton) ----
+      // Se ainda não existir, cria automaticamente com campos vazios.
+      let clinicRec: any = clinicSet?.items?.[0] || null
+      if (!clinicRec) {
+        try {
+          clinicRec = await pb.collection('clinic_settings').create({
+            nome: '',
+            endereco: '',
+            telefone: '',
+            email: '',
+          })
+        } catch (e) {
+          console.warn('Não foi possível criar registro de clinic_settings:', e)
+        }
+      }
+      if (clinicRec) {
+        setClinicSettings({
+          id: clinicRec.id,
+          nome: clinicRec.nome || '',
+          endereco: clinicRec.endereco || '',
+          telefone: clinicRec.telefone || '',
+          email: clinicRec.email || '',
+        })
+      }
+
+      // ---- Equipamentos ----
+      setEquipments(
+        equips.map((e: any) => ({
+          id: e.id,
+          nome: e.nome || '',
+          data_calibracao: e.data_calibracao || '',
+          proxima_calibracao: e.proxima_calibracao || '',
+        })),
+      )
     } catch (err) {
       console.error('Erro ao carregar dados do PocketBase:', err)
     } finally {
@@ -678,6 +760,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAudiometries([])
     setTympanometries([])
     setBeras([])
+    setClinicSettings(null)
+    setEquipments([])
     toast({
       title: 'Sessão encerrada',
       description: 'Você saiu do sistema com segurança.',
@@ -793,6 +877,153 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return {
         success: false,
         message: describePbError(err) || 'Não foi possível enviar a foto.',
+      }
+    }
+  }
+
+  // ---------- Configurações da Clínica Handlers ----------
+  const saveClinicSettings = async (
+    data: Omit<ClinicSettings, 'id'>,
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      // Garante que exista um registro singleton carregado.
+      let current = clinicSettings
+      if (!current) {
+        try {
+          const list = await pb.collection('clinic_settings').getList(1, 1, { sort: '-created' })
+          if (list.items.length > 0) {
+            const r = list.items[0] as any
+            current = {
+              id: r.id,
+              nome: r.nome || '',
+              endereco: r.endereco || '',
+              telefone: r.telefone || '',
+              email: r.email || '',
+            }
+          }
+        } catch {
+          /* intentionally ignored */
+        }
+      }
+      if (!current) {
+        const created: any = await pb.collection('clinic_settings').create({
+          nome: data.nome || '',
+          endereco: data.endereco || '',
+          telefone: data.telefone || '',
+          email: data.email || '',
+        })
+        const newRec: ClinicSettings = { id: created.id, ...data }
+        setClinicSettings(newRec)
+        toast({ title: 'Configurações salvas', description: 'Dados da clínica atualizados.' })
+        return { success: true }
+      }
+      const payload: Record<string, any> = {
+        nome: data.nome || '',
+        endereco: data.endereco || '',
+        telefone: data.telefone || '',
+        email: data.email || '',
+      }
+      const updated: any = await pb.collection('clinic_settings').update(current.id, payload)
+      setClinicSettings({
+        id: updated.id,
+        nome: updated.nome || '',
+        endereco: updated.endereco || '',
+        telefone: updated.telefone || '',
+        email: updated.email || '',
+      })
+      toast({ title: 'Configurações salvas', description: 'Dados da clínica atualizados.' })
+      return { success: true }
+    } catch (err) {
+      console.error('Erro ao salvar clinic_settings:', err)
+      return {
+        success: false,
+        message: describePbError(err) || 'Não foi possível salvar as configurações.',
+      }
+    }
+  }
+
+  const addEquipment = async (
+    eq: Omit<Equipment, 'id' | 'proxima_calibracao'>,
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      if (!eq.nome?.trim()) return { success: false, message: 'Informe o nome do equipamento.' }
+      if (!eq.data_calibracao) return { success: false, message: 'Informe a data de calibração.' }
+      const proxima = computeNextCalibration(eq.data_calibracao)
+      const rec: any = await pb.collection('equipments').create({
+        nome: eq.nome.trim(),
+        data_calibracao: eq.data_calibracao,
+        proxima_calibracao: proxima,
+      })
+      setEquipments((prev) =>
+        [
+          ...prev,
+          {
+            id: rec.id,
+            nome: rec.nome || '',
+            data_calibracao: rec.data_calibracao || '',
+            proxima_calibracao: rec.proxima_calibracao || '',
+          },
+        ].sort((a, b) => a.nome.localeCompare(b.nome)),
+      )
+      toast({ title: 'Equipamento cadastrado', description: `${eq.nome} foi adicionado.` })
+      return { success: true }
+    } catch (err) {
+      console.error('Erro ao criar equipamento:', err)
+      return {
+        success: false,
+        message: describePbError(err) || 'Não foi possível cadastrar o equipamento.',
+      }
+    }
+  }
+
+  const updateEquipment = async (
+    id: string,
+    eq: Partial<Omit<Equipment, 'id'>>,
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const patch: Record<string, any> = {}
+      if (eq.nome !== undefined) patch.nome = eq.nome.trim()
+      if (eq.data_calibracao !== undefined) {
+        patch.data_calibracao = eq.data_calibracao
+        patch.proxima_calibracao = computeNextCalibration(eq.data_calibracao)
+      }
+      const rec: any = await pb.collection('equipments').update(id, patch)
+      setEquipments((prev) =>
+        prev
+          .map((e) =>
+            e.id === id
+              ? {
+                  id: rec.id,
+                  nome: rec.nome || '',
+                  data_calibracao: rec.data_calibracao || '',
+                  proxima_calibracao: rec.proxima_calibracao || '',
+                }
+              : e,
+          )
+          .sort((a, b) => a.nome.localeCompare(b.nome)),
+      )
+      toast({ title: 'Equipamento atualizado', description: 'Dados salvos com sucesso.' })
+      return { success: true }
+    } catch (err) {
+      console.error('Erro ao atualizar equipamento:', err)
+      return {
+        success: false,
+        message: describePbError(err) || 'Não foi possível atualizar o equipamento.',
+      }
+    }
+  }
+
+  const deleteEquipment = async (id: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      await pb.collection('equipments').delete(id)
+      setEquipments((prev) => prev.filter((e) => e.id !== id))
+      toast({ title: 'Equipamento excluído', variant: 'destructive' })
+      return { success: true }
+    } catch (err) {
+      console.error('Erro ao excluir equipamento:', err)
+      return {
+        success: false,
+        message: describePbError(err) || 'Não foi possível excluir o equipamento.',
       }
     }
   }
@@ -2127,8 +2358,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     })
 
+    // ---- Alertas de calibração de equipamentos ----
+    // Aparecem para TODOS os perfis. Vencida (danger) ou vencendo nos
+    // próximos 30 dias (warning).
+    equipments.forEach((eq) => {
+      const status = getEquipmentStatus(eq.proxima_calibracao, today)
+      if (status === 'expired') {
+        list.push({
+          id: `alert-cal-${eq.id}`,
+          type: 'calibration',
+          severity: 'danger',
+          title: `Calibração vencida: ${eq.nome}`,
+          description: `Calibração do equipamento ${eq.nome} vencida em ${formatDateBR(eq.proxima_calibracao)}.`,
+          linkUrl: `/configuracoes`,
+          targetId: eq.id,
+          date: eq.proxima_calibracao,
+        })
+      } else if (status === 'expiring') {
+        const diffDays = Math.ceil(
+          (new Date(eq.proxima_calibracao + 'T00:00:00').getTime() - today.getTime()) /
+            (1000 * 60 * 60 * 24),
+        )
+        list.push({
+          id: `alert-cal-${eq.id}`,
+          type: 'calibration',
+          severity: 'warning',
+          title: `Calibração vencendo: ${eq.nome}`,
+          description: `Calibração do equipamento ${eq.nome} vence em ${diffDays} dia(s) (${formatDateBR(eq.proxima_calibracao)}).`,
+          linkUrl: `/configuracoes`,
+          targetId: eq.id,
+          date: eq.proxima_calibracao,
+        })
+      }
+    })
+
     return list
-  }, [hearingAids, patients, installments, stockItems])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hearingAids, patients, installments, stockItems, equipments])
 
   const unreadAlertsCount = alerts.length
 
@@ -2150,6 +2416,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateProfile,
         uploadAvatar,
         dataLoading,
+        clinicSettings,
+        saveClinicSettings,
+        equipments,
+        addEquipment,
+        updateEquipment,
+        deleteEquipment,
         patients,
         addPatient,
         updatePatient,
