@@ -29,6 +29,7 @@ import {
   XCircle,
   Building2,
   ShoppingCart,
+  RotateCcw,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { CompareAudiometriesModal } from '@/components/CompareAudiometriesModal'
@@ -62,6 +63,7 @@ import {
   Patient,
   Sale,
   PDVPaymentMethod,
+  HearingAidSide,
 } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
@@ -1260,6 +1262,7 @@ interface HearingAidTest {
   sale_type: string
   sale_id: string
   sale_number: string
+  return_reason?: string
   created: string
 }
 
@@ -1271,9 +1274,45 @@ function TesteAparelhoSection({ patient }: { patient: Patient }) {
     addVendaB2B,
     addSale,
     addStockExit,
+    addStockEntry,
+    addHearingAid,
     currentUser,
   } = useApp()
   const { toast } = useToast()
+
+  // Calcula a data final de garantia (saleDate + meses).
+  const computeWarrantyEnd = (saleDate: string, months: number): string => {
+    const d = new Date(saleDate + 'T00:00:00')
+    if (isNaN(d.getTime())) return ''
+    d.setMonth(d.getMonth() + months)
+    return d.toISOString().split('T')[0]
+  }
+
+  // Cria o vínculo de HearingAid a partir de um teste convertido em venda.
+  const vincularHearingAid = (t: HearingAidTest, saleValue: number): string => {
+    const item = stockItems.find((p) => p.id === t.inventory_item_id)
+    const warrantyMonths = 24
+    const warrantyEndDate = computeWarrantyEnd(today, warrantyMonths)
+    addHearingAid({
+      patientId: patient.id,
+      patientName: patient.name,
+      brand: item?.brand || t.brand || '',
+      model: item?.model || t.model || '',
+      type: 'BTE',
+      side: (t.side as HearingAidSide) || 'Bilateral',
+      serialNumber: t.inventory_item_id ? t.inventory_item_id : `TST-${today}`,
+      saleDate: today,
+      saleValue,
+      paymentMethod: 'À vista',
+      warrantyMonths,
+      warrantyEndDate,
+      powerSource: 'Recarregável',
+      earMold: false,
+      status: 'Em uso',
+      notes: `Venda realizada via teste com aparelho em ${today}`,
+    })
+    return warrantyEndDate
+  }
 
   const [tests, setTests] = useState<HearingAidTest[]>([])
   const [loading, setLoading] = useState(false)
@@ -1301,6 +1340,12 @@ function TesteAparelhoSection({ patient }: { patient: Patient }) {
   const [diretaDesconto, setDiretaDesconto] = useState(0)
   const [diretaPagamento, setDiretaPagamento] = useState<PDVPaymentMethod>('Dinheiro')
   const [savingDireta, setSavingDireta] = useState(false)
+
+  // Modal devolução ao estoque
+  const [devolverOpen, setDevolverOpen] = useState(false)
+  const [devolverTarget, setDevolverTarget] = useState<HearingAidTest | null>(null)
+  const [devolverMotivo, setDevolverMotivo] = useState('')
+  const [savingDevolver, setSavingDevolver] = useState(false)
 
   // Empresas ativas
   const empresasAtivas = useMemo(
@@ -1404,6 +1449,58 @@ function TesteAparelhoSection({ patient }: { patient: Patient }) {
     }
   }
 
+  const openDevolver = (t: HearingAidTest) => {
+    setDevolverTarget(t)
+    setDevolverMotivo('')
+    setDevolverOpen(true)
+  }
+
+  const handleConfirmDevolver = async () => {
+    if (!devolverTarget) return
+    if (!devolverMotivo.trim()) {
+      toast({ title: 'Informe o motivo da devolução', variant: 'destructive' })
+      return
+    }
+    setSavingDevolver(true)
+    try {
+      // Restaura a quantidade no estoque caso o item tenha sido baixado ao
+      // iniciar o teste. A baixa só ocorre na venda; quando não houve baixa,
+      // esta entrada apenas registra o movimento de devolução.
+      addStockEntry(
+        devolverTarget.inventory_item_id,
+        1,
+        `Devolução de teste — ${devolverMotivo.trim()}`,
+        currentUser?.name || 'Sistema',
+        today,
+      )
+
+      await pb.collection('hearing_aid_tests').update(devolverTarget.id, {
+        status: 'Devolvido',
+        return_reason: devolverMotivo.trim(),
+      })
+      setTests((prev) =>
+        prev.map((x) =>
+          x.id === devolverTarget.id
+            ? { ...x, status: 'Devolvido', return_reason: devolverMotivo.trim() }
+            : x,
+        ),
+      )
+
+      toast({
+        title: 'Aparelho devolvido ao estoque',
+        description: `Motivo: ${devolverMotivo.trim()}`,
+      })
+      setDevolverOpen(false)
+      setDevolverTarget(null)
+      setDevolverMotivo('')
+    } catch (err) {
+      console.error('Erro ao devolver aparelho ao estoque:', err)
+      toast({ title: 'Erro ao devolver aparelho', variant: 'destructive' })
+    } finally {
+      setSavingDevolver(false)
+    }
+  }
+
   const openB2B = (t: HearingAidTest) => {
     const item = stockItems.find((p) => p.id === t.inventory_item_id)
     setB2bTarget(t)
@@ -1474,9 +1571,15 @@ function TesteAparelhoSection({ patient }: { patient: Patient }) {
         ),
       )
 
+      // Cria vínculo de aparelho auditivo no paciente
+      const warrantyEndDate = vincularHearingAid(b2bTarget, valorSubtotal)
       toast({
         title: 'Venda B2B criada com sucesso!',
         description: `${venda.numero_venda} registrada e estoque baixado.`,
+      })
+      toast({
+        title: 'Aparelho vinculado ao paciente',
+        description: `Garantia até ${formatDate(warrantyEndDate)}.`,
       })
       setB2bOpen(false)
       setB2bTarget(null)
@@ -1565,9 +1668,15 @@ function TesteAparelhoSection({ patient }: { patient: Patient }) {
         ),
       )
 
+      // Cria vínculo de aparelho auditivo no paciente
+      const warrantyEndDate = vincularHearingAid(diretaTarget, total)
       toast({
         title: 'Venda direta registrada!',
         description: `Venda #${newSale.number} criada e estoque baixado.`,
+      })
+      toast({
+        title: 'Aparelho vinculado ao paciente',
+        description: `Garantia até ${formatDate(warrantyEndDate)}.`,
       })
       setDiretaOpen(false)
       setDiretaTarget(null)
@@ -1589,6 +1698,8 @@ function TesteAparelhoSection({ patient }: { patient: Patient }) {
         return 'bg-emerald-50 text-emerald-700 border-emerald-200'
       case 'Cancelado':
         return 'bg-slate-100 text-slate-500 border-slate-200'
+      case 'Devolvido':
+        return 'bg-amber-100 text-amber-800 border-amber-300'
       default:
         return 'bg-slate-50 text-slate-700 border-slate-200'
     }
@@ -1663,6 +1774,16 @@ function TesteAparelhoSection({ patient }: { patient: Patient }) {
                   >
                     <ShoppingCart className="w-3.5 h-3.5 mr-1" />
                     Vender Direto
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openDevolver(t)}
+                    className="bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 text-xs font-semibold rounded-lg h-8"
+                    title="Devolver ao estoque"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                    Devolver ao Estoque
                   </Button>
                   <Button
                     size="sm"
@@ -1941,6 +2062,57 @@ function TesteAparelhoSection({ patient }: { patient: Patient }) {
             >
               <ShoppingCart className="w-3.5 h-3.5 mr-1" />
               {savingDireta ? 'Salvando...' : 'Confirmar Venda'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Devolver ao Estoque */}
+      <Dialog open={devolverOpen} onOpenChange={setDevolverOpen}>
+        <DialogContent className="max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 text-amber-600" />
+              Devolver ao Estoque
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 border border-slate-200">
+              {devolverTarget?.product_name} — {devolverTarget?.brand} {devolverTarget?.model}
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">Motivo da Devolução *</Label>
+              <Textarea
+                value={devolverMotivo}
+                onChange={(e) => setDevolverMotivo(e.target.value)}
+                placeholder="Não adaptou ao paciente, paciente preferiu outro modelo, aparelho com defeito..."
+                rows={3}
+                required
+                className="rounded-xl mt-1 text-xs border-slate-300"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">
+                O aparelho retornará ao estoque e o teste será marcado como devolvido.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDevolverOpen(false)}
+              disabled={savingDevolver}
+              className="rounded-xl text-xs"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmDevolver}
+              disabled={savingDevolver}
+              className="bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold"
+            >
+              <RotateCcw className="w-3.5 h-3.5 mr-1" />
+              {savingDevolver ? 'Salvando...' : 'Confirmar Devolução'}
             </Button>
           </DialogFooter>
         </DialogContent>
