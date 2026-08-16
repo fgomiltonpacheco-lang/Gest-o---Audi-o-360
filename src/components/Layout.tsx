@@ -15,6 +15,7 @@ import {
   Ear,
   Settings,
   UserCog,
+  ListChecks,
   type LucideIcon,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
@@ -119,6 +120,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           name: 'Usuários',
           path: '/usuarios',
           icon: UserCog,
+          adminOnly: true,
+        },
+        {
+          name: 'Procedimentos',
+          path: '/procedimentos',
+          icon: ListChecks,
           adminOnly: true,
         },
       ],
