@@ -302,7 +302,7 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
         {airPts.map((p) => {
           const cx = xForFreq(p.freq)
           const noResp = p.point.symbol === 'no_response' || p.point.symbol === 'masked_no_response'
-          const cy = noResp ? yForDb(120) : yForDb(p.point.db as number)
+          const cy = yForDb(p.point.db as number)
           if (side === 'OD') {
             return p.point.symbol === 'masked' || p.point.symbol === 'masked_no_response'
               ? symbolAirOdMasked(cx, cy, color, noResp)
@@ -318,7 +318,7 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
         {bonePts.map((p) => {
           const cx = xForFreq(p.freq)
           const noResp = p.point.symbol === 'no_response' || p.point.symbol === 'masked_no_response'
-          const cy = noResp ? yForDb(120) : yForDb(p.point.db as number)
+          const cy = yForDb(p.point.db as number)
           if (side === 'OD') {
             return p.point.symbol === 'masked' || p.point.symbol === 'masked_no_response'
               ? symbolBoneOdMasked(cx, cy, color, noResp)
