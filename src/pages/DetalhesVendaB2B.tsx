@@ -11,6 +11,7 @@ import {
   Save,
   ShieldAlert,
   Wallet,
+  Download,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { useToast } from '@/hooks/use-toast'
@@ -20,6 +21,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -37,7 +45,7 @@ import {
 } from '@/components/ui/dialog'
 import { usePrint } from '@/components/print/PrintProvider'
 import { NFServicoComissaoPrint } from '@/components/print/NFServicoComissaoPrint'
-import type { VendaB2B, VendaB2BStatus, NFServicoComissao } from '@/types'
+import type { VendaB2B, VendaB2BStatus, NFServicoStatus } from '@/types'
 
 const statusLabel: Record<VendaB2BStatus, string> = {
   pendente: 'Pendente',
@@ -56,7 +64,37 @@ const statusColors: Record<VendaB2BStatus, string> = {
 }
 
 const DEFAULT_DISCRIMINACAO =
-  'Promoção de vendas e intermediação comercial - Comissão sobre venda de aparelhos auditivos'
+  'Intermediação comercial - Comissão sobre venda de aparelhos auditivos'
+
+const ITENS_LISTA_SERVICO = [
+  { value: '10.01', label: '10.01 — Intermediação de negócios' },
+  { value: '10.02', label: '10.02 — Representação comercial' },
+  { value: '10.04', label: '10.04 — Agenciamento de negócios' },
+  { value: '01.07', label: '01.07 — Outros serviços' },
+]
+
+const nfStatusLabel = (s: NFServicoStatus) =>
+  s === 'emitida'
+    ? 'Emitida'
+    : s === 'cancelada'
+      ? 'Cancelada'
+      : s === 'cancelada_prefeitura'
+        ? 'Cancelada na Prefeitura'
+        : 'Rascunho'
+
+const nfStatusColor = (s: NFServicoStatus) =>
+  s === 'emitida'
+    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    : s === 'cancelada' || s === 'cancelada_prefeitura'
+      ? 'bg-red-50 text-red-700 border-red-200'
+      : 'bg-slate-100 text-slate-600 border-slate-200'
+
+const todayStr = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate(),
+  ).padStart(2, '0')}`
+}
 
 export default function DetalhesVendaB2B() {
   const { id } = useParams<{ id: string }>()
@@ -70,8 +108,10 @@ export default function DetalhesVendaB2B() {
     updateVendaB2B,
     cancelVendaB2B,
     addNFServicoComissao,
-    updateNFServicoComissao,
+    cancelNFServicoComissao,
     fetchItensVendaB2B,
+    nfseB2BConfig,
+    fetchNfseB2BConfig,
   } = useApp()
   const { toast } = useToast()
 
@@ -81,23 +121,33 @@ export default function DetalhesVendaB2B() {
   const [cancelReason, setCancelReason] = useState('')
   const [cancelLoading, setCancelLoading] = useState(false)
 
-  // Formulário de NF
+  // Modal de cancelamento de NFS-e (com motivo obrigatório)
+  const [cancelNfOpen, setCancelNfOpen] = useState(false)
+  const [cancelNfMotivo, setCancelNfMotivo] = useState('')
+  const [cancelNfLoading, setCancelNfLoading] = useState(false)
+
+  // Formulário de emissão da NFS-e de Comissão
   const [nfForm, setNfForm] = useState({
-    numero_nf: '',
+    numero_nfse: '',
     codigo_verificacao: '',
     aliquota_iss: 3,
     item_lista_servico: '10.01',
     discriminacao_servico: DEFAULT_DISCRIMINACAO,
-    data_emissao: (() => {
-      const d = new Date()
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-        d.getDate(),
-      ).padStart(2, '0')}`
-    })(),
+    data_emissao: todayStr(),
+    // Dados do tomador (auto-preenchidos a partir da empresa parceira)
+    tomador_cnpj: '',
+    tomador_razao_social: '',
+    tomador_endereco: '',
+    tomador_municipio: '',
+    tomador_uf: '',
+    tomador_cep: '',
+    tomador_email: '',
+    pdf_url: '',
   })
   const [emitLoading, setEmitLoading] = useState(false)
 
   useEffect(() => {
+    fetchNfseB2BConfig()
     let active = true
     ;(async () => {
       setLoading(true)
@@ -126,23 +176,65 @@ export default function DetalhesVendaB2B() {
 
   const nf = venda?.nf || null
 
+  // Pré-preenche alíquota, discriminação e item da lista conforme Settings
+  useEffect(() => {
+    if (nfseB2BConfig) {
+      setNfForm((prev) => ({
+        ...prev,
+        aliquota_iss: nfseB2BConfig.aliquota_iss_padrao || prev.aliquota_iss,
+        item_lista_servico: nfseB2BConfig.item_lista_servico || prev.item_lista_servico,
+        discriminacao_servico: nfseB2BConfig.discriminacao_padrao || prev.discriminacao_servico,
+      }))
+    }
+  }, [nfseB2BConfig])
+
+  // Pré-preenche os dados do tomador a partir do cadastro da empresa parceira
+  useEffect(() => {
+    if (empresa && !nf) {
+      setNfForm((prev) => ({
+        ...prev,
+        tomador_cnpj: empresa.cnpj || prev.tomador_cnpj,
+        tomador_razao_social: empresa.razao_social || prev.tomador_razao_social,
+        tomador_endereco: empresa.endereco || prev.tomador_endereco,
+        tomador_municipio: empresa.cidade || prev.tomador_municipio,
+        tomador_uf: empresa.estado || prev.tomador_uf,
+        tomador_cep: empresa.cep || prev.tomador_cep,
+        tomador_email: empresa.email || prev.tomador_email,
+      }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [empresa?.id])
+
   const valorIssCalc = ((venda?.valor_comissao || 0) * (Number(nfForm.aliquota_iss) || 0)) / 100
   const valorLiquidoCalc = (venda?.valor_comissao || 0) - valorIssCalc
 
   const handleEmitirNF = async () => {
     if (!venda) return
-    if (!nfForm.numero_nf.trim()) {
-      toast({ title: 'Informe o número da NF', variant: 'destructive' })
+    // RN1: só pode emitir NFS-e com venda aprovada
+    if (venda.status !== 'aprovada') {
+      toast({
+        title: 'Venda não aprovada',
+        description: 'A NFS-e só pode ser emitida após a aprovação da venda B2B.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (!nfForm.tomador_cnpj.trim() || !nfForm.tomador_razao_social.trim()) {
+      toast({
+        title: 'Dados do tomador incompletos',
+        description: 'Informe o CNPJ e a razão social do tomador.',
+        variant: 'destructive',
+      })
       return
     }
     setEmitLoading(true)
     try {
-      const base = venda.valor_comissao
+      const base = venda.valor_comissao // RN2: base = comissão
       const iss = (base * Number(nfForm.aliquota_iss || 0)) / 100
       const liquido = base - iss
       const result = await addNFServicoComissao({
         venda_b2b_id: venda.id,
-        numero_nf: nfForm.numero_nf.trim(),
+        numero_nfse: nfForm.numero_nfse.trim(),
         codigo_verificacao: nfForm.codigo_verificacao.trim(),
         data_emissao: nfForm.data_emissao,
         valor_base: base,
@@ -151,10 +243,18 @@ export default function DetalhesVendaB2B() {
         valor_liquido: liquido,
         discriminacao_servico: nfForm.discriminacao_servico || DEFAULT_DISCRIMINACAO,
         item_lista_servico: nfForm.item_lista_servico || '10.01',
+        tomador_cnpj: nfForm.tomador_cnpj.trim(),
+        tomador_razao_social: nfForm.tomador_razao_social.trim(),
+        tomador_endereco: nfForm.tomador_endereco.trim(),
+        tomador_municipio: nfForm.tomador_municipio.trim(),
+        tomador_uf: nfForm.tomador_uf.trim(),
+        tomador_cep: nfForm.tomador_cep.trim(),
+        tomador_email: nfForm.tomador_email.trim(),
+        pdf_url: nfForm.pdf_url.trim(),
         status: 'emitida',
       })
       if (result) {
-        toast({ title: 'NF de Promoção de Vendas emitida com sucesso' })
+        toast({ title: 'NFS-e de Comissão emitida com sucesso' })
       }
     } finally {
       setEmitLoading(false)
@@ -163,29 +263,29 @@ export default function DetalhesVendaB2B() {
 
   const handleCancelarNF = async () => {
     if (!nf) return
-    const res = await updateNFServicoComissao(nf.id, { status: 'cancelada' })
-    if (res.success) {
-      // volta status da venda para aprovada e limpa o repasse
-      await updateVendaB2B(venda!.id, {
-        status: 'aprovada',
-        status_repasse: 'pendente',
-        data_recebimento_comissao: undefined,
-      })
-      toast({ title: 'NF de Promoção de Vendas cancelada', variant: 'destructive' })
+    if (!cancelNfMotivo.trim()) {
+      toast({ title: 'Informe o motivo do cancelamento', variant: 'destructive' })
+      return
+    }
+    setCancelNfLoading(true)
+    try {
+      const res = await cancelNFServicoComissao(nf.id, cancelNfMotivo)
+      if (res.success) {
+        setCancelNfOpen(false)
+        setCancelNfMotivo('')
+      } else {
+        toast({ title: 'Erro ao cancelar NFS-e', description: res.message, variant: 'destructive' })
+      }
+    } finally {
+      setCancelNfLoading(false)
     }
   }
 
   const handleRegistrarRepasse = async () => {
     if (!venda) return
-    const hoje = (() => {
-      const d = new Date()
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-        d.getDate(),
-      ).padStart(2, '0')}`
-    })()
     await updateVendaB2B(venda.id, {
       status_repasse: 'recebido',
-      data_recebimento_comissao: hoje,
+      data_recebimento_comissao: todayStr(),
     })
     toast({ title: 'Repasse de comissão recebido' })
   }
@@ -202,11 +302,16 @@ export default function DetalhesVendaB2B() {
   const handleImprimirNF = () => {
     if (!venda || !nf) return
     print({
-      title: `NF ${nf.numero_nf} — ${venda.numero_venda}`,
+      title: `NFS-e ${nf.numero_nfse} — ${venda.numero_venda}`,
       body: (
         <NFServicoComissaoPrint venda={venda} nf={nf} empresa={empresa} clinic={clinicSettings} />
       ),
     })
+  }
+
+  const handleBaixarPdf = () => {
+    if (!nf?.pdf_url) return
+    window.open(nf.pdf_url, '_blank')
   }
 
   const handleAprovar = async () => {
@@ -225,9 +330,17 @@ export default function DetalhesVendaB2B() {
     if (!venda) return
     setCancelLoading(true)
     try {
-      await cancelVendaB2B(venda.id, cancelReason)
-      setCancelOpen(false)
-      setCancelReason('')
+      const res = await cancelVendaB2B(venda.id, cancelReason)
+      if (res.success) {
+        setCancelOpen(false)
+        setCancelReason('')
+      } else {
+        toast({
+          title: 'Não foi possível cancelar',
+          description: res.message,
+          variant: 'destructive',
+        })
+      }
     } finally {
       setCancelLoading(false)
     }
@@ -259,7 +372,8 @@ export default function DetalhesVendaB2B() {
   }
 
   const itens = venda.itens?.length ? venda.itens : itensCarregados
-  const canEmitNF = (venda.status === 'pendente' || venda.status === 'aprovada') && !nf
+  // RN1: só pode emitir NFS-e com venda aprovada. RN3: uma venda só pode ter uma NFS-e.
+  const canEmitNF = venda.status === 'aprovada' && !nf
   const canCancelVenda = venda.status !== 'cancelada' && venda.status !== 'concluida'
 
   return (
@@ -399,35 +513,22 @@ export default function DetalhesVendaB2B() {
             </div>
           )}
 
-          {/* Seção NF de Promoção de Vendas */}
+          {/* Seção NFS-e de Comissão */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
             <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-              <Receipt className="w-4 h-4 text-blue-700" /> NF de Promoção de Vendas
+              <Receipt className="w-4 h-4 text-blue-700" /> NFS-e de Comissão
             </h2>
 
             {venda.status === 'cancelada' ? (
               <div className="text-sm text-slate-500 italic">
-                Venda cancelada — não é possível emitir NF.
+                Venda cancelada — não é possível emitir NFS-e.
               </div>
             ) : nf ? (
-              /* NF já emitida */
+              /* NFS-e já emitida */
               <div className="space-y-3">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <Badge
-                    variant="outline"
-                    className={
-                      nf.status === 'emitida'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : nf.status === 'cancelada'
-                          ? 'bg-red-50 text-red-700 border-red-200'
-                          : 'bg-slate-100 text-slate-600 border-slate-200'
-                    }
-                  >
-                    {nf.status === 'emitida'
-                      ? 'Emitida'
-                      : nf.status === 'cancelada'
-                        ? 'Cancelada'
-                        : 'Rascunho'}
+                  <Badge variant="outline" className={nfStatusColor(nf.status)}>
+                    {nfStatusLabel(nf.status)}
                   </Badge>
                   <div className="flex gap-2">
                     {nf.status === 'emitida' && (
@@ -437,15 +538,25 @@ export default function DetalhesVendaB2B() {
                           onClick={handleImprimirNF}
                           className="rounded-lg text-xs bg-blue-700 hover:bg-blue-800 text-white"
                         >
-                          <Printer className="w-3.5 h-3.5 mr-1" /> Imprimir NF
+                          <Printer className="w-3.5 h-3.5 mr-1" /> Imprimir
                         </Button>
+                        {nf.pdf_url && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleBaixarPdf}
+                            className="rounded-lg text-xs"
+                          >
+                            <Download className="w-3.5 h-3.5 mr-1" /> Baixar PDF
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={handleCancelarNF}
+                          onClick={() => setCancelNfOpen(true)}
                           className="rounded-lg text-xs text-red-600 border-red-200 hover:bg-red-50"
                         >
-                          <Ban className="w-3.5 h-3.5 mr-1" /> Cancelar NF
+                          <Ban className="w-3.5 h-3.5 mr-1" /> Cancelar NFS-e
                         </Button>
                       </>
                     )}
@@ -453,8 +564,8 @@ export default function DetalhesVendaB2B() {
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
                   <div>
-                    <span className="text-xs text-slate-500 font-semibold">Nº NF</span>
-                    <p className="font-bold text-slate-900">{nf.numero_nf}</p>
+                    <span className="text-xs text-slate-500 font-semibold">Nº NFS-e</span>
+                    <p className="font-bold text-slate-900">{nf.numero_nfse || '—'}</p>
                   </div>
                   <div>
                     <span className="text-xs text-slate-500 font-semibold">Cód. Verificação</span>
@@ -481,26 +592,80 @@ export default function DetalhesVendaB2B() {
                     </p>
                   </div>
                 </div>
+                {/* Dados do tomador */}
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                  <p className="text-xs font-bold text-slate-600 mb-1">Tomador</p>
+                  <div className="grid grid-cols-2 gap-1 text-xs text-slate-600">
+                    <span>
+                      <strong>Razão Social:</strong> {nf.tomador_razao_social || '—'}
+                    </span>
+                    <span>
+                      <strong>CNPJ:</strong> {nf.tomador_cnpj || '—'}
+                    </span>
+                    <span className="col-span-2">
+                      <strong>Endereço:</strong> {nf.tomador_endereco}
+                      {nf.tomador_municipio ? ` — ${nf.tomador_municipio}` : ''}
+                      {nf.tomador_uf ? `/${nf.tomador_uf}` : ''}
+                      {nf.tomador_cep ? ` · CEP ${nf.tomador_cep}` : ''}
+                    </span>
+                    <span>
+                      <strong>E-mail:</strong> {nf.tomador_email || '—'}
+                    </span>
+                  </div>
+                </div>
                 <div className="text-xs text-slate-500">
                   <span className="font-semibold">Discriminação:</span> {nf.discriminacao_servico}
                 </div>
                 <div className="text-xs text-slate-500">
                   <span className="font-semibold">Item Lista Serviço:</span> {nf.item_lista_servico}
                 </div>
+                {nf.motivo_cancelamento && (
+                  <div className="text-xs text-red-600">
+                    <span className="font-semibold">Motivo do cancelamento:</span>{' '}
+                    {nf.motivo_cancelamento}
+                  </div>
+                )}
               </div>
             ) : canEmitNF ? (
               /* Formulário de emissão */
-              <div className="space-y-3">
+              <div className="space-y-4">
+                {/* Aviso de regra de negócio */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+                  A NFS-e de Comissão é emitida sobre o valor da comissão (R${' '}
+                  {formatCurrency(venda.valor_comissao)}), e não sobre o valor total da venda.
+                </div>
+
+                {/* Referência: valor total da venda (não tributado) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                    <span className="text-xs text-slate-500 font-semibold">
+                      Valor da Venda (referência — não tributado)
+                    </span>
+                    <p className="text-lg font-bold text-slate-700">
+                      {formatCurrency(venda.valor_total)}
+                    </p>
+                  </div>
+                  <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+                    <span className="text-xs text-emerald-700 font-semibold">
+                      Valor Base da NFS-e (Comissão)
+                    </span>
+                    <p className="text-lg font-extrabold text-emerald-700">
+                      {formatCurrency(venda.valor_comissao)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Dados da NFS-e */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs font-semibold text-slate-600 mb-1 block">
-                      Nº da NF *
+                      Nº da NFS-e
                     </Label>
                     <Input
-                      value={nfForm.numero_nf}
-                      onChange={(e) => setNfForm({ ...nfForm, numero_nf: e.target.value })}
+                      value={nfForm.numero_nfse}
+                      onChange={(e) => setNfForm({ ...nfForm, numero_nfse: e.target.value })}
                       className="h-9 rounded-lg text-sm"
-                      placeholder="Ex: 0001"
+                      placeholder="Gerado pela prefeitura"
                     />
                   </div>
                   <div>
@@ -539,15 +704,25 @@ export default function DetalhesVendaB2B() {
                       className="h-9 rounded-lg text-sm"
                     />
                   </div>
-                  <div>
+                  <div className="sm:col-span-2">
                     <Label className="text-xs font-semibold text-slate-600 mb-1 block">
-                      Item Lista Serviço
+                      Item da Lista de Serviço
                     </Label>
-                    <Input
+                    <Select
                       value={nfForm.item_lista_servico}
-                      onChange={(e) => setNfForm({ ...nfForm, item_lista_servico: e.target.value })}
-                      className="h-9 rounded-lg text-sm"
-                    />
+                      onValueChange={(v) => setNfForm({ ...nfForm, item_lista_servico: v })}
+                    >
+                      <SelectTrigger className="h-9 rounded-lg text-sm">
+                        <SelectValue placeholder="Selecione o item" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ITENS_LISTA_SERVICO.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="sm:col-span-2">
                     <Label className="text-xs font-semibold text-slate-600 mb-1 block">
@@ -563,7 +738,88 @@ export default function DetalhesVendaB2B() {
                   </div>
                 </div>
 
-                {/* Preview cálculo */}
+                {/* Dados do Tomador */}
+                <div className="border-t border-slate-100 pt-3">
+                  <p className="text-xs font-bold text-slate-700 mb-2">
+                    Dados do Tomador (Empresa Parceira)
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="sm:col-span-2">
+                      <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                        Razão Social
+                      </Label>
+                      <Input
+                        value={nfForm.tomador_razao_social}
+                        onChange={(e) =>
+                          setNfForm({ ...nfForm, tomador_razao_social: e.target.value })
+                        }
+                        className="h-9 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                        CNPJ
+                      </Label>
+                      <Input
+                        value={nfForm.tomador_cnpj}
+                        onChange={(e) => setNfForm({ ...nfForm, tomador_cnpj: e.target.value })}
+                        className="h-9 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-slate-600 mb-1 block">CEP</Label>
+                      <Input
+                        value={nfForm.tomador_cep}
+                        onChange={(e) => setNfForm({ ...nfForm, tomador_cep: e.target.value })}
+                        className="h-9 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                        Endereço
+                      </Label>
+                      <Input
+                        value={nfForm.tomador_endereco}
+                        onChange={(e) => setNfForm({ ...nfForm, tomador_endereco: e.target.value })}
+                        className="h-9 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                        Município
+                      </Label>
+                      <Input
+                        value={nfForm.tomador_municipio}
+                        onChange={(e) =>
+                          setNfForm({ ...nfForm, tomador_municipio: e.target.value })
+                        }
+                        className="h-9 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-slate-600 mb-1 block">UF</Label>
+                      <Input
+                        value={nfForm.tomador_uf}
+                        onChange={(e) => setNfForm({ ...nfForm, tomador_uf: e.target.value })}
+                        className="h-9 rounded-lg text-sm"
+                        maxLength={2}
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                        E-mail (para envio da NFS-e)
+                      </Label>
+                      <Input
+                        type="email"
+                        value={nfForm.tomador_email}
+                        onChange={(e) => setNfForm({ ...nfForm, tomador_email: e.target.value })}
+                        className="h-9 rounded-lg text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview cálculo do ISS */}
                 <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-sm space-y-1">
                   <div className="flex justify-between">
                     <span className="text-slate-500">Valor Base (Comissão)</span>
@@ -589,13 +845,13 @@ export default function DetalhesVendaB2B() {
                   className="rounded-xl text-sm bg-blue-700 hover:bg-blue-800 text-white"
                 >
                   <FileText className="w-4 h-4 mr-1.5" />
-                  {emitLoading ? 'Emitindo...' : 'Emitir NF de Promoção de Vendas'}
+                  {emitLoading ? 'Emitindo...' : 'Emitir NFS-e de Comissão'}
                 </Button>
               </div>
             ) : (
               <div className="text-sm text-slate-500 italic flex items-center gap-2">
                 <ShieldAlert className="w-4 h-4" />
-                Aprove a venda antes de emitir a NF de Promoção de Vendas.
+                Aprove a venda antes de emitir a NFS-e de Comissão.
               </div>
             )}
           </div>
@@ -608,7 +864,7 @@ export default function DetalhesVendaB2B() {
               </h2>
               <div className="space-y-3">
                 <p className="text-xs text-slate-500">
-                  Após a emissão da NF de Promoção de Vendas, a empresa parceira deve repassar os{' '}
+                  Após a emissão da NFS-e de Comissão, a empresa parceira deve repassar os{' '}
                   {Number(venda.percentual_comissao || 0).toFixed(2)}% de comissão para a
                   Audição360.
                 </p>
@@ -742,7 +998,54 @@ export default function DetalhesVendaB2B() {
         </div>
       </div>
 
-      {/* Modal de cancelamento */}
+      {/* Modal de cancelamento da NFS-e */}
+      <Dialog open={cancelNfOpen} onOpenChange={setCancelNfOpen}>
+        <DialogContent className="max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+          <DialogHeader className="border-b border-slate-100 pb-3">
+            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <Ban className="w-5 h-5 text-red-500" />
+              Cancelar NFS-e {nf?.numero_nfse}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <p className="text-sm text-slate-600">
+              O cancelamento da NFS-e é obrigatório antes de cancelar a venda B2B. Informe o motivo
+              do cancelamento.
+            </p>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                Motivo do cancelamento *
+              </Label>
+              <Textarea
+                value={cancelNfMotivo}
+                onChange={(e) => setCancelNfMotivo(e.target.value)}
+                placeholder="Informe o motivo..."
+                className="rounded-xl text-sm min-h-[80px]"
+              />
+            </div>
+          </div>
+          <DialogFooter className="pt-2 border-t border-slate-100">
+            <Button
+              variant="outline"
+              onClick={() => setCancelNfOpen(false)}
+              className="rounded-xl text-xs"
+              disabled={cancelNfLoading}
+            >
+              Voltar
+            </Button>
+            <Button
+              onClick={handleCancelarNF}
+              disabled={cancelNfLoading}
+              className="rounded-xl text-xs bg-red-500 hover:bg-red-600 text-white"
+            >
+              <Save className="w-3.5 h-3.5 mr-1" />
+              {cancelNfLoading ? 'Cancelando...' : 'Confirmar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de cancelamento da venda */}
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <DialogContent className="max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
           <DialogHeader className="border-b border-slate-100 pb-3">
@@ -754,6 +1057,11 @@ export default function DetalhesVendaB2B() {
           <div className="space-y-3 pt-2">
             <p className="text-sm text-slate-600">
               Ao cancelar, os produtos serão devolvidos ao estoque (se já tiverem sido baixados).
+              {nf && nf.status === 'emitida' && (
+                <span className="block mt-1 text-red-600 font-semibold">
+                  Esta venda possui uma NFS-e ativa — cancele-a antes de cancelar a venda.
+                </span>
+              )}
             </p>
             <div>
               <Label className="text-xs font-semibold text-slate-600 mb-1 block">

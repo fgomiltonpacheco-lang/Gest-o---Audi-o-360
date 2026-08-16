@@ -35,6 +35,7 @@ import {
   ItemVendaB2B,
   NFServicoComissao,
   EmpresaParceira,
+  NfseB2BConfig,
 } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
@@ -471,7 +472,7 @@ const mapItemVendaB2B = (r: any): ItemVendaB2B => ({
 const mapNFServicoComissao = (r: any): NFServicoComissao => ({
   id: r.id,
   venda_b2b_id: r.venda_b2b_id || r.venda_b2b || '',
-  numero_nf: r.numero_nf || '',
+  numero_nfse: r.numero_nfse || r.numero_nf || '',
   codigo_verificacao: r.codigo_verificacao || '',
   data_emissao: toDateStr(r.data_emissao),
   valor_base: Number(r.valor_base) || 0,
@@ -480,8 +481,53 @@ const mapNFServicoComissao = (r: any): NFServicoComissao => ({
   valor_liquido: Number(r.valor_liquido) || 0,
   discriminacao_servico: r.discriminacao_servico || '',
   item_lista_servico: r.item_lista_servico || '',
+  tomador_cnpj: r.tomador_cnpj || '',
+  tomador_razao_social: r.tomador_razao_social || '',
+  tomador_endereco: r.tomador_endereco || '',
+  tomador_municipio: r.tomador_municipio || '',
+  tomador_uf: r.tomador_uf || '',
+  tomador_cep: r.tomador_cep || '',
+  tomador_email: r.tomador_email || '',
+  motivo_cancelamento: r.motivo_cancelamento || undefined,
+  pdf_url: r.pdf_url || undefined,
   status: (r.status || 'rascunho') as NFServicoComissao['status'],
   created: toDateStr(r.created),
+  updated: toDateStr(r.updated),
+})
+
+const DEFAULT_NFSE_CONFIG: Omit<NfseB2BConfig, 'id' | 'created' | 'updated'> = {
+  municipio: 'Caçador',
+  uf: 'SC',
+  codigo_municipio: '8107308',
+  provedor: 'BETHA',
+  url_api: '',
+  login_api: '',
+  token_api: '',
+  inscricao_municipal: '',
+  aliquota_iss_padrao: 3,
+  item_lista_servico: '10.01',
+  discriminacao_padrao: 'Intermediação comercial - Comissão sobre venda de aparelhos auditivos',
+  ambiente: 'homologacao',
+  ativo: true,
+}
+
+const mapNfseB2BConfig = (r: any): NfseB2BConfig => ({
+  id: r.id,
+  municipio: r.municipio || '',
+  uf: r.uf || '',
+  codigo_municipio: r.codigo_municipio || '',
+  provedor: (r.provedor || 'BETHA') as NfseB2BConfig['provedor'],
+  url_api: r.url_api || '',
+  login_api: r.login_api || '',
+  token_api: r.token_api || '',
+  inscricao_municipal: r.inscricao_municipal || '',
+  aliquota_iss_padrao: Number(r.aliquota_iss_padrao) || 0,
+  item_lista_servico: r.item_lista_servico || '',
+  discriminacao_padrao: r.discriminacao_padrao || '',
+  ambiente: (r.ambiente === 'producao' ? 'producao' : 'homologacao') as NfseB2BConfig['ambiente'],
+  ativo: r.ativo !== false,
+  created: toDateStr(r.created),
+  updated: toDateStr(r.updated),
 })
 
 const mapVendaB2B = (r: any): VendaB2B => {
@@ -710,6 +756,16 @@ interface AppContextType {
     id: string,
     data: Partial<NFServicoComissao>,
   ) => Promise<{ success: boolean; message?: string }>
+  cancelNFServicoComissao: (
+    id: string,
+    motivo: string,
+  ) => Promise<{ success: boolean; message?: string }>
+  // Configuração da NFS-e de comissão B2B
+  nfseB2BConfig: NfseB2BConfig | null
+  fetchNfseB2BConfig: () => Promise<void>
+  saveNfseB2BConfig: (
+    data: Partial<Omit<NfseB2BConfig, 'id' | 'created' | 'updated'>>,
+  ) => Promise<{ success: boolean; message?: string }>
 
   // Utilitário para recarregar dados do banco
   resetToSeedData: () => void
@@ -758,6 +814,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [vendasB2B, setVendasB2B] = useState<VendaB2B[]>([])
   const [empresasParceiras, setEmpresasParceiras] = useState<EmpresaParceira[]>([])
   const [nfServicoComissao, setNfServicoComissao] = useState<NFServicoComissao[]>([])
+  const [nfseB2BConfig, setNfseB2BConfig] = useState<NfseB2BConfig | null>(null)
 
   // ---------- Carregamento de dados ----------
   const reloadAll = useCallback(async () => {
@@ -967,6 +1024,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setEquipments([])
     setFechamentosCaixa([])
     setMovimentacoesCaixa([])
+    setVendasB2B([])
+    setEmpresasParceiras([])
+    setNfServicoComissao([])
+    setNfseB2BConfig(null)
     toast({
       title: 'Sessão encerrada',
       description: 'Você saiu do sistema com segurança.',
@@ -3104,6 +3165,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const current = vendasB2B.find((v) => v.id === id)
       if (!current) return { success: false, message: 'Venda não encontrada.' }
+
+      // RN4: o cancelamento da NFS-e na prefeitura é obrigatório antes de
+      // cancelar a venda B2B. Se existir uma NFS-e ainda ativa, bloqueia.
+      const nfAtiva = nfServicoComissao.find(
+        (n) => n.venda_b2b_id === id && (n.status === 'emitida' || n.status === 'rascunho'),
+      )
+      if (nfAtiva) {
+        return {
+          success: false,
+          message: 'Cancele a NFS-e de Comissão vinculada antes de cancelar a venda B2B.',
+        }
+      }
+
       const obs = reason.trim()
         ? `${current.observacoes ? current.observacoes + '\n' : ''}Cancelada: ${reason.trim()}`
         : current.observacoes
@@ -3128,7 +3202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const rec: any = await pb.collection('nf_servico_comissao').create({
         venda_b2b_id: data.venda_b2b_id || '',
-        numero_nf: data.numero_nf || '',
+        numero_nfse: data.numero_nfse || '',
         codigo_verificacao: data.codigo_verificacao || '',
         data_emissao: data.data_emissao || todayStr(),
         valor_base: data.valor_base ?? 0,
@@ -3137,24 +3211,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         valor_liquido: data.valor_liquido ?? 0,
         discriminacao_servico: data.discriminacao_servico || '',
         item_lista_servico: data.item_lista_servico || '10.01',
+        tomador_cnpj: data.tomador_cnpj || '',
+        tomador_razao_social: data.tomador_razao_social || '',
+        tomador_endereco: data.tomador_endereco || '',
+        tomador_municipio: data.tomador_municipio || '',
+        tomador_uf: data.tomador_uf || '',
+        tomador_cep: data.tomador_cep || '',
+        tomador_email: data.tomador_email || '',
+        pdf_url: data.pdf_url || '',
         status: data.status || 'emitida',
       })
       const mapped = mapNFServicoComissao(rec)
       setNfServicoComissao((prev) => [mapped, ...prev])
-      // Ao emitir a NF de Promoção de Vendas, a venda passa a aguardar o
-      // repasse da comissão por parte da empresa parceira.
+      // Ao emitir a NFS-e de Comissão, a venda passa a aguardar o repasse da
+      // comissão por parte da empresa parceira.
       await updateVendaB2B(data.venda_b2b_id, {
         status: 'nf_emitida',
         status_repasse: 'pendente',
         data_recebimento_comissao: undefined,
       })
       await fetchVendasB2B()
-      toast({ title: 'NF de Promoção de Vendas emitida', description: `NF ${data.numero_nf}` })
+      toast({ title: 'NFS-e de Comissão emitida', description: `NFS-e ${data.numero_nfse}` })
       return mapped
     } catch (err) {
-      console.error('Erro ao criar NF de serviço:', err)
+      console.error('Erro ao criar NFS-e de serviço:', err)
       toast({
-        title: 'Erro ao emitir NF',
+        title: 'Erro ao emitir NFS-e',
         description: describePbError(err),
         variant: 'destructive',
       })
@@ -3168,7 +3250,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ): Promise<{ success: boolean; message?: string }> => {
     try {
       const patch: Record<string, any> = {}
-      if (data.numero_nf !== undefined) patch.numero_nf = data.numero_nf
+      if (data.numero_nfse !== undefined) patch.numero_nfse = data.numero_nfse
       if (data.codigo_verificacao !== undefined) patch.codigo_verificacao = data.codigo_verificacao
       if (data.data_emissao !== undefined) patch.data_emissao = data.data_emissao
       if (data.valor_base !== undefined) patch.valor_base = data.valor_base
@@ -3178,15 +3260,126 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (data.discriminacao_servico !== undefined)
         patch.discriminacao_servico = data.discriminacao_servico
       if (data.item_lista_servico !== undefined) patch.item_lista_servico = data.item_lista_servico
+      if (data.tomador_cnpj !== undefined) patch.tomador_cnpj = data.tomador_cnpj
+      if (data.tomador_razao_social !== undefined)
+        patch.tomador_razao_social = data.tomador_razao_social
+      if (data.tomador_endereco !== undefined) patch.tomador_endereco = data.tomador_endereco
+      if (data.tomador_municipio !== undefined) patch.tomador_municipio = data.tomador_municipio
+      if (data.tomador_uf !== undefined) patch.tomador_uf = data.tomador_uf
+      if (data.tomador_cep !== undefined) patch.tomador_cep = data.tomador_cep
+      if (data.tomador_email !== undefined) patch.tomador_email = data.tomador_email
+      if (data.motivo_cancelamento !== undefined)
+        patch.motivo_cancelamento = data.motivo_cancelamento
+      if (data.pdf_url !== undefined) patch.pdf_url = data.pdf_url
       if (data.status !== undefined) patch.status = data.status
       const rec: any = await pb.collection('nf_servico_comissao').update(id, patch)
       const mapped = mapNFServicoComissao(rec)
       setNfServicoComissao((prev) => prev.map((n) => (n.id === id ? mapped : n)))
       await fetchVendasB2B()
-      toast({ title: 'NF de Promoção de Vendas atualizada' })
+      toast({ title: 'NFS-e de Comissão atualizada' })
       return { success: true }
     } catch (err) {
-      console.error('Erro ao atualizar NF de serviço:', err)
+      console.error('Erro ao atualizar NFS-e de serviço:', err)
+      return { success: false, message: describePbError(err) }
+    }
+  }
+
+  // Cancelamento da NFS-e: exige motivo e marca o status como cancelada.
+  // A venda vinculada volta para "aprovada" (o cancelamento da NFS-e na
+  // prefeitura é pré-requisito para cancelar a venda B2B).
+  const cancelNFServicoComissao = async (
+    id: string,
+    motivo: string,
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      if (!motivo?.trim()) {
+        return { success: false, message: 'Informe o motivo do cancelamento.' }
+      }
+      // Busca a NF atual para localizar a venda vinculada.
+      const nfRec: any = await pb.collection('nf_servico_comissao').getOne(id)
+      const result = await updateNFServicoComissao(id, {
+        status: 'cancelada',
+        motivo_cancelamento: motivo.trim(),
+      })
+      if (!result.success) return result
+      // Volta a venda para "aprovada" e limpa o repasse.
+      if (nfRec?.venda_b2b_id) {
+        await updateVendaB2B(nfRec.venda_b2b_id, {
+          status: 'aprovada',
+          status_repasse: 'pendente',
+          data_recebimento_comissao: undefined,
+        })
+      }
+      toast({ title: 'NFS-e de Comissão cancelada', variant: 'destructive' })
+      return { success: true }
+    } catch (err) {
+      console.error('Erro ao cancelar NFS-e de serviço:', err)
+      return { success: false, message: describePbError(err) }
+    }
+  }
+
+  // ---------- Configuração da NFS-e B2B (singleton) ----------
+  const fetchNfseB2BConfig = useCallback(async () => {
+    try {
+      const list = await pb.collection('nfse_b2b_config').getList(1, 1, { sort: '-created' })
+      const rec = list.items?.[0]
+      if (rec) {
+        setNfseB2BConfig(mapNfseB2BConfig(rec))
+      } else {
+        // Cria o registro singleton com valores padrão (Caçador/SC).
+        try {
+          const created: any = await pb.collection('nfse_b2b_config').create(DEFAULT_NFSE_CONFIG)
+          setNfseB2BConfig(mapNfseB2BConfig(created))
+        } catch (e) {
+          console.warn('Não foi possível criar registro de nfse_b2b_config:', e)
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao carregar configuração da NFS-e B2B:', err)
+    }
+  }, [])
+
+  const saveNfseB2BConfig = async (
+    data: Partial<Omit<NfseB2BConfig, 'id' | 'created' | 'updated'>>,
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      let current = nfseB2BConfig
+      if (!current) {
+        try {
+          const list = await pb.collection('nfse_b2b_config').getList(1, 1, { sort: '-created' })
+          if (list.items.length > 0) {
+            current = mapNfseB2BConfig(list.items[0])
+          }
+        } catch (_) {
+          /* ignore */
+        }
+      }
+      const payload: Record<string, any> = {
+        municipio: data.municipio ?? '',
+        uf: data.uf ?? '',
+        codigo_municipio: data.codigo_municipio ?? '',
+        provedor: data.provedor ?? 'BETHA',
+        url_api: data.url_api ?? '',
+        login_api: data.login_api ?? '',
+        token_api: data.token_api ?? '',
+        inscricao_municipal: data.inscricao_municipal ?? '',
+        aliquota_iss_padrao: Number(data.aliquota_iss_padrao) || 0,
+        item_lista_servico: data.item_lista_servico ?? '',
+        discriminacao_padrao: data.discriminacao_padrao ?? '',
+        ambiente: data.ambiente ?? 'homologacao',
+        ativo: data.ativo !== false,
+      }
+      if (!current) {
+        const created: any = await pb.collection('nfse_b2b_config').create(payload)
+        setNfseB2BConfig(mapNfseB2BConfig(created))
+      } else {
+        const updated: any = await pb.collection('nfse_b2b_config').update(current.id, payload)
+        setNfseB2BConfig(mapNfseB2BConfig(updated))
+      }
+      toast({ title: 'Configuração da NFS-e salva' })
+      return { success: true }
+    } catch (err) {
+      console.error('Erro ao salvar configuração da NFS-e B2B:', err)
       return { success: false, message: describePbError(err) }
     }
   }
@@ -3280,6 +3473,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fetchNFServicoComissao,
         addNFServicoComissao,
         updateNFServicoComissao,
+        cancelNFServicoComissao,
+        nfseB2BConfig,
+        fetchNfseB2BConfig,
+        saveNfseB2BConfig,
         alerts,
         unreadAlertsCount,
         resetToSeedData,

@@ -328,7 +328,7 @@ export default function VendasB2B() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                NF's Emitidas
+                NFS-e Emitidas
               </p>
               <p className="text-xl font-extrabold text-slate-900 mt-1">{resumo.nfsEmitidas}</p>
             </div>
@@ -433,7 +433,7 @@ export default function VendasB2B() {
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="pendente">Pendente</SelectItem>
                   <SelectItem value="aprovada">Aprovada</SelectItem>
-                  <SelectItem value="nf_emitida">NF Emitida</SelectItem>
+                  <SelectItem value="nf_emitida">NFS-e Emitida</SelectItem>
                   <SelectItem value="concluida">Concluída</SelectItem>
                   <SelectItem value="cancelada">Cancelada</SelectItem>
                 </SelectContent>

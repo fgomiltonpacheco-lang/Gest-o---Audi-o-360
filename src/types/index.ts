@@ -761,7 +761,29 @@ export interface MovimentacaoCaixa {
 
 // ===== Módulo de Vendas B2B (Business-to-Business) =====
 export type VendaB2BStatus = 'pendente' | 'aprovada' | 'nf_emitida' | 'concluida' | 'cancelada'
-export type NFServicoStatus = 'rascunho' | 'emitida' | 'cancelada'
+export type NFServicoStatus = 'rascunho' | 'emitida' | 'cancelada' | 'cancelada_prefeitura'
+export type NfseB2BProvedor = 'BETHA' | 'NOTABLU' | 'SIMPLISS' | 'GINFES' | 'ABRASF' | 'OUTRO'
+export type NfseB2BAmbiente = 'homologacao' | 'producao'
+
+/** Configuração da NFS-e de comissão B2B (singleton por clínica). */
+export interface NfseB2BConfig {
+  id: string
+  municipio: string
+  uf: string
+  codigo_municipio: string
+  provedor: NfseB2BProvedor
+  url_api: string
+  login_api: string
+  token_api: string
+  inscricao_municipal: string
+  aliquota_iss_padrao: number
+  item_lista_servico: string
+  discriminacao_padrao: string
+  ambiente: NfseB2BAmbiente
+  ativo: boolean
+  created: string
+  updated: string
+}
 export type EmpresaParceiraStatus = 'ativo' | 'inativo'
 
 /**
@@ -827,7 +849,7 @@ export interface VendaB2B {
 export interface NFServicoComissao {
   id: string
   venda_b2b_id: string
-  numero_nf: string
+  numero_nfse: string
   codigo_verificacao: string
   data_emissao: string
   valor_base: number
@@ -836,8 +858,19 @@ export interface NFServicoComissao {
   valor_liquido: number
   discriminacao_servico: string
   item_lista_servico: string
+  /** Dados do tomador (empresa parceira compradora) — auto-preenchidos, editáveis. */
+  tomador_cnpj: string
+  tomador_razao_social: string
+  tomador_endereco: string
+  tomador_municipio: string
+  tomador_uf: string
+  tomador_cep: string
+  tomador_email: string
+  motivo_cancelamento?: string
+  pdf_url?: string
   status: NFServicoStatus
   created: string
+  updated: string
 }
 
 // Alertas do Sistema

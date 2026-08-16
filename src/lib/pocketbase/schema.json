@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T19:50:31.221Z",
+  "generatedAt": "2026-08-16T20:34:04.008Z",
   "collections": [
     {
       "name": "users",
@@ -372,69 +372,229 @@
       },
       "fields": [
         {
-          "name": "patientId",
-          "type": "relation",
+          "name": "numero_nfse",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "codigo_verificacao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_emissao",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_base",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aliquota_iss",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_iss",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_liquido",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "discriminacao_servico",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "item_lista_servico",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tomador_cnpj",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tomador_razao_social",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tomador_endereco",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tomador_municipio",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tomador_uf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tomador_cep",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tomador_email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "motivo_cancelamento",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pdf_url",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
           "required": false,
           "system": false,
-          "collectionRef": "patients"
+          "selectValues": ["rascunho", "emitida", "cancelada", "cancelada_prefeitura"]
         },
         {
-          "name": "patientName",
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_nf_servico_venda ON nf_servico_comissao (venda_b2b_id)",
+        "CREATE INDEX idx_nf_servico_numero ON nf_servico_comissao (numero_nfse)",
+        "CREATE INDEX idx_nf_servico_status ON nf_servico_comissao (status)"
+      ]
+    },
+    {
+      "name": "nfse_b2b_config",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.role = 'admin'",
+        "update": "@request.auth.role = 'admin'",
+        "delete": "@request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "municipio",
           "type": "text",
           "required": false,
           "system": false
         },
         {
-          "name": "mainComplaint",
+          "name": "uf",
           "type": "text",
           "required": false,
           "system": false
         },
         {
-          "name": "anamnesis",
+          "name": "codigo_municipio",
           "type": "text",
           "required": false,
           "system": false
         },
         {
-          "name": "hearingHistory",
+          "name": "provedor",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["BETHA", "NOTABLU", "SIMPLISS", "GINFES", "ABRASF", "OUTRO"]
+        },
+        {
+          "name": "url_api",
           "type": "text",
           "required": false,
           "system": false
         },
         {
-          "name": "currentMedications",
+          "name": "login_api",
           "type": "text",
           "required": false,
           "system": false
         },
         {
-          "name": "familyHistory",
+          "name": "token_api",
           "type": "text",
           "required": false,
           "system": false
         },
         {
-          "name": "diagnosis",
+          "name": "inscricao_municipal",
           "type": "text",
           "required": false,
           "system": false
         },
         {
-          "name": "conduct",
+          "name": "aliquota_iss_padrao",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "item_lista_servico",
           "type": "text",
           "required": false,
           "system": false
         },
         {
-          "name": "nextReturn",
+          "name": "discriminacao_padrao",
           "type": "text",
           "required": false,
           "system": false
         },
         {
-          "name": "updatedAt",
-          "type": "text",
+          "name": "ambiente",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["homologacao", "producao"]
+        },
+        {
+          "name": "ativo",
+          "type": "bool",
           "required": false,
           "system": false
         },
@@ -453,9 +613,7 @@
           "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
-      "indexes": [
-        "CREATE UNIQUE INDEX idx_clinical_records_patient ON clinical_records (patientId)"
-      ]
+      "indexes": []
     },
     {
       "name": "evolutions",
@@ -2747,7 +2905,7 @@
           "collectionRef": "vendas_b2b"
         },
         {
-          "name": "numero_nf",
+          "name": "numero_nfse",
           "type": "text",
           "required": false,
           "system": false
@@ -2805,7 +2963,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["rascunho", "emitida", "cancelada"]
+          "selectValues": ["rascunho", "emitida", "cancelada", "cancelada_prefeitura"]
         },
         {
           "name": "created",
@@ -2820,11 +2978,65 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "tomador_cnpj",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tomador_razao_social",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tomador_endereco",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tomador_municipio",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tomador_uf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tomador_cep",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tomador_email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "motivo_cancelamento",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pdf_url",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_nf_servico_venda ON nf_servico_comissao (venda_b2b_id)",
-        "CREATE INDEX idx_nf_servico_numero ON nf_servico_comissao (numero_nf)",
+        "CREATE INDEX idx_nf_servico_numero ON nf_servico_comissao (numero_nfse)",
         "CREATE INDEX idx_nf_servico_status ON nf_servico_comissao (status)"
       ]
     },
@@ -2952,6 +3164,114 @@
         "CREATE INDEX idx_hearing_aid_tests_status ON hearing_aid_tests (status)",
         "CREATE INDEX idx_hearing_aid_tests_inventory ON hearing_aid_tests (inventory_item_id)"
       ]
+    },
+    {
+      "name": "nfse_b2b_config",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.role = 'admin'",
+        "update": "@request.auth.role = 'admin'",
+        "delete": "@request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "municipio",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "uf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "codigo_municipio",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "provedor",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["BETHA", "NOTABLU", "SIMPLISS", "GINFES", "ABRASF", "OUTRO"]
+        },
+        {
+          "name": "url_api",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "login_api",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "token_api",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "inscricao_municipal",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aliquota_iss_padrao",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "item_lista_servico",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "discriminacao_padrao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ambiente",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["homologacao", "producao"]
+        },
+        {
+          "name": "ativo",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
     }
   ]
 }

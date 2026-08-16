@@ -37,6 +37,21 @@ export function NFServicoComissaoPrint({
   empresa?: EmpresaParceira
   clinic?: ClinicSettings | null
 }) {
+  // Dados do tomador vindos da própria NFS-e (auto-preenchidos no momento da
+  // emissão), com fallback para o cadastro da empresa parceira.
+  const tomador = {
+    razao_social: nf.tomador_razao_social || empresa?.razao_social || venda.cliente_empresa_nome,
+    cnpj: nf.tomador_cnpj || empresa?.cnpj || '',
+    endereco: nf.tomador_endereco || empresa?.endereco || '',
+    municipio: nf.tomador_municipio || empresa?.cidade || '',
+    uf: nf.tomador_uf || empresa?.estado || '',
+    cep: nf.tomador_cep || empresa?.cep || '',
+    email: nf.tomador_email || empresa?.email || '',
+    nome_fantasia: empresa?.nome_fantasia || '',
+    inscricao_estadual: empresa?.inscricao_estadual || '',
+    telefone: empresa?.telefone || '',
+  }
+
   return (
     <div style={{ color: '#1e293b' }}>
       {/* Subtítulo */}
@@ -52,9 +67,9 @@ export function NFServicoComissaoPrint({
       >
         <strong style={{ color: '#1e3a8a' }}>
           <FileText style={{ width: 12, height: 12, display: 'inline', marginRight: 4 }} />
-          Nota Fiscal de Promoção de Vendas
+          NFS-e de Comissão
         </strong>
-        <span>NF Nº {nf.numero_nf}</span>
+        <span>NFS-e Nº {nf.numero_nfse}</span>
       </div>
 
       {/* Código de verificação + data */}
@@ -92,19 +107,17 @@ export function NFServicoComissaoPrint({
       {/* TOMADOR */}
       {sectionTitle('Dados do Tomador')}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 24px' }}>
-        {row('Razão Social', empresa?.razao_social || venda.cliente_empresa_nome)}
-        {row('Nome Fantasia', empresa?.nome_fantasia || '—')}
-        {row('CNPJ', empresa?.cnpj || '—')}
-        {row('Inscrição Estadual', empresa?.inscricao_estadual || '—')}
+        {row('Razão Social', tomador.razao_social)}
+        {row('Nome Fantasia', tomador.nome_fantasia)}
+        {row('CNPJ', tomador.cnpj)}
+        {row('Inscrição Estadual', tomador.inscricao_estadual)}
         {row(
           'Endereço',
-          empresa
-            ? `${empresa.endereco}${empresa.cidade ? ' — ' + empresa.cidade : ''}${empresa.estado ? '/' + empresa.estado : ''}`
-            : '—',
+          `${tomador.endereco}${tomador.municipio ? ' — ' + tomador.municipio : ''}${tomador.uf ? '/' + tomador.uf : ''}`,
         )}
-        {row('CEP', empresa?.cep || '—')}
-        {row('Telefone', empresa?.telefone || '—')}
-        {row('E-mail', empresa?.email || '—')}
+        {row('CEP', tomador.cep)}
+        {row('Telefone', tomador.telefone)}
+        {row('E-mail', tomador.email)}
       </div>
 
       {/* DISCRIMINAÇÃO */}
@@ -121,7 +134,7 @@ export function NFServicoComissaoPrint({
         }}
       >
         {nf.discriminacao_servico ||
-          'Promoção de vendas e intermediação comercial - Comissão sobre venda de aparelhos auditivos'}
+          'Intermediação comercial - Comissão sobre venda de aparelhos auditivos'}
       </div>
       {row('Item da Lista de Serviço', nf.item_lista_servico || '10.01')}
       {row('Venda B2B relacionada', venda.numero_venda)}
@@ -136,6 +149,10 @@ export function NFServicoComissaoPrint({
           </tr>
         </thead>
         <tbody>
+          <tr>
+            <td>Valor da Venda (apenas referência — não tributado)</td>
+            <td style={{ textAlign: 'right' }}>{formatCurrency(venda.valor_total)}</td>
+          </tr>
           <tr>
             <td>Base de Cálculo (Valor da Comissão)</td>
             <td style={{ textAlign: 'right' }}>{formatCurrency(nf.valor_base)}</td>
