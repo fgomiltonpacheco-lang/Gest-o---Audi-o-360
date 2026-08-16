@@ -12,17 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import {
-  ArrowLeft,
-  Save,
-  Printer,
-  Activity,
-  Stethoscope,
-  Ear,
-  FileText,
-  Wand2,
-  Loader2,
-} from 'lucide-react'
+import { ArrowLeft, Save, Printer, Activity, Ear, FileText, Wand2, Loader2 } from 'lucide-react'
 import {
   AIR_FREQS,
   BONE_FREQS,
@@ -532,32 +522,6 @@ export default function Audiometria() {
               className="h-10 rounded-xl text-xs border-slate-300"
             />
           </Field>
-          <Field label="Repouso Auditivo de 14h">
-            <div className="flex items-center gap-3 h-10">
-              <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                <input
-                  type="radio"
-                  name="hearing_rest"
-                  checked={exam.hearing_rest_14h === true}
-                  onChange={() => setField('hearing_rest_14h', true)}
-                  disabled={isSecretaria}
-                  className="accent-teal-600"
-                />
-                Sim
-              </label>
-              <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                <input
-                  type="radio"
-                  name="hearing_rest"
-                  checked={exam.hearing_rest_14h === false}
-                  onChange={() => setField('hearing_rest_14h', false)}
-                  disabled={isSecretaria}
-                  className="accent-teal-600"
-                />
-                Não
-              </label>
-            </div>
-          </Field>
           <Field label="Audiômetro">
             <Input
               value={exam.audiometer}
@@ -575,65 +539,6 @@ export default function Audiometria() {
               className="h-10 rounded-xl text-xs border-slate-300"
             />
           </Field>
-        </div>
-      </Section>
-
-      {/* Meatoscopia / Otoscopia */}
-      <Section
-        title="Meatoscopia / Otoscopia"
-        icon={<Stethoscope className="w-4 h-4 text-teal-600" />}
-      >
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {(['OD', 'OE'] as const).map((side) => {
-            const key = side === 'OD' ? 'otoscopy_od' : 'otoscopy_oe'
-            const obsKey = side === 'OD' ? 'otoscopy_od_obs' : 'otoscopy_oe_obs'
-            const color = side === 'OD' ? 'text-red-600' : 'text-blue-600'
-            const value = exam[key] as 'Normal' | 'Alterada' | ''
-            return (
-              <div
-                key={side}
-                className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3"
-              >
-                <h4 className={`text-xs font-bold uppercase tracking-wider ${color}`}>
-                  Orelha {side === 'OD' ? 'Direita (OD)' : 'Esquerda (OE)'}
-                </h4>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                    <input
-                      type="radio"
-                      name={`otoscopy-${side}`}
-                      checked={value === 'Normal'}
-                      onChange={() => setField(key, 'Normal' as any)}
-                      disabled={isSecretaria}
-                      className="accent-teal-600"
-                    />
-                    Normal
-                  </label>
-                  <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                    <input
-                      type="radio"
-                      name={`otoscopy-${side}`}
-                      checked={value === 'Alterada'}
-                      onChange={() => setField(key, 'Alterada' as any)}
-                      disabled={isSecretaria}
-                      className="accent-teal-600"
-                    />
-                    Alterada
-                  </label>
-                </div>
-                {value === 'Alterada' && (
-                  <Textarea
-                    value={exam[obsKey] as string}
-                    onChange={(e) => setField(obsKey as any, e.target.value)}
-                    disabled={isSecretaria}
-                    placeholder="Observações da meatoscopia..."
-                    rows={2}
-                    className="rounded-xl text-xs border-slate-300 resize-none"
-                  />
-                )}
-              </div>
-            )
-          })}
         </div>
       </Section>
 

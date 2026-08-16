@@ -376,9 +376,7 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
           <strong>Sexo:</strong> {checkBox(exam.sex === 'F')}F {checkBox(exam.sex === 'M')}M
         </div>
         <div style={{ fontSize: '7.5pt' }}>
-          <strong>Encaminhado por:</strong> {exam.referred_by || '—'} &nbsp;&nbsp;
-          <strong>Repouso Auditivo 14h:</strong> {checkBox(exam.hearing_rest_14h === true)}Sim{' '}
-          {checkBox(exam.hearing_rest_14h === false)}Não
+          <strong>Encaminhado por:</strong> {exam.referred_by || '—'}
         </div>
         <div style={{ fontSize: '7.5pt' }}>
           <strong>Audiômetro:</strong> {exam.audiometer || '—'} &nbsp;&nbsp;
@@ -457,18 +455,6 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
             <strong>Quadritonal:</strong> {fmtMedia(oeQuadri)}
           </div>
         </div>
-      </div>
-      {/* Meatoscopia — uma linha horizontal, sem bordas de card */}
-      <div style={{ fontSize: '7.5pt', marginBottom: '2px', marginTop: '2px' }}>
-        <span style={{ color: '#dc2626', fontWeight: 700 }}>OD:</span> Meatoscopia:{' '}
-        {checkBox(exam.otoscopy_od === 'Normal')}Normal {checkBox(exam.otoscopy_od === 'Alterada')}
-        Alterada
-        {exam.otoscopy_od_obs ? ` (obs: ${exam.otoscopy_od_obs})` : ''}
-        &nbsp;&nbsp;&nbsp;
-        <span style={{ color: '#2563eb', fontWeight: 700 }}>OE:</span> Meatoscopia:{' '}
-        {checkBox(exam.otoscopy_oe === 'Normal')}Normal {checkBox(exam.otoscopy_oe === 'Alterada')}
-        Alterada
-        {exam.otoscopy_oe_obs ? ` (obs: ${exam.otoscopy_oe_obs})` : ''}
       </div>
       {/* Limiares Vocais — uma linha, separada por pipe, sem MT */}
       <div style={{ fontSize: '7.5pt', marginBottom: '3px' }}>
