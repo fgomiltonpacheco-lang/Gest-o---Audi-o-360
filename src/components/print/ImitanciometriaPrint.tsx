@@ -99,6 +99,159 @@ export function ImitanciometriaPrint({
     return String(v)
   }
 
+  // ---- Gráfico simplificado da curva de complacência (timpanometria) ----
+  // Eixo X: pressão em daPa (range -400 a +200). Eixo Y: complacência em ml
+  // (range 0 a 5). Plota um ponto por orelha a partir de pressao_pico e
+  // complacencia. SVG inline, pequeno, não quebra a regra de 1 página A4.
+  const TimpCurveGraph: React.FC<{ ear: 'OD' | 'OE' }> = ({ ear }) => {
+    const W = 150
+    const H = 78
+    const padL = 26
+    const padR = 6
+    const padT = 6
+    const padB = 16
+    const plotW = W - padL - padR
+    const plotH = H - padT - padB
+
+    const P_MIN = -400
+    const P_MAX = 200
+    const C_MIN = 0
+    const C_MAX = 5
+
+    const xOf = (p: number) =>
+      padL + ((Math.max(P_MIN, Math.min(P_MAX, p)) - P_MIN) / (P_MAX - P_MIN)) * plotW
+    const yOf = (c: number) =>
+      padT + plotH - ((Math.max(C_MIN, Math.min(C_MAX, c)) - C_MIN) / (C_MAX - C_MIN)) * plotH
+
+    const timp = ear === 'OD' ? odTimp : oeTimp
+    const hasPoint =
+      timp != null &&
+      timp.pressao_pico != null &&
+      timp.complacencia != null &&
+      !isNaN(Number(timp.pressao_pico)) &&
+      !isNaN(Number(timp.complacencia))
+    const px = hasPoint ? xOf(Number(timp!.pressao_pico)) : null
+    const py = hasPoint ? yOf(Number(timp!.complacencia)) : null
+
+    const color = ear === 'OD' ? '#dc2626' : '#2563eb'
+    const zeroX = xOf(0)
+
+    const ticksX = [-400, -200, 0, 200]
+    const ticksY = [0, 1, 2, 3, 4, 5]
+
+    return (
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
+        {/* grade horizontal */}
+        {ticksY.map((c) => (
+          <g key={`y-${c}`}>
+            <line
+              x1={padL}
+              x2={W - padR}
+              y1={yOf(c)}
+              y2={yOf(c)}
+              stroke="#e2e8f0"
+              strokeWidth={0.5}
+            />
+            <text
+              x={padL - 2}
+              y={yOf(c) + 2.5}
+              textAnchor="end"
+              style={{ fontSize: 6 }}
+              fill="#64748b"
+            >
+              {c}
+            </text>
+          </g>
+        ))}
+        {/* linha de pressão zero (destaque) */}
+        <line
+          x1={zeroX}
+          x2={zeroX}
+          y1={padT}
+          y2={padT + plotH}
+          stroke="#94a3b8"
+          strokeWidth={0.6}
+        />
+        {/* eixos */}
+        <line
+          x1={padL}
+          x2={W - padR}
+          y1={padT + plotH}
+          y2={padT + plotH}
+          stroke="#475569"
+          strokeWidth={0.7}
+        />
+        <line x1={padL} x2={padL} y1={padT} y2={padT + plotH} stroke="#475569" strokeWidth={0.7} />
+        {/* ticks X */}
+        {ticksX.map((p) => (
+          <text
+            key={`x-${p}`}
+            x={xOf(p)}
+            y={H - 5}
+            textAnchor="middle"
+            style={{ fontSize: 6 }}
+            fill="#64748b"
+          >
+            {p}
+          </text>
+        ))}
+        {/* rótulos dos eixos */}
+        <text
+          x={padL + plotW / 2}
+          y={H - 1}
+          textAnchor="middle"
+          style={{ fontSize: 6 }}
+          fill="#475569"
+        >
+          Pressão (daPa)
+        </text>
+        <text
+          x={6}
+          y={padT + plotH / 2}
+          textAnchor="middle"
+          style={{ fontSize: 6, fill: '#475569' }}
+          transform={`rotate(-90 6 ${padT + plotH / 2})`}
+        >
+          Compl. (ml)
+        </text>
+        {/* ponto */}
+        {hasPoint && px != null && py != null && (
+          <>
+            <line
+              x1={px}
+              y1={padT + plotH}
+              x2={px}
+              y2={py}
+              stroke={color}
+              strokeWidth={0.5}
+              strokeDasharray="2 2"
+            />
+            <line
+              x1={padL}
+              y1={py}
+              x2={px}
+              y2={py}
+              stroke={color}
+              strokeWidth={0.5}
+              strokeDasharray="2 2"
+            />
+            <circle cx={px} cy={py} r={2.6} fill={color} />
+          </>
+        )}
+        {/* rótulo da orelha */}
+        <text
+          x={W - padR}
+          y={padT + 6}
+          textAnchor="end"
+          style={{ fontSize: 7, fontWeight: 700 }}
+          fill={color}
+        >
+          {ear}
+        </text>
+      </svg>
+    )
+  }
+
   return (
     <div
       className="imitanciometria-print"
@@ -226,6 +379,12 @@ export function ImitanciometriaPrint({
             </tr>
           </tbody>
         </table>
+
+        {/* Gráfico da curva de complacência (timpanometria) — um por orelha */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: '3px', alignItems: 'center' }}>
+          <TimpCurveGraph ear="OD" />
+          <TimpCurveGraph ear="OE" />
+        </div>
       </div>
 
       {/* Reflexo Acústico */}

@@ -22,6 +22,12 @@ import {
   ListChecks,
   SlidersHorizontal,
   ShieldCheck,
+  ChevronDown,
+  TrendingUp,
+  Target,
+  CalendarX,
+  UserPlus,
+  Shield,
   type LucideIcon,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
@@ -41,6 +47,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Mobile sidebar state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [logoutModalOpen, setLogoutModalOpen] = useState(false)
+  const [relatoriosOpen, setRelatoriosOpen] = useState(
+    () => typeof window !== 'undefined' && window.location.pathname.startsWith('/relatorios'),
+  )
 
   interface NavItem {
     name: string
@@ -48,6 +57,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     icon: LucideIcon
     exact?: boolean
     adminOnly?: boolean
+    children?: NavItem[]
   }
 
   // Menu agrupado institucional
@@ -137,6 +147,56 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           path: '/relatorios',
           icon: BarChart3,
           adminOnly: true,
+          children: [
+            {
+              name: 'Comissões B2B',
+              path: '/relatorios/comissoes-b2b',
+              icon: PieChart,
+              adminOnly: true,
+            },
+            {
+              name: 'Faturamento',
+              path: '/relatorios/faturamento',
+              icon: DollarSign,
+              adminOnly: true,
+            },
+            {
+              name: 'Produção por Profissional',
+              path: '/relatorios/producao',
+              icon: BarChart3,
+              adminOnly: false,
+            },
+            {
+              name: 'Taxa de Conversão',
+              path: '/relatorios/conversao',
+              icon: Target,
+              adminOnly: true,
+            },
+            {
+              name: 'No-Show / Faltas',
+              path: '/relatorios/no-show',
+              icon: CalendarX,
+              adminOnly: true,
+            },
+            {
+              name: 'Pacientes Novos vs. Retornos',
+              path: '/relatorios/pacientes-fluxo',
+              icon: UserPlus,
+              adminOnly: true,
+            },
+            {
+              name: 'Estoque Baixo',
+              path: '/relatorios/estoque-baixo',
+              icon: Package,
+              adminOnly: true,
+            },
+            {
+              name: 'Garantias Vencendo',
+              path: '/relatorios/garantias',
+              icon: Shield,
+              adminOnly: true,
+            },
+          ],
         },
         {
           name: 'Configurações',
@@ -179,13 +239,103 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigationGroups = allNavigationGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.adminOnly || currentUser?.role === 'admin'),
+      items: group.items
+        .filter((item) => !item.adminOnly || currentUser?.role === 'admin')
+        .map((item) =>
+          item.children
+            ? {
+                ...item,
+                children: item.children.filter(
+                  (c) => !c.adminOnly || currentUser?.role === 'admin',
+                ),
+              }
+            : item,
+        ),
     }))
     .filter((group) => group.items.length > 0)
 
   const isCurrentActive = (path: string, exact = false) => {
     if (exact) return location.pathname === path
     return location.pathname.startsWith(path)
+  }
+
+  // Renderiza um item de menu, com suporte a submenu expansível (children)
+  const renderNavItem = (item: NavItem, { mobile }: { mobile: boolean }) => {
+    const active = isCurrentActive(item.path, item.exact)
+    const Icon = item.icon
+
+    // Item com submenu
+    if (item.children && item.children.length > 0) {
+      const parentActive = location.pathname.startsWith(item.path)
+      const open = relatoriosOpen || parentActive
+      return (
+        <div key={item.path}>
+          <button
+            onClick={() => setRelatoriosOpen((v) => !v)}
+            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 relative w-full text-left ${
+              parentActive
+                ? 'bg-white/10 text-white font-semibold shadow-sm'
+                : 'text-slate-300/80 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            {parentActive && (
+              <span className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-teal-500 rounded-r-full" />
+            )}
+            <Icon
+              className={`w-4 h-4 shrink-0 ${parentActive ? 'text-teal-300' : 'text-slate-300/70'}`}
+            />
+            <span className="flex-1">{item.name}</span>
+            <ChevronDown
+              className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+            />
+          </button>
+          {open && (
+            <div className="mt-0.5 ml-3 pl-3 border-l border-white/10 space-y-0.5">
+              {item.children.map((child) => {
+                const cActive =
+                  isCurrentActive(child.path, true) || location.pathname === child.path
+                const CIcon = child.icon
+                return (
+                  <Link
+                    key={child.path}
+                    to={child.path}
+                    onClick={() => mobile && setMobileMenuOpen(false)}
+                    className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] transition-all ${
+                      cActive
+                        ? 'bg-teal-500/15 text-teal-200 font-semibold'
+                        : 'text-slate-300/70 hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    <CIcon className="w-3.5 h-3.5 shrink-0" />
+                    <span>{child.name}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    // Item simples
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        onClick={() => mobile && setMobileMenuOpen(false)}
+        className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 relative ${
+          active
+            ? 'bg-white/10 text-white font-semibold shadow-sm'
+            : 'text-slate-300/80 hover:bg-white/5 hover:text-white'
+        }`}
+      >
+        {active && (
+          <span className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-teal-500 rounded-r-full" />
+        )}
+        <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-teal-300' : 'text-slate-300/70'}`} />
+        <span>{item.name}</span>
+      </Link>
+    )
   }
 
   return (
@@ -211,29 +361,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <span className="px-3 text-[11px] font-bold uppercase tracking-wider text-teal-300/60 block">
                 {group.groupTitle}
               </span>
-              {group.items.map((item) => {
-                const active = isCurrentActive(item.path, item.exact)
-                const Icon = item.icon
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 relative ${
-                      active
-                        ? 'bg-white/10 text-white font-semibold shadow-sm'
-                        : 'text-slate-300/80 hover:bg-white/5 hover:text-white'
-                    }`}
-                  >
-                    {active && (
-                      <span className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-teal-500 rounded-r-full" />
-                    )}
-                    <Icon
-                      className={`w-4 h-4 shrink-0 ${active ? 'text-teal-300' : 'text-slate-300/70'}`}
-                    />
-                    <span>{item.name}</span>
-                  </Link>
-                )
-              })}
+              {group.items.map((item) => renderNavItem(item, { mobile: false }))}
             </div>
           ))}
         </div>
@@ -327,24 +455,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <span className="px-3 text-[10px] font-bold uppercase tracking-wider text-teal-300/60 block">
                     {group.groupTitle}
                   </span>
-                  {group.items.map((item) => {
-                    const active = isCurrentActive(item.path, item.exact)
-                    const Icon = item.icon
-                    return (
-                      <Link
-                        key={item.path}
-                        to={item.path}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                          active
-                            ? 'bg-white/10 text-white font-semibold'
-                            : 'text-slate-300/80 hover:bg-white/5 hover:text-white'
-                        }`}
-                      >
-                        <Icon className="w-4 h-4 text-teal-300 shrink-0" /> <span>{item.name}</span>
-                      </Link>
-                    )
-                  })}
+                  {group.items.map((item) => renderNavItem(item, { mobile: true }))}
                 </div>
               ))}
             </div>

@@ -17,6 +17,13 @@ import Vendas from '@/pages/Vendas'
 import PDV from '@/pages/PDV'
 import Estoque from '@/pages/Estoque'
 import Relatorios from '@/pages/Relatorios'
+import RelatorioFaturamento from '@/pages/relatorios/Faturamento'
+import RelatorioProducao from '@/pages/relatorios/Producao'
+import RelatorioConversao from '@/pages/relatorios/Conversao'
+import RelatorioNoShow from '@/pages/relatorios/NoShow'
+import RelatorioPacientesFluxo from '@/pages/relatorios/PacientesFluxo'
+import RelatorioEstoqueBaixo from '@/pages/relatorios/EstoqueBaixo'
+import RelatorioGarantias from '@/pages/relatorios/Garantias'
 import Profile from '@/pages/Profile'
 import Users from '@/pages/Users'
 import Procedimentos from '@/pages/Procedimentos'
@@ -220,6 +227,63 @@ export function App() {
               element={
                 <AdminRoute>
                   <RelatorioComissoesB2B />
+                </AdminRoute>
+              }
+            />
+            {/* ===== Módulo de Relatórios (expandido) ===== */}
+            <Route
+              path="/relatorios/faturamento"
+              element={
+                <AdminRoute>
+                  <RelatorioFaturamento />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/relatorios/producao"
+              element={
+                <ProtectedRoute>
+                  <RelatorioProducao />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/relatorios/conversao"
+              element={
+                <AdminRoute>
+                  <RelatorioConversao />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/relatorios/no-show"
+              element={
+                <AdminRoute>
+                  <RelatorioNoShow />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/relatorios/pacientes-fluxo"
+              element={
+                <AdminRoute>
+                  <RelatorioPacientesFluxo />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/relatorios/estoque-baixo"
+              element={
+                <AdminRoute>
+                  <RelatorioEstoqueBaixo />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/relatorios/garantias"
+              element={
+                <AdminRoute>
+                  <RelatorioGarantias />
                 </AdminRoute>
               }
             />
