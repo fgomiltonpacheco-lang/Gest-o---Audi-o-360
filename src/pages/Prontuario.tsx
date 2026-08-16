@@ -119,7 +119,6 @@ export default function Prontuario() {
 
   // Tab State
   const [activeTab, setActiveTab] = useState('cadastrais')
-
   // Modais de Exames
   const [tympModalOpen, setTympModalOpen] = useState(false)
   const [beraModalOpen, setBeraModalOpen] = useState(false)
@@ -382,8 +381,8 @@ export default function Prontuario() {
               >
                 Dados Cadastrais
               </TabsTrigger>
-              <TabsTrigger value="prontuario" className="text-xs font-semibold py-2 rounded-lg">
-                Prontuário
+              <TabsTrigger value="anamnese" className="text-xs font-semibold py-2 rounded-lg">
+                Anamnese
               </TabsTrigger>
               <TabsTrigger value="exames" className="text-xs font-semibold py-2 rounded-lg">
                 Exames ({examsCount})
@@ -391,16 +390,17 @@ export default function Prontuario() {
               <TabsTrigger value="aparelhos" className="text-xs font-semibold py-2 rounded-lg">
                 Aparelhos ({patientAids.length})
               </TabsTrigger>
-              <TabsTrigger value="financeiro" className="text-xs font-semibold py-2 rounded-lg">
-                Financeiro
-              </TabsTrigger>
               <TabsTrigger value="evolucao" className="text-xs font-semibold py-2 rounded-lg">
                 Evolução ({patientEvolutions.length})
+              </TabsTrigger>
+              <TabsTrigger value="financeiro" className="text-xs font-semibold py-2 rounded-lg">
+                Financeiro
               </TabsTrigger>
             </TabsList>
 
             {/* 1. ABA DADOS CADASTRAIS */}
             <TabsContent value="cadastrais" className="space-y-5 pt-5">
+              {' '}
               {/* Cabeçalho do paciente */}
               <div className="flex flex-col sm:flex-row items-center gap-4 pb-5 border-b border-slate-100">
                 <div
@@ -435,7 +435,6 @@ export default function Prontuario() {
                   </div>
                 </div>
               </div>
-
               {/* Grid de informações cadastrais */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Dados Pessoais */}
@@ -573,9 +572,10 @@ export default function Prontuario() {
               </div>
             </TabsContent>
 
-            {/* 2. ABA PRONTUÁRIO (Dados Clínicos) */}
-            <TabsContent value="prontuario" className="space-y-4 pt-5">
+            {/* 2. ABA ANAMNESE (Dados Clínicos) */}
+            <TabsContent value="anamnese" className="space-y-4 pt-5">
               <form onSubmit={handleSaveClinicalRecord} className="space-y-4">
+                {' '}
                 <div>
                   <Label className="text-xs font-bold text-slate-800">Queixa Principal</Label>
                   <Textarea
@@ -587,7 +587,6 @@ export default function Prontuario() {
                     className="rounded-xl mt-1 text-xs border-slate-300"
                   />
                 </div>
-
                 <div>
                   <Label className="text-xs font-bold text-slate-800">Anamnese Geral</Label>
                   <Textarea
@@ -599,7 +598,6 @@ export default function Prontuario() {
                     className="rounded-xl mt-1 text-xs border-slate-300"
                   />
                 </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-xs font-bold text-slate-800">
@@ -626,7 +624,6 @@ export default function Prontuario() {
                     />
                   </div>
                 </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-xs font-bold text-slate-800">
@@ -655,7 +652,6 @@ export default function Prontuario() {
                     />
                   </div>
                 </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="sm:col-span-2">
                     <Label className="text-xs font-bold text-slate-800">Conduta Terapêutica</Label>
@@ -679,7 +675,6 @@ export default function Prontuario() {
                     />
                   </div>
                 </div>
-
                 {!isSecretaria && (
                   <div className="flex justify-end pt-2 border-t border-slate-100">
                     <Button
@@ -1013,12 +1008,9 @@ export default function Prontuario() {
               )}
             </TabsContent>
 
-            {/* 5. ABA FINANCEIRO - Interface de Lançamento no Atendimento */}
-            <TabsContent value="financeiro" className="space-y-5 pt-5">
-              <FinanceiroAtendimentoSection patient={patient} />
-            </TabsContent>
-            {/* 6. ABA EVOLUÇÃO */}
+            {/* 5. ABA EVOLUÇÃO */}
             <TabsContent value="evolucao" className="space-y-4 pt-5">
+              {' '}
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-slate-900">
                   Linha do Tempo de Evoluções Clínicas
@@ -1032,7 +1024,6 @@ export default function Prontuario() {
                   Nova Evolução
                 </Button>
               </div>
-
               {patientEvolutions.length === 0 ? (
                 <div className="text-center py-10 text-slate-400 text-xs bg-slate-50 rounded-xl">
                   Nenhuma evolução clínica registrada ainda para este paciente.
@@ -1078,6 +1069,11 @@ export default function Prontuario() {
                   ))}
                 </div>
               )}
+            </TabsContent>
+
+            {/* 6. ABA FINANCEIRO - Interface de Lançamento no Atendimento */}
+            <TabsContent value="financeiro" className="space-y-5 pt-5">
+              <FinanceiroAtendimentoSection patient={patient} />
             </TabsContent>
           </Tabs>
         </div>
