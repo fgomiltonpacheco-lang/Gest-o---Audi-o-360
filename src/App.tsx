@@ -34,6 +34,9 @@ import NovaVendaB2B from '@/pages/NovaVendaB2B'
 import DetalhesVendaB2B from '@/pages/DetalhesVendaB2B'
 import EmpresasParceiras from '@/pages/EmpresasParceiras'
 import Auditoria from '@/pages/Auditoria'
+import ContasReceberPage from '@/pages/ContasReceber'
+import Inadimplentes from '@/pages/Inadimplentes'
+import FluxoProjetado from '@/pages/FluxoProjetado'
 import NotFound from '@/pages/NotFound'
 import { Toaster } from '@/components/ui/toaster'
 import { useToast } from '@/hooks/use-toast'
@@ -175,6 +178,30 @@ export function App() {
               element={
                 <AdminRoute>
                   <Caixa />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/financeiro/contas-receber"
+              element={
+                <AdminRoute>
+                  <ContasReceberPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/financeiro/inadimplentes"
+              element={
+                <AdminRoute>
+                  <Inadimplentes />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/financeiro/fluxo-projetado"
+              element={
+                <AdminRoute>
+                  <FluxoProjetado />
                 </AdminRoute>
               }
             />

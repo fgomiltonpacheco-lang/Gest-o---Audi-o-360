@@ -6,6 +6,8 @@ import {
   Calendar,
   FileText,
   Wallet,
+  TrendingDown,
+  CalendarRange,
   DollarSign,
   Package,
   BarChart3,
@@ -134,6 +136,24 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           name: 'Caixa',
           path: '/financeiro/caixa',
           icon: Wallet,
+          adminOnly: true,
+        },
+        {
+          name: 'Contas a Receber',
+          path: '/financeiro/contas-receber',
+          icon: DollarSign,
+          adminOnly: true,
+        },
+        {
+          name: 'Inadimplentes',
+          path: '/financeiro/inadimplentes',
+          icon: TrendingDown,
+          adminOnly: true,
+        },
+        {
+          name: 'Fluxo Projetado',
+          path: '/financeiro/fluxo-projetado',
+          icon: CalendarRange,
           adminOnly: true,
         },
         {

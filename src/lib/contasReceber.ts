@@ -1,7 +1,5 @@
 import type { ContaReceber, ContaReceberStatus } from '@/types'
 
-export { STATUS_BADGE_CLASS } from '@/lib/contasReceberStatus'
-
 /** Hoje em YYYY-MM-DD (horário local). */
 export function todayStr(): string {
   const d = new Date()
