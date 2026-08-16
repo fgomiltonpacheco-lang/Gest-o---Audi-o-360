@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T02:20:30.650Z",
+  "generatedAt": "2026-08-16T02:25:58.938Z",
   "collections": [
     {
       "name": "users",
@@ -1752,6 +1752,201 @@
         }
       ],
       "indexes": []
+    },
+    {
+      "name": "audiometry_exams",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "patient",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "created_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "date",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cpf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dob",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "age",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sex",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "referred_by",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hearing_rest_14h",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "audiometer",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "calibration",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "otoscopy_od",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "otoscopy_od_obs",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "otoscopy_oe",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "otoscopy_oe_obs",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "air_od",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "air_oe",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "bone_od",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "bone_oe",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mt_od",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mt_oe",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lrf_od",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lrf_oe",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ldv_od",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ldv_oe",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "iprf",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "report",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_audiometry_exams_patient ON audiometry_exams (patient)",
+        "CREATE INDEX idx_audiometry_exams_date ON audiometry_exams (date)"
+      ]
     }
   ]
 }

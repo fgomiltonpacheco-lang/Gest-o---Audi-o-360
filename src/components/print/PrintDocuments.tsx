@@ -6,8 +6,12 @@ import {
   AudiometryExam,
   TympanometryExam,
   BeraExam,
+  AudiometryExamFull,
+  AIR_FREQS,
+  BONE_FREQS,
 } from '@/types'
 import { formatDate, maskCPF, calculateAge } from '@/lib/formatters'
+import { AudiogramChart } from '@/components/AudiogramChart'
 
 const FREQUENCIES_AIR = ['250', '500', '1000', '2000', '3000', '4000', '6000', '8000']
 const FREQUENCIES_BONE = ['500', '1000', '2000', '4000']
@@ -326,6 +330,282 @@ export function AudiometryPrint({ exam }: { exam: AudiometryExam }) {
           {exam.notes}
         </div>
       )}
+    </div>
+  )
+}
+
+/* ============ AUDIOMETRIA COMPLETA (audiometry_exams) ============ */
+export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
+  const sectionTitle = (text: string) => (
+    <h3
+      style={{
+        fontSize: '12pt',
+        fontWeight: 700,
+        color: '#0F2B5C',
+        borderBottom: '1.5px solid #cbd5e1',
+        paddingBottom: '4px',
+        marginTop: '18px',
+        marginBottom: '8px',
+      }}
+    >
+      {text}
+    </h3>
+  )
+  const row = (label: string, value: React.ReactNode) => (
+    <div style={{ display: 'flex', padding: '2px 0', fontSize: '10pt' }}>
+      <span style={{ width: '40%', color: '#64748b', fontWeight: 600 }}>{label}:</span>
+      <span style={{ flex: 1, color: '#1e293b', fontWeight: 500 }}>{value || '—'}</span>
+    </div>
+  )
+
+  const thStyle: React.CSSProperties = {
+    border: '1px solid #cbd5e1',
+    padding: '4px 8px',
+    background: '#f1f5f9',
+    fontSize: '9pt',
+    fontWeight: 700,
+    textAlign: 'center',
+  }
+  const tdStyle: React.CSSProperties = {
+    border: '1px solid #cbd5e1',
+    padding: '4px 8px',
+    fontSize: '9pt',
+    textAlign: 'center',
+  }
+
+  const fmtFreq = (f: string) => (Number(f) >= 1000 ? `${Number(f) / 1000}k` : f)
+
+  const cellPoint = (freq: string, map: any) => {
+    const p = map?.[freq]
+    if (!p || p.db === null || p.db === undefined) return '—'
+    const symMap: Record<string, string> = {
+      normal: '',
+      no_response: '↓',
+      masked: '▢',
+      masked_no_response: '▢↓',
+    }
+    const suffix = symMap[p.symbol] || ''
+    return `${p.db}${suffix}`
+  }
+
+  return (
+    <div>
+      {/* Identificação do paciente */}
+      <div style={{ fontSize: '10pt', color: '#475569', marginBottom: '10px' }}>
+        <strong>Paciente:</strong> {exam.patientName} &nbsp;|&nbsp; <strong>Data:</strong>{' '}
+        {formatDate(exam.date)} &nbsp;|&nbsp; <strong>CPF:</strong> {maskCPF(exam.cpf)}{' '}
+        &nbsp;|&nbsp; <strong>DN:</strong> {formatDate(exam.dob)} &nbsp;|&nbsp;{' '}
+        <strong>Idade:</strong> {exam.age || '—'} &nbsp;|&nbsp; <strong>Sexo:</strong>{' '}
+        {exam.sex || '—'}
+      </div>
+      <div style={{ fontSize: '10pt', color: '#475569', marginBottom: '10px' }}>
+        <strong>Encaminhado por:</strong> {exam.referred_by || '—'} &nbsp;|&nbsp;{' '}
+        <strong>Repouso Auditivo 14h:</strong> {exam.hearing_rest_14h ? 'Sim' : 'Não'} &nbsp;|&nbsp;{' '}
+        <strong>Audiômetro:</strong> {exam.audiometer || '—'} &nbsp;|&nbsp;{' '}
+        <strong>Calibração:</strong> {formatDate(exam.calibration)}
+      </div>
+
+      {/* Meatoscopia */}
+      {sectionTitle('Meatoscopia / Otoscopia')}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 24px' }}>
+        {row(
+          'OD',
+          `${exam.otoscopy_od || '—'}${exam.otoscopy_od_obs ? ` — ${exam.otoscopy_od_obs}` : ''}`,
+        )}
+        {row(
+          'OE',
+          `${exam.otoscopy_oe || '—'}${exam.otoscopy_oe_obs ? ` — ${exam.otoscopy_oe_obs}` : ''}`,
+        )}
+      </div>
+
+      {/* Audiograma (SVG) */}
+      {sectionTitle('Audiograma Tonal')}
+      <div style={{ breakInside: 'avoid' }}>
+        <AudiogramChart
+          airOD={exam.air_od}
+          airOE={exam.air_oe}
+          boneOD={exam.bone_od}
+          boneOE={exam.bone_oe}
+        />
+      </div>
+
+      {/* Via Aérea tabela */}
+      {sectionTitle('Via Aérea (dB HL)')}
+      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+        <thead>
+          <tr>
+            <th style={thStyle}>Orelha</th>
+            {AIR_FREQS.map((f) => (
+              <th key={f} style={thStyle}>
+                {fmtFreq(f)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ ...tdStyle, fontWeight: 700, color: '#2563eb' }}>OD</td>
+            {AIR_FREQS.map((f) => (
+              <td key={f} style={tdStyle}>
+                {cellPoint(f, exam.air_od)}
+              </td>
+            ))}
+          </tr>
+          <tr>
+            <td style={{ ...tdStyle, fontWeight: 700, color: '#dc2626' }}>OE</td>
+            {AIR_FREQS.map((f) => (
+              <td key={f} style={tdStyle}>
+                {cellPoint(f, exam.air_oe)}
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+
+      {/* Via Óssea tabela */}
+      {sectionTitle('Via Óssea (dB HL)')}
+      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+        <thead>
+          <tr>
+            <th style={thStyle}>Orelha</th>
+            {BONE_FREQS.map((f) => (
+              <th key={f} style={thStyle}>
+                {fmtFreq(f)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ ...tdStyle, fontWeight: 700, color: '#2563eb' }}>OD</td>
+            {BONE_FREQS.map((f) => (
+              <td key={f} style={tdStyle}>
+                {cellPoint(f, exam.bone_od)}
+              </td>
+            ))}
+          </tr>
+          <tr>
+            <td style={{ ...tdStyle, fontWeight: 700, color: '#dc2626' }}>OE</td>
+            {BONE_FREQS.map((f) => (
+              <td key={f} style={tdStyle}>
+                {cellPoint(f, exam.bone_oe)}
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+
+      {/* Logoaudiometria */}
+      {sectionTitle('Índices Logoaudiométricos')}
+      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+        <thead>
+          <tr>
+            <th style={thStyle}>Orelha</th>
+            <th style={thStyle}>MT (dB)</th>
+            <th style={thStyle}>LRF (dB)</th>
+            <th style={thStyle}>LDV (dB)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ ...tdStyle, fontWeight: 700, color: '#2563eb' }}>OD</td>
+            <td style={tdStyle}>{exam.mt_od ?? '—'}</td>
+            <td style={tdStyle}>{exam.lrf_od ?? '—'}</td>
+            <td style={tdStyle}>{exam.ldv_od ?? '—'}</td>
+          </tr>
+          <tr>
+            <td style={{ ...tdStyle, fontWeight: 700, color: '#dc2626' }}>OE</td>
+            <td style={tdStyle}>{exam.mt_oe ?? '—'}</td>
+            <td style={tdStyle}>{exam.lrf_oe ?? '—'}</td>
+            <td style={tdStyle}>{exam.ldv_oe ?? '—'}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* IPRF */}
+      {sectionTitle('IPRF — Índice de Reconhecimento de Fala')}
+      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+        <thead>
+          <tr>
+            <th style={thStyle}>Orelha</th>
+            <th style={thStyle}>Intensidade (dB)</th>
+            <th style={thStyle}>Monossílabos (%)</th>
+            <th style={thStyle}>Dissílabos (%)</th>
+            <th style={thStyle}>Mascaramento (dB)</th>
+            <th style={thStyle}>Palavras Faladas</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(['od', 'oe'] as const).map((side) => {
+            const r: any = exam.iprf?.[side] || {}
+            const label = side === 'od' ? 'OD' : 'OE'
+            const color = side === 'od' ? '#2563eb' : '#dc2626'
+            return (
+              <tr key={side}>
+                <td style={{ ...tdStyle, fontWeight: 700, color }}>{label}</td>
+                <td style={tdStyle}>{r.intensidade || '—'}</td>
+                <td style={tdStyle}>{r.monossilabos || '—'}</td>
+                <td style={tdStyle}>{r.dissilabos || '—'}</td>
+                <td style={tdStyle}>{r.mascaramento || '—'}</td>
+                <td style={tdStyle}>{r.palavras || '—'}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+
+      {/* Parecer */}
+      {sectionTitle('Parecer Audiológico')}
+      <div
+        style={{ fontSize: '10pt', color: '#334155', whiteSpace: 'pre-wrap', minHeight: '40px' }}
+      >
+        {exam.report || '—'}
+      </div>
+
+      {/* Assinaturas */}
+      <div
+        style={{ display: 'flex', justifyContent: 'space-between', marginTop: '60px', gap: '40px' }}
+      >
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <div
+            style={{
+              borderTop: '1px solid #475569',
+              paddingTop: '6px',
+              fontSize: '10pt',
+              fontWeight: 600,
+            }}
+          >
+            Fonoaudiólogo
+          </div>
+        </div>
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <div
+            style={{
+              borderTop: '1px solid #475569',
+              paddingTop: '6px',
+              fontSize: '10pt',
+              fontWeight: 600,
+            }}
+          >
+            Cliente
+          </div>
+        </div>
+      </div>
+
+      {/* Rodapé clínica */}
+      <div
+        style={{
+          marginTop: '24px',
+          paddingTop: '10px',
+          borderTop: '1px solid #cbd5e1',
+          fontSize: '9pt',
+          color: '#64748b',
+          textAlign: 'center',
+        }}
+      >
+        Audição360 — R. Sadoc Correa, 373 - St. Central, Araguaína - TO, 77803-060 • Telefone: (63)
+        3421-2611
+      </div>
     </div>
   )
 }

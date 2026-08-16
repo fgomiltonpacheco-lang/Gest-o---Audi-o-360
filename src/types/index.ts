@@ -195,6 +195,133 @@ export interface AudiometryExam {
   notes?: string
 }
 
+// ===== Módulo de Audiometria Completa (audiometry_exams) =====
+export const AIR_FREQS = [
+  '250',
+  '500',
+  '750',
+  '1000',
+  '1500',
+  '2000',
+  '3000',
+  '4000',
+  '6000',
+  '8000',
+] as const
+export const BONE_FREQS = ['500', '1000', '2000', '3000', '4000'] as const
+
+export type AudiogramSymbol = 'normal' | 'no_response' | 'masked' | 'masked_no_response'
+
+export interface AudiogramPoint {
+  db: number | null
+  symbol: AudiogramSymbol
+}
+
+/** Mapa frequência -> ponto do audiograma (ex.: { "500": { db: 25, symbol: "normal" } }). */
+export type AudiogramMap = Record<string, AudiogramPoint>
+
+export interface IprfRow {
+  intensidade: string
+  monossilabos: string
+  dissilabos: string
+  mascaramento: string
+  palavras: string
+}
+
+export interface IprfData {
+  od: IprfRow
+  oe: IprfRow
+}
+
+export interface AudiometryExamFull {
+  id: string
+  patientId: string
+  patientName: string
+  created_by?: string
+  date: string // YYYY-MM-DD
+  cpf: string
+  dob: string
+  age: string
+  sex: string
+  referred_by: string
+  hearing_rest_14h: boolean
+  audiometer: string
+  calibration: string
+  otoscopy_od: 'Normal' | 'Alterada' | ''
+  otoscopy_od_obs: string
+  otoscopy_oe: 'Normal' | 'Alterada' | ''
+  otoscopy_oe_obs: string
+  air_od: AudiogramMap
+  air_oe: AudiogramMap
+  bone_od: AudiogramMap
+  bone_oe: AudiogramMap
+  mt_od: number | null
+  mt_oe: number | null
+  lrf_od: number | null
+  lrf_oe: number | null
+  ldv_od: number | null
+  ldv_oe: number | null
+  iprf: IprfData
+  report: string
+  created: string
+  updated: string
+}
+
+export function emptyAudiogramMap(freqs: readonly string[]): AudiogramMap {
+  const m: AudiogramMap = {}
+  freqs.forEach((f) => {
+    m[f] = { db: null, symbol: 'normal' }
+  })
+  return m
+}
+
+export function emptyIprf(): IprfData {
+  const emptyRow = (): IprfRow => ({
+    intensidade: '',
+    monossilabos: '',
+    dissilabos: '',
+    mascaramento: '',
+    palavras: '',
+  })
+  return { od: emptyRow(), oe: emptyRow() }
+}
+
+export function emptyAudiometryExamFull(
+  patientId: string,
+  patientName: string,
+): Omit<AudiometryExamFull, 'id' | 'created' | 'updated'> {
+  return {
+    patientId,
+    patientName,
+    created_by: '',
+    date: new Date().toISOString().split('T')[0],
+    cpf: '',
+    dob: '',
+    age: '',
+    sex: '',
+    referred_by: '',
+    hearing_rest_14h: false,
+    audiometer: 'R27a Resonance',
+    calibration: '',
+    otoscopy_od: '',
+    otoscopy_od_obs: '',
+    otoscopy_oe: '',
+    otoscopy_oe_obs: '',
+    air_od: emptyAudiogramMap(AIR_FREQS),
+    air_oe: emptyAudiogramMap(AIR_FREQS),
+    bone_od: emptyAudiogramMap(BONE_FREQS),
+    bone_oe: emptyAudiogramMap(BONE_FREQS),
+    mt_od: null,
+    mt_oe: null,
+    lrf_od: null,
+    lrf_oe: null,
+    ldv_od: null,
+    ldv_oe: null,
+    iprf: emptyIprf(),
+    report: '',
+  }
+}
+
 export type ReflexStatus = 'Presente' | 'Ausente' | 'Não testado'
 
 export interface TympanometryData {

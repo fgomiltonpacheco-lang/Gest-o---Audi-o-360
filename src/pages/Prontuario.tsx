@@ -56,6 +56,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import pb from '@/lib/pocketbase/client'
 import { AudiometryModal } from '@/components/AudiometryModal'
 import { TympanometryModal } from '@/components/TympanometryModal'
 import { BeraModal } from '@/components/BeraModal'
@@ -126,6 +127,28 @@ export default function Prontuario() {
     id: string
     name: string
   } | null>(null)
+
+  // Exames de audiometria completa (coleção audiometry_exams)
+  const [fullAudiometries, setFullAudiometries] = useState<any[]>([])
+  const [loadingFullAudio, setLoadingFullAudio] = useState(false)
+  const loadFullAudiometries = async (pid: string) => {
+    setLoadingFullAudio(true)
+    try {
+      const recs = await pb.collection('audiometry_exams').getFullList({
+        filter: `patient = "${pid}"`,
+        sort: '-date',
+      })
+      setFullAudiometries(recs as any[])
+    } catch (err) {
+      console.error('Erro ao carregar audiometrias completas:', err)
+      setFullAudiometries([])
+    } finally {
+      setLoadingFullAudio(false)
+    }
+  }
+  React.useEffect(() => {
+    if (patient?.id) loadFullAudiometries(patient.id)
+  }, [patient?.id])
 
   // Impressão
   const { print } = usePrint()
@@ -666,6 +689,62 @@ export default function Prontuario() {
                   >
                     + BERA
                   </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Exames Audiológicos Completos (audiometry_exams) */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-teal-700 flex items-center gap-1.5">
+                  <Activity className="w-4 h-4" />
+                  Exames Audiológicos Completos ({fullAudiometries.length})
+                </h4>
+                {!isSecretaria && (
+                  <Button
+                    size="sm"
+                    onClick={() => navigate(`/pacientes/${patient.id}/audiometria/novo`)}
+                    className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-8"
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    Novo Exame
+                  </Button>
+                )}
+              </div>
+              {loadingFullAudio ? (
+                <p className="text-xs text-slate-400 italic">Carregando exames...</p>
+              ) : fullAudiometries.length === 0 ? (
+                <p className="text-xs text-slate-400 italic">
+                  Nenhum exame audiológico completo registrado.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {fullAudiometries.map((exam) => {
+                    const date = exam.date ? formatDate(exam.date) : '—'
+                    const report = (exam.report || '').slice(0, 80)
+                    return (
+                      <button
+                        key={exam.id}
+                        onClick={() => navigate(`/pacientes/${patient.id}/audiometria/${exam.id}`)}
+                        className="w-full text-left p-3 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:border-teal-300 hover:shadow-sm transition-all flex items-center justify-between gap-3"
+                      >
+                        <div className="min-w-0">
+                          <span className="text-xs font-extrabold text-slate-900">
+                            Audiometria — {date}
+                          </span>
+                          {report && (
+                            <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                              {report}
+                              {exam.report && exam.report.length > 80 ? '…' : ''}
+                            </p>
+                          )}
+                        </div>
+                        <Badge className="bg-teal-50 text-navy-700 border-teal-200 shrink-0">
+                          Ver / Editar
+                        </Badge>
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>

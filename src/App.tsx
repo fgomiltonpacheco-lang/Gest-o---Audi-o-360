@@ -7,6 +7,7 @@ import Login from '@/pages/Login'
 import Index from '@/pages/Index'
 import Pacientes from '@/pages/Pacientes'
 import Prontuario from '@/pages/Prontuario'
+import Audiometria from '@/pages/Audiometria'
 import Agenda from '@/pages/Agenda'
 import Aparelhos from '@/pages/Aparelhos'
 import Financeiro from '@/pages/Financeiro'
@@ -104,6 +105,15 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <Prontuario />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/pacientes/:id/audiometria/:examId?"
+              element={
+                <ProtectedRoute>
+                  <Audiometria />
                 </ProtectedRoute>
               }
             />
