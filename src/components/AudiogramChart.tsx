@@ -360,16 +360,6 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
             strokeDasharray={lineDash}
           />
         ))}
-        {bonePaths.map((d, i) => (
-          <path
-            key={`bone-line-${side}-${i}`}
-            d={d}
-            fill="none"
-            stroke={color}
-            strokeWidth={1.8}
-            strokeDasharray={lineDash}
-          />
-        ))}
 
         {/* Símbolos Aéreos */}
         {airPts.map((p, i) => {
