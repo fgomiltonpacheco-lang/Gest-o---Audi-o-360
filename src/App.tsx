@@ -15,6 +15,7 @@ import Relatorios from '@/pages/Relatorios'
 import Profile from '@/pages/Profile'
 import Users from '@/pages/Users'
 import Procedimentos from '@/pages/Procedimentos'
+import Configuracoes from '@/pages/Configuracoes'
 import NotFound from '@/pages/NotFound'
 import { Toaster } from '@/components/ui/toaster'
 import { useToast } from '@/hooks/use-toast'
@@ -175,6 +176,15 @@ export function App() {
               element={
                 <AdminRoute>
                   <Procedimentos />
+                </AdminRoute>
+              }
+            />
+
+            <Route
+              path="/configuracoes"
+              element={
+                <AdminRoute>
+                  <Configuracoes />
                 </AdminRoute>
               }
             />

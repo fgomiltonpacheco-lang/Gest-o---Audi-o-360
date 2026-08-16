@@ -117,6 +117,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           icon: Settings,
         },
         {
+          name: 'Configurações',
+          path: '/configuracoes',
+          icon: Settings,
+          adminOnly: true,
+        },
+        {
           name: 'Usuários',
           path: '/usuarios',
           icon: UserCog,

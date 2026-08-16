@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import {
@@ -21,6 +21,8 @@ import {
   DoorOpen,
   Zap,
   AlertTriangle,
+  Lock,
+  LockOpen,
 } from 'lucide-react'
 import {
   formatDate,
@@ -28,9 +30,20 @@ import {
   APPOINTMENT_TYPE_COLORS,
   getAppointmentColor,
 } from '@/lib/formatters'
+import { getHolidayOnDate, getYearHolidays } from '@/lib/holidays'
 import { Appointment, AppointmentType, AppointmentStatus, PatientPlanType } from '@/types'
+import pb from '@/lib/pocketbase/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -75,7 +88,54 @@ function timeToMinutes(time: string): number {
   return h * 60 + m
 }
 
+/** Altura base (px) de cada slot de 30 min na visão Dia. */
+const SLOT_HEIGHT = 60
+
 type ViewMode = 'dia' | 'semana' | 'mes' | 'lista'
+
+// ---------- Configuração de horários da clínica ----------
+
+interface DayHours {
+  open: boolean
+  start: string
+  end: string
+}
+interface OperatingHours {
+  monday: DayHours
+  tuesday: DayHours
+  wednesday: DayHours
+  thursday: DayHours
+  friday: DayHours
+  saturday: DayHours
+  sunday: DayHours
+}
+
+const DEFAULT_OPERATING_HOURS: OperatingHours = {
+  monday: { open: true, start: '07:00', end: '19:00' },
+  tuesday: { open: true, start: '07:00', end: '19:00' },
+  wednesday: { open: true, start: '07:00', end: '19:00' },
+  thursday: { open: true, start: '07:00', end: '19:00' },
+  friday: { open: true, start: '07:00', end: '19:00' },
+  saturday: { open: true, start: '08:00', end: '12:00' },
+  sunday: { open: false, start: '', end: '' },
+}
+
+/** Mapa JS getDay() (0=Dom..6=Sáb) -> chave de OperatingHours. */
+const WEEKDAY_KEY: Record<number, keyof OperatingHours> = {
+  0: 'sunday',
+  1: 'monday',
+  2: 'tuesday',
+  3: 'wednesday',
+  4: 'thursday',
+  5: 'friday',
+  6: 'saturday',
+}
+
+interface BlockedDay {
+  id: string
+  date: string
+  reason: string
+}
 
 // ---------- Helpers de exibição ----------
 
@@ -175,8 +235,101 @@ export default function Agenda() {
   const [attendanceOpen, setAttendanceOpen] = useState(false)
   const [attendanceAppointment, setAttendanceAppointment] = useState<Appointment | null>(null)
 
+  // Configuração da clínica (horários de funcionamento)
+  const [operatingHours, setOperatingHours] = useState<OperatingHours>(DEFAULT_OPERATING_HOURS)
+  const [slotMinutes, setSlotMinutes] = useState<number>(30)
+
+  // Dias bloqueados
+  const [blockedDays, setBlockedDays] = useState<BlockedDay[]>([])
+  const [blockModalOpen, setBlockModalOpen] = useState(false)
+  const [blockReason, setBlockReason] = useState('')
+
   // String da data selecionada: YYYY-MM-DD
   const selectedDateStr = selectedDate.toISOString().split('T')[0]
+
+  // ---------- Carregar configuração e bloqueios ----------
+  const loadConfig = useCallback(async () => {
+    try {
+      const records = await pb.collection('clinic_config').getFullList({ sort: '-created' })
+      if (records.length > 0) {
+        const r = records[0] as any
+        const oh = r.operating_hours
+        if (oh && typeof oh === 'object') {
+          const merged: OperatingHours = { ...DEFAULT_OPERATING_HOURS }
+          ;(Object.keys(DEFAULT_OPERATING_HOURS) as (keyof OperatingHours)[]).forEach((k) => {
+            const v = (oh as any)[k]
+            if (v && typeof v === 'object') {
+              merged[k] = {
+                open: !!v.open,
+                start: v.start || '',
+                end: v.end || '',
+              }
+            }
+          })
+          setOperatingHours(merged)
+        }
+        setSlotMinutes(Number(r.slot_minutes) || 30)
+      }
+    } catch (err) {
+      console.error('Erro ao carregar configuração da clínica:', err)
+    }
+  }, [])
+
+  const loadBlockedDays = useCallback(async () => {
+    try {
+      const records = await pb.collection('blocked_days').getFullList({ sort: 'date' })
+      setBlockedDays(
+        records.map((r: any) => ({
+          id: r.id,
+          date: r.date || '',
+          reason: r.reason || '',
+        })),
+      )
+    } catch (err) {
+      console.error('Erro ao carregar dias bloqueados:', err)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadConfig()
+    loadBlockedDays()
+  }, [loadConfig, loadBlockedDays])
+
+  // Helpers de bloqueio
+  const isBlocked = (dateStr: string) => blockedDays.find((b) => b.date === dateStr)
+  const selectedBlocked = isBlocked(selectedDateStr)
+
+  // Feriado na data selecionada (visão Dia)
+  const selectedHoliday = useMemo(() => getHolidayOnDate(selectedDateStr), [selectedDateStr])
+
+  // ---------- Bloquear / desbloquear dia ----------
+  const handleBlockDay = async () => {
+    try {
+      const rec: any = await pb.collection('blocked_days').create({
+        date: selectedDateStr,
+        reason: blockReason.trim(),
+        created_by: '',
+      })
+      setBlockedDays((prev) =>
+        [...prev, { id: rec.id, date: selectedDateStr, reason: blockReason.trim() }].sort((a, b) =>
+          a.date < b.date ? -1 : 1,
+        ),
+      )
+      setBlockModalOpen(false)
+      setBlockReason('')
+    } catch (err) {
+      console.error('Erro ao bloquear dia:', err)
+    }
+  }
+
+  const handleUnblockDay = async (id: string) => {
+    try {
+      await pb.collection('blocked_days').delete(id)
+      setBlockedDays((prev) => prev.filter((b) => b.id !== id))
+    } catch (err) {
+      console.error('Erro ao desbloquear dia:', err)
+    }
+  }
 
   // Navegação Temporal
   const handlePrev = () => {
@@ -307,17 +460,30 @@ export default function Agenda() {
     updateAppointment(app.id, { reception: 'presente' })
   }
 
-  // Horários para visão de dia (07:00 às 19:00 em blocos de 30 min)
+  // Horários para visão de dia, gerados a partir dos horários de
+  // funcionamento da clínica. Fallback: 07:00 às 19:00 em blocos de 30 min.
   const timeSlots = useMemo(() => {
+    const dayKey = WEEKDAY_KEY[selectedDate.getDay()]
+    const cfg = operatingHours[dayKey]
+    const step = slotMinutes || 30
+    let startStr = '07:00'
+    let endStr = '19:00'
+    if (cfg && cfg.open && cfg.start && cfg.end) {
+      startStr = cfg.start
+      endStr = cfg.end
+    }
+    const startMin = timeToMinutes(startStr)
+    const endMin = timeToMinutes(endStr)
     const slots: string[] = []
-    for (let h = 7; h <= 19; h++) {
-      slots.push(`${String(h).padStart(2, '0')}:00`)
-      if (h < 19) slots.push(`${String(h).padStart(2, '0')}:30`)
+    for (let m = startMin; m < endMin; m += step) {
+      const h = Math.floor(m / 60)
+      const mm = m % 60
+      slots.push(`${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`)
     }
     return slots
-  }, [])
+  }, [selectedDate, operatingHours, slotMinutes])
 
-  // Slots ocupados por extensão de agendamentos existentes (duração > 30 min).
+  // Slots ocupados por extensão de agendamentos existentes (duração > slot).
   // Um slot intermediário fica ocupado quando um agendamento iniciado antes
   // se estende até ele: app.time + duration > slotTime.
   // Agendamentos cancelados não bloqueiam slots.
@@ -337,6 +503,42 @@ export default function Agenda() {
     }
     return busy
   }, [filteredAppointments, selectedDateStr, timeSlots])
+
+  // Slots que devem ser completamente OCULTOS da grade (não renderizados).
+  // Um slot é oculto quando existe um agendamento que começou antes (ou no
+  // mesmo instante) e cujo término é maior que o horário do slot. O slot
+  // inicial (onde começa o agendamento) é tratado separadamente com o card.
+  const hiddenSlots = useMemo(() => {
+    const hidden = new Set<string>()
+    const dayApps = filteredAppointments.filter(
+      (a) => a.date === selectedDateStr && a.status !== 'Cancelado',
+    )
+    for (const app of dayApps) {
+      const start = timeToMinutes(app.time)
+      const end = start + (Number(app.duration) || 0)
+      for (const slot of timeSlots) {
+        const s = timeToMinutes(slot)
+        // slot inicial (s === start) mostra o card; demais dentro do
+        // intervalo [start, end) são ocultados.
+        if (s >= start && s < end && s !== start) {
+          hidden.add(slot)
+        }
+      }
+    }
+    return hidden
+  }, [filteredAppointments, selectedDateStr, timeSlots])
+
+  // Mapa de agendamentos por horário de início (para a visão Dia).
+  const appsByTime = useMemo(() => {
+    const map = new Map<string, Appointment[]>()
+    for (const app of filteredAppointments) {
+      if (app.date !== selectedDateStr) continue
+      const arr = map.get(app.time) || []
+      arr.push(app)
+      map.set(app.time, arr)
+    }
+    return map
+  }, [filteredAppointments, selectedDateStr])
 
   // Dias da semana para visão de semana
   const weekDays = useMemo(() => {
@@ -384,16 +586,41 @@ export default function Agenda() {
     return days
   }, [selectedDate])
 
+  // Feriados do mês corrente (visão Mês)
+  const monthHolidays = useMemo(() => {
+    const year = selectedDate.getFullYear()
+    const map = new Map<string, { date: string; name: string }>()
+    for (const h of getYearHolidays(year)) map.set(h.date, h)
+    return map
+  }, [selectedDate])
+
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-200">
       {/* Cabeçalho da Página */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Agenda</h1>
             <Badge variant="secondary" className="bg-teal-50 text-navy-700 font-bold text-xs">
               {filteredAppointments.length} atendimentos
             </Badge>
+            {viewMode === 'dia' && selectedHoliday && (
+              <Badge
+                variant="outline"
+                className="bg-red-50 text-red-700 border-red-200 font-bold text-[11px]"
+              >
+                Feriado: {selectedHoliday.name}
+              </Badge>
+            )}
+            {viewMode === 'dia' && selectedBlocked && (
+              <Badge
+                variant="outline"
+                className="bg-slate-200 text-slate-700 border-slate-300 font-bold text-[11px]"
+              >
+                <Lock className="w-3 h-3 mr-1" />
+                Dia bloqueado
+              </Badge>
+            )}
           </div>
           <p className="text-xs text-slate-500 mt-1 capitalize">{periodLabel}</p>
         </div>
@@ -502,50 +729,121 @@ export default function Agenda() {
           </button>
         </div>
 
-        {/* Toggle Permitir Encaixes (somente visão Dia) */}
-        <button
-          onClick={() => setAllowEncaixe((v) => !v)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-            allowEncaixe
-              ? 'bg-white text-amber-600 shadow-sm border-amber-200'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border-transparent'
-          }`}
-          title="Permitir agendar em horários ocupados (encaixe)"
-        >
-          <Zap className="w-3.5 h-3.5" />
-          Encaixes
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Botão Bloquear / Desbloquear dia (somente visão Dia) */}
+          {viewMode === 'dia' &&
+            (selectedBlocked ? (
+              <button
+                onClick={() => handleUnblockDay(selectedBlocked.id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border bg-white text-slate-600 hover:bg-slate-50 border-slate-300"
+                title="Desbloquear dia"
+              >
+                <LockOpen className="w-3.5 h-3.5" />
+                Desbloquear dia
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setBlockReason('')
+                  setBlockModalOpen(true)
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border bg-white text-slate-600 hover:bg-slate-50 border-slate-300"
+                title="Bloquear dia"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                Bloquear dia
+              </button>
+            ))}
+
+          {/* Toggle Permitir Encaixes (somente visão Dia) */}
+          <button
+            onClick={() => setAllowEncaixe((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+              allowEncaixe
+                ? 'bg-white text-amber-600 shadow-sm border-amber-200'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border-transparent'
+            }`}
+            title="Permitir agendar em horários ocupados (encaixe)"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            Encaixes
+          </button>
+        </div>
       </div>
 
       {/* 1. VISÃO DIA */}
       {viewMode === 'dia' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
-          <div className="divide-y divide-slate-100">
-            {timeSlots.map((time) => {
-              const matchedApps = filteredAppointments.filter(
-                (a) => a.date === selectedDateStr && a.time === time,
-              )
-              const isBusy = busySlots.has(time)
-              const showBusyStyle = isBusy && matchedApps.length === 0
-              return (
-                <div
-                  key={time}
-                  className={`py-2.5 flex items-start gap-4 transition-colors group rounded-xl px-2 ${
-                    showBusyStyle
-                      ? allowEncaixe
-                        ? 'bg-amber-50/50 hover:bg-amber-50'
-                        : 'bg-slate-100/60 hover:bg-slate-100/80'
-                      : 'hover:bg-slate-50/70'
-                  }`}
-                >
-                  <span className="w-14 text-xs font-bold text-slate-400 shrink-0 pt-1 font-mono">
-                    {time}
-                  </span>
+          {selectedBlocked ? (
+            // Dia bloqueado: card centralizado em vez dos slots
+            <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                <Lock className="w-8 h-8 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-700">Dia bloqueado</h3>
+              <p className="text-sm text-slate-500 mt-1">
+                {selectedBlocked.reason
+                  ? `Motivo: ${selectedBlocked.reason}`
+                  : 'Sem motivo informado.'}
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5 capitalize">{periodLabel}</p>
+              <Button
+                onClick={() => handleUnblockDay(selectedBlocked.id)}
+                variant="outline"
+                className="mt-5 rounded-xl border-slate-300 text-xs font-semibold h-9 flex items-center gap-1.5"
+              >
+                <LockOpen className="w-3.5 h-3.5" />
+                Desbloquear dia
+              </Button>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {timeSlots.map((time) => {
+                // Slots ocultos (intermediários de agendamentos longos) não
+                // são renderizados — o card do agendamento inicial já ocupa
+                // visualmente o espaço proporcional à duração.
+                if (hiddenSlots.has(time)) return null
 
-                  <div className="flex-1 min-h-[44px] flex flex-wrap gap-3">
-                    {matchedApps.length === 0 ? (
-                      isBusy ? (
-                        allowEncaixe ? (
+                const matchedApps = appsByTime.get(time) || []
+                const isBusy = busySlots.has(time)
+                const showBusyStyle = isBusy && matchedApps.length === 0
+                return (
+                  <div
+                    key={time}
+                    className={`py-2.5 flex items-start gap-4 transition-colors group rounded-xl px-2 ${
+                      showBusyStyle
+                        ? allowEncaixe
+                          ? 'bg-amber-50/50 hover:bg-amber-50'
+                          : 'bg-slate-100/60 hover:bg-slate-100/80'
+                        : 'hover:bg-slate-50/70'
+                    }`}
+                  >
+                    <span className="w-14 text-xs font-bold text-slate-400 shrink-0 pt-1 font-mono">
+                      {time}
+                    </span>
+
+                    <div className="flex-1 min-h-[44px] flex flex-wrap gap-3">
+                      {matchedApps.length === 0 ? (
+                        isBusy ? (
+                          allowEncaixe ? (
+                            <button
+                              onClick={() => {
+                                setAppointmentToEdit(null)
+                                setModalInitialDate(selectedDateStr)
+                                setModalInitialTime(time)
+                                setModalOpen(true)
+                              }}
+                              className="text-[11px] text-amber-700 font-semibold flex items-center gap-1 hover:underline py-1"
+                            >
+                              <AlertTriangle className="w-3.5 h-3.5" />
+                              Encaixar neste horário
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5 py-1 italic">
+                              <span className="line-through opacity-60">Ocupado</span>
+                            </span>
+                          )
+                        ) : (
                           <button
                             onClick={() => {
                               setAppointmentToEdit(null)
@@ -553,126 +851,114 @@ export default function Agenda() {
                               setModalInitialTime(time)
                               setModalOpen(true)
                             }}
-                            className="text-[11px] text-amber-700 font-semibold flex items-center gap-1 hover:underline py-1"
+                            className="opacity-0 group-hover:opacity-100 text-[11px] text-teal-600 font-semibold flex items-center gap-1 hover:underline py-1"
                           >
-                            <AlertTriangle className="w-3.5 h-3.5" />
-                            Encaixar neste horário
+                            <Plus className="w-3.5 h-3.5" />
+                            Agendar neste horário
                           </button>
-                        ) : (
-                          <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5 py-1 italic">
-                            <span className="line-through opacity-60">Ocupado</span>
-                          </span>
                         )
                       ) : (
-                        <button
-                          onClick={() => {
-                            setAppointmentToEdit(null)
-                            setModalInitialDate(selectedDateStr)
-                            setModalInitialTime(time)
-                            setModalOpen(true)
-                          }}
-                          className="opacity-0 group-hover:opacity-100 text-[11px] text-teal-600 font-semibold flex items-center gap-1 hover:underline py-1"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          Agendar neste horário
-                        </button>
-                      )
-                    ) : (
-                      matchedApps.map((app) => {
-                        const typeConfig = getAppointmentColor(app.type)
-                        const plan: PatientPlanType = app.planType || 'Particular'
-                        const isPresent = app.reception === 'presente'
-                        return (
-                          <div
-                            key={app.id}
-                            className={`p-3 rounded-xl border ${typeConfig.border} ${typeConfig.bg} flex-1 min-w-[280px] flex items-center justify-between gap-3 shadow-sm`}
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className={`text-xs font-bold ${typeConfig.text}`}>
-                                  {app.patientName}
-                                </span>
-                                <StatusBadge status={app.status} />
-                                <PlanBadge plan={plan} />
-                                <ReceptionBadge reception={app.reception} />
-                              </div>
-                              <p className="text-[11px] text-slate-600 mt-0.5">
-                                {getProceduresLabel(app)} • {app.duration} min •{' '}
-                                {app.professionalName}
-                              </p>
-                              <p className="text-[11px] text-slate-700 font-semibold mt-0.5">
-                                {formatCurrency(getProceduresTotal(app))}
-                              </p>
-                              {app.notes && (
-                                <p className="text-[10px] text-slate-500 italic mt-0.5 truncate">
-                                  {app.notes}
+                        matchedApps.map((app) => {
+                          const typeConfig = getAppointmentColor(app.type)
+                          const plan: PatientPlanType = app.planType || 'Particular'
+                          const isPresent = app.reception === 'presente'
+                          // Altura proporcional à duração: cada 30 min = 1 slot
+                          // (60px). Mínimo de 1 slot.
+                          const slotsCount = Math.max(1, app.duration / 30)
+                          const cardMinHeight = SLOT_HEIGHT * slotsCount
+                          return (
+                            <div
+                              key={app.id}
+                              className={`p-3 rounded-xl border ${typeConfig.border} ${typeConfig.bg} flex-1 min-w-[280px] flex items-center justify-between gap-3 shadow-sm`}
+                              style={{ minHeight: `${cardMinHeight}px` }}
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className={`text-xs font-bold ${typeConfig.text}`}>
+                                    {app.patientName}
+                                  </span>
+                                  <StatusBadge status={app.status} />
+                                  <PlanBadge plan={plan} />
+                                  <ReceptionBadge reception={app.reception} />
+                                </div>
+                                <p className="text-[11px] text-slate-600 mt-0.5">
+                                  {getProceduresLabel(app)} • {app.duration} min •{' '}
+                                  {app.professionalName}
                                 </p>
-                              )}
-                            </div>
+                                <p className="text-[11px] text-slate-700 font-semibold mt-0.5">
+                                  {formatCurrency(getProceduresTotal(app))}
+                                </p>
+                                {app.notes && (
+                                  <p className="text-[10px] text-slate-500 italic mt-0.5 truncate">
+                                    {app.notes}
+                                  </p>
+                                )}
+                              </div>
 
-                            <div className="flex items-center gap-1 shrink-0">
-                              {/* Chegou: marcar presença na recepção */}
-                              {app.status !== 'Cancelado' &&
-                                app.status !== 'Realizado' &&
-                                !app.reception && (
+                              <div className="flex items-center gap-1 shrink-0">
+                                {/* Chegou: marcar presença na recepção */}
+                                {app.status !== 'Cancelado' &&
+                                  app.status !== 'Realizado' &&
+                                  !app.reception && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleArrival(app)}
+                                      className="h-8 px-2 text-xs text-emerald-700 hover:bg-emerald-100/60 rounded-lg font-semibold"
+                                      title="Confirmar chegada do paciente"
+                                    >
+                                      <UserCheck className="w-3.5 h-3.5 mr-1" />
+                                      Chegou
+                                    </Button>
+                                  )}
+                                {/* Atender: só quando paciente presente e ainda não realizado */}
+                                {app.status !== 'Realizado' && isPresent && (
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() => handleArrival(app)}
-                                    className="h-8 px-2 text-xs text-emerald-700 hover:bg-emerald-100/60 rounded-lg font-semibold"
-                                    title="Confirmar chegada do paciente"
+                                    onClick={() => handleFulfill(app)}
+                                    className="h-8 px-2 text-xs text-emerald-900 bg-emerald-100 hover:bg-emerald-200 rounded-lg font-semibold"
+                                    title="Realizar atendimento e abrir prontuário"
                                   >
-                                    <UserCheck className="w-3.5 h-3.5 mr-1" />
-                                    Chegou
+                                    <Check className="w-3.5 h-3.5 mr-1" />
+                                    Atender
                                   </Button>
                                 )}
-                              {/* Atender: só quando paciente presente e ainda não realizado */}
-                              {app.status !== 'Realizado' && isPresent && (
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={() => handleFulfill(app)}
-                                  className="h-8 px-2 text-xs text-emerald-900 bg-emerald-100 hover:bg-emerald-200 rounded-lg font-semibold"
-                                  title="Realizar atendimento e abrir prontuário"
+                                  onClick={() => {
+                                    setAppointmentToEdit(app)
+                                    setModalOpen(true)
+                                  }}
+                                  className="h-8 w-8 p-0 text-slate-600 hover:bg-white/80 rounded-lg"
+                                  title="Editar"
                                 >
-                                  <Check className="w-3.5 h-3.5 mr-1" />
-                                  Atender
+                                  <Pencil className="w-3.5 h-3.5" />
                                 </Button>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  setAppointmentToEdit(app)
-                                  setModalOpen(true)
-                                }}
-                                className="h-8 w-8 p-0 text-slate-600 hover:bg-white/80 rounded-lg"
-                                title="Editar"
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  setAppointmentToDelete(app)
-                                  setDeleteConfirmOpen(true)
-                                }}
-                                className="h-8 w-8 p-0 text-red-500 hover:bg-white/80 rounded-lg"
-                                title="Excluir"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setAppointmentToDelete(app)
+                                    setDeleteConfirmOpen(true)
+                                  }}
+                                  className="h-8 w-8 p-0 text-red-500 hover:bg-white/80 rounded-lg"
+                                  title="Excluir"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        )
-                      })
-                    )}
+                          )
+                        })
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -684,12 +970,18 @@ export default function Agenda() {
               const dStr = d.toISOString().split('T')[0]
               const isToday = dStr === new Date().toISOString().split('T')[0]
               const dayApps = filteredAppointments.filter((a) => a.date === dStr)
+              const blocked = isBlocked(dStr)
+              const holiday = getHolidayOnDate(dStr)
 
               return (
                 <div
                   key={index}
                   className={`rounded-xl border p-2.5 min-h-[400px] flex flex-col justify-between ${
-                    isToday ? 'border-teal-400 bg-teal-50/20' : 'border-slate-200 bg-slate-50/40'
+                    blocked
+                      ? 'border-slate-300 bg-slate-100/80'
+                      : isToday
+                        ? 'border-teal-400 bg-teal-50/20'
+                        : 'border-slate-200 bg-slate-50/40'
                   }`}
                 >
                   <div>
@@ -704,69 +996,91 @@ export default function Agenda() {
                       >
                         {d.getDate()}
                       </span>
+                      {blocked && (
+                        <div className="flex items-center justify-center mt-1">
+                          <Lock className="w-3 h-3 text-slate-400" />
+                        </div>
+                      )}
+                      {holiday && !blocked && (
+                        <span className="block text-[9px] italic text-red-600 mt-0.5 leading-tight">
+                          {holiday.name}
+                        </span>
+                      )}
                     </div>
 
-                    <div className="space-y-1.5 mt-2.5">
-                      {dayApps.map((app) => {
-                        const typeConfig = getAppointmentColor(app.type)
-                        const plan: PatientPlanType = app.planType || 'Particular'
-                        const planCfg = PLAN_CONFIG[plan] || PLAN_CONFIG.Particular
-                        return (
-                          <div
-                            key={app.id}
-                            onClick={() => {
-                              setAppointmentToEdit(app)
-                              setModalOpen(true)
-                            }}
-                            className={`p-2 rounded-lg border ${typeConfig.border} ${typeConfig.bg} text-left cursor-pointer hover:shadow-sm transition-all`}
-                          >
-                            <div className="flex items-center justify-between gap-1">
-                              <span className="text-[10px] font-extrabold text-slate-500 font-mono">
-                                {app.time}
+                    {blocked ? (
+                      <div className="mt-2.5 text-center">
+                        <p className="text-[10px] font-semibold text-slate-500 italic">
+                          {blocked.reason ? `Bloqueado: ${blocked.reason}` : 'Bloqueado'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 mt-2.5">
+                        {dayApps.map((app) => {
+                          const typeConfig = getAppointmentColor(app.type)
+                          const plan: PatientPlanType = app.planType || 'Particular'
+                          const planCfg = PLAN_CONFIG[plan] || PLAN_CONFIG.Particular
+                          return (
+                            <div
+                              key={app.id}
+                              onClick={() => {
+                                setAppointmentToEdit(app)
+                                setModalOpen(true)
+                              }}
+                              className={`p-2 rounded-lg border ${typeConfig.border} ${typeConfig.bg} text-left cursor-pointer hover:shadow-sm transition-all`}
+                            >
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-[10px] font-extrabold text-slate-500 font-mono">
+                                  {app.time}
+                                </span>
+                                <ReceptionDot reception={app.reception} />
+                              </div>
+                              <span
+                                className={`text-xs font-bold ${typeConfig.text} block truncate`}
+                              >
+                                {app.patientName}
                               </span>
-                              <ReceptionDot reception={app.reception} />
+                              <span className="text-[10px] text-slate-500 block truncate">
+                                {getProceduresLabel(app)}
+                              </span>
+                              <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                                <Badge
+                                  variant="outline"
+                                  className={`text-[9px] font-bold px-1 py-0 h-3.5 border ${planCfg.badge}`}
+                                >
+                                  {plan}
+                                </Badge>
+                                <Badge
+                                  variant="outline"
+                                  className={`text-[9px] font-bold px-1 py-0 h-3.5 ${
+                                    STATUS_BADGE_CLASS[app.status] || STATUS_BADGE_CLASS.Agendado
+                                  }`}
+                                >
+                                  {app.status}
+                                </Badge>
+                              </div>
                             </div>
-                            <span className={`text-xs font-bold ${typeConfig.text} block truncate`}>
-                              {app.patientName}
-                            </span>
-                            <span className="text-[10px] text-slate-500 block truncate">
-                              {getProceduresLabel(app)}
-                            </span>
-                            <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                              <Badge
-                                variant="outline"
-                                className={`text-[9px] font-bold px-1 py-0 h-3.5 border ${planCfg.badge}`}
-                              >
-                                {plan}
-                              </Badge>
-                              <Badge
-                                variant="outline"
-                                className={`text-[9px] font-bold px-1 py-0 h-3.5 ${
-                                  STATUS_BADGE_CLASS[app.status] || STATUS_BADGE_CLASS.Agendado
-                                }`}
-                              >
-                                {app.status}
-                              </Badge>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
 
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setAppointmentToEdit(null)
-                      setModalInitialDate(dStr)
-                      setModalInitialTime('09:00')
-                      setModalOpen(true)
-                    }}
-                    className="w-full text-[11px] text-teal-600 hover:bg-teal-50 h-7 rounded-lg mt-2 font-semibold"
-                  >
-                    + Agendar
-                  </Button>
+                  {!blocked && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setAppointmentToEdit(null)
+                        setModalInitialDate(dStr)
+                        setModalInitialTime('09:00')
+                        setModalOpen(true)
+                      }}
+                      className="w-full text-[11px] text-teal-600 hover:bg-teal-50 h-7 rounded-lg mt-2 font-semibold"
+                    >
+                      + Agendar
+                    </Button>
+                  )}
                 </div>
               )
             })}
@@ -791,6 +1105,8 @@ export default function Agenda() {
               const dStr = item.date.toISOString().split('T')[0]
               const isToday = dStr === new Date().toISOString().split('T')[0]
               const dayApps = filteredAppointments.filter((a) => a.date === dStr)
+              const blocked = isBlocked(dStr)
+              const holiday = monthHolidays.get(dStr)
 
               return (
                 <div
@@ -800,45 +1116,64 @@ export default function Agenda() {
                     setViewMode('dia')
                   }}
                   className={`min-h-[90px] p-2 rounded-xl border text-left cursor-pointer transition-all hover:border-teal-400 ${
-                    item.inCurrentMonth
-                      ? 'bg-white border-slate-200'
-                      : 'bg-slate-50 text-slate-300 border-transparent'
+                    blocked
+                      ? 'bg-slate-100 border-slate-300'
+                      : item.inCurrentMonth
+                        ? 'bg-white border-slate-200'
+                        : 'bg-slate-50 text-slate-300 border-transparent'
                   }`}
                 >
-                  <span
-                    className={`text-xs font-extrabold w-6 h-6 rounded-full flex items-center justify-center ${
-                      isToday ? 'bg-teal-500 text-white' : 'text-slate-700'
-                    }`}
-                  >
-                    {item.date.getDate()}
-                  </span>
-
-                  <div className="space-y-1 mt-1.5 overflow-hidden">
-                    {dayApps.slice(0, 2).map((app) => {
-                      const plan: PatientPlanType = app.planType || 'Particular'
-                      const planCfg = PLAN_CONFIG[plan] || PLAN_CONFIG.Particular
-                      return (
-                        <div
-                          key={app.id}
-                          className="text-[10px] font-semibold truncate bg-teal-50 text-navy-700 px-1.5 py-0.5 rounded border border-teal-100 flex items-center gap-1"
-                        >
-                          <span
-                            className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
-                            style={{ backgroundColor: planCfg.dot }}
-                          />
-                          <span className="flex-1 truncate">
-                            {app.time} {app.patientName.split(' ')[0]}
-                          </span>
-                          <ReceptionDot reception={app.reception} />
-                        </div>
-                      )
-                    })}
-                    {dayApps.length > 2 && (
-                      <span className="text-[9px] font-bold text-teal-600 pl-1">
-                        +{dayApps.length - 2} mais
-                      </span>
-                    )}
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`text-xs font-extrabold w-6 h-6 rounded-full flex items-center justify-center ${
+                        isToday ? 'bg-teal-500 text-white' : 'text-slate-700'
+                      }`}
+                    >
+                      {item.date.getDate()}
+                    </span>
+                    {blocked && <Lock className="w-3 h-3 text-slate-400" />}
                   </div>
+
+                  {blocked && (
+                    <p className="text-[9px] text-slate-500 italic mt-1 truncate">
+                      {blocked.reason ? `Bloqueado: ${blocked.reason}` : 'Bloqueado'}
+                    </p>
+                  )}
+
+                  {!blocked && holiday && (
+                    <p className="text-[9px] italic text-red-600 mt-1 leading-tight line-clamp-2">
+                      {holiday.name}
+                    </p>
+                  )}
+
+                  {!blocked && (
+                    <div className="space-y-1 mt-1.5 overflow-hidden">
+                      {dayApps.slice(0, 2).map((app) => {
+                        const plan: PatientPlanType = app.planType || 'Particular'
+                        const planCfg = PLAN_CONFIG[plan] || PLAN_CONFIG.Particular
+                        return (
+                          <div
+                            key={app.id}
+                            className="text-[10px] font-semibold truncate bg-teal-50 text-navy-700 px-1.5 py-0.5 rounded border border-teal-100 flex items-center gap-1"
+                          >
+                            <span
+                              className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+                              style={{ backgroundColor: planCfg.dot }}
+                            />
+                            <span className="flex-1 truncate">
+                              {app.time} {app.patientName.split(' ')[0]}
+                            </span>
+                            <ReceptionDot reception={app.reception} />
+                          </div>
+                        )
+                      })}
+                      {dayApps.length > 2 && (
+                        <span className="text-[9px] font-bold text-teal-600 pl-1">
+                          +{dayApps.length - 2} mais
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -1070,6 +1405,53 @@ export default function Agenda() {
           }
         }}
       />
+
+      {/* Modal: Bloquear dia */}
+      <Dialog open={blockModalOpen} onOpenChange={setBlockModalOpen}>
+        <DialogContent className="max-w-md w-full rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+          <DialogHeader className="border-b border-slate-100 pb-3">
+            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <Lock className="w-5 h-5 text-slate-500" />
+              <span>Bloquear dia</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">Data</Label>
+              <Input
+                type="date"
+                value={selectedDateStr}
+                readOnly
+                className="h-10 rounded-xl mt-1 text-sm border-slate-300 bg-slate-50 font-mono"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">Motivo</Label>
+              <Input
+                value={blockReason}
+                onChange={(e) => setBlockReason(e.target.value)}
+                placeholder="Ex.: Feriado, Recesso, Manutenção..."
+                className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+              />
+            </div>
+          </div>
+          <DialogFooter className="pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setBlockModalOpen(false)}
+              className="rounded-xl border-slate-300 text-xs font-semibold h-10"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleBlockDay}
+              className="bg-slate-700 hover:bg-slate-800 text-white font-semibold rounded-xl h-10"
+            >
+              Bloquear dia
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
