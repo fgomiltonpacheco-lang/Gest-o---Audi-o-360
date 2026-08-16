@@ -19,6 +19,8 @@ import {
   Grid,
   UserCheck,
   DoorOpen,
+  Zap,
+  AlertTriangle,
 } from 'lucide-react'
 import {
   formatDate,
@@ -65,6 +67,12 @@ function getProceduresTotal(app: Appointment): number {
   const list = app.proceduresList
   if (!list || list.length === 0) return Number(app.value || 0)
   return list.reduce((sum, it) => sum + (Number(it.value) || 0), 0)
+}
+
+/** Converte um horário "HH:MM" para minutos desde a meia-noite. */
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number)
+  return h * 60 + m
 }
 
 type ViewMode = 'dia' | 'semana' | 'mes' | 'lista'
@@ -150,6 +158,9 @@ export default function Agenda() {
   const [viewMode, setViewMode] = useState<ViewMode>('dia')
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedProfessional, setSelectedProfessional] = useState<string>('todos')
+
+  // Permitir agendar em horários ocupados (encaixe)
+  const [allowEncaixe, setAllowEncaixe] = useState<boolean>(false)
 
   // Modais
   const [modalOpen, setModalOpen] = useState(false)
@@ -305,6 +316,27 @@ export default function Agenda() {
     }
     return slots
   }, [])
+
+  // Slots ocupados por extensão de agendamentos existentes (duração > 30 min).
+  // Um slot intermediário fica ocupado quando um agendamento iniciado antes
+  // se estende até ele: app.time + duration > slotTime.
+  // Agendamentos cancelados não bloqueiam slots.
+  const busySlots = useMemo(() => {
+    const busy = new Set<string>()
+    const dayApps = filteredAppointments.filter(
+      (a) => a.date === selectedDateStr && a.status !== 'Cancelado',
+    )
+    for (const app of dayApps) {
+      const start = timeToMinutes(app.time)
+      const end = start + (Number(app.duration) || 0)
+      for (const slot of timeSlots) {
+        const s = timeToMinutes(slot)
+        // somente slots intermediários (após o início e antes do término)
+        if (s > start && s < end) busy.add(slot)
+      }
+    }
+    return busy
+  }, [filteredAppointments, selectedDateStr, timeSlots])
 
   // Dias da semana para visão de semana
   const weekDays = useMemo(() => {
@@ -469,6 +501,20 @@ export default function Agenda() {
             Lista
           </button>
         </div>
+
+        {/* Toggle Permitir Encaixes (somente visão Dia) */}
+        <button
+          onClick={() => setAllowEncaixe((v) => !v)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+            allowEncaixe
+              ? 'bg-white text-amber-600 shadow-sm border-amber-200'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border-transparent'
+          }`}
+          title="Permitir agendar em horários ocupados (encaixe)"
+        >
+          <Zap className="w-3.5 h-3.5" />
+          Encaixes
+        </button>
       </div>
 
       {/* 1. VISÃO DIA */}
@@ -479,10 +525,18 @@ export default function Agenda() {
               const matchedApps = filteredAppointments.filter(
                 (a) => a.date === selectedDateStr && a.time === time,
               )
+              const isBusy = busySlots.has(time)
+              const showBusyStyle = isBusy && matchedApps.length === 0
               return (
                 <div
                   key={time}
-                  className="py-2.5 flex items-start gap-4 hover:bg-slate-50/70 transition-colors group rounded-xl px-2"
+                  className={`py-2.5 flex items-start gap-4 transition-colors group rounded-xl px-2 ${
+                    showBusyStyle
+                      ? allowEncaixe
+                        ? 'bg-amber-50/50 hover:bg-amber-50'
+                        : 'bg-slate-100/60 hover:bg-slate-100/80'
+                      : 'hover:bg-slate-50/70'
+                  }`}
                 >
                   <span className="w-14 text-xs font-bold text-slate-400 shrink-0 pt-1 font-mono">
                     {time}
@@ -490,18 +544,39 @@ export default function Agenda() {
 
                   <div className="flex-1 min-h-[44px] flex flex-wrap gap-3">
                     {matchedApps.length === 0 ? (
-                      <button
-                        onClick={() => {
-                          setAppointmentToEdit(null)
-                          setModalInitialDate(selectedDateStr)
-                          setModalInitialTime(time)
-                          setModalOpen(true)
-                        }}
-                        className="opacity-0 group-hover:opacity-100 text-[11px] text-teal-600 font-semibold flex items-center gap-1 hover:underline py-1"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        Agendar neste horário
-                      </button>
+                      isBusy ? (
+                        allowEncaixe ? (
+                          <button
+                            onClick={() => {
+                              setAppointmentToEdit(null)
+                              setModalInitialDate(selectedDateStr)
+                              setModalInitialTime(time)
+                              setModalOpen(true)
+                            }}
+                            className="text-[11px] text-amber-700 font-semibold flex items-center gap-1 hover:underline py-1"
+                          >
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            Encaixar neste horário
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5 py-1 italic">
+                            <span className="line-through opacity-60">Ocupado</span>
+                          </span>
+                        )
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setAppointmentToEdit(null)
+                            setModalInitialDate(selectedDateStr)
+                            setModalInitialTime(time)
+                            setModalOpen(true)
+                          }}
+                          className="opacity-0 group-hover:opacity-100 text-[11px] text-teal-600 font-semibold flex items-center gap-1 hover:underline py-1"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Agendar neste horário
+                        </button>
+                      )
                     ) : (
                       matchedApps.map((app) => {
                         const typeConfig = getAppointmentColor(app.type)
