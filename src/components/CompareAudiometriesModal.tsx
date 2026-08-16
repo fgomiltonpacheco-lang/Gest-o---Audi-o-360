@@ -9,11 +9,149 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Activity, ArrowUpDown, TrendingUp, TrendingDown, Minus } from 'lucide-react'
-import { AudiometryExam } from '@/types'
 import { formatDate } from '@/lib/formatters'
 
 const AIR_FREQUENCIES = ['250', '500', '1000', '2000', '3000', '4000', '6000', '8000']
 const BONE_FREQUENCIES = ['500', '1000', '2000', '4000']
+
+/**
+ * Forma normalizada usada internamente pelo comparativo.
+ * Aceita tanto exames legados (AudiometryExam, com airOD/airOE em dB)
+ * quanto exames completos (audiometry_exams, com air_od/air_oe como AudiogramMap).
+ */
+type FreqMap = Record<string, number | null | 'NR'>
+
+interface NormExam {
+  id: string
+  date: string
+  lossDegree: string
+  lossType: string
+  airOD: FreqMap
+  airOE: FreqMap
+  boneOD: FreqMap
+  boneOE: FreqMap
+  srtOD?: number
+  srtOE?: number
+  iprfOD?: number
+  iprfOE?: number
+}
+
+/** Converte um mapa de frequências (AudiogramMap ou Record de dB) para FreqMap. */
+function toFreqMap(raw: any): FreqMap {
+  if (!raw || typeof raw !== 'object') return {}
+  const out: FreqMap = {}
+  Object.keys(raw).forEach((k) => {
+    const v = raw[k]
+    if (v === null || v === undefined) {
+      out[k] = null
+    } else if (typeof v === 'number' || v === 'NR') {
+      out[k] = v
+    } else if (typeof v === 'object' && 'db' in v) {
+      // AudiogramPoint { db, symbol }
+      const db = (v as any).db
+      out[k] = db === null || db === undefined ? null : db
+    } else {
+      out[k] = null
+    }
+  })
+  return out
+}
+
+function numOrUndef(v: any): number | undefined {
+  if (v === null || v === undefined || v === '') return undefined
+  const n = Number(v)
+  return isNaN(n) ? undefined : n
+}
+
+function avgAir(map: FreqMap): number | null {
+  const freqs = ['500', '1000', '2000', '4000']
+  const vals = freqs.map((f) => map[f]).filter((v): v is number => typeof v === 'number')
+  if (vals.length === 0) return null
+  return vals.reduce((a, b) => a + b, 0) / vals.length
+}
+
+function degreeFromAvg(avg: number | null): string {
+  if (avg === null) return '—'
+  if (avg <= 25) return 'Normal'
+  if (avg <= 40) return 'Leve'
+  if (avg <= 55) return 'Moderada'
+  if (avg <= 70) return 'Moderadamente Severa'
+  if (avg <= 90) return 'Severa'
+  return 'Profunda'
+}
+
+function determineType(air: FreqMap, bone: FreqMap): string {
+  const freqs = ['500', '1000', '2000', '4000']
+  let hasGap = false
+  let airAbnormal = false
+  let boneAbnormal = false
+  freqs.forEach((f) => {
+    const a = air[f]
+    const b = bone[f]
+    if (typeof a === 'number') {
+      if (a > 25) airAbnormal = true
+      if (typeof b === 'number') {
+        if (a - b > 15) hasGap = true
+        if (b > 25) boneAbnormal = true
+      }
+    }
+  })
+  if (!airAbnormal) return 'Normal'
+  if (hasGap && !boneAbnormal) return 'Condutiva'
+  if (hasGap && boneAbnormal) return 'Mista'
+  return 'Neurossensorial'
+}
+
+/** Normaliza qualquer formato de audiometria (legado ou completo) para NormExam. */
+function normalizeExam(rec: any): NormExam {
+  const fallback: NormExam = {
+    id: '',
+    date: '',
+    lossDegree: '—',
+    lossType: '—',
+    airOD: {},
+    airOE: {},
+    boneOD: {},
+    boneOE: {},
+  }
+  if (!rec) return fallback
+  // Exame completo (audiometry_exams) — mapas como AudiogramPoint { db, symbol }
+  if (rec.air_od || rec.air_oe || rec.bone_od || rec.bone_oe) {
+    const airOD = toFreqMap(rec.air_od)
+    const airOE = toFreqMap(rec.air_oe)
+    const boneOD = toFreqMap(rec.bone_od)
+    const boneOE = toFreqMap(rec.bone_oe)
+    return {
+      id: rec.id || '',
+      date: rec.date || '',
+      lossDegree: degreeFromAvg(avgAir(airOD)),
+      lossType: determineType(airOD, boneOD),
+      airOD,
+      airOE,
+      boneOD,
+      boneOE,
+      srtOD: numOrUndef(rec.mt_od),
+      srtOE: numOrUndef(rec.mt_oe),
+      iprfOD: numOrUndef(rec.iprf?.od?.monossilabos),
+      iprfOE: numOrUndef(rec.iprf?.oe?.monossilabos),
+    }
+  }
+  // Exame legado (AudiometryExam) — airOD/airOE/boneOD/boneOE em dB direto
+  return {
+    id: rec.id || '',
+    date: rec.date || '',
+    lossDegree: rec.lossDegree || '—',
+    lossType: rec.lossType || '—',
+    airOD: toFreqMap(rec.airOD),
+    airOE: toFreqMap(rec.airOE),
+    boneOD: toFreqMap(rec.boneOD),
+    boneOE: toFreqMap(rec.boneOE),
+    srtOD: numOrUndef(rec.srtOD),
+    srtOE: numOrUndef(rec.srtOE),
+    iprfOD: numOrUndef(rec.iprfOD),
+    iprfOE: numOrUndef(rec.iprfOE),
+  }
+}
 
 /** Valor numérico de um limiar (trata null/'NR' como não-numérico). */
 function toNum(v: number | null | 'NR' | undefined): number | null {
@@ -72,7 +210,7 @@ function DeltaBadge({ a, b }: { a: number | null; b: number | null }) {
 interface CompareAudiometriesModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  audiometries: AudiometryExam[]
+  audiometries: any[]
 }
 
 export const CompareAudiometriesModal: React.FC<CompareAudiometriesModalProps> = ({
@@ -80,10 +218,11 @@ export const CompareAudiometriesModal: React.FC<CompareAudiometriesModalProps> =
   onOpenChange,
   audiometries,
 }) => {
-  // Ordena por data (mais antigo primeiro)
+  // Normaliza qualquer formato de exame e ordena por data (mais antigo primeiro)
+  const normalized = useMemo(() => audiometries.map(normalizeExam), [audiometries])
   const sorted = useMemo(
-    () => [...audiometries].sort((a, b) => a.date.localeCompare(b.date)),
-    [audiometries],
+    () => [...normalized].sort((a, b) => (a.date || '').localeCompare(b.date || '')),
+    [normalized],
   )
 
   const [idA, setIdA] = useState<string>('')
@@ -308,8 +447,8 @@ function ComparisonSection({
   title: string
   icon: React.ReactNode
   frequencies: string[]
-  examA: AudiometryExam
-  examB: AudiometryExam
+  examA: NormExam
+  examB: NormExam
   kind: 'air' | 'bone'
 }) {
   const mapA =
@@ -348,7 +487,7 @@ function ComparisonSection({
                 </td>
                 {frequencies.map((f) => (
                   <td key={f} className="py-2 px-2 font-semibold text-slate-800">
-                    {fmtThreshold(mapA[ear][f])}
+                    {fmtThreshold(mapA[ear]?.[f])}
                   </td>
                 ))}
               </tr>
@@ -357,7 +496,7 @@ function ComparisonSection({
                 <td className="py-2 px-2 text-left font-medium text-slate-500">Evolução</td>
                 {frequencies.map((f) => (
                   <td key={f} className="py-1.5 px-1">
-                    <DeltaBadge a={toNum(mapA[ear][f])} b={toNum(mapB[ear][f])} />
+                    <DeltaBadge a={toNum(mapA[ear]?.[f])} b={toNum(mapB[ear]?.[f])} />
                   </td>
                 ))}
               </tr>
@@ -368,7 +507,7 @@ function ComparisonSection({
                 </td>
                 {frequencies.map((f) => (
                   <td key={f} className="py-2 px-2 font-semibold text-slate-800">
-                    {fmtThreshold(mapB[ear][f])}
+                    {fmtThreshold(mapB[ear]?.[f])}
                   </td>
                 ))}
               </tr>

@@ -22,12 +22,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { CompareAudiometriesModal } from '@/components/CompareAudiometriesModal'
 import { usePrint } from '@/components/print/PrintProvider'
-import {
-  PatientFichaPrint,
-  AudiometryPrint,
-  TympanometryPrint,
-  BeraPrint,
-} from '@/components/print/PrintDocuments'
+import { PatientFichaPrint, TympanometryPrint, BeraPrint } from '@/components/print/PrintDocuments'
 import {
   formatDate,
   formatCurrency,
@@ -57,7 +52,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import pb from '@/lib/pocketbase/client'
-import { AudiometryModal } from '@/components/AudiometryModal'
 import { TympanometryModal } from '@/components/TympanometryModal'
 import { BeraModal } from '@/components/BeraModal'
 import { HearingAidModal } from '@/components/HearingAidModal'
@@ -76,7 +70,6 @@ export default function Prontuario() {
     deleteEvolution,
     audiometries,
     deleteAudiometry,
-    addAudiometry,
     tympanometries,
     deleteTympanometry,
     addTympanometry,
@@ -101,7 +94,6 @@ export default function Prontuario() {
   const [activeTab, setActiveTab] = useState('cadastrais')
 
   // Modais de Exames
-  const [audioModalOpen, setAudioModalOpen] = useState(false)
   const [tympModalOpen, setTympModalOpen] = useState(false)
   const [beraModalOpen, setBeraModalOpen] = useState(false)
 
@@ -191,7 +183,11 @@ export default function Prontuario() {
   const patientSales = sales.filter((s) => s.patientId === patient.id)
   const patientInstallments = installments.filter((i) => i.patientId === patient.id)
 
-  const examsCount = patientAudiometries.length + patientTympanometries.length + patientBeras.length
+  const examsCount =
+    fullAudiometries.length +
+    patientAudiometries.length +
+    patientTympanometries.length +
+    patientBeras.length
 
   const handleSaveClinicalRecord = (e: React.FormEvent) => {
     e.preventDefault()
@@ -652,7 +648,7 @@ export default function Prontuario() {
                         <span tabIndex={0} className="inline-flex">
                           <Button
                             size="sm"
-                            disabled={patientAudiometries.length < 2}
+                            disabled={fullAudiometries.length < 2}
                             onClick={() => setCompareModalOpen(true)}
                             className="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl h-8 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
@@ -661,7 +657,7 @@ export default function Prontuario() {
                           </Button>
                         </span>
                       </TooltipTrigger>
-                      {patientAudiometries.length < 2 && (
+                      {fullAudiometries.length < 2 && (
                         <TooltipContent className="max-w-[220px] text-xs">
                           São necessárias pelo menos 2 audiometrias para comparar
                         </TooltipContent>
@@ -670,7 +666,7 @@ export default function Prontuario() {
                   </TooltipProvider>
                   <Button
                     size="sm"
-                    onClick={() => setAudioModalOpen(true)}
+                    onClick={() => navigate(`/pacientes/${patient.id}/audiometria/novo`)}
                     className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-8"
                   >
                     + Audiometria
@@ -746,89 +742,6 @@ export default function Prontuario() {
                     )
                   })}
                 </div>
-              )}
-            </div>
-
-            {/* Audiometrias */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-teal-700 flex items-center gap-1.5">
-                <Activity className="w-4 h-4" />
-                Audiometrias Tonais & Vocais ({patientAudiometries.length})
-              </h4>
-              {patientAudiometries.length === 0 ? (
-                <p className="text-xs text-slate-400 italic">Nenhuma audiometria registrada.</p>
-              ) : (
-                patientAudiometries.map((exam) => (
-                  <div
-                    key={exam.id}
-                    className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="text-xs font-extrabold text-slate-900">
-                          Audiometria em {formatDate(exam.date)}
-                        </span>
-                        <span className="text-xs text-slate-500 ml-2">
-                          Examinador: {exam.professionalName}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-teal-50 text-navy-700 border-teal-200">
-                          {exam.lossDegree} • {exam.lossType}
-                        </Badge>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() =>
-                            print({
-                              title: 'Laudo Audiometrico',
-                              subtitle: `${patient.name} — ${formatDate(exam.date)}`,
-                              body: <AudiometryPrint exam={exam} />,
-                            })
-                          }
-                          className="h-7 w-7 p-0 text-teal-600 hover:bg-teal-50 rounded-lg"
-                          title="Imprimir laudo"
-                        >
-                          <Printer className="w-3.5 h-3.5" />
-                        </Button>
-                        {!isSecretaria && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setDeleteTarget({
-                                type: 'audiometry',
-                                id: exam.id,
-                                name: `Audiometria de ${formatDate(exam.date)}`,
-                              })
-                              setDeleteConfirmOpen(true)
-                            }}
-                            className="h-7 w-7 p-0 text-red-500 hover:bg-red-50 rounded-lg"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-white p-2.5 rounded-lg border border-slate-200">
-                      <div>
-                        SRT OD: <strong>{exam.srtOD ?? '—'} dB</strong>
-                      </div>
-                      <div>
-                        SRT OE: <strong>{exam.srtOE ?? '—'} dB</strong>
-                      </div>
-                      <div>
-                        IPRF OD: <strong>{exam.iprfOD ?? '—'}%</strong>
-                      </div>
-                      <div>
-                        IPRF OE: <strong>{exam.iprfOE ?? '—'}%</strong>
-                      </div>
-                    </div>
-
-                    {exam.notes && <p className="text-xs text-slate-600 italic">{exam.notes}</p>}
-                  </div>
-                ))
               )}
             </div>
 
@@ -1246,19 +1159,11 @@ export default function Prontuario() {
         onSave={handleSaveAid}
       />
 
-      {/* Modais de Exames */}
-      <AudiometryModal
-        open={audioModalOpen}
-        onOpenChange={setAudioModalOpen}
-        patient={patient}
-        onSave={addAudiometry}
-      />
-
       {/* Modal Comparar Audiometrias */}
       <CompareAudiometriesModal
         open={compareModalOpen}
         onOpenChange={setCompareModalOpen}
-        audiometries={patientAudiometries}
+        audiometries={fullAudiometries}
       />
       <TympanometryModal
         open={tympModalOpen}
