@@ -139,7 +139,8 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       // paciente e indica a origem do valor.
       {
         const pat = patients.find((p) => p.id === appointmentToEdit.patientId)
-        const plan: PatientPlanType = pat?.planType || 'Particular'
+        // Prefere o planType já salvo no agendamento; senão, usa o do paciente.
+        const plan: PatientPlanType = appointmentToEdit.planType || pat?.planType || 'Particular'
         setPlanType(plan)
         setValueSourceLabel(appointmentToEdit.procedureId ? `Valor para ${plan}` : '')
       }

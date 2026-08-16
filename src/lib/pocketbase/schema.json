@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T01:10:52.051Z",
+  "generatedAt": "2026-08-16T01:17:41.407Z",
   "collections": [
     {
       "name": "users",
@@ -336,6 +336,18 @@
         {
           "name": "value",
           "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "planType",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reception",
+          "type": "text",
           "required": false,
           "system": false
         }

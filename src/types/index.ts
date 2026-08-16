@@ -122,6 +122,10 @@ export interface Appointment {
   professionalName: string
   status: AppointmentStatus
   notes?: string
+  /** Tipo de pagamento (Particular/SUS/Convênio) — fallback "Particular". */
+  planType?: PatientPlanType
+  /** Estado de recepção: "" (não chegou), "presente" (na recepção), "atendendo" (em atendimento). */
+  reception?: string
   createdAt: string
 }
 

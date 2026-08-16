@@ -110,6 +110,8 @@ const mapAppointment = (r: any): Appointment => ({
   professionalName: r.professionalName || '',
   status: r.status || 'Agendado',
   notes: r.notes || '',
+  planType: r.planType === 'Convênio' ? 'Convênio' : r.planType === 'SUS' ? 'SUS' : 'Particular',
+  reception: r.reception || '',
   createdAt: toDateStr(r.created),
 })
 
@@ -930,6 +932,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       professionalName: appData.professionalName,
       status: appData.status,
       notes: appData.notes || '',
+      planType: appData.planType || 'Particular',
+      reception: appData.reception ?? '',
     }
     pb.collection('appointments')
       .create(payload)

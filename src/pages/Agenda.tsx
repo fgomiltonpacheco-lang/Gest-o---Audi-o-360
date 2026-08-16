@@ -17,9 +17,16 @@ import {
   List,
   CalendarDays,
   Grid,
+  UserCheck,
+  DoorOpen,
 } from 'lucide-react'
-import { formatDate, APPOINTMENT_TYPE_COLORS, getAppointmentColor } from '@/lib/formatters'
-import { Appointment, AppointmentType, AppointmentStatus } from '@/types'
+import {
+  formatDate,
+  formatCurrency,
+  APPOINTMENT_TYPE_COLORS,
+  getAppointmentColor,
+} from '@/lib/formatters'
+import { Appointment, AppointmentType, AppointmentStatus, PatientPlanType } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -35,6 +42,79 @@ import { usePrint } from '@/components/print/PrintProvider'
 import { AgendaPrint } from '@/components/print/PrintDocuments'
 
 type ViewMode = 'dia' | 'semana' | 'mes' | 'lista'
+
+// ---------- Helpers de exibição ----------
+
+const PLAN_CONFIG: Record<PatientPlanType, { badge: string; dot: string }> = {
+  Particular: { badge: 'bg-blue-100 text-blue-700 border-blue-200', dot: '#2563eb' },
+  SUS: { badge: 'bg-green-100 text-green-700 border-green-200', dot: '#16a34a' },
+  Convênio: { badge: 'bg-purple-100 text-purple-700 border-purple-200', dot: '#9333ea' },
+}
+
+const STATUS_BADGE_CLASS: Record<AppointmentStatus, string> = {
+  Agendado: 'bg-slate-100 text-slate-700 border-slate-200',
+  Confirmado: 'bg-teal-50 text-navy-700 border-teal-200',
+  Realizado: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  Faltou: 'bg-amber-50 text-amber-700 border-amber-200',
+  Cancelado: 'bg-red-50 text-red-700 border-red-200',
+}
+
+function PlanBadge({ plan }: { plan: PatientPlanType }) {
+  const cfg = PLAN_CONFIG[plan] || PLAN_CONFIG.Particular
+  return (
+    <Badge
+      variant="outline"
+      className={`text-[10px] font-bold px-1.5 py-0 h-4 border ${cfg.badge}`}
+    >
+      {plan}
+    </Badge>
+  )
+}
+
+function StatusBadge({ status }: { status: AppointmentStatus }) {
+  return (
+    <Badge
+      variant="outline"
+      className={`text-[10px] font-bold px-1.5 py-0 h-4 border ${
+        STATUS_BADGE_CLASS[status] || STATUS_BADGE_CLASS.Agendado
+      }`}
+    >
+      {status}
+    </Badge>
+  )
+}
+
+function ReceptionBadge({ reception }: { reception?: string }) {
+  if (reception === 'presente') {
+    return (
+      <Badge className="text-[10px] font-bold px-1.5 py-0 h-4 bg-amber-100 text-amber-800 border border-amber-300">
+        <DoorOpen className="w-2.5 h-2.5 mr-0.5" />
+        Na recepção
+      </Badge>
+    )
+  }
+  if (reception === 'atendendo') {
+    return (
+      <Badge className="text-[10px] font-bold px-1.5 py-0 h-4 bg-emerald-100 text-emerald-800 border border-emerald-300">
+        Em atendimento
+      </Badge>
+    )
+  }
+  return null
+}
+
+/** Bolinha colorida indicando o estado de recepção (para visões compactas). */
+function ReceptionDot({ reception }: { reception?: string }) {
+  if (reception === 'presente') {
+    return <span className="inline-block w-2 h-2 rounded-full bg-amber-500" title="Na recepção" />
+  }
+  if (reception === 'atendendo') {
+    return (
+      <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" title="Em atendimento" />
+    )
+  }
+  return null
+}
 
 export default function Agenda() {
   const { appointments, addAppointment, updateAppointment, deleteAppointment } = useApp()
@@ -172,10 +252,16 @@ export default function Agenda() {
     }
   }
 
-  // Ação rápida: Realizar atendimento (leva ao prontuário)
+  // Ação rápida: Realizar atendimento (leva ao prontuário).
+  // Só deve ser acionado quando o paciente já está "presente" na recepção.
   const handleFulfill = (app: Appointment) => {
-    updateAppointment(app.id, { status: 'Realizado' })
+    updateAppointment(app.id, { status: 'Realizado', reception: 'atendendo' })
     navigate(`/pacientes/${app.patientId}/prontuario`)
+  }
+
+  // Marcar chegada do paciente na recepção
+  const handleArrival = (app: Appointment) => {
+    updateAppointment(app.id, { reception: 'presente' })
   }
 
   // Horários para visão de dia (07:00 às 19:00 em blocos de 30 min)
@@ -387,25 +473,27 @@ export default function Agenda() {
                     ) : (
                       matchedApps.map((app) => {
                         const typeConfig = getAppointmentColor(app.type)
+                        const plan: PatientPlanType = app.planType || 'Particular'
+                        const isPresent = app.reception === 'presente'
                         return (
                           <div
                             key={app.id}
                             className={`p-3 rounded-xl border ${typeConfig.border} ${typeConfig.bg} flex-1 min-w-[280px] flex items-center justify-between gap-3 shadow-sm`}
                           >
                             <div className="min-w-0">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className={`text-xs font-bold ${typeConfig.text}`}>
                                   {app.patientName}
                                 </span>
-                                <Badge
-                                  variant="outline"
-                                  className="text-[10px] bg-white border-slate-200"
-                                >
-                                  {app.status}
-                                </Badge>
+                                <StatusBadge status={app.status} />
+                                <PlanBadge plan={plan} />
+                                <ReceptionBadge reception={app.reception} />
                               </div>
                               <p className="text-[11px] text-slate-600 mt-0.5">
                                 {app.type} • {app.duration} min • {app.professionalName}
+                              </p>
+                              <p className="text-[11px] text-slate-700 font-semibold mt-0.5">
+                                {formatCurrency(app.value)}
                               </p>
                               {app.notes && (
                                 <p className="text-[10px] text-slate-500 italic mt-0.5 truncate">
@@ -415,12 +503,28 @@ export default function Agenda() {
                             </div>
 
                             <div className="flex items-center gap-1 shrink-0">
-                              {app.status !== 'Realizado' && (
+                              {/* Chegou: marcar presença na recepção */}
+                              {app.status !== 'Cancelado' &&
+                                app.status !== 'Realizado' &&
+                                !app.reception && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleArrival(app)}
+                                    className="h-8 px-2 text-xs text-emerald-700 hover:bg-emerald-100/60 rounded-lg font-semibold"
+                                    title="Confirmar chegada do paciente"
+                                  >
+                                    <UserCheck className="w-3.5 h-3.5 mr-1" />
+                                    Chegou
+                                  </Button>
+                                )}
+                              {/* Atender: só quando paciente presente e ainda não realizado */}
+                              {app.status !== 'Realizado' && isPresent && (
                                 <Button
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => handleFulfill(app)}
-                                  className="h-8 px-2 text-xs text-emerald-700 hover:bg-emerald-100/60 rounded-lg font-semibold"
+                                  className="h-8 px-2 text-xs text-emerald-900 bg-emerald-100 hover:bg-emerald-200 rounded-lg font-semibold"
                                   title="Realizar atendimento e abrir prontuário"
                                 >
                                   <Check className="w-3.5 h-3.5 mr-1" />
@@ -497,6 +601,8 @@ export default function Agenda() {
                     <div className="space-y-1.5 mt-2.5">
                       {dayApps.map((app) => {
                         const typeConfig = getAppointmentColor(app.type)
+                        const plan: PatientPlanType = app.planType || 'Particular'
+                        const planCfg = PLAN_CONFIG[plan] || PLAN_CONFIG.Particular
                         return (
                           <div
                             key={app.id}
@@ -506,15 +612,34 @@ export default function Agenda() {
                             }}
                             className={`p-2 rounded-lg border ${typeConfig.border} ${typeConfig.bg} text-left cursor-pointer hover:shadow-sm transition-all`}
                           >
-                            <span className="text-[10px] font-extrabold text-slate-500 font-mono block">
-                              {app.time}
-                            </span>
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-[10px] font-extrabold text-slate-500 font-mono">
+                                {app.time}
+                              </span>
+                              <ReceptionDot reception={app.reception} />
+                            </div>
                             <span className={`text-xs font-bold ${typeConfig.text} block truncate`}>
                               {app.patientName}
                             </span>
                             <span className="text-[10px] text-slate-500 block truncate">
                               {app.type}
                             </span>
+                            <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                              <Badge
+                                variant="outline"
+                                className={`text-[9px] font-bold px-1 py-0 h-3.5 border ${planCfg.badge}`}
+                              >
+                                {plan}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className={`text-[9px] font-bold px-1 py-0 h-3.5 ${
+                                  STATUS_BADGE_CLASS[app.status] || STATUS_BADGE_CLASS.Agendado
+                                }`}
+                              >
+                                {app.status}
+                              </Badge>
+                            </div>
                           </div>
                         )
                       })}
@@ -581,14 +706,25 @@ export default function Agenda() {
                   </span>
 
                   <div className="space-y-1 mt-1.5 overflow-hidden">
-                    {dayApps.slice(0, 2).map((app) => (
-                      <div
-                        key={app.id}
-                        className="text-[10px] font-semibold truncate bg-teal-50 text-navy-700 px-1.5 py-0.5 rounded border border-teal-100"
-                      >
-                        {app.time} {app.patientName.split(' ')[0]}
-                      </div>
-                    ))}
+                    {dayApps.slice(0, 2).map((app) => {
+                      const plan: PatientPlanType = app.planType || 'Particular'
+                      const planCfg = PLAN_CONFIG[plan] || PLAN_CONFIG.Particular
+                      return (
+                        <div
+                          key={app.id}
+                          className="text-[10px] font-semibold truncate bg-teal-50 text-navy-700 px-1.5 py-0.5 rounded border border-teal-100 flex items-center gap-1"
+                        >
+                          <span
+                            className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{ backgroundColor: planCfg.dot }}
+                          />
+                          <span className="flex-1 truncate">
+                            {app.time} {app.patientName.split(' ')[0]}
+                          </span>
+                          <ReceptionDot reception={app.reception} />
+                        </div>
+                      )
+                    })}
                     {dayApps.length > 2 && (
                       <span className="text-[9px] font-bold text-teal-600 pl-1">
                         +{dayApps.length - 2} mais
@@ -615,13 +751,16 @@ export default function Agenda() {
                   <th className="py-3.5 px-4">Profissional</th>
                   <th className="py-3.5 px-4">Duração</th>
                   <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4">Tipo de Pagamento</th>
+                  <th className="py-3.5 px-4">Valor</th>
+                  <th className="py-3.5 px-4">Recepção</th>
                   <th className="py-3.5 px-4 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredAppointments.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400 text-xs">
+                    <td colSpan={10} className="py-12 text-center text-slate-400 text-xs">
                       Nenhum agendamento encontrado.
                     </td>
                   </tr>
@@ -658,26 +797,44 @@ export default function Agenda() {
                           <Badge
                             variant="outline"
                             className={
-                              app.status === 'Realizado'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                : app.status === 'Confirmado'
-                                  ? 'bg-teal-50 text-navy-700 border-teal-200'
-                                  : app.status === 'Cancelado'
-                                    ? 'bg-red-50 text-red-700 border-red-200'
-                                    : 'bg-slate-100 text-slate-700'
+                              STATUS_BADGE_CLASS[app.status] || STATUS_BADGE_CLASS.Agendado
                             }
                           >
                             {app.status}
                           </Badge>
                         </td>
+                        <td className="py-3.5 px-4">
+                          <PlanBadge plan={app.planType || 'Particular'} />
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-xs text-slate-700 font-semibold">
+                          {formatCurrency(app.value)}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <ReceptionBadge reception={app.reception} />
+                          {!app.reception && <span className="text-[11px] text-slate-400">—</span>}
+                        </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {app.status !== 'Realizado' && (
+                            {app.status !== 'Cancelado' &&
+                              app.status !== 'Realizado' &&
+                              !app.reception && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleArrival(app)}
+                                  className="h-8 px-2 text-xs text-emerald-700 hover:bg-emerald-50 font-semibold rounded-lg"
+                                  title="Confirmar chegada do paciente"
+                                >
+                                  <UserCheck className="w-4 h-4 mr-1" />
+                                  Chegou
+                                </Button>
+                              )}
+                            {app.status !== 'Realizado' && app.reception === 'presente' && (
                               <Button
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => handleFulfill(app)}
-                                className="h-8 px-2 text-xs text-emerald-700 hover:bg-emerald-50 font-semibold rounded-lg"
+                                className="h-8 px-2 text-xs text-emerald-900 bg-emerald-100 hover:bg-emerald-200 font-semibold rounded-lg"
                                 title="Realizar e abrir prontuário"
                               >
                                 <Check className="w-4 h-4 mr-1" />
@@ -718,12 +875,12 @@ export default function Agenda() {
         </div>
       )}
 
-      {/* Legenda de Cores dos 10 Tipos de Atendimento */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+      {/* Legenda de Cores dos 10 Tipos de Atendimento + Pagamento + Recepção */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
           Legenda de Atendimentos Especializados
         </h4>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-1">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
           {Object.entries(APPOINTMENT_TYPE_COLORS).map(([type, color]) => (
             <div key={type} className="flex items-center gap-2 text-xs text-slate-700">
               <span
@@ -733,6 +890,34 @@ export default function Agenda() {
               <span className="truncate">{type}</span>
             </div>
           ))}
+        </div>
+
+        <div className="border-t border-slate-100 pt-3 flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Pagamento:
+            </span>
+            <span className="flex items-center gap-1 text-xs text-slate-700">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600" /> Particular
+            </span>
+            <span className="flex items-center gap-1 text-xs text-slate-700">
+              <span className="w-2.5 h-2.5 rounded-full bg-green-600" /> SUS
+            </span>
+            <span className="flex items-center gap-1 text-xs text-slate-700">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-600" /> Convênio
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Recepção:
+            </span>
+            <span className="flex items-center gap-1 text-xs text-slate-700">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Na recepção
+            </span>
+            <span className="flex items-center gap-1 text-xs text-slate-700">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Em atendimento
+            </span>
+          </div>
         </div>
       </div>
 
