@@ -52,6 +52,9 @@ interface ProcedureRow {
   name: string
   duration: number
   value: number
+  valueParticular: number
+  valueSUS: number
+  valueConvenio: number
   category: string
   active: boolean
   created: string
@@ -62,7 +65,9 @@ interface ProcedureFormData {
   name: string
   category: string
   duration: number
-  value: number
+  valueParticular: number
+  valueSUS: number
+  valueConvenio: number
   active: boolean
 }
 
@@ -70,7 +75,9 @@ const EMPTY_FORM: ProcedureFormData = {
   name: '',
   category: 'Avaliação',
   duration: 30,
-  value: 0,
+  valueParticular: 0,
+  valueSUS: 0,
+  valueConvenio: 0,
   active: true,
 }
 
@@ -103,16 +110,22 @@ export default function Procedimentos() {
       const records = await pb.collection('procedures').getFullList({
         sort: 'name',
       })
-      const rows: ProcedureRow[] = records.map((r: any) => ({
-        id: r.id,
-        name: r.name || '',
-        duration: Number(r.duration) || 0,
-        value: Number(r.value) || 0,
-        category: r.category || '',
-        active: r.active !== false,
-        created: r.created || '',
-        updated: r.updated || '',
-      }))
+      const rows: ProcedureRow[] = records.map((r: any) => {
+        const particular = Number(r.valueParticular ?? r.value) || 0
+        return {
+          id: r.id,
+          name: r.name || '',
+          duration: Number(r.duration) || 0,
+          value: Number(r.value) || particular,
+          valueParticular: particular,
+          valueSUS: Number(r.valueSUS) || 0,
+          valueConvenio: Number(r.valueConvenio) || 0,
+          category: r.category || '',
+          active: r.active !== false,
+          created: r.created || '',
+          updated: r.updated || '',
+        }
+      })
       setProcedures(rows)
     } catch (err) {
       console.error('Erro ao carregar procedimentos:', err)
@@ -145,7 +158,10 @@ export default function Procedimentos() {
       await pb.collection('procedures').create({
         name: data.name.trim(),
         duration: data.duration,
-        value: data.value,
+        value: data.valueParticular,
+        valueParticular: data.valueParticular,
+        valueSUS: data.valueSUS,
+        valueConvenio: data.valueConvenio,
         category: data.category,
         active: data.active,
       })
@@ -170,7 +186,10 @@ export default function Procedimentos() {
       await pb.collection('procedures').update(id, {
         name: data.name.trim(),
         duration: data.duration,
-        value: data.value,
+        value: data.valueParticular,
+        valueParticular: data.valueParticular,
+        valueSUS: data.valueSUS,
+        valueConvenio: data.valueConvenio,
         category: data.category,
         active: data.active,
       })
@@ -275,7 +294,7 @@ export default function Procedimentos() {
               <p className="text-xl font-bold text-slate-900">
                 {formatCurrency(
                   procedures.length
-                    ? procedures.reduce((sum, p) => sum + p.value, 0) / procedures.length
+                    ? procedures.reduce((sum, p) => sum + p.valueParticular, 0) / procedures.length
                     : 0,
                 )}
               </p>
@@ -322,7 +341,7 @@ export default function Procedimentos() {
                     Duração (min)
                   </TableHead>
                   <TableHead className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                    Valor (R$)
+                    Valores (Particular / SUS / Convênio)
                   </TableHead>
                   <TableHead className="text-xs font-bold text-slate-600 uppercase tracking-wider">
                     Status
@@ -360,9 +379,16 @@ export default function Procedimentos() {
                           <span className="text-sm text-slate-400">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm text-slate-600">{p.duration}</TableCell>
-                      <TableCell className="text-sm font-semibold text-slate-700">
-                        {formatCurrency(p.value)}
+                      <TableCell className="text-sm text-slate-600">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-semibold text-slate-700">
+                            Particular: {formatCurrency(p.valueParticular)}
+                          </span>
+                          <span className="text-slate-500">SUS: {formatCurrency(p.valueSUS)}</span>
+                          <span className="text-slate-500">
+                            Convênio: {formatCurrency(p.valueConvenio)}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         {p.active ? (
@@ -452,7 +478,9 @@ const ProcedureFormModal: React.FC<ProcedureFormModalProps> = ({
           name: procedure.name,
           category: procedure.category || 'Avaliação',
           duration: procedure.duration,
-          value: procedure.value,
+          valueParticular: procedure.valueParticular,
+          valueSUS: procedure.valueSUS,
+          valueConvenio: procedure.valueConvenio,
           active: procedure.active,
         })
       } else {
@@ -474,9 +502,17 @@ const ProcedureFormModal: React.FC<ProcedureFormModalProps> = ({
       setError('A duração deve ser maior que zero.')
       return
     }
-    if (form.value < 0 || isNaN(form.value)) {
-      setError('O valor deve ser maior ou igual a zero.')
-      return
+    const fields = [
+      { key: 'valueParticular' as const, label: 'Valor Particular' },
+      { key: 'valueSUS' as const, label: 'Valor SUS' },
+      { key: 'valueConvenio' as const, label: 'Valor Convênio' },
+    ]
+    for (const f of fields) {
+      const v = form[f.key]
+      if (v === null || v === undefined || isNaN(v) || v < 0) {
+        setError(`${f.label} deve ser maior ou igual a zero (não pode ficar vazio).`)
+        return
+      }
     }
 
     setSaving(true)
@@ -484,7 +520,9 @@ const ProcedureFormModal: React.FC<ProcedureFormModalProps> = ({
       name: form.name.trim(),
       category: form.category,
       duration: Number(form.duration),
-      value: Number(form.value),
+      valueParticular: Number(form.valueParticular) || 0,
+      valueSUS: Number(form.valueSUS) || 0,
+      valueConvenio: Number(form.valueConvenio) || 0,
       active: form.active,
     })
     setSaving(false)
@@ -555,20 +593,41 @@ const ProcedureFormModal: React.FC<ProcedureFormModalProps> = ({
             </Select>
           </div>
 
-          {/* Duração + Valor */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Duração */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">
+              Duração (min) <span className="text-red-500">*</span>
+            </Label>
+            <div className="relative">
+              <Clock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Input
+                type="number"
+                min={1}
+                step={1}
+                value={form.duration}
+                onChange={(e) => setForm({ ...form, duration: Number(e.target.value) })}
+                required
+                className="h-11 pl-10 rounded-xl border-slate-300 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Valores por tipo de pagamento */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-slate-700">
-                Duração (min) <span className="text-red-500">*</span>
+                Valor Particular (R$) <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
-                <Clock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <DollarSign className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <Input
                   type="number"
-                  min={1}
-                  step={1}
-                  value={form.duration}
-                  onChange={(e) => setForm({ ...form, duration: Number(e.target.value) })}
+                  min={0}
+                  step="0.01"
+                  value={form.valueParticular}
+                  onChange={(e) =>
+                    setForm({ ...form, valueParticular: Number(e.target.value) || 0 })
+                  }
                   required
                   className="h-11 pl-10 rounded-xl border-slate-300 text-sm"
                 />
@@ -577,7 +636,7 @@ const ProcedureFormModal: React.FC<ProcedureFormModalProps> = ({
 
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-slate-700">
-                Valor (R$) <span className="text-red-500">*</span>
+                Valor SUS (R$) <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
                 <DollarSign className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -585,8 +644,26 @@ const ProcedureFormModal: React.FC<ProcedureFormModalProps> = ({
                   type="number"
                   min={0}
                   step="0.01"
-                  value={form.value}
-                  onChange={(e) => setForm({ ...form, value: Number(e.target.value) })}
+                  value={form.valueSUS}
+                  onChange={(e) => setForm({ ...form, valueSUS: Number(e.target.value) || 0 })}
+                  required
+                  className="h-11 pl-10 rounded-xl border-slate-300 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">
+                Valor Convênio (R$) <span className="text-red-500">*</span>
+              </Label>
+              <div className="relative">
+                <DollarSign className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.valueConvenio}
+                  onChange={(e) => setForm({ ...form, valueConvenio: Number(e.target.value) || 0 })}
                   required
                   className="h-11 pl-10 rounded-xl border-slate-300 text-sm"
                 />

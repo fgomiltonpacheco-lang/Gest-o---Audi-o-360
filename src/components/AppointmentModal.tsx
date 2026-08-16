@@ -17,9 +17,15 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Appointment, AppointmentStatus, Procedure } from '@/types'
+import {
+  Appointment,
+  AppointmentStatus,
+  Procedure,
+  PatientPlanType,
+  getProcedureValueByPlan,
+} from '@/types'
 import { useApp } from '@/context/AppContext'
-import { getAppointmentColor } from '@/lib/formatters'
+import { getAppointmentColor, formatCurrency } from '@/lib/formatters'
 import { Calendar, Clock, User, AlertCircle, DollarSign } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 
@@ -58,6 +64,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   const [time, setTime] = useState('09:00')
   const [duration, setDuration] = useState<number>(60)
   const [value, setValue] = useState<number>(0)
+  const [valueSourceLabel, setValueSourceLabel] = useState<string>('')
   const [professionalName, setProfessionalName] = useState('Milton Soares Pacheco')
   const [status, setStatus] = useState<AppointmentStatus>('Agendado')
   const [notes, setNotes] = useState('')
@@ -73,16 +80,22 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
         filter: 'active = true',
         sort: 'name',
       })
-      const rows: Procedure[] = records.map((r: any) => ({
-        id: r.id,
-        name: r.name || '',
-        duration: Number(r.duration) || 30,
-        value: Number(r.value) || 0,
-        category: r.category || '',
-        active: r.active !== false,
-        createdAt: r.created || '',
-        updatedAt: r.updated || '',
-      }))
+      const rows: Procedure[] = records.map((r: any) => {
+        const particular = Number(r.valueParticular ?? r.value) || 0
+        return {
+          id: r.id,
+          name: r.name || '',
+          duration: Number(r.duration) || 30,
+          value: Number(r.value) || particular,
+          valueParticular: particular,
+          valueSUS: Number(r.valueSUS) || 0,
+          valueConvenio: Number(r.valueConvenio) || 0,
+          category: r.category || '',
+          active: r.active !== false,
+          createdAt: r.created || '',
+          updatedAt: r.updated || '',
+        }
+      })
       setProcedures(rows)
     } catch (err) {
       console.error('Erro ao carregar procedimentos:', err)
@@ -108,6 +121,12 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       setTime(appointmentToEdit.time)
       setDuration(appointmentToEdit.duration)
       setValue(appointmentToEdit.value ?? 0)
+      // Ao editar, indica a origem do valor conforme o plano do paciente.
+      {
+        const pat = patients.find((p) => p.id === appointmentToEdit.patientId)
+        const plan: PatientPlanType = pat?.planType || 'Particular'
+        setValueSourceLabel(appointmentToEdit.procedureId ? `Valor para ${plan}` : '')
+      }
       setProfessionalName(appointmentToEdit.professionalName)
       setStatus(appointmentToEdit.status)
       setNotes(appointmentToEdit.notes || '')
@@ -120,6 +139,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       setTime(initialTime || '09:00')
       setDuration(60)
       setValue(0)
+      setValueSourceLabel('')
       setProfessionalName('Milton Soares Pacheco')
       setStatus('Agendado')
       setNotes('')
@@ -138,9 +158,21 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
     setPatientId(p.id)
     setPatientSearch(p.name)
     setPatientDropdownOpen(false)
+    // Se um procedimento já estiver selecionado, reajusta o valor conforme o
+    // plano do novo paciente.
+    if (procedureId) {
+      const proc = procedures.find((pr) => pr.id === procedureId)
+      if (proc) {
+        const plan: PatientPlanType = p.planType || 'Particular'
+        setValue(getProcedureValueByPlan(proc, plan))
+        setValueSourceLabel(`Valor para ${plan}`)
+      }
+    }
   }
 
   // Ao selecionar um procedimento, preenche nome/duração/valor automaticamente.
+  // O valor é escolhido conforme o planType do paciente selecionado
+  // (Particular como padrão quando nenhum paciente estiver selecionado).
   // Os campos continuam editáveis depois.
   const handleSelectProcedure = (procId: string) => {
     const proc = procedures.find((p) => p.id === procId)
@@ -148,7 +180,10 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       setProcedureId(proc.id)
       setProcedureName(proc.name)
       setDuration(proc.duration)
-      setValue(proc.value)
+      const patientObj = patients.find((p) => p.id === patientId)
+      const plan: PatientPlanType = patientObj?.planType || 'Particular'
+      setValue(getProcedureValueByPlan(proc, plan))
+      setValueSourceLabel(`Valor para ${plan}`)
     }
   }
 
@@ -283,7 +318,8 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                           />
                           <span className="flex-1 truncate">{p.name}</span>
                           <span className="text-slate-400 text-[10px]">
-                            {p.duration}min • R$ {Number(p.value).toFixed(0)}
+                            {p.duration}min • Part: {formatCurrency(p.valueParticular)} • SUS:{' '}
+                            {formatCurrency(p.valueSUS)} • Conv: {formatCurrency(p.valueConvenio)}
                           </span>
                         </span>
                       </SelectItem>
@@ -382,6 +418,9 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                 className="h-10 rounded-xl mt-1 text-xs border-slate-300 pl-9"
               />
             </div>
+            {valueSourceLabel && (
+              <p className="text-[11px] text-teal-600 font-medium mt-1">{valueSourceLabel}</p>
+            )}
           </div>
 
           {/* Status */}

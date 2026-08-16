@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T00:54:18.459Z",
+  "generatedAt": "2026-08-16T00:59:22.011Z",
   "collections": [
     {
       "name": "users",
@@ -1615,6 +1615,24 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "valueParticular",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valueSUS",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valueConvenio",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX idx_procedures_name ON procedures (name)"]

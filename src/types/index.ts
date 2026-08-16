@@ -79,11 +79,30 @@ export interface Procedure {
   id: string
   name: string
   duration: number // minutos
-  value: number // R$
+  value: number // R$ (legado — espelha valueParticular para compatibilidade)
+  valueParticular: number // R$ — valor para pacientes Particulares
+  valueSUS: number // R$ — valor para pacientes SUS
+  valueConvenio: number // R$ — valor para pacientes de Convênio/Plano de Saúde
   category?: string
   active: boolean
   createdAt: string
   updatedAt: string
+}
+
+/** Tipo de plano do paciente (espelha Patient.planType). */
+export type PatientPlanType = 'Particular' | 'Convênio' | 'SUS'
+
+/**
+ * Retorna o valor de um procedimento conforme o plano do paciente.
+ * Se o plano não for reconhecido, usa `valueParticular` como padrão.
+ */
+export function getProcedureValueByPlan(
+  proc: Pick<Procedure, 'valueParticular' | 'valueSUS' | 'valueConvenio'>,
+  planType?: PatientPlanType | null,
+): number {
+  if (planType === 'SUS') return Number(proc.valueSUS) || 0
+  if (planType === 'Convênio') return Number(proc.valueConvenio) || 0
+  return Number(proc.valueParticular) || 0
 }
 
 export interface Appointment {
