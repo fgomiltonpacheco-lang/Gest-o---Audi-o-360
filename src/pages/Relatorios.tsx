@@ -127,17 +127,119 @@ export default function Relatorios() {
     }))
   }, [appointments])
 
-  // 4. Vendas por Mês (Barras Duplas Qtd + Valor)
-  const salesByMonthData = useMemo(() => {
-    return [
-      { mes: 'Set/24', quantidade: 3, valorMil: 28.5 },
-      { mes: 'Out/24', quantidade: 4, valorMil: 36.0 },
-      { mes: 'Nov/24', quantidade: 3, valorMil: 24.2 },
-      { mes: 'Dez/24', quantidade: 5, valorMil: 48.0 },
-      { mes: 'Jan/25', quantidade: 4, valorMil: 38.5 },
-      { mes: 'Fev/25', quantidade: 3, valorMil: 32.4 },
+  // 4. Faturamento por Tipo de Pagamento (Particular × SUS × Convênio)
+  const billingByTypeData = useMemo(() => {
+    const MONTH_ABBR = [
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
     ]
-  }, [])
+
+    // Normaliza o planType em uma das três chaves canônicas
+    const normType = (t?: string | null): 'particular' | 'sus' | 'convenio' => {
+      if (!t) return 'particular'
+      const low = String(t).toLowerCase()
+      if (low === 'sus') return 'sus'
+      if (low.includes('conv')) return 'convenio'
+      return 'particular'
+    }
+
+    // Filtra agendamentos pelo período selecionado (comparação YYYY-MM-DD)
+    const periodAppts = appointments.filter((a) => a.date >= startDate && a.date <= endDate)
+
+    // Totais do período (para os cards) + contagem de atendimentos por tipo
+    const totals = {
+      particular: 0,
+      sus: 0,
+      convenio: 0,
+      particularCount: 0,
+      susCount: 0,
+      convenioCount: 0,
+    }
+
+    // Acumulado por mês (chave "Mes/AA")
+    const byMonth: Record<string, { particular: number; sus: number; convenio: number }> = {}
+
+    periodAppts.forEach((a) => {
+      // contributions agrega valor por tipo de pagamento do atendimento
+      const contributions: Record<string, number> = {}
+
+      const items =
+        Array.isArray(a.proceduresList) && a.proceduresList.length > 0 ? a.proceduresList : null
+
+      if (items) {
+        items.forEach((it) => {
+          const key = normType(it.planType)
+          contributions[key] = (contributions[key] || 0) + (Number(it.value) || 0)
+        })
+      } else {
+        // Fallback: usa value + planType direto do agendamento
+        const key = normType(a.planType)
+        contributions[key] = (contributions[key] || 0) + (Number(a.value) || 0)
+      }
+
+      // Chave de mês a partir da data do agendamento
+      const d = new Date(`${a.date}T00:00:00`)
+      if (isNaN(d.getTime())) return
+      const mKey = `${MONTH_ABBR[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`
+      if (!byMonth[mKey]) byMonth[mKey] = { particular: 0, sus: 0, convenio: 0 }
+
+      // Cada tipo que recebeu valor é contado uma vez por atendimento
+      Object.entries(contributions).forEach(([key, val]) => {
+        totals[key] += val
+        byMonth[mKey][key] += val
+        if (key === 'particular') totals.particularCount++
+        else if (key === 'sus') totals.susCount++
+        else totals.convenioCount++
+      })
+    })
+
+    // Gera os últimos 6 meses terminando no mês final do período selecionado
+    const end = new Date(`${endDate}T00:00:00`)
+    const months: {
+      mes: string
+      particular: number
+      sus: number
+      convenio: number
+      total: number
+    }[] = []
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(end.getFullYear(), end.getMonth() - i, 1)
+      const mKey = `${MONTH_ABBR[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`
+      const m = byMonth[mKey] || { particular: 0, sus: 0, convenio: 0 }
+      months.push({
+        mes: mKey,
+        particular: m.particular,
+        sus: m.sus,
+        convenio: m.convenio,
+        total: m.particular + m.sus + m.convenio,
+      })
+    }
+
+    // Totais exibidos no rodapé da tabela (somam apenas os meses mostrados)
+    const monthsTotals = months.reduce(
+      (acc, m) => {
+        acc.particular += m.particular
+        acc.sus += m.sus
+        acc.convenio += m.convenio
+        acc.total += m.total
+        return acc
+      },
+      { particular: 0, sus: 0, convenio: 0, total: 0 },
+    )
+
+    return { totals, months, monthsTotals }
+  }, [appointments, startDate, endDate])
 
   // 5. Receita vs Despesa (Linhas duplas)
   const cashFlowTrendData = useMemo(() => {
@@ -384,6 +486,72 @@ export default function Relatorios() {
         </div>
       </div>
 
+      {/* Cards de Resumo: Faturamento por Tipo de Pagamento */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Particular */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-start gap-4">
+          <div className="p-2.5 rounded-xl bg-blue-50">
+            <DollarSign className="w-6 h-6 text-blue-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-slate-700">Particular</h3>
+              <Badge className="bg-blue-100 text-blue-700 text-[10px] font-semibold">
+                Particular
+              </Badge>
+            </div>
+            <p className="text-2xl font-extrabold text-slate-900 mt-1">
+              {formatCurrency(billingByTypeData.totals.particular)}
+            </p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {billingByTypeData.totals.particularCount} atendimento(s) no período
+            </p>
+          </div>
+        </div>
+
+        {/* SUS */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-start gap-4">
+          <div className="p-2.5 rounded-xl bg-emerald-50">
+            <DollarSign className="w-6 h-6 text-emerald-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-slate-700">SUS</h3>
+              <Badge className="bg-emerald-100 text-emerald-700 text-[10px] font-semibold">
+                SUS
+              </Badge>
+            </div>
+            <p className="text-2xl font-extrabold text-slate-900 mt-1">
+              {formatCurrency(billingByTypeData.totals.sus)}
+            </p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {billingByTypeData.totals.susCount} atendimento(s) no período
+            </p>
+          </div>
+        </div>
+
+        {/* Convênio */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-start gap-4">
+          <div className="p-2.5 rounded-xl bg-purple-50">
+            <DollarSign className="w-6 h-6 text-purple-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-slate-700">Convênio</h3>
+              <Badge className="bg-purple-100 text-purple-700 text-[10px] font-semibold">
+                Convênio
+              </Badge>
+            </div>
+            <p className="text-2xl font-extrabold text-slate-900 mt-1">
+              {formatCurrency(billingByTypeData.totals.convenio)}
+            </p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {billingByTypeData.totals.convenioCount} atendimento(s) no período
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Grade de Cards com Gráficos e Tabelas (9 Relatórios) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 1. Novos Pacientes por Mês */}
@@ -487,42 +655,102 @@ export default function Relatorios() {
           </div>
         </div>
 
-        {/* 4. Vendas de Aparelhos por Mês */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-orange-600" />
-                Vendas e Faturamento de Próteses
-              </h3>
-              <p className="text-xs text-slate-400">
-                Faturamento em R$ mil e quantidade de unidades
-              </p>
+        {/* 4. Faturamento por Tipo de Pagamento (gráfico + tabela) */}
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-orange-600" />
+                  Faturamento por Tipo de Pagamento
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Particular × SUS × Convênio nos últimos 6 meses
+                </p>
+              </div>
+            </div>
+
+            <div className="h-64 w-full pt-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={billingByTypeData.months}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="mes" fontSize={11} stroke="#94a3b8" />
+                  <YAxis
+                    fontSize={11}
+                    stroke="#94a3b8"
+                    tickFormatter={(v) => formatCurrency(v)}
+                    width={90}
+                  />
+                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                  <Legend />
+                  <Bar
+                    dataKey="particular"
+                    fill="#3b82f6"
+                    name="Particular"
+                    radius={[6, 6, 0, 0]}
+                  />
+                  <Bar dataKey="sus" fill="#22c55e" name="SUS" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="convenio" fill="#8b5cf6" name="Convênio" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
-          <div className="h-64 w-full pt-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={salesByMonthData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="mes" fontSize={11} stroke="#94a3b8" />
-                <YAxis fontSize={11} stroke="#94a3b8" />
-                <Tooltip />
-                <Legend />
-                <Bar
-                  dataKey="valorMil"
-                  fill="#0F2B5C"
-                  name="Faturamento (R$ mil)"
-                  radius={[6, 6, 0, 0]}
-                />
-                <Bar
-                  dataKey="quantidade"
-                  fill="#f97316"
-                  name="Aparelhos (un)"
-                  radius={[6, 6, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+          {/* Tabela detalhada do faturamento por mês */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4 text-slate-600" />
+              Detalhamento Mensal — Faturamento por Tipo
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500">
+                    <th className="text-left font-semibold py-2 px-2">Mês</th>
+                    <th className="text-right font-semibold py-2 px-2">Particular (R$)</th>
+                    <th className="text-right font-semibold py-2 px-2">SUS (R$)</th>
+                    <th className="text-right font-semibold py-2 px-2">Convênio (R$)</th>
+                    <th className="text-right font-semibold py-2 px-2">Total (R$)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {billingByTypeData.months.map((m) => (
+                    <tr key={m.mes} className="border-b border-slate-100">
+                      <td className="py-2 px-2 font-semibold text-slate-700">{m.mes}</td>
+                      <td className="py-2 px-2 text-right text-blue-700 font-medium">
+                        {formatCurrency(m.particular)}
+                      </td>
+                      <td className="py-2 px-2 text-right text-emerald-700 font-medium">
+                        {formatCurrency(m.sus)}
+                      </td>
+                      <td className="py-2 px-2 text-right text-purple-700 font-medium">
+                        {formatCurrency(m.convenio)}
+                      </td>
+                      <td className="py-2 px-2 text-right font-extrabold text-slate-900">
+                        {formatCurrency(m.total)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-slate-50 font-extrabold text-slate-900">
+                    <td className="py-2.5 px-2">Total</td>
+                    <td className="py-2.5 px-2 text-right text-blue-700">
+                      {formatCurrency(billingByTypeData.monthsTotals.particular)}
+                    </td>
+                    <td className="py-2.5 px-2 text-right text-emerald-700">
+                      {formatCurrency(billingByTypeData.monthsTotals.sus)}
+                    </td>
+                    <td className="py-2.5 px-2 text-right text-purple-700">
+                      {formatCurrency(billingByTypeData.monthsTotals.convenio)}
+                    </td>
+                    <td className="py-2.5 px-2 text-right">
+                      {formatCurrency(billingByTypeData.monthsTotals.total)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
         </div>
 
