@@ -50,8 +50,9 @@ import {
   Pencil,
   AlertTriangle,
   FileText,
+  ShieldCheck,
 } from 'lucide-react'
-import type { Equipment, NfseB2BProvedor, NfseB2BAmbiente } from '@/types'
+import type { Equipment, NfseB2BProvedor, NfseB2BAmbiente, PolicyTexts } from '@/types'
 import { getEquipmentStatus } from '@/types'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 
@@ -140,6 +141,8 @@ export default function Configuracoes() {
     nfseB2BConfig,
     fetchNfseB2BConfig,
     saveNfseB2BConfig,
+    fetchLgpdPolicyTexts,
+    saveLgpdPolicyTexts,
   } = useApp()
   const { toast } = useToast()
 
@@ -400,6 +403,47 @@ export default function Configuracoes() {
     }
   }, [currentUser?.id, currentUser?.role, loadConfig, loadBlocked])
 
+  // ---------- LGPD: textos de política e termos ----------
+  const [lgpdTexts, setLgpdTexts] = useState<PolicyTexts | null>(null)
+  const [lgpdLoading, setLgpdLoading] = useState(false)
+  const [lgpdSaving, setLgpdSaving] = useState(false)
+
+  useEffect(() => {
+    if (currentUser?.role !== 'admin') return
+    setLgpdLoading(true)
+    fetchLgpdPolicyTexts()
+      .then((texts) => setLgpdTexts(texts))
+      .catch((err) => {
+        console.error('Erro ao carregar textos da LGPD:', err)
+        toast({
+          title: 'Erro ao carregar',
+          description: 'Não foi possível carregar os textos da LGPD.',
+          variant: 'destructive',
+        })
+      })
+      .finally(() => setLgpdLoading(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.role])
+
+  const handleSaveLgpd = async () => {
+    if (!lgpdTexts) return
+    setLgpdSaving(true)
+    const res = await saveLgpdPolicyTexts(lgpdTexts)
+    setLgpdSaving(false)
+    toast(
+      res.success
+        ? {
+            title: 'Textos da LGPD salvos',
+            description: 'A política de privacidade e os termos foram atualizados.',
+          }
+        : {
+            title: 'Erro ao salvar',
+            description: res.message || 'Não foi possível salvar os textos da LGPD.',
+            variant: 'destructive',
+          },
+    )
+  }
+
   // ---------- Salvar horários ----------
   const handleSaveHours = async () => {
     setHoursSaving(true)
@@ -575,6 +619,13 @@ export default function Configuracoes() {
           >
             <FileText className="w-3.5 h-3.5 mr-1.5" />
             NFS-e
+          </TabsTrigger>
+          <TabsTrigger
+            value="lgpd"
+            className="rounded-lg text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm px-4 py-2"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
+            LGPD
           </TabsTrigger>
         </TabsList>
 
@@ -1240,6 +1291,122 @@ export default function Configuracoes() {
                   {nfseSaving ? 'Salvando...' : 'Salvar Configuração NFS-e'}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ============ ABA: LGPD ============ */}
+        <TabsContent value="lgpd" className="mt-4">
+          <Card className="rounded-2xl border-slate-200 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-teal-600" />
+                LGPD & Termos
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                Política de Privacidade e termos de consentimento exibidos no cadastro de pacientes
+                e na tela de login. Os textos são armazenados em um único registro na collection
+                <span className="font-mono"> policy_texts</span>.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {lgpdLoading || !lgpdTexts ? (
+                <p className="text-xs text-slate-400 py-4 text-center">Carregando textos...</p>
+              ) : (
+                <>
+                  {/* Política de Privacidade */}
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Política de Privacidade
+                    </h4>
+                    <Textarea
+                      value={lgpdTexts.politica_privacidade}
+                      onChange={(e) =>
+                        setLgpdTexts({
+                          ...lgpdTexts,
+                          politica_privacidade: e.target.value,
+                        })
+                      }
+                      rows={8}
+                      className="rounded-xl text-xs border-slate-300 resize-y font-mono leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Termo - Dados Cadastrais */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Termo de Consentimento — Dados Cadastrais
+                    </h4>
+                    <Textarea
+                      value={lgpdTexts.dados_cadastrais.texto}
+                      onChange={(e) =>
+                        setLgpdTexts({
+                          ...lgpdTexts,
+                          dados_cadastrais: {
+                            ...lgpdTexts.dados_cadastrais,
+                            texto: e.target.value,
+                          },
+                        })
+                      }
+                      rows={6}
+                      className="rounded-xl text-xs border-slate-300 resize-y font-mono leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Termo - Dados de Saúde */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Termo de Consentimento — Dados de Saúde
+                    </h4>
+                    <Textarea
+                      value={lgpdTexts.dados_saude.texto}
+                      onChange={(e) =>
+                        setLgpdTexts({
+                          ...lgpdTexts,
+                          dados_saude: {
+                            ...lgpdTexts.dados_saude,
+                            texto: e.target.value,
+                          },
+                        })
+                      }
+                      rows={6}
+                      className="rounded-xl text-xs border-slate-300 resize-y font-mono leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Termo - Marketing */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Termo de Consentimento — Marketing
+                    </h4>
+                    <Textarea
+                      value={lgpdTexts.marketing.texto}
+                      onChange={(e) =>
+                        setLgpdTexts({
+                          ...lgpdTexts,
+                          marketing: {
+                            ...lgpdTexts.marketing,
+                            texto: e.target.value,
+                          },
+                        })
+                      }
+                      rows={6}
+                      className="rounded-xl text-xs border-slate-300 resize-y font-mono leading-relaxed"
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-2 border-t border-slate-100">
+                    <Button
+                      onClick={handleSaveLgpd}
+                      disabled={lgpdSaving}
+                      className="bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-xl shadow-sm flex items-center gap-2 h-10 px-5"
+                    >
+                      <Save className="w-4 h-4" />
+                      {lgpdSaving ? 'Salvando...' : 'Salvar Textos LGPD'}
+                    </Button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -36,6 +36,10 @@ import {
   NFServicoComissao,
   EmpresaParceira,
   NfseB2BConfig,
+  Consentimento,
+  TipoConsentimento,
+  PolicyTexts,
+  TEXTO_PADRAO_CONSENTIMENTO,
 } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
@@ -768,6 +772,21 @@ interface AppContextType {
     data: Partial<Omit<NfseB2BConfig, 'id' | 'created' | 'updated'>>,
   ) => Promise<{ success: boolean; message?: string }>
 
+  // LGPD — Consentimentos e Política de Privacidade
+  fetchConsentimentos: (pacienteId: string) => Promise<Consentimento[]>
+  registrarConsentimento: (
+    pacienteId: string,
+    tipo: TipoConsentimento,
+    textoTermo: string,
+    observacoes?: string,
+  ) => Promise<{ success: boolean; message?: string }>
+  revogarConsentimento: (
+    consentimentoId: string,
+    motivo: string,
+  ) => Promise<{ success: boolean; message?: string }>
+  fetchLgpdPolicyTexts: () => Promise<PolicyTexts>
+  saveLgpdPolicyTexts: (texts: PolicyTexts) => Promise<{ success: boolean; message?: string }>
+
   // Utilitário para recarregar dados do banco
   resetToSeedData: () => void
 }
@@ -1352,6 +1371,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .then((rec: any) => {
         const mapped = mapPatient(rec)
         setPatients((prev) => prev.map((p) => (p.id === tempId ? mapped : p)))
+        // LGPD: registra automaticamente o consentimento de dados cadastrais
+        // (status='aceito') para o novo paciente.
+        pb.collection('consentimentos')
+          .create({
+            paciente_id: rec.id,
+            tipo_consentimento: 'dados_cadastrais',
+            versao_termo: `v1-${todayStr()}`,
+            data_aceitacao: new Date().toISOString(),
+            ip_aceitacao: '',
+            usuario_id: currentUser?.id || '',
+            usuario_nome: currentUser?.name || '',
+            status: 'aceito',
+            observacoes: TEXTO_PADRAO_CONSENTIMENTO.dados_cadastrais,
+          })
+          .catch((e) => console.warn('Não foi possível registrar consentimento LGPD:', e))
       })
       .catch((err) => {
         console.error('Erro ao criar paciente no PB:', err)
@@ -3386,6 +3420,201 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }
 
+  // ---------- LGPD: Consentimentos ----------
+  const fetchConsentimentos = useCallback(async (pacienteId: string): Promise<Consentimento[]> => {
+    if (!pacienteId) return []
+    try {
+      const recs = await pb.collection('consentimentos').getFullList({
+        filter: `paciente_id = "${pacienteId}"`,
+        sort: '-data_aceitacao',
+      })
+      return recs.map((r: any) => ({
+        id: r.id,
+        paciente_id: r.paciente_id || '',
+        tipo_consentimento: (r.tipo_consentimento || 'dados_cadastrais') as TipoConsentimento,
+        versao_termo: r.versao_termo || '',
+        data_aceitacao: r.data_aceitacao || '',
+        ip_aceitacao: r.ip_aceitacao || '',
+        usuario_id: r.usuario_id || '',
+        usuario_nome: r.usuario_nome || '',
+        status: (r.status || 'aceito') as Consentimento['status'],
+        data_revogacao: r.data_revogacao || null,
+        observacoes: r.observacoes || '',
+      }))
+    } catch (err) {
+      console.error('Erro ao buscar consentimentos:', err)
+      return []
+    }
+  }, [])
+
+  const registrarConsentimento = useCallback(
+    async (
+      pacienteId: string,
+      tipo: TipoConsentimento,
+      textoTermo: string,
+      observacoes?: string,
+    ): Promise<{ success: boolean; message?: string }> => {
+      try {
+        // versão do termo: hash simples da data atual + tamanho do texto
+        const versao = `v1-${new Date().toISOString().slice(0, 10)}`
+        const payload: Record<string, any> = {
+          paciente_id: pacienteId,
+          tipo_consentimento: tipo,
+          versao_termo: versao,
+          data_aceitacao: new Date().toISOString(),
+          ip_aceitacao: '',
+          usuario_id: currentUser?.id || '',
+          usuario_nome: currentUser?.name || '',
+          status: 'aceito',
+          observacoes: observacoes || textoTermo || '',
+        }
+        await pb.collection('consentimentos').create(payload)
+        toast({
+          title: 'Consentimento registrado',
+          description: 'O consentimento foi salvo com sucesso.',
+        })
+        return { success: true }
+      } catch (err) {
+        console.error('Erro ao registrar consentimento:', err)
+        const msg = describePbError(err)
+        toast({
+          title: 'Erro ao registrar consentimento',
+          description: msg,
+          variant: 'destructive',
+        })
+        return { success: false, message: msg }
+      }
+    },
+    [currentUser?.id, currentUser?.name],
+  )
+
+  const revogarConsentimento = useCallback(
+    async (
+      consentimentoId: string,
+      motivo: string,
+    ): Promise<{ success: boolean; message?: string }> => {
+      try {
+        await pb.collection('consentimentos').update(consentimentoId, {
+          status: 'revogado',
+          data_revogacao: new Date().toISOString(),
+          observacoes: motivo,
+        })
+        toast({
+          title: 'Consentimento revogado',
+          description: 'O consentimento foi revogado com sucesso.',
+          variant: 'destructive',
+        })
+        return { success: true }
+      } catch (err) {
+        console.error('Erro ao revogar consentimento:', err)
+        const msg = describePbError(err)
+        toast({
+          title: 'Erro ao revogar consentimento',
+          description: msg,
+          variant: 'destructive',
+        })
+        return { success: false, message: msg }
+      }
+    },
+    [],
+  )
+
+  // ---------- LGPD: Textos de Política/Termos ----------
+  const defaultPolicyTexts = (): PolicyTexts => ({
+    dados_cadastrais: {
+      texto: TEXTO_PADRAO_CONSENTIMENTO.dados_cadastrais,
+      versao: 'v1',
+    },
+    dados_saude: { texto: TEXTO_PADRAO_CONSENTIMENTO.dados_saude, versao: 'v1' },
+    marketing: { texto: TEXTO_PADRAO_CONSENTIMENTO.marketing, versao: 'v1' },
+    pesquisa: { texto: TEXTO_PADRAO_CONSENTIMENTO.pesquisa, versao: 'v1' },
+    politica_privacidade:
+      'POLÍTICA DE PRIVACIDADE — AUDIÇÃO360 (LGPD - Lei 13.709/2018)\n\n' +
+      'A AUDIÇÃO360 valoriza a privacidade e a proteção dos dados pessoais de seus pacientes, ' +
+      'colaboradores e parceiros. Esta Política de Privacidade descreve como coletamos, usamos, ' +
+      'armazenamos e protegemos as informações em conformidade com a Lei Geral de Proteção de Dados (LGPD).\n\n' +
+      '1. Dados coletados: nome, CPF, data de nascimento, endereço, telefones, e-mail e dados de saúde ' +
+      'necessários à prestação dos serviços audiológicos.\n' +
+      '2. Finalidade do tratamento: cadastro, agendamento, prestação de serviços, comunicação e ' +
+      'cumprimento de obrigações legais.\n' +
+      '3. Compartilhamento: os dados são tratados com sigilo e somente compartilhados quando exigido ' +
+      'por lei ou mediante autorização expressa do titular.\n' +
+      '4. Direitos do titular: acesso, correção, exclusão, portabilidade e revogação do consentimento, ' +
+      'mediante solicitação por escrito à clínica.\n' +
+      '5. Segurança: adotamos medidas técnicas e organizacionais para proteger os dados contra acessos ' +
+      'não autorizados, perda ou alteração indevida.\n\n' +
+      'Para mais informações ou exercício de direitos, entre em contato pelo e-mail da clínica.',
+  })
+
+  const fetchLgpdPolicyTexts = useCallback(async (): Promise<PolicyTexts> => {
+    try {
+      const list = await pb.collection('policy_texts').getList(1, 1, { sort: '-created' })
+      const rec: any = list.items?.[0]
+      if (!rec) return defaultPolicyTexts()
+      return {
+        dados_cadastrais: {
+          texto: rec.dados_cadastrais_texto || TEXTO_PADRAO_CONSENTIMENTO.dados_cadastrais,
+          versao: rec.dados_cadastrais_versao || 'v1',
+        },
+        dados_saude: {
+          texto: rec.dados_saude_texto || TEXTO_PADRAO_CONSENTIMENTO.dados_saude,
+          versao: rec.dados_saude_versao || 'v1',
+        },
+        marketing: {
+          texto: rec.marketing_texto || TEXTO_PADRAO_CONSENTIMENTO.marketing,
+          versao: rec.marketing_versao || 'v1',
+        },
+        pesquisa: {
+          texto: rec.pesquisa_texto || TEXTO_PADRAO_CONSENTIMENTO.pesquisa,
+          versao: rec.pesquisa_versao || 'v1',
+        },
+        politica_privacidade: rec.politica_privacidade || defaultPolicyTexts().politica_privacidade,
+      }
+    } catch (err) {
+      console.error('Erro ao buscar textos da política LGPD:', err)
+      return defaultPolicyTexts()
+    }
+  }, [])
+
+  const saveLgpdPolicyTexts = useCallback(
+    async (texts: PolicyTexts): Promise<{ success: boolean; message?: string }> => {
+      try {
+        const payload = {
+          dados_cadastrais_texto: texts.dados_cadastrais.texto,
+          dados_cadastrais_versao: texts.dados_cadastrais.versao || 'v1',
+          dados_saude_texto: texts.dados_saude.texto,
+          dados_saude_versao: texts.dados_saude.versao || 'v1',
+          marketing_texto: texts.marketing.texto,
+          marketing_versao: texts.marketing.versao || 'v1',
+          pesquisa_texto: texts.pesquisa.texto,
+          pesquisa_versao: texts.pesquisa.versao || 'v1',
+          politica_privacidade: texts.politica_privacidade,
+        }
+        const list = await pb.collection('policy_texts').getList(1, 1, { sort: '-created' })
+        if (list.items.length > 0) {
+          await pb.collection('policy_texts').update(list.items[0].id, payload)
+        } else {
+          await pb.collection('policy_texts').create(payload)
+        }
+        toast({
+          title: 'Textos da LGPD salvos',
+          description: 'As configurações foram atualizadas.',
+        })
+        return { success: true }
+      } catch (err) {
+        console.error('Erro ao salvar textos da LGPD:', err)
+        const msg = describePbError(err)
+        toast({
+          title: 'Erro ao salvar',
+          description: msg,
+          variant: 'destructive',
+        })
+        return { success: false, message: msg }
+      }
+    },
+    [],
+  )
+
   return (
     <AppContext.Provider
       value={{
@@ -3479,6 +3708,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         nfseB2BConfig,
         fetchNfseB2BConfig,
         saveNfseB2BConfig,
+        // LGPD
+        fetchConsentimentos,
+        registrarConsentimento,
+        revogarConsentimento,
+        fetchLgpdPolicyTexts,
+        saveLgpdPolicyTexts,
         alerts,
         unreadAlertsCount,
         resetToSeedData,

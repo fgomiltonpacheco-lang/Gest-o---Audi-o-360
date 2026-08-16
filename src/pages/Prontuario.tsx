@@ -64,6 +64,11 @@ import {
   Sale,
   PDVPaymentMethod,
   HearingAidSide,
+  Consentimento,
+  TipoConsentimento,
+  ROTULO_CONSENTIMENTO,
+  TEXTO_PADRAO_CONSENTIMENTO,
+  TIPOS_CONSENTIMENTO,
 } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
@@ -72,6 +77,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -79,6 +85,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { ScrollText, FileSignature, Ban, Lock } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -118,7 +125,12 @@ export default function Prontuario() {
     installments,
     addAppointment,
     currentUser,
+    fetchConsentimentos,
+    registrarConsentimento,
+    revogarConsentimento,
+    fetchLgpdPolicyTexts,
   } = useApp()
+  const { toast } = useToast()
 
   const patient = getPatient(id || '')
 
@@ -127,6 +139,138 @@ export default function Prontuario() {
 
   // Tab State
   const [activeTab, setActiveTab] = useState('cadastrais')
+
+  // LGPD — Consentimentos do paciente
+  const [consentimentos, setConsentimentos] = useState<Consentimento[]>([])
+  const [loadingConsent, setLoadingConsent] = useState(false)
+  const [consentModalOpen, setConsentModalOpen] = useState(false)
+  const [revokeModalOpen, setRevokeModalOpen] = useState(false)
+  const [revokeTarget, setRevokeTarget] = useState<Consentimento | null>(null)
+  const [consentTipo, setConsentTipo] = useState<TipoConsentimento>('dados_cadastrais')
+  const [consentTexto, setConsentTexto] = useState('')
+  const [consentChecked, setConsentChecked] = useState(false)
+  const [revokeMotivo, setRevokeMotivo] = useState('')
+  const [consentSaving, setConsentSaving] = useState(false)
+  const [policyTextsCache, setPolicyTextsCache] = useState<Record<
+    TipoConsentimento,
+    string
+  > | null>(null)
+
+  const loadConsentimentos = useCallback(
+    async (pid: string) => {
+      setLoadingConsent(true)
+      try {
+        const list = await fetchConsentimentos(pid)
+        setConsentimentos(list)
+      } catch (err) {
+        console.error('Erro ao carregar consentimentos:', err)
+      } finally {
+        setLoadingConsent(false)
+      }
+    },
+    [fetchConsentimentos],
+  )
+
+  React.useEffect(() => {
+    if (patient?.id) loadConsentimentos(patient.id)
+  }, [patient?.id, loadConsentimentos])
+
+  // Carrega os textos configurados dos termos (para pré-preencher o modal).
+  React.useEffect(() => {
+    if (!policyTextsCache) {
+      fetchLgpdPolicyTexts()
+        .then((texts) => {
+          setPolicyTextsCache({
+            dados_cadastrais: texts.dados_cadastrais.texto,
+            dados_saude: texts.dados_saude.texto,
+            marketing: texts.marketing.texto,
+            pesquisa: texts.pesquisa.texto,
+          })
+        })
+        .catch(() => {
+          setPolicyTextsCache({
+            dados_cadastrais: TEXTO_PADRAO_CONSENTIMENTO.dados_cadastrais,
+            dados_saude: TEXTO_PADRAO_CONSENTIMENTO.dados_saude,
+            marketing: TEXTO_PADRAO_CONSENTIMENTO.marketing,
+            pesquisa: TEXTO_PADRAO_CONSENTIMENTO.pesquisa,
+          })
+        })
+    }
+  }, [policyTextsCache, fetchLgpdPolicyTexts])
+
+  const openConsentModal = () => {
+    setConsentTipo('dados_cadastrais')
+    setConsentTexto(
+      policyTextsCache?.dados_cadastrais || TEXTO_PADRAO_CONSENTIMENTO.dados_cadastrais,
+    )
+    setConsentChecked(false)
+    setConsentModalOpen(true)
+  }
+
+  const onChangeConsentTipo = (tipo: TipoConsentimento) => {
+    setConsentTipo(tipo)
+    setConsentTexto(policyTextsCache?.[tipo] || TEXTO_PADRAO_CONSENTIMENTO[tipo])
+  }
+
+  const handleSaveConsent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!patient) return
+    if (!consentChecked) {
+      toast({
+        title: 'Consentimento obrigatório',
+        description: 'Marque a opção confirmando que o paciente leu e concordou.',
+        variant: 'destructive',
+      })
+      return
+    }
+    setConsentSaving(true)
+    const res = await registrarConsentimento(patient.id, consentTipo, consentTexto)
+    setConsentSaving(false)
+    if (res.success) {
+      setConsentModalOpen(false)
+      loadConsentimentos(patient.id)
+    }
+  }
+
+  const openRevokeModal = (c: Consentimento) => {
+    setRevokeTarget(c)
+    setRevokeMotivo('')
+    setRevokeModalOpen(true)
+  }
+
+  const handleRevokeConsent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!revokeTarget) return
+    if (!revokeMotivo.trim()) {
+      toast({ title: 'Informe o motivo da revogação.', variant: 'destructive' })
+      return
+    }
+    setConsentSaving(true)
+    const res = await revogarConsentimento(revokeTarget.id, revokeMotivo.trim())
+    setConsentSaving(false)
+    if (res.success) {
+      setRevokeModalOpen(false)
+      setRevokeTarget(null)
+      if (patient) loadConsentimentos(patient.id)
+    }
+  }
+
+  const formatConsentDate = (dt?: string | null) => {
+    if (!dt) return '—'
+    try {
+      const d = new Date(dt)
+      if (isNaN(d.getTime())) return dt
+      return d.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    } catch {
+      return dt
+    }
+  }
   // Modais de Exames
   const [tympModalOpen, setTympModalOpen] = useState(false)
   const [beraModalOpen, setBeraModalOpen] = useState(false)
@@ -577,6 +721,87 @@ export default function Prontuario() {
                     </div>
                   )}
                 </div>
+              </div>
+              {/* Bloco Consentimentos LGPD */}
+              <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2 border-b border-slate-200">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <ScrollText className="w-4 h-4 text-teal-600" />
+                    Consentimentos LGPD
+                  </h3>
+                  <Button
+                    size="sm"
+                    onClick={openConsentModal}
+                    className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-lg h-8 flex items-center gap-1.5 self-start sm:self-auto"
+                  >
+                    <FileSignature className="w-3.5 h-3.5" />
+                    Registrar Consentimento
+                  </Button>
+                </div>
+
+                {loadingConsent ? (
+                  <p className="text-xs text-slate-400 italic">Carregando consentimentos...</p>
+                ) : consentimentos.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">
+                    Nenhum consentimento registrado para este paciente.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {consentimentos.map((c) => (
+                      <div
+                        key={c.id}
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2.5 rounded-lg border border-slate-100 bg-slate-50/60"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-bold text-slate-800">
+                              {ROTULO_CONSENTIMENTO[c.tipo_consentimento] || c.tipo_consentimento}
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className={
+                                c.status === 'aceito'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-semibold'
+                                  : c.status === 'revogado'
+                                    ? 'bg-red-50 text-red-700 border-red-200 text-[10px] font-semibold'
+                                    : 'bg-slate-100 text-slate-600 border-slate-200 text-[10px] font-semibold'
+                              }
+                            >
+                              {c.status === 'aceito'
+                                ? 'Aceito'
+                                : c.status === 'revogado'
+                                  ? 'Revogado'
+                                  : 'Expirado'}
+                            </Badge>
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Aceito em: {formatConsentDate(c.data_aceitacao)}
+                            {c.status === 'revogado' && c.data_revogacao
+                              ? ` • Revogado em: ${formatConsentDate(c.data_revogacao)}`
+                              : ''}
+                            {c.usuario_nome ? ` • Por: ${c.usuario_nome}` : ''}
+                          </p>
+                          {c.status === 'revogado' && c.observacoes && (
+                            <p className="text-[11px] text-red-600 mt-0.5 italic">
+                              Motivo: {c.observacoes}
+                            </p>
+                          )}
+                        </div>
+                        {c.status === 'aceito' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openRevokeModal(c)}
+                            className="h-7 px-2 text-xs text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-1 self-start sm:self-auto"
+                          >
+                            <Ban className="w-3.5 h-3.5" />
+                            Revogar
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </TabsContent>
 
@@ -1214,6 +1439,135 @@ export default function Prontuario() {
           variant="danger"
           onConfirm={handleDeleteItem}
         />
+
+        {/* Modal: Registrar Consentimento LGPD */}
+        <Dialog open={consentModalOpen} onOpenChange={setConsentModalOpen}>
+          <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+            <DialogHeader className="border-b border-slate-100 pb-3">
+              <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <ScrollText className="w-5 h-5 text-teal-600" />
+                <span>Registrar Consentimento LGPD</span>
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSaveConsent} className="space-y-4 pt-2">
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">
+                  Tipo de Consentimento <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={consentTipo}
+                  onValueChange={(v) => onChangeConsentTipo(v as TipoConsentimento)}
+                >
+                  <SelectTrigger className="h-10 rounded-xl mt-1 text-sm border-slate-300">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIPOS_CONSENTIMENTO.map((t) => (
+                      <SelectItem key={t} value={t} className="text-sm">
+                        {ROTULO_CONSENTIMENTO[t]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">
+                  Texto do Termo (editável)
+                </Label>
+                <Textarea
+                  value={consentTexto}
+                  onChange={(e) => setConsentTexto(e.target.value)}
+                  rows={8}
+                  className="rounded-xl mt-1 text-xs border-slate-300 resize-y"
+                />
+              </div>
+              <div className="flex items-start gap-2.5 rounded-lg bg-slate-50 border border-slate-200 p-3">
+                <Checkbox
+                  id="lgpd-consent-check"
+                  checked={consentChecked}
+                  onCheckedChange={(v) => setConsentChecked(!!v)}
+                  className="border-slate-400 data-[state=checked]:bg-teal-500 mt-0.5"
+                />
+                <Label
+                  htmlFor="lgpd-consent-check"
+                  className="text-xs font-medium text-slate-700 cursor-pointer select-none leading-relaxed"
+                >
+                  Paciente leu e concordou com o termo de consentimento acima.
+                </Label>
+              </div>
+              <DialogFooter className="pt-2 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setConsentModalOpen(false)}
+                  className="rounded-xl border-slate-300 text-xs font-semibold h-10"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={consentSaving || !consentChecked}
+                  className="bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-xl h-10 flex items-center gap-1.5"
+                >
+                  <Lock className="w-4 h-4" />
+                  {consentSaving ? 'Salvando...' : 'Salvar Consentimento'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal: Revogar Consentimento LGPD */}
+        <Dialog open={revokeModalOpen} onOpenChange={setRevokeModalOpen}>
+          <DialogContent className="max-w-md w-full rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+            <DialogHeader className="border-b border-slate-100 pb-3">
+              <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Ban className="w-5 h-5 text-red-500" />
+                <span>Revogar Consentimento</span>
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleRevokeConsent} className="space-y-4 pt-2">
+              <p className="text-xs text-slate-600">
+                Você está revogando o consentimento de{' '}
+                <strong>
+                  {revokeTarget ? ROTULO_CONSENTIMENTO[revokeTarget.tipo_consentimento] : ''}
+                </strong>
+                . Esta ação registra a revogação imediata do tratamento dos dados.
+              </p>
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">
+                  Motivo da Revogação <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  value={revokeMotivo}
+                  onChange={(e) => setRevokeMotivo(e.target.value)}
+                  rows={4}
+                  required
+                  placeholder="Descreva o motivo da revogação do consentimento..."
+                  className="rounded-xl mt-1 text-sm border-slate-300 resize-none"
+                />
+              </div>
+              <DialogFooter className="pt-2 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRevokeModalOpen(false)}
+                  className="rounded-xl border-slate-300 text-xs font-semibold h-10"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={consentSaving || !revokeMotivo.trim()}
+                  className="bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl h-10 flex items-center gap-1.5"
+                >
+                  <Ban className="w-4 h-4" />
+                  {consentSaving ? 'Revogando...' : 'Revogar Consentimento'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
       )
     </ErrorBoundary>

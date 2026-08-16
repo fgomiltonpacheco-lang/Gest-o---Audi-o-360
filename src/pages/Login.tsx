@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
-import { Lock, Mail, Eye, EyeOff, ArrowRight } from 'lucide-react'
+import { Lock, Mail, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react'
 import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog'
 
 export default function Login() {
-  const { login, recoverPassword } = useApp()
+  const { login, recoverPassword, fetchLgpdPolicyTexts } = useApp()
   const navigate = useNavigate()
 
   // Login state
@@ -31,6 +31,22 @@ export default function Login() {
   const [recoveryOpen, setRecoveryOpen] = useState(false)
   const [recoveryEmail, setRecoveryEmail] = useState('')
   const [recoveryLoading, setRecoveryLoading] = useState(false)
+
+  // Modal Política de Privacidade (LGPD)
+  const [policyOpen, setPolicyOpen] = useState(false)
+  const [policyText, setPolicyText] = useState('')
+  const [policyLoading, setPolicyLoading] = useState(false)
+
+  const openPolicyModal = () => {
+    setPolicyOpen(true)
+    if (!policyText) {
+      setPolicyLoading(true)
+      fetchLgpdPolicyTexts()
+        .then((texts) => setPolicyText(texts.politica_privacidade))
+        .catch(() => setPolicyText('Não foi possível carregar a política de privacidade.'))
+        .finally(() => setPolicyLoading(false))
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -186,6 +202,16 @@ export default function Login() {
               </>
             )}
           </Button>
+
+          {/* Link Política de Privacidade (LGPD) */}
+          <button
+            type="button"
+            onClick={openPolicyModal}
+            className="w-full mt-3 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-500 hover:text-teal-600 transition-colors"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Política de Privacidade
+          </button>
         </form>
 
         {/* Dica de Acesso Rápido para Demonstração */}
@@ -268,6 +294,39 @@ export default function Login() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Política de Privacidade (LGPD) */}
+      <Dialog open={policyOpen} onOpenChange={setPolicyOpen}>
+        <DialogContent className="max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+          <DialogHeader className="border-b border-slate-100 pb-3">
+            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-teal-600" />
+              <span>Política de Privacidade</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 mt-1">
+              Conforme a Lei Geral de Proteção de Dados (LGPD - Lei 13.709/2018).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2 max-h-[60vh] overflow-y-auto">
+            {policyLoading ? (
+              <p className="text-xs text-slate-400 text-center py-6">Carregando...</p>
+            ) : (
+              <pre className="text-xs text-slate-700 whitespace-pre-wrap font-sans leading-relaxed">
+                {policyText}
+              </pre>
+            )}
+          </div>
+          <DialogFooter className="pt-2 border-t border-slate-100">
+            <Button
+              type="button"
+              onClick={() => setPolicyOpen(false)}
+              className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold"
+            >
+              Fechar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

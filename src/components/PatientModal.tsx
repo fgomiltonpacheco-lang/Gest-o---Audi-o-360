@@ -20,9 +20,16 @@ import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import { maskCPF, validateCPF, maskPhone, maskCEP, calculateAge } from '@/lib/formatters'
-import { Patient, Gender, PatientStatus, HearingLossType } from '@/types'
-import { Search, MapPin, UserCheck, Stethoscope, Shield } from 'lucide-react'
+import {
+  Patient,
+  Gender,
+  PatientStatus,
+  HearingLossType,
+  TEXTO_PADRAO_CONSENTIMENTO,
+} from '@/types'
+import { Search, MapPin, UserCheck, Stethoscope, Shield, ShieldCheck } from 'lucide-react'
 
 const BRAZIL_STATES = [
   'AC',
@@ -110,6 +117,9 @@ export const PatientModal: React.FC<PatientModalProps> = ({
   const [previousAidBrand, setPreviousAidBrand] = useState('')
   const [previousAidModel, setPreviousAidModel] = useState('')
   const [generalNotes, setGeneralNotes] = useState('')
+
+  // LGPD — consentimento de dados cadastrais no cadastro
+  const [lgpdConsent, setLgpdConsent] = useState(false)
 
   // Erros gerais de validação obrigatória
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
@@ -866,6 +876,40 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             </TabsContent>
           </Tabs>
 
+          {/* LGPD - Consentimento de dados cadastrais (somente no novo cadastro) */}
+          {!patientToEdit && (
+            <div className="rounded-xl border border-teal-200 bg-teal-50/40 p-4 space-y-3">
+              <div className="flex items-start gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-teal-600 mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-800 mb-1">
+                    Termo de Consentimento — Dados Cadastrais (LGPD)
+                  </p>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Autorizo a AUDIÇÃO360 a coletar, armazenar e tratar meus dados pessoais (nome,
+                    CPF, data de nascimento, endereço, contatos) para fins de cadastro, agendamento
+                    e prestação de serviços, conforme a Lei Geral de Proteção de Dados (Lei
+                    13.709/2018).
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5 pl-1">
+                <Checkbox
+                  id="lgpd-consent"
+                  checked={lgpdConsent}
+                  onCheckedChange={(v) => setLgpdConsent(!!v)}
+                  className="border-slate-400 data-[state=checked]:bg-teal-500 mt-0.5"
+                />
+                <Label
+                  htmlFor="lgpd-consent"
+                  className="text-xs font-medium text-slate-700 cursor-pointer select-none leading-relaxed"
+                >
+                  Autorizo o tratamento dos meus dados pessoais conforme a LGPD.
+                </Label>
+              </div>
+            </div>
+          )}
+
           <DialogFooter className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
             <Button
               type="button"
@@ -877,7 +921,8 @@ export const PatientModal: React.FC<PatientModalProps> = ({
             </Button>
             <Button
               type="submit"
-              className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold shadow-sm"
+              disabled={!patientToEdit && !lgpdConsent}
+              className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Salvar Paciente
             </Button>
