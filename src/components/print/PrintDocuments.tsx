@@ -12,7 +12,7 @@ import {
   BONE_FREQS,
 } from '@/types'
 import { formatDate, maskCPF, calculateAge } from '@/lib/formatters'
-import { AudiogramChart } from '@/components/AudiogramChart'
+import { SingleEarAudiogramChart } from '@/components/AudiogramChart'
 import { mediaTritonal, mediaQuadritonal } from '@/lib/audiogram'
 
 const FREQUENCIES_AIR = [
@@ -328,16 +328,16 @@ export function AudiometryPrint({ exam }: { exam: AudiometryExam }) {
 export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
   const thStyle: React.CSSProperties = {
     border: '1px solid #94a3b8',
-    padding: '3px 4px',
+    padding: '2px 4px',
     background: '#f1f5f9',
-    fontSize: '8pt',
+    fontSize: '7pt',
     fontWeight: 700,
     textAlign: 'center',
   }
   const tdStyle: React.CSSProperties = {
     border: '1px solid #94a3b8',
-    padding: '3px 4px',
-    fontSize: '8pt',
+    padding: '2px 4px',
+    fontSize: '7pt',
     textAlign: 'center',
   }
 
@@ -352,233 +352,141 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
   )
 
   return (
-    <div style={{ color: '#000', fontSize: '9pt' }}>
+    <div className="audiometry-print" style={{ color: '#000', fontSize: '7.5pt', lineHeight: 1.3 }}>
       {/* Cabeçalho do Exame */}
       <h2
         style={{
           textAlign: 'center',
-          fontSize: '12pt',
+          fontSize: '10pt',
           fontWeight: 800,
-          margin: '0 0 6px 0',
+          margin: '0 0 3px 0',
           color: '#0F2B5C',
           textTransform: 'uppercase',
           letterSpacing: '0.04em',
         }}
       >
-        Avaliação Audiológica Tonal e Vocal
+        Avaliação Audiológica
       </h2>
-      <div
-        style={{
-          border: '1px solid #cbd5e1',
-          borderRadius: '6px',
-          padding: '5px 8px',
-          marginBottom: '6px',
-          lineHeight: 1.45,
-          background: '#f8fafc',
-        }}
-      >
-        <div style={{ display: 'flex', gap: '20px', fontSize: '8.5pt' }}>
-          <span style={{ flex: 2 }}>
-            <strong>Nome:</strong> {exam.patientName || '—'}
-          </span>
-          <span style={{ flex: 1 }}>
-            <strong>Data:</strong> {formatDate(exam.date) || '—'}
-          </span>
+      <div style={{ marginBottom: '3px', lineHeight: 1.4 }}>
+        <div style={{ fontSize: '7.5pt' }}>
+          <strong>Nome:</strong> {exam.patientName || '—'} &nbsp;&nbsp;
+          <strong>Data:</strong> {formatDate(exam.date) || '—'} &nbsp;&nbsp;
+          <strong>CPF:</strong> {maskCPF(exam.cpf) || '—'} &nbsp;&nbsp;
+          <strong>DN:</strong> {formatDate(exam.dob) || '—'} &nbsp;&nbsp;
+          <strong>Sexo:</strong> {checkBox(exam.sex === 'F')}F {checkBox(exam.sex === 'M')}M
         </div>
-        <div style={{ display: 'flex', gap: '20px', fontSize: '8.5pt' }}>
-          <span style={{ flex: 1 }}>
-            <strong>CPF:</strong> {maskCPF(exam.cpf) || '—'}
-          </span>
-          <span style={{ flex: 1 }}>
-            <strong>DN:</strong> {formatDate(exam.dob) || '—'}
-          </span>
-          <span style={{ flex: 1 }}>
-            <strong>Sexo:</strong> F({checkBox(exam.sex === 'F')}) M({checkBox(exam.sex === 'M')})
-          </span>
+        <div style={{ fontSize: '7.5pt' }}>
+          <strong>Encaminhado por:</strong> {exam.referred_by || '—'} &nbsp;&nbsp;
+          <strong>Repouso Auditivo 14h:</strong> {checkBox(exam.hearing_rest_14h === true)}Sim{' '}
+          {checkBox(exam.hearing_rest_14h === false)}Não
         </div>
-        <div style={{ display: 'flex', gap: '20px', fontSize: '8.5pt' }}>
-          <span style={{ flex: 1.5 }}>
-            <strong>Encaminhado por:</strong> {exam.referred_by || '—'}
-          </span>
-          <span style={{ flex: 1.5 }}>
-            <strong>Repouso Auditivo 14h:</strong> Sim(
-            {checkBox(exam.hearing_rest_14h === true)}) Não(
-            {checkBox(exam.hearing_rest_14h === false)})
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: '20px', fontSize: '8.5pt' }}>
-          <span style={{ flex: 1.5 }}>
-            <strong>Audiômetro:</strong> {exam.audiometer || '—'}
-          </span>
-          <span style={{ flex: 1.5 }}>
-            <strong>Calibração:</strong> {formatDate(exam.calibration) || '—'}
-          </span>
+        <div style={{ fontSize: '7.5pt' }}>
+          <strong>Audiômetro:</strong> {exam.audiometer || '—'} &nbsp;&nbsp;
+          <strong>Calibração:</strong> {formatDate(exam.calibration) || '—'}
         </div>
       </div>
-      {/* Audiograma Tonal — Um único par de gráficos (Direito e Esquerdo) lado a lado */}
-      <div style={{ marginBottom: '8px', breakInside: 'avoid' }}>
-        <AudiogramChart
-          airOD={exam.air_od}
-          airOE={exam.air_oe}
-          boneOD={exam.bone_od}
-          boneOE={exam.bone_oe}
-          ldlOD={exam.ldl_od}
-          ldlOE={exam.ldl_oe}
-        />
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '8px',
-            marginTop: '4px',
-            fontSize: '8pt',
-          }}
-        >
+      {/* Audiogramas lado a lado (OD vermelho / OE azul) */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '4px',
+          marginBottom: '3px',
+          breakInside: 'avoid',
+          alignItems: 'flex-start',
+        }}
+      >
+        <div style={{ width: '45%', breakInside: 'avoid' }}>
+          <div
+            style={{
+              fontSize: '8pt',
+              fontWeight: 700,
+              color: '#dc2626',
+              textAlign: 'center',
+              marginBottom: '1px',
+            }}
+          >
+            Orelha Direita (OD)
+          </div>
+          <SingleEarAudiogramChart
+            side="OD"
+            air={exam.air_od}
+            bone={exam.bone_od}
+            ldl={exam.ldl_od}
+            width="100%"
+          />
           <div
             style={{
               textAlign: 'center',
               color: '#dc2626',
-              background: '#fef2f2',
-              padding: '3px 6px',
-              borderRadius: '4px',
-              border: '1px solid #fecca3',
+              fontSize: '7pt',
+              marginTop: '1px',
             }}
           >
-            <strong>OD — Média Tritonal:</strong> {fmtMedia(odTrito)} &nbsp;|&nbsp;{' '}
+            <strong>Tritonal:</strong> {fmtMedia(odTrito)} &nbsp;|&nbsp;{' '}
             <strong>Quadritonal:</strong> {fmtMedia(odQuadri)}
           </div>
+        </div>
+        <div style={{ width: '45%', breakInside: 'avoid' }}>
+          <div
+            style={{
+              fontSize: '8pt',
+              fontWeight: 700,
+              color: '#2563eb',
+              textAlign: 'center',
+              marginBottom: '1px',
+            }}
+          >
+            Orelha Esquerda (OE)
+          </div>
+          <SingleEarAudiogramChart
+            side="OE"
+            air={exam.air_oe}
+            bone={exam.bone_oe}
+            ldl={exam.ldl_oe}
+            width="100%"
+          />
           <div
             style={{
               textAlign: 'center',
               color: '#2563eb',
-              background: '#eff6ff',
-              padding: '3px 6px',
-              borderRadius: '4px',
-              border: '1px solid #bfdbfe',
+              fontSize: '7pt',
+              marginTop: '1px',
             }}
           >
-            <strong>OE — Média Tritonal:</strong> {fmtMedia(oeTrito)} &nbsp;|&nbsp;{' '}
+            <strong>Tritonal:</strong> {fmtMedia(oeTrito)} &nbsp;|&nbsp;{' '}
             <strong>Quadritonal:</strong> {fmtMedia(oeQuadri)}
           </div>
         </div>
       </div>
-      {/* Meatoscopia */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '8px',
-          marginBottom: '6px',
-          marginTop: '4px',
-        }}
-      >
-        <div
-          style={{
-            border: '1px solid #cbd5e1',
-            borderRadius: '6px',
-            padding: '5px 8px',
-            fontSize: '8.5pt',
-            background: '#fafafa',
-          }}
-        >
-          <div style={{ fontWeight: 700, color: '#dc2626' }}>Meatoscopia — Orelha Direita (OD)</div>
-          <div>
-            Normal ({checkBox(exam.otoscopy_od === 'Normal')}) Alterada (
-            {checkBox(exam.otoscopy_od === 'Alterada')})
-          </div>
-          {exam.otoscopy_od_obs ? (
-            <div style={{ marginTop: '2px', color: '#334155' }}>
-              <strong>Obs.:</strong> {exam.otoscopy_od_obs}
-            </div>
-          ) : null}
-        </div>
-        <div
-          style={{
-            border: '1px solid #cbd5e1',
-            borderRadius: '6px',
-            padding: '5px 8px',
-            fontSize: '8.5pt',
-            background: '#fafafa',
-          }}
-        >
-          <div style={{ fontWeight: 700, color: '#2563eb' }}>
-            Meatoscopia — Orelha Esquerda (OE)
-          </div>
-          <div>
-            Normal ({checkBox(exam.otoscopy_oe === 'Normal')}) Alterada (
-            {checkBox(exam.otoscopy_oe === 'Alterada')})
-          </div>
-          {exam.otoscopy_oe_obs ? (
-            <div style={{ marginTop: '2px', color: '#334155' }}>
-              <strong>Obs.:</strong> {exam.otoscopy_oe_obs}
-            </div>
-          ) : null}
-        </div>
+      {/* Meatoscopia — uma linha horizontal, sem bordas de card */}
+      <div style={{ fontSize: '7.5pt', marginBottom: '2px', marginTop: '2px' }}>
+        <span style={{ color: '#dc2626', fontWeight: 700 }}>OD:</span> Meatoscopia:{' '}
+        {checkBox(exam.otoscopy_od === 'Normal')}Normal {checkBox(exam.otoscopy_od === 'Alterada')}
+        Alterada
+        {exam.otoscopy_od_obs ? ` (obs: ${exam.otoscopy_od_obs})` : ''}
+        &nbsp;&nbsp;&nbsp;
+        <span style={{ color: '#2563eb', fontWeight: 700 }}>OE:</span> Meatoscopia:{' '}
+        {checkBox(exam.otoscopy_oe === 'Normal')}Normal {checkBox(exam.otoscopy_oe === 'Alterada')}
+        Alterada
+        {exam.otoscopy_oe_obs ? ` (obs: ${exam.otoscopy_oe_obs})` : ''}
       </div>
-      {/* Limiares Vocais */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '8px',
-          marginBottom: '8px',
-        }}
-      >
-        <div
-          style={{
-            border: '1px solid #cbd5e1',
-            borderRadius: '6px',
-            padding: '6px 10px',
-            fontSize: '8.5pt',
-            background: '#f8fafc',
-          }}
-        >
-          <div
-            style={{ fontWeight: 700, color: '#dc2626', marginBottom: '2px', fontSize: '8.5pt' }}
-          >
-            ORELHA DIREITA (OD)
-          </div>
-          <div style={{ display: 'flex', gap: '16px', color: '#1e293b' }}>
-            <span>
-              <strong>LRF:</strong> {exam.lrf_od != null ? `${exam.lrf_od} dB` : '—'}
-            </span>
-            <span>
-              <strong>LDV:</strong> {exam.ldv_od != null ? `${exam.ldv_od} dB` : '—'}
-            </span>
-          </div>
-        </div>
-        <div
-          style={{
-            border: '1px solid #cbd5e1',
-            borderRadius: '6px',
-            padding: '6px 10px',
-            fontSize: '8.5pt',
-            background: '#f8fafc',
-          }}
-        >
-          <div
-            style={{ fontWeight: 700, color: '#2563eb', marginBottom: '2px', fontSize: '8.5pt' }}
-          >
-            ORELHA ESQUERDA (OE)
-          </div>
-          <div style={{ display: 'flex', gap: '16px', color: '#1e293b' }}>
-            <span>
-              <strong>LRF:</strong> {exam.lrf_oe != null ? `${exam.lrf_oe} dB` : '—'}
-            </span>
-            <span>
-              <strong>LDV:</strong> {exam.ldv_oe != null ? `${exam.ldv_oe} dB` : '—'}
-            </span>
-          </div>
-        </div>
+      {/* Limiares Vocais — uma linha, separada por pipe, sem MT */}
+      <div style={{ fontSize: '7.5pt', marginBottom: '3px' }}>
+        <span style={{ color: '#dc2626', fontWeight: 700 }}>OD</span> — LRF:{' '}
+        {exam.lrf_od != null ? `${exam.lrf_od} dB` : '—'} LDV:{' '}
+        {exam.ldv_od != null ? `${exam.ldv_od} dB` : '—'} &nbsp;&nbsp;|&nbsp;&nbsp;
+        <span style={{ color: '#2563eb', fontWeight: 700 }}>OE</span> — LRF:{' '}
+        {exam.lrf_oe != null ? `${exam.lrf_oe} dB` : '—'} LDV:{' '}
+        {exam.ldv_oe != null ? `${exam.ldv_oe} dB` : '—'}
       </div>
-      {/* IPRF — Índice de Reconhecimento de Fala */}
-      <div style={{ marginTop: '6px', marginBottom: '6px' }}>
+      {/* IPRF — tabela compacta */}
+      <div style={{ marginTop: '2px', marginBottom: '3px', breakInside: 'avoid' }}>
         <div
           style={{
             fontWeight: 700,
-            fontSize: '9pt',
+            fontSize: '8pt',
             color: '#0F2B5C',
-            marginBottom: '3px',
+            marginBottom: '2px',
             textTransform: 'uppercase',
             letterSpacing: '0.02em',
           }}
@@ -589,18 +497,18 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
           style={{
             borderCollapse: 'collapse',
             width: '100%',
-            borderRadius: '4px',
+            borderRadius: '3px',
             overflow: 'hidden',
           }}
         >
           <thead>
             <tr>
               <th style={thStyle}>Orelha</th>
-              <th style={thStyle}>Intensidade (dB)</th>
-              <th style={thStyle}>Monossílabos (%)</th>
-              <th style={thStyle}>Dissílabos (%)</th>
-              <th style={thStyle}>Mascaramento (dB)</th>
-              <th style={thStyle}>Palavras Faladas</th>
+              <th style={thStyle}>Intens. (dB)</th>
+              <th style={thStyle}>Monoss. (%)</th>
+              <th style={thStyle}>Diss. (%)</th>
+              <th style={thStyle}>Masc. (dB)</th>
+              <th style={thStyle}>Pal. Faladas</th>
             </tr>
           </thead>
           <tbody>
@@ -623,31 +531,32 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
         </table>
       </div>
       {/* Parecer Audiológico */}
-      <div style={{ marginTop: '8px', breakInside: 'avoid' }}>
+      <div style={{ marginTop: '3px' }}>
         <div
           style={{
-            fontSize: '9.5pt',
+            fontSize: '8pt',
             fontWeight: 700,
             color: '#0F2B5C',
-            borderBottom: '1.5px solid #0F2B5C',
-            paddingBottom: '2px',
-            marginBottom: '4px',
+            borderBottom: '1px solid #0F2B5C',
+            paddingBottom: '1px',
+            marginBottom: '2px',
             textTransform: 'uppercase',
             letterSpacing: '0.03em',
           }}
         >
-          Parecer Audiológico / Laudo
+          Parecer Audiológico
         </div>
         <div
           style={{
-            fontSize: '8.5pt',
+            fontSize: '7pt',
             color: '#0f172a',
-            lineHeight: 1.4,
+            lineHeight: 1.3,
             whiteSpace: 'pre-wrap',
-            minHeight: '44px',
+            maxHeight: '50px',
+            overflow: 'hidden',
             border: '1px solid #cbd5e1',
-            borderRadius: '6px',
-            padding: '6px 8px',
+            borderRadius: '3px',
+            padding: '2px 4px',
             background: '#fafafa',
           }}
         >
@@ -655,9 +564,9 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
         </div>
         <p
           style={{
-            fontSize: '7pt',
+            fontSize: '6pt',
             color: '#64748b',
-            marginTop: '3px',
+            marginTop: '2px',
             marginBottom: '0',
             textAlign: 'justify',
             fontStyle: 'italic',
@@ -672,24 +581,23 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
         style={{
           display: 'flex',
           justifyContent: 'space-between',
-          marginTop: '24px',
+          marginTop: '12px',
           gap: '40px',
-          breakInside: 'avoid',
         }}
       >
         <div style={{ flex: 1, textAlign: 'center' }}>
           <div
             style={{
               borderTop: '1px solid #475569',
-              paddingTop: '4px',
-              fontSize: '8.5pt',
+              paddingTop: '2px',
+              fontSize: '7.5pt',
               fontWeight: 600,
               color: '#1e293b',
             }}
           >
             Fonoaudiólogo
           </div>
-          <div style={{ fontSize: '8pt', color: '#475569', marginTop: '1px' }}>
+          <div style={{ fontSize: '7.5pt', color: '#475569', marginTop: '1px' }}>
             Dr. Milton Soares Pacheco — CRFa 3-11981-5
           </div>
         </div>
@@ -697,8 +605,8 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
           <div
             style={{
               borderTop: '1px solid #475569',
-              paddingTop: '4px',
-              fontSize: '8.5pt',
+              paddingTop: '2px',
+              fontSize: '7.5pt',
               fontWeight: 600,
               color: '#1e293b',
             }}
@@ -710,17 +618,15 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
       {/* Rodapé */}
       <div
         style={{
-          marginTop: '12px',
-          paddingTop: '4px',
-          borderTop: '1px solid #cbd5e1',
-          fontSize: '7.5pt',
+          marginTop: '4px',
+          fontSize: '6.5pt',
           color: '#64748b',
           textAlign: 'center',
         }}
       >
         Endereço: R. Sadoc Correa, 373 - St. Central, Araguaína - TO, 77803-060 &nbsp;•&nbsp;
         Telefone: (63) 3421-2611
-      </div>{' '}
+      </div>
     </div>
   )
 }

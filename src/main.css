@@ -354,4 +354,20 @@
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+
+  /* Audiometria: layout ultra-compacto para caber em 1 página A4 */
+  .audiometry-print {
+    font-size: 7.5pt;
+  }
+
+  .audiometry-print table {
+    font-size: 7pt;
+  }
+
+  .audiometry-print th,
+  .audiometry-print td {
+    padding: 2px 4px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
