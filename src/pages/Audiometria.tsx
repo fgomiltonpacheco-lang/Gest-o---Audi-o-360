@@ -1018,7 +1018,7 @@ function EarAudiometrySection({
   // LDL: Ausente (símbolo de ausência em LDL)
 
   const symBtnClass = (active: boolean) =>
-    `px-0.5 py-0 min-w-[18px] h-5 text-[10px] font-bold rounded flex items-center justify-center transition-all select-none ${
+    `px-0 py-0 min-w-[16px] h-4 text-[9px] font-bold rounded flex items-center justify-center transition-all select-none ${
       active
         ? isOd
           ? 'bg-red-600 text-white shadow-sm scale-105'
@@ -1027,27 +1027,27 @@ function EarAudiometrySection({
     }`
 
   const resetBtnClass = (active: boolean) =>
-    `p-0.5 w-4 h-5 text-[10px] rounded flex items-center justify-center transition-all ${
+    `p-0.5 w-3.5 h-4 text-[10px] rounded flex items-center justify-center transition-all ${
       active
         ? 'text-slate-400 bg-slate-100'
         : 'text-slate-500 hover:bg-slate-200 border border-slate-200 bg-slate-50'
     }`
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-3 space-y-2">
-      <h2 className={`text-xs sm:text-sm font-extrabold tracking-tight ${titleColor}`}>{title}</h2>
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-1.5 sm:p-2 space-y-2">
+      <h2 className={`text-[11px] font-extrabold tracking-tight ${titleColor}`}>{title}</h2>
 
       <div className="overflow-x-auto border border-slate-300 rounded-lg bg-white">
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="border-b border-slate-300 bg-white">
-              <th className="py-1.5 px-1 text-center text-slate-400 font-bold border-r border-slate-200 w-20">
+              <th className="py-1.5 px-1 text-center text-slate-400 font-bold border-r border-slate-200 w-16">
                 .
               </th>
               {ALL_INPUT_FREQS.map((f) => (
                 <th
                   key={f}
-                  className={`py-1.5 px-0.5 text-center font-bold border-r border-slate-200 min-w-[38px] ${headerFreqColor}`}
+                  className={`py-1 px-0 text-center font-bold border-r border-slate-200 min-w-[28px] ${headerFreqColor}`}
                 >
                   {fmtFreq(f)}
                 </th>
@@ -1057,20 +1057,20 @@ function EarAudiometrySection({
           <tbody className="divide-y divide-slate-200">
             {/* 1. Linha Aérea (Inputs dB) */}
             <tr>
-              <td className="py-1 px-2 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
+              <td className="py-1 px-1 font-bold text-slate-800 text-right border-r border-slate-200 bg-white text-[10px]">
                 Aérea
               </td>
               {ALL_INPUT_FREQS.map((f) => {
                 const dbVal = airMap[f]?.db
                 return (
-                  <td key={f} className="p-1 border-r border-slate-200 text-center align-middle">
+                  <td key={f} className="p-0.5 border-r border-slate-200 text-center align-middle">
                     <input
                       type="number"
                       value={dbVal ?? ''}
                       onChange={(e) => onAirDb(f, e.target.value)}
                       disabled={disabled}
                       placeholder=""
-                      className={`w-full h-7 text-center text-[11px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 ${
+                      className={`w-full h-6 px-0 text-center text-[10px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 ${
                         isOd ? 'focus:ring-red-400' : 'focus:ring-blue-400'
                       }`}
                     />
@@ -1081,14 +1081,14 @@ function EarAudiometrySection({
 
             {/* 2. Linha Masc / Ausências (Aérea) */}
             <tr>
-              <td className="py-1 px-2 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
+              <td className="py-1 px-1 font-bold text-slate-800 text-right border-r border-slate-200 bg-white text-[10px]">
                 Masc / Ausências
               </td>
               {ALL_INPUT_FREQS.map((f) => {
                 const sym = airMap[f]?.symbol || 'normal'
                 return (
-                  <td key={f} className="p-1 border-r border-slate-200 text-center align-middle">
-                    <div className="flex items-center justify-center gap-0.5">
+                  <td key={f} className="p-0.5 border-r border-slate-200 text-center align-middle">
+                    <div className="flex items-center justify-center gap-0">
                       {isOd ? (
                         <>
                           {/* OD Aérea alternativos: Mascarado △, Ausente ○↓, Mascarado Ausente △↓ */}
@@ -1173,7 +1173,7 @@ function EarAudiometrySection({
                         title="Reverter ao Padrão"
                         className={resetBtnClass(sym === 'normal')}
                       >
-                        <RotateCcw className="w-3 h-3" />
+                        <RotateCcw className="w-2.5 h-2.5" />
                       </button>
                     </div>
                   </td>
@@ -1183,23 +1183,23 @@ function EarAudiometrySection({
 
             {/* 3. Linha Óssea (Inputs dB) — apenas 500, 1000, 2000, 3000 e 4000 Hz */}
             <tr>
-              <td className="py-1 px-2 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
+              <td className="py-1 px-1 font-bold text-slate-800 text-right border-r border-slate-200 bg-white text-[10px]">
                 Óssea
               </td>
               {ALL_INPUT_FREQS.map((f) => {
                 if (!BONE_FREQ_SET.has(f)) {
-                  return <td key={f} className="p-1 border-r border-slate-200" />
+                  return <td key={f} className="p-0.5 border-r border-slate-200" />
                 }
                 const dbVal = boneMap[f]?.db
                 return (
-                  <td key={f} className="p-1 border-r border-slate-200 text-center align-middle">
+                  <td key={f} className="p-0.5 border-r border-slate-200 text-center align-middle">
                     <input
                       type="number"
                       value={dbVal ?? ''}
                       onChange={(e) => onBoneDb(f, e.target.value)}
                       disabled={disabled}
                       placeholder=""
-                      className={`w-full h-7 text-center text-[11px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 ${
+                      className={`w-full h-6 px-0 text-center text-[10px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 ${
                         isOd ? 'focus:ring-red-400' : 'focus:ring-blue-400'
                       }`}
                     />
@@ -1210,14 +1210,14 @@ function EarAudiometrySection({
 
             {/* 4. Linha Masc / Ausências (Óssea) */}
             <tr>
-              <td className="py-1 px-2 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
+              <td className="py-1 px-1 font-bold text-slate-800 text-right border-r border-slate-200 bg-white text-[10px]">
                 Masc / Ausências
               </td>
               {ALL_INPUT_FREQS.map((f) => {
                 const sym = boneMap[f]?.symbol || 'normal'
                 return (
-                  <td key={f} className="p-1 border-r border-slate-200 text-center align-middle">
-                    <div className="flex items-center justify-center gap-0.5 sm:gap-1">
+                  <td key={f} className="p-0.5 border-r border-slate-200 text-center align-middle">
+                    <div className="flex items-center justify-center gap-0 sm:gap-1">
                       {isOd ? (
                         <>
                           {/* OD Óssea alternativos: Mascarado [, Ausente <↓, Mascarado Ausente [↓ */}
@@ -1302,7 +1302,7 @@ function EarAudiometrySection({
                         title="Reverter ao Padrão"
                         className={resetBtnClass(sym === 'normal')}
                       >
-                        <RotateCcw className="w-3 h-3" />
+                        <RotateCcw className="w-2.5 h-2.5" />
                       </button>
                     </div>
                   </td>
@@ -1312,20 +1312,20 @@ function EarAudiometrySection({
 
             {/* 5. Linha Limiar de Desconforto (LDL) (Inputs dB) */}
             <tr>
-              <td className="py-1 px-2 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
+              <td className="py-1 px-1 font-bold text-slate-800 text-right border-r border-slate-200 bg-white text-[10px]">
                 Limiar de Desconforto (LDL)
               </td>
               {ALL_INPUT_FREQS.map((f) => {
                 const dbVal = ldlMap[f]?.db
                 return (
-                  <td key={f} className="p-1 border-r border-slate-200 text-center align-middle">
+                  <td key={f} className="p-0.5 border-r border-slate-200 text-center align-middle">
                     <input
                       type="number"
                       value={dbVal ?? ''}
                       onChange={(e) => onLdlDb(f, e.target.value)}
                       disabled={disabled}
                       placeholder=""
-                      className={`w-full h-7 text-center text-[11px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 ${
+                      className={`w-full h-6 px-0 text-center text-[10px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 ${
                         isOd ? 'focus:ring-red-400' : 'focus:ring-blue-400'
                       }`}
                     />
@@ -1336,14 +1336,14 @@ function EarAudiometrySection({
 
             {/* 6. Linha Ausências (LDL) */}
             <tr>
-              <td className="py-1 px-2 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
+              <td className="py-1 px-1 font-bold text-slate-800 text-right border-r border-slate-200 bg-white text-[10px]">
                 Ausências
               </td>
               {ALL_INPUT_FREQS.map((f) => {
                 const sym = ldlMap[f]?.symbol || 'normal'
                 return (
-                  <td key={f} className="p-1 border-r border-slate-200 text-center align-middle">
-                    <div className="flex items-center justify-center gap-0.5 sm:gap-1">
+                  <td key={f} className="p-0.5 border-r border-slate-200 text-center align-middle">
+                    <div className="flex items-center justify-center gap-0 sm:gap-1">
                       <button
                         type="button"
                         onClick={() =>
@@ -1366,7 +1366,7 @@ function EarAudiometrySection({
                         title="Reverter ao Padrão"
                         className={resetBtnClass(sym === 'normal')}
                       >
-                        <RotateCcw className="w-3 h-3" />
+                        <RotateCcw className="w-2.5 h-2.5" />
                       </button>
                     </div>
                   </td>
