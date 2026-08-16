@@ -1,15 +1,29 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { useApp } from '@/context/AppContext'
-import { getInitials, getAvatarColor } from '@/lib/formatters'
+import { getInitials, getAvatarColor, getAvatarUrl } from '@/lib/formatters'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
-import { User, Mail, IdCard, Lock, Eye, EyeOff, Save, ShieldCheck } from 'lucide-react'
+import {
+  User,
+  Mail,
+  IdCard,
+  Lock,
+  Eye,
+  EyeOff,
+  Save,
+  ShieldCheck,
+  Camera,
+  Loader2,
+} from 'lucide-react'
+
+const MAX_AVATAR_SIZE = 2 * 1024 * 1024 // 2MB
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 export default function Profile() {
-  const { currentUser, updateProfile } = useApp()
+  const { currentUser, updateProfile, uploadAvatar } = useApp()
   const { toast } = useToast()
 
   const [name, setName] = useState(currentUser?.name || '')
@@ -22,6 +36,66 @@ export default function Profile() {
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  // Avatar: preview local instantâneo + flag de upload em andamento
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // URL atual do avatar (preferindo o preview local recém-selecionado)
+  const liveAvatarUrl = avatarPreview ?? getAvatarUrl(currentUser)
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    // limpa o input para permitir re-selecionar o mesmo arquivo
+    e.target.value = ''
+    if (!file) return
+
+    // Validação de tipo
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast({
+        title: 'Formato inválido',
+        description: 'Selecione uma imagem JPG, PNG ou WebP.',
+        variant: 'destructive',
+      })
+      return
+    }
+    // Validação de tamanho
+    if (file.size > MAX_AVATAR_SIZE) {
+      toast({
+        title: 'Arquivo muito grande',
+        description: 'A imagem deve ter no máximo 2MB.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // Preview instantâneo (antes de salvar)
+    const previewUrl = URL.createObjectURL(file)
+    setAvatarPreview(previewUrl)
+
+    // Faz o upload imediatamente
+    setUploadingAvatar(true)
+    const result = await uploadAvatar(file)
+    setUploadingAvatar(false)
+
+    if (result.success) {
+      toast({
+        title: 'Foto atualizada',
+        description: 'Sua foto de perfil foi salva com sucesso.',
+      })
+      // descarta o preview local — o currentUser atualizado agora fornece a URL real
+      setAvatarPreview(null)
+    } else {
+      toast({
+        title: 'Erro ao enviar foto',
+        description: result.message || 'Não foi possível salvar a foto de perfil.',
+        variant: 'destructive',
+      })
+      // reverte o preview em caso de falha
+      setAvatarPreview(null)
+    }
+  }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,6 +129,8 @@ export default function Profile() {
     }
 
     setSaving(true)
+    // O avatar NÃO é enviado aqui — somente nome/CRFa/senha.
+    // Isso garante que trocar a senha sem selecionar nova imagem não apague a foto.
     const result = await updateProfile({
       name,
       crmCrfa: crfa,
@@ -96,14 +172,60 @@ export default function Profile() {
 
       <div className="flex justify-center">
         <Card className="w-full max-w-2xl rounded-2xl border-slate-200 shadow-sm">
-          {/* Avatar com iniciais */}
+          {/* Avatar com upload */}
           <CardHeader className="flex flex-col items-center gap-3 pb-2">
-            <div
-              className={`w-24 h-24 rounded-full ${getAvatarColor(
-                currentUser?.name || 'Admin',
-              )} text-white flex items-center justify-center font-bold text-3xl shadow-md ring-4 ring-teal-500/15`}
-            >
-              {getInitials(currentUser?.name || 'Audição360')}
+            <div className="relative group/avatar">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                title="Alterar foto de perfil"
+                aria-label="Alterar foto de perfil"
+                className="relative w-24 h-24 rounded-full overflow-hidden shadow-md ring-4 ring-teal-500/15 transition-all duration-150 hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-teal-500/30 disabled:cursor-wait"
+              >
+                {liveAvatarUrl ? (
+                  <img
+                    src={liveAvatarUrl}
+                    alt={currentUser?.name || 'Avatar'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className={`w-full h-full ${getAvatarColor(
+                      currentUser?.name || 'Admin',
+                    )} text-white flex items-center justify-center font-bold text-3xl`}
+                  >
+                    {getInitials(currentUser?.name || 'Audição360')}
+                  </div>
+                )}
+                {/* Overlay sutil no hover */}
+                <span className="absolute inset-0 bg-black/0 group-hover/avatar:bg-black/10 transition-colors" />
+              </button>
+
+              {/* Botão de câmera sobreposto no canto inferior direito */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                title="Alterar foto de perfil"
+                aria-label="Alterar foto de perfil"
+                className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-[#00A6A6] hover:bg-[#008c8c] text-white flex items-center justify-center shadow-lg ring-2 ring-white transition-colors disabled:opacity-60 disabled:cursor-wait"
+              >
+                {uploadingAvatar ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Camera className="w-4 h-4" />
+                )}
+              </button>
+
+              {/* Input de arquivo invisível */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
             </div>
             <div className="text-center">
               <CardTitle className="text-lg font-bold text-slate-900">
@@ -112,6 +234,9 @@ export default function Profile() {
               <CardDescription className="text-xs text-slate-500">
                 {currentUser?.email || 'admin@audicao360.com.br'}
               </CardDescription>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Clique na foto para enviar uma imagem (JPG, PNG ou WebP — máx. 2MB)
+              </p>
             </div>
           </CardHeader>
 

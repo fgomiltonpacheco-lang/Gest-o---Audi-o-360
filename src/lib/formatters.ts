@@ -1,3 +1,14 @@
+import pb from '@/lib/pocketbase/client'
+
+// Constrói a URL pública do avatar do usuário no PocketBase.
+// Retorna null quando não há avatar salvo (caller mostra iniciais).
+export function getAvatarUrl(
+  user: { id: string; avatar?: string } | null | undefined,
+): string | null {
+  if (!user?.id || !user?.avatar) return null
+  return `${pb.baseUrl}/api/files/users/${user.id}/${user.avatar}`
+}
+
 // Formatador de Moeda Real Brasileiro
 export function formatCurrency(value: number | undefined | null): string {
   if (value === undefined || value === null || isNaN(value)) return 'R$ 0,00'

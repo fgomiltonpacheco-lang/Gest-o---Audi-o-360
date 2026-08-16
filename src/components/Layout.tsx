@@ -18,7 +18,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
-import { getInitials, getAvatarColor } from '@/lib/formatters'
+import { getInitials, getAvatarColor, getAvatarUrl } from '@/lib/formatters'
 import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { NotificationsDrawer } from '@/components/NotificationsDrawer'
@@ -194,13 +194,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               className="flex items-center gap-2.5 min-w-0 group/user flex-1"
               title="Editar perfil"
             >
-              <div
-                className={`w-9 h-9 rounded-full ${getAvatarColor(
-                  currentUser?.name || 'Admin',
-                )} text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm`}
-              >
-                {getInitials(currentUser?.name || 'Audição360')}
-              </div>
+              {getAvatarUrl(currentUser) ? (
+                <img
+                  src={getAvatarUrl(currentUser) || ''}
+                  alt={currentUser?.name || 'Avatar'}
+                  className="w-9 h-9 rounded-full object-cover shrink-0 shadow-sm"
+                />
+              ) : (
+                <div
+                  className={`w-9 h-9 rounded-full ${getAvatarColor(
+                    currentUser?.name || 'Admin',
+                  )} text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm`}
+                >
+                  {getInitials(currentUser?.name || 'Audição360')}
+                </div>
+              )}
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-white truncate group-hover/user:text-teal-300 transition-colors">
                   {currentUser?.name || 'Administrador'}
@@ -363,15 +371,23 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             )}
           </button>
 
-          {/* Avatar com iniciais */}
+          {/* Avatar (foto ou iniciais) */}
           <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200">
-            <div
-              className={`w-9 h-9 rounded-full ${getAvatarColor(
-                currentUser?.name || 'Admin',
-              )} text-white flex items-center justify-center font-bold text-xs shadow-sm ring-2 ring-teal-500/20`}
-            >
-              {getInitials(currentUser?.name || 'Audição360')}
-            </div>
+            {getAvatarUrl(currentUser) ? (
+              <img
+                src={getAvatarUrl(currentUser) || ''}
+                alt={currentUser?.name || 'Avatar'}
+                className="w-9 h-9 rounded-full object-cover shadow-sm ring-2 ring-teal-500/20"
+              />
+            ) : (
+              <div
+                className={`w-9 h-9 rounded-full ${getAvatarColor(
+                  currentUser?.name || 'Admin',
+                )} text-white flex items-center justify-center font-bold text-xs shadow-sm ring-2 ring-teal-500/20`}
+              >
+                {getInitials(currentUser?.name || 'Audição360')}
+              </div>
+            )}
             <div className="hidden md:block text-left">
               <span className="text-xs font-bold text-slate-800 block leading-tight truncate max-w-[140px]">
                 {currentUser?.name || 'Administrador'}

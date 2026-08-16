@@ -333,6 +333,7 @@ interface AppContextType {
     newPassword?: string
     passwordConfirm?: string
   }) => Promise<{ success: boolean; message?: string }>
+  uploadAvatar: (file: File) => Promise<{ success: boolean; message?: string }>
   dataLoading: boolean
 
   // Pacientes
@@ -711,6 +712,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return {
         success: false,
         message: describePbError(err) || 'Não foi possível atualizar o perfil.',
+      }
+    }
+  }
+
+  // ---------- Upload de avatar ----------
+  const uploadAvatar = async (file: File): Promise<{ success: boolean; message?: string }> => {
+    if (!currentUser?.id) {
+      return { success: false, message: 'Usuário não autenticado.' }
+    }
+    // Validação de tipo
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      return {
+        success: false,
+        message: 'Formato não suportado. Envie uma imagem JPG, PNG ou WebP.',
+      }
+    }
+    // Validação de tamanho (máx. 2MB)
+    const MAX_SIZE = 2 * 1024 * 1024
+    if (file.size > MAX_SIZE) {
+      return {
+        success: false,
+        message: 'A imagem excede o limite de 2MB.',
+      }
+    }
+    try {
+      const formData = new FormData()
+      formData.append('avatar', file)
+      const updated: any = await pb.collection('users').update(currentUser.id, formData)
+      const newAvatar = updated?.avatar || ''
+      // Atualiza o currentUser local para refletir imediatamente na UI
+      setCurrentUser((prev) => (prev ? { ...prev, avatar: newAvatar || undefined } : prev))
+      return { success: true }
+    } catch (err) {
+      console.error('Erro ao enviar avatar:', err)
+      return {
+        success: false,
+        message: describePbError(err) || 'Não foi possível enviar a foto.',
       }
     }
   }
@@ -2041,6 +2080,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         logout,
         recoverPassword,
         updateProfile,
+        uploadAvatar,
         dataLoading,
         patients,
         addPatient,
