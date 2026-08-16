@@ -15,7 +15,7 @@ import {
 } from '@/types'
 import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
 import { formatDate, maskCPF, calculateAge } from '@/lib/formatters'
-import { SingleEarAudiogramChart } from '@/components/AudiogramChart'
+import { AudiogramaSVG } from '@/components/print/AudiogramaSVG'
 import { mediaTritonal, mediaQuadritonal } from '@/lib/audiogram'
 
 const FREQUENCIES_AIR = [
@@ -586,81 +586,22 @@ export function AudiometriaFullPrint({
         </table>
       </div>
 
-      {/* Audiogramas lado a lado (OD vermelho / OE azul) */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '4px',
-          marginBottom: '3px',
-          breakInside: 'avoid',
-          alignItems: 'flex-start',
-        }}
-      >
-        <div style={{ width: '50%', breakInside: 'avoid' }}>
-          <div
-            style={{
-              fontSize: '7.5pt',
-              fontWeight: 700,
-              color: '#dc2626',
-              textAlign: 'center',
-              marginBottom: '1px',
-            }}
-          >
-            ORELHA DIREITA
-          </div>
-          <SingleEarAudiogramChart
-            side="OD"
-            air={exam.air_od}
-            bone={exam.bone_od}
-            ldl={exam.ldl_od}
-            width="100%"
-            compact
-            hideLegend
-          />
-          <div
-            style={{
-              textAlign: 'center',
-              color: '#dc2626',
-              fontSize: '7pt',
-              marginTop: '1px',
-              fontWeight: 700,
-            }}
-          >
-            SRT: {fmtDb(exam.srt_od)} &nbsp;|&nbsp; LDV: {fmtDb(exam.ldv_od)}
-          </div>
-        </div>
-        <div style={{ width: '50%', breakInside: 'avoid' }}>
-          <div
-            style={{
-              fontSize: '7.5pt',
-              fontWeight: 700,
-              color: '#2563eb',
-              textAlign: 'center',
-              marginBottom: '1px',
-            }}
-          >
-            ORELHA ESQUERDA
-          </div>
-          <SingleEarAudiogramChart
-            side="OE"
-            air={exam.air_oe}
-            bone={exam.bone_oe}
-            ldl={exam.ldl_oe}
-            width="100%"
-            compact
-            hideLegend
-          />
-          <div
-            style={{
-              textAlign: 'center',
-              color: '#2563eb',
-              fontSize: '7pt',
-              marginTop: '1px',
-              fontWeight: 700,
-            }}
-          >
-            SRT: {fmtDb(exam.srt_oe)} &nbsp;|&nbsp; LDV: {fmtDb(exam.ldv_oe)}
-          </div>
+      {/* Audiograma gráfico único (ambas as orelhas sobrepostas — padrão clínico) */}
+      <div style={{ marginBottom: '3px', breakInside: 'avoid', textAlign: 'center' }}>
+        <AudiogramaSVG
+          airOD={exam.air_od}
+          airOE={exam.air_oe}
+          boneOD={exam.bone_od}
+          boneOE={exam.bone_oe}
+        />
+        <div style={{ fontSize: '7pt', marginTop: '2px', fontWeight: 700 }}>
+          <span style={{ color: '#dc2626' }}>
+            OD — SRT: {fmtDb(exam.srt_od)} &nbsp;|&nbsp; LDV: {fmtDb(exam.ldv_od)}
+          </span>
+          &nbsp;&nbsp;&nbsp;
+          <span style={{ color: '#2563eb' }}>
+            OE — SRT: {fmtDb(exam.srt_oe)} &nbsp;|&nbsp; LDV: {fmtDb(exam.ldv_oe)}
+          </span>
         </div>
       </div>
 
