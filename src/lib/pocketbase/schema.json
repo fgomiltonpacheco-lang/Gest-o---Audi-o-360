@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T19:15:26.260Z",
+  "generatedAt": "2026-08-16T19:26:23.264Z",
   "collections": [
     {
       "name": "users",
@@ -2637,6 +2637,19 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "status_repasse",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["pendente", "recebido"]
+        },
+        {
+          "name": "data_recebimento_comissao",
+          "type": "date",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

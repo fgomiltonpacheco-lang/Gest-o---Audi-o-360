@@ -10,6 +10,7 @@ import {
   FileText,
   Save,
   ShieldAlert,
+  Wallet,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { useToast } from '@/hooks/use-toast'
@@ -55,7 +56,7 @@ const statusColors: Record<VendaB2BStatus, string> = {
 }
 
 const DEFAULT_DISCRIMINACAO =
-  'Intermediação comercial - Comissão sobre venda de aparelhos auditivos'
+  'Promoção de vendas e intermediação comercial - Comissão sobre venda de aparelhos auditivos'
 
 export default function DetalhesVendaB2B() {
   const { id } = useParams<{ id: string }>()
@@ -153,7 +154,7 @@ export default function DetalhesVendaB2B() {
         status: 'emitida',
       })
       if (result) {
-        toast({ title: 'NF de Serviço emitida com sucesso' })
+        toast({ title: 'NF de Promoção de Vendas emitida com sucesso' })
       }
     } finally {
       setEmitLoading(false)
@@ -164,10 +165,38 @@ export default function DetalhesVendaB2B() {
     if (!nf) return
     const res = await updateNFServicoComissao(nf.id, { status: 'cancelada' })
     if (res.success) {
-      // volta status da venda para aprovada
-      await updateVendaB2B(venda!.id, { status: 'aprovada' })
-      toast({ title: 'NF cancelada', variant: 'destructive' })
+      // volta status da venda para aprovada e limpa o repasse
+      await updateVendaB2B(venda!.id, {
+        status: 'aprovada',
+        status_repasse: 'pendente',
+        data_recebimento_comissao: undefined,
+      })
+      toast({ title: 'NF de Promoção de Vendas cancelada', variant: 'destructive' })
     }
+  }
+
+  const handleRegistrarRepasse = async () => {
+    if (!venda) return
+    const hoje = (() => {
+      const d = new Date()
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+        d.getDate(),
+      ).padStart(2, '0')}`
+    })()
+    await updateVendaB2B(venda.id, {
+      status_repasse: 'recebido',
+      data_recebimento_comissao: hoje,
+    })
+    toast({ title: 'Repasse de comissão recebido' })
+  }
+
+  const handleEstornarRepasse = async () => {
+    if (!venda) return
+    await updateVendaB2B(venda.id, {
+      status_repasse: 'pendente',
+      data_recebimento_comissao: undefined,
+    })
+    toast({ title: 'Repasse reaberto', variant: 'destructive' })
   }
 
   const handleImprimirNF = () => {
@@ -370,10 +399,10 @@ export default function DetalhesVendaB2B() {
             </div>
           )}
 
-          {/* Seção NF de Serviço */}
+          {/* Seção NF de Promoção de Vendas */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
             <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-              <Receipt className="w-4 h-4 text-blue-700" /> NF de Serviço (Comissão)
+              <Receipt className="w-4 h-4 text-blue-700" /> NF de Promoção de Vendas
             </h2>
 
             {venda.status === 'cancelada' ? (
@@ -560,16 +589,71 @@ export default function DetalhesVendaB2B() {
                   className="rounded-xl text-sm bg-blue-700 hover:bg-blue-800 text-white"
                 >
                   <FileText className="w-4 h-4 mr-1.5" />
-                  {emitLoading ? 'Emitindo...' : 'Emitir NF de Serviço'}
+                  {emitLoading ? 'Emitindo...' : 'Emitir NF de Promoção de Vendas'}
                 </Button>
               </div>
             ) : (
               <div className="text-sm text-slate-500 italic flex items-center gap-2">
                 <ShieldAlert className="w-4 h-4" />
-                Aprove a venda antes de emitir a NF de Serviço.
+                Aprove a venda antes de emitir a NF de Promoção de Vendas.
               </div>
             )}
           </div>
+
+          {/* Seção Repasse da Comissão */}
+          {nf && nf.status === 'emitida' && venda.status !== 'cancelada' && (
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-blue-700" /> Repasse da Comissão
+              </h2>
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500">
+                  Após a emissão da NF de Promoção de Vendas, a empresa parceira deve repassar os{' '}
+                  {Number(venda.percentual_comissao || 0).toFixed(2)}% de comissão para a
+                  Audição360.
+                </p>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <Badge
+                    variant="outline"
+                    className={
+                      venda.status_repasse === 'recebido'
+                        ? 'bg-green-50 text-green-800 border-green-300'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }
+                  >
+                    {venda.status_repasse === 'recebido'
+                      ? 'Comissão Recebida'
+                      : 'Aguardando Repasse'}
+                  </Badge>
+                  {venda.data_recebimento_comissao && (
+                    <span className="text-xs text-slate-500">
+                      Recebido em {formatDate(venda.data_recebimento_comissao)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {venda.status_repasse !== 'recebido' ? (
+                    <Button
+                      size="sm"
+                      onClick={handleRegistrarRepasse}
+                      className="rounded-lg text-xs bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Registrar Repasse Recebido
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleEstornarRepasse}
+                      className="rounded-lg text-xs text-amber-700 border-amber-200 hover:bg-amber-50"
+                    >
+                      <Ban className="w-3.5 h-3.5 mr-1" /> Reabrir Repasse
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Resumo lateral */}
@@ -585,14 +669,34 @@ export default function DetalhesVendaB2B() {
                   {formatCurrency(venda.valor_total)}
                 </span>
               </div>
-              <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-emerald-50 border border-emerald-200">
-                <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">
+              <div
+                className={`flex items-center justify-between py-2 px-3 rounded-xl border ${
+                  venda.status_repasse === 'recebido'
+                    ? 'bg-green-50 border-green-300'
+                    : 'bg-emerald-50 border-emerald-200'
+                }`}
+              >
+                <span
+                  className={`text-xs font-semibold uppercase tracking-wider ${
+                    venda.status_repasse === 'recebido' ? 'text-green-800' : 'text-emerald-700'
+                  }`}
+                >
                   Comissão ({Number(venda.percentual_comissao || 0).toFixed(2)}%)
+                  {venda.status_repasse === 'recebido' && ' · Recebida'}
                 </span>
-                <span className="text-lg font-extrabold text-emerald-700">
+                <span
+                  className={`text-lg font-extrabold ${
+                    venda.status_repasse === 'recebido' ? 'text-green-700' : 'text-emerald-700'
+                  }`}
+                >
                   {formatCurrency(venda.valor_comissao)}
                 </span>
               </div>
+              {venda.data_recebimento_comissao && (
+                <p className="text-[11px] text-green-700 -mt-1">
+                  Repasse recebido em {formatDate(venda.data_recebimento_comissao)}
+                </p>
+              )}
               <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-slate-50 border border-slate-200">
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   Repasse ao Fornecedor

@@ -52,9 +52,9 @@ export function NFServicoComissaoPrint({
       >
         <strong style={{ color: '#1e3a8a' }}>
           <FileText style={{ width: 12, height: 12, display: 'inline', marginRight: 4 }} />
-          Nota Fiscal de Serviço Eletrônica
+          Nota Fiscal de Promoção de Vendas
         </strong>
-        <span>NFS-e Nº {nf.numero_nf}</span>
+        <span>NF Nº {nf.numero_nf}</span>
       </div>
 
       {/* Código de verificação + data */}
@@ -108,7 +108,7 @@ export function NFServicoComissaoPrint({
       </div>
 
       {/* DISCRIMINAÇÃO */}
-      {sectionTitle('Discriminação do Serviço')}
+      {sectionTitle('Discriminação')}
       <div
         style={{
           fontSize: '9pt',
@@ -121,7 +121,7 @@ export function NFServicoComissaoPrint({
         }}
       >
         {nf.discriminacao_servico ||
-          'Intermediação comercial - Comissão sobre venda de aparelhos auditivos'}
+          'Promoção de vendas e intermediação comercial - Comissão sobre venda de aparelhos auditivos'}
       </div>
       {row('Item da Lista de Serviço', nf.item_lista_servico || '10.01')}
       {row('Venda B2B relacionada', venda.numero_venda)}

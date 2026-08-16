@@ -112,12 +112,18 @@ export default function Index() {
       )
       .reduce((acc, v) => acc + (v.valor_total || 0), 0)
     const comissaoMes = doMes.reduce((acc, v) => acc + (v.valor_comissao || 0), 0)
-    // Comissões a receber: vendas aprovadas (NF ainda não emitida)
+    // Comissões a receber: NF emitida e repasse ainda pendente (qualquer mês)
     const comissaoReceber = ativas
-      .filter((v) => v.status === 'aprovada')
+      .filter((v) => v.nf && v.nf.status === 'emitida' && v.status_repasse !== 'recebido')
       .reduce((acc, v) => acc + (v.valor_comissao || 0), 0)
-    const nfsPendentes = ativas.filter((v) => v.status === 'aprovada').length
-    return { vendasMes, comissaoMes, comissaoReceber, nfsPendentes }
+    // Comissões recebidas: repasse confirmado (qualquer mês)
+    const comissaoRecebida = ativas
+      .filter((v) => v.status_repasse === 'recebido')
+      .reduce((acc, v) => acc + (v.valor_comissao || 0), 0)
+    const nfsPendentes = ativas.filter(
+      (v) => v.nf && v.nf.status === 'emitida' && v.status_repasse !== 'recebido',
+    ).length
+    return { vendasMes, comissaoMes, comissaoReceber, comissaoRecebida, nfsPendentes }
   }, [vendasB2B, thisMonthStr])
 
   // Próximos agendamentos Hoje e Amanhã
@@ -316,16 +322,24 @@ export default function Index() {
             </p>
           </div>
           <div>
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+            <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider">
               Comissões a Receber
             </p>
-            <p className="text-lg font-extrabold text-emerald-600 mt-0.5">
+            <p className="text-lg font-extrabold text-amber-600 mt-0.5">
               {formatCurrency(b2bResumo.comissaoReceber)}
             </p>
           </div>
           <div>
+            <p className="text-[10px] font-semibold text-green-700 uppercase tracking-wider">
+              Comissões Recebidas
+            </p>
+            <p className="text-lg font-extrabold text-green-600 mt-0.5">
+              {formatCurrency(b2bResumo.comissaoRecebida)}
+            </p>
+          </div>
+          <div className="col-span-2 sm:col-span-1">
             <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-              NFs Pendentes
+              Repasses Pendentes
             </p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="text-lg font-extrabold text-amber-600">

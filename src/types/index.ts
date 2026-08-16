@@ -764,6 +764,14 @@ export type VendaB2BStatus = 'pendente' | 'aprovada' | 'nf_emitida' | 'concluida
 export type NFServicoStatus = 'rascunho' | 'emitida' | 'cancelada'
 export type EmpresaParceiraStatus = 'ativo' | 'inativo'
 
+/**
+ * Status do repasse da comissão da empresa parceira para a Audição360,
+ * após a emissão da NF de Promoção de Vendas.
+ * - pendente: NF emitida, aguardando a empresa parceira repassar os 30%
+ * - recebido: empresa parceira já repassou os 30% para a Audição360
+ */
+export type StatusRepasseComissao = 'pendente' | 'recebido'
+
 export interface EmpresaParceira {
   id: string
   razao_social: string
@@ -806,6 +814,10 @@ export interface VendaB2B {
   especialista_id: string
   especialista_nome: string
   observacoes: string
+  /** Status do repasse da comissão após emissão da NF de Promoção de Vendas. */
+  status_repasse?: StatusRepasseComissao
+  /** Data (YYYY-MM-DD) em que o repasse da comissão foi confirmado. */
+  data_recebimento_comissao?: string
   itens?: ItemVendaB2B[]
   nf?: NFServicoComissao | null
   created: string

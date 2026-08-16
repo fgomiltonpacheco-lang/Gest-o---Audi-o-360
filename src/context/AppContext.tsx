@@ -506,6 +506,12 @@ const mapVendaB2B = (r: any): VendaB2B => {
     especialista_id: r.especialista_id || r.especialista || '',
     especialista_nome: r.especialista_nome || r.expand?.especialista_id?.name || '',
     observacoes: r.observacoes || '',
+    status_repasse: (r.status_repasse === 'recebido'
+      ? 'recebido'
+      : 'pendente') as VendaB2B['status_repasse'],
+    data_recebimento_comissao: r.data_recebimento_comissao
+      ? toDateStr(r.data_recebimento_comissao)
+      : undefined,
     itens,
     nf: nfRec ? mapNFServicoComissao(nfRec) : null,
     created: toDateStr(r.created),
@@ -3019,6 +3025,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const current = vendasB2B.find((v) => v.id === id)
       const patch: Record<string, any> = {}
       if (data.status !== undefined) patch.status = data.status
+      if (data.status_repasse !== undefined) patch.status_repasse = data.status_repasse
+      if (data.data_recebimento_comissao !== undefined) {
+        patch.data_recebimento_comissao = data.data_recebimento_comissao || null
+      }
       if (data.observacoes !== undefined) patch.observacoes = data.observacoes
       if (data.percentual_comissao !== undefined) {
         const valor_total = current?.valor_total || 0
@@ -3131,10 +3141,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
       const mapped = mapNFServicoComissao(rec)
       setNfServicoComissao((prev) => [mapped, ...prev])
-      // Atualiza status da venda para nf_emitida
-      await updateVendaB2B(data.venda_b2b_id, { status: 'nf_emitida' })
+      // Ao emitir a NF de Promoção de Vendas, a venda passa a aguardar o
+      // repasse da comissão por parte da empresa parceira.
+      await updateVendaB2B(data.venda_b2b_id, {
+        status: 'nf_emitida',
+        status_repasse: 'pendente',
+        data_recebimento_comissao: undefined,
+      })
       await fetchVendasB2B()
-      toast({ title: 'NF de Serviço emitida', description: `NF ${data.numero_nf}` })
+      toast({ title: 'NF de Promoção de Vendas emitida', description: `NF ${data.numero_nf}` })
       return mapped
     } catch (err) {
       console.error('Erro ao criar NF de serviço:', err)
@@ -3168,7 +3183,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const mapped = mapNFServicoComissao(rec)
       setNfServicoComissao((prev) => prev.map((n) => (n.id === id ? mapped : n)))
       await fetchVendasB2B()
-      toast({ title: 'NF de Serviço atualizada' })
+      toast({ title: 'NF de Promoção de Vendas atualizada' })
       return { success: true }
     } catch (err) {
       console.error('Erro ao atualizar NF de serviço:', err)

@@ -12,6 +12,8 @@ import {
   X,
   Filter,
   Download,
+  Wallet,
+  CheckCircle2,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { useToast } from '@/hooks/use-toast'
@@ -95,7 +97,28 @@ export default function VendasB2B() {
     const totalComissaoMes = doMes.reduce((acc, v) => acc + (v.valor_comissao || 0), 0)
     const qtdVendas = doMes.length
     const nfsEmitidas = vendasB2B.filter((v) => v.status === 'nf_emitida').length
-    return { totalVendasMes, totalComissaoMes, qtdVendas, nfsEmitidas }
+    // Comissões a receber: NF emitida e repasse ainda pendente (qualquer mês)
+    const comissoesReceber = ativas
+      .filter((v) => v.nf && v.nf.status === 'emitida' && v.status_repasse !== 'recebido')
+      .reduce((acc, v) => acc + (v.valor_comissao || 0), 0)
+    const qtdComissoesReceber = ativas.filter(
+      (v) => v.nf && v.nf.status === 'emitida' && v.status_repasse !== 'recebido',
+    ).length
+    // Comissões recebidas: repasse confirmado (qualquer mês)
+    const comissoesRecebidas = ativas
+      .filter((v) => v.status_repasse === 'recebido')
+      .reduce((acc, v) => acc + (v.valor_comissao || 0), 0)
+    const qtdComissoesRecebidas = ativas.filter((v) => v.status_repasse === 'recebido').length
+    return {
+      totalVendasMes,
+      totalComissaoMes,
+      qtdVendas,
+      nfsEmitidas,
+      comissoesReceber,
+      qtdComissoesReceber,
+      comissoesRecebidas,
+      qtdComissoesRecebidas,
+    }
   }, [vendasB2B, mesAtual])
 
   const filtered = useMemo(() => {
@@ -265,31 +288,39 @@ export default function VendasB2B() {
             </div>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-4 rounded-2xl border border-amber-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                Comissões (mês)
+              <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider">
+                Comissões a Receber
               </p>
-              <p className="text-xl font-extrabold text-emerald-700 mt-1">
-                {formatCurrency(resumo.totalComissaoMes)}
+              <p className="text-xl font-extrabold text-amber-700 mt-1">
+                {formatCurrency(resumo.comissoesReceber)}
+              </p>
+              <p className="text-[10px] text-amber-600 mt-0.5">
+                {resumo.qtdComissoesReceber} NF(s) emitida(s) — aguardando repasse
               </p>
             </div>
-            <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4 text-emerald-600" />
+            <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center">
+              <Wallet className="w-4 h-4 text-amber-600" />
             </div>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-4 rounded-2xl border border-green-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                Qtd. Vendas
+              <p className="text-[11px] font-semibold text-green-700 uppercase tracking-wider">
+                Comissões Recebidas
               </p>
-              <p className="text-xl font-extrabold text-slate-900 mt-1">{resumo.qtdVendas}</p>
+              <p className="text-xl font-extrabold text-green-700 mt-1">
+                {formatCurrency(resumo.comissoesRecebidas)}
+              </p>
+              <p className="text-[10px] text-green-600 mt-0.5">
+                {resumo.qtdComissoesRecebidas} repasse(s) confirmado(s)
+              </p>
             </div>
-            <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-slate-600" />
+            <div className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4 text-green-600" />
             </div>
           </div>
         </div>
@@ -456,9 +487,25 @@ export default function VendasB2B() {
                       {formatCurrency(v.valor_comissao)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={statusColors[v.status]}>
-                        {statusLabel[v.status]}
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant="outline" className={statusColors[v.status]}>
+                          {statusLabel[v.status]}
+                        </Badge>
+                        {v.nf && v.nf.status === 'emitida' && v.status !== 'cancelada' && (
+                          <Badge
+                            variant="outline"
+                            className={
+                              v.status_repasse === 'recebido'
+                                ? 'bg-green-50 text-green-800 border-green-300'
+                                : 'bg-amber-50 text-amber-700 border-amber-200'
+                            }
+                          >
+                            {v.status_repasse === 'recebido'
+                              ? 'Comissão Recebida'
+                              : 'Comissão a Receber'}
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">

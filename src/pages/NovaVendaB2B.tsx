@@ -81,6 +81,17 @@ export default function NovaVendaB2B() {
     [empresasParceiras],
   )
 
+  // Vendas B2B são SOMENTE de aparelhos auditivos: filtra o estoque para
+  // exibir apenas produtos da categoria "Aparelhos auditivos", evitando
+  // incluir serviços, exames, pilhas ou outros itens.
+  const aparelhosAuditivos = useMemo(
+    () =>
+      stockItems.filter(
+        (p) => (p.category || '').toLowerCase().replace(/ó/g, 'o') === 'aparelhos auditivos',
+      ),
+    [stockItems],
+  )
+
   const valorTotal = useMemo(
     () => itens.reduce((acc, it) => acc + (Number(it.valor_subtotal) || 0), 0),
     [itens],
@@ -237,9 +248,14 @@ export default function NovaVendaB2B() {
           {/* Itens */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <ShoppingCart className="w-4 h-4 text-blue-700" /> Produtos
-              </h2>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4 text-blue-700" /> Aparelhos Auditivos
+                </h2>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Vendas B2B incluem apenas aparelhos auditivos.
+                </p>
+              </div>
               <Button
                 size="sm"
                 onClick={addItem}
@@ -276,12 +292,18 @@ export default function NovaVendaB2B() {
                             <SelectValue placeholder="Selecione..." />
                           </SelectTrigger>
                           <SelectContent>
-                            {stockItems.map((p) => (
-                              <SelectItem key={p.id} value={p.id}>
-                                {p.name}
-                                {p.brand ? ` — ${p.brand}` : ''}
+                            {aparelhosAuditivos.length === 0 ? (
+                              <SelectItem value="_empty" disabled>
+                                Nenhum aparelho auditivo em estoque
                               </SelectItem>
-                            ))}
+                            ) : (
+                              aparelhosAuditivos.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.name}
+                                  {p.brand ? ` — ${p.brand}` : ''}
+                                </SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
                       </TableCell>
