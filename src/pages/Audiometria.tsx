@@ -668,7 +668,6 @@ export default function Audiometria() {
                   : 'border-slate-200 hover:border-blue-200'
               const sideKey = side === 'OD' ? 'od' : 'oe'
               const row = exam.iprf_vocal[sideKey]
-              const levelsKey = side === 'OD' ? 'iprf_levels_od' : 'iprf_levels_oe'
               return (
                 <div
                   key={side}
@@ -677,7 +676,23 @@ export default function Audiometria() {
                   <h4 className={`text-xs font-extrabold uppercase tracking-wider ${color}`}>
                     Orelha {side === 'OD' ? 'Direita (OD)' : 'Esquerda (OE)'}
                   </h4>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Field label="Intensidade (dB)">
+                      <Input
+                        type="number"
+                        value={row.intensidade}
+                        onChange={(e) =>
+                          setField('iprf_vocal', {
+                            ...exam.iprf_vocal,
+                            [sideKey]: { ...row, intensidade: e.target.value },
+                          })
+                        }
+                        disabled={isSecretaria}
+                        className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
+                      />
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
                     <Field label="Monossílabos (%)">
                       <Input
                         type="number"
@@ -686,20 +701,6 @@ export default function Audiometria() {
                           setField('iprf_vocal', {
                             ...exam.iprf_vocal,
                             [sideKey]: { ...row, monossilabos: e.target.value },
-                          })
-                        }
-                        disabled={isSecretaria}
-                        className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
-                      />
-                    </Field>
-                    <Field label="Intensidade Monoss. (dB)">
-                      <Input
-                        type="number"
-                        value={row.intensidade}
-                        onChange={(e) =>
-                          setField('iprf_vocal', {
-                            ...exam.iprf_vocal,
-                            [sideKey]: { ...row, intensidade: e.target.value },
                           })
                         }
                         disabled={isSecretaria}
@@ -721,15 +722,6 @@ export default function Audiometria() {
                       />
                     </Field>
                   </div>
-                  <Field label="Níveis de intensidade (ex.: 100% a 45 dB, 76% a 95 dB)">
-                    <Input
-                      value={exam[levelsKey] || row.niveis || ''}
-                      onChange={(e) => setField(levelsKey as any, e.target.value)}
-                      disabled={isSecretaria}
-                      placeholder="100% a 45 dB, 76% a 95 dB"
-                      className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
-                    />
-                  </Field>
                 </div>
               )
             })}
@@ -1696,8 +1688,6 @@ function IprfTable({ exam }: { exam: AudiometryExamFull }) {
   const td = 'border border-slate-400 text-[10px] text-center px-1 py-0.5'
   const odRow = exam.iprf_vocal.od
   const oeRow = exam.iprf_vocal.oe
-  const odLevels = exam.iprf_levels_od || odRow.niveis || ''
-  const oeLevels = exam.iprf_levels_oe || oeRow.niveis || ''
   const fmtIprf = (r: { intensidade: string; monossilabos: string; dissilabos: string }) => {
     const intens = r.intensidade ? `${r.intensidade} dB` : '- dB'
     const monoPct = r.monossilabos ? `${r.monossilabos}%` : '-'
@@ -1725,13 +1715,6 @@ function IprfTable({ exam }: { exam: AudiometryExamFull }) {
             <td className={td}>{fmtIprf(odRow)}</td>
             <td className={td}>{fmtIprf(oeRow)}</td>
           </tr>
-          {(odLevels || oeLevels) && (
-            <tr>
-              <td className={`${td} text-left font-semibold`}>Níveis</td>
-              <td className={td}>{odLevels || '—'}</td>
-              <td className={td}>{oeLevels || '—'}</td>
-            </tr>
-          )}
         </tbody>
       </table>
     </div>

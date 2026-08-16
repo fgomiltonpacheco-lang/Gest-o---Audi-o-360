@@ -726,17 +726,12 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
           </thead>
           <tbody>
             <tr>
-              <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 600 }}>Monossílabos</td>
+              <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 600 }}>
+                Monossílabos / Dissílabos
+              </td>
               <td style={{ ...tdStyle, fontSize: '6.5pt' }}>{fmtIprfPrint(odVocal)}</td>
               <td style={{ ...tdStyle, fontSize: '6.5pt' }}>{fmtIprfPrint(oeVocal)}</td>
             </tr>
-            {(odLevels || oeLevels) && (
-              <tr>
-                <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 600 }}>Níveis</td>
-                <td style={{ ...tdStyle, fontSize: '6.5pt' }}>{odLevels || '—'}</td>
-                <td style={{ ...tdStyle, fontSize: '6.5pt' }}>{oeLevels || '—'}</td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
