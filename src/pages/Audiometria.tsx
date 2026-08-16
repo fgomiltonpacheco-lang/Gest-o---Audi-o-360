@@ -100,6 +100,8 @@ function mapExam(r: any): AudiometryExamFull {
     air_oe: normalizeMap(r.air_oe, AIR_FREQS),
     bone_od: normalizeMap(r.bone_od, BONE_FREQS),
     bone_oe: normalizeMap(r.bone_oe, BONE_FREQS),
+    ldl_od: normalizeMap(r.ldl_od, AIR_FREQS),
+    ldl_oe: normalizeMap(r.ldl_oe, AIR_FREQS),
     mt_od: r.mt_od != null && r.mt_od !== '' ? Number(r.mt_od) : null,
     mt_oe: r.mt_oe != null && r.mt_oe !== '' ? Number(r.mt_oe) : null,
     lrf_od: r.lrf_od != null && r.lrf_od !== '' ? Number(r.lrf_od) : null,
@@ -112,32 +114,6 @@ function mapExam(r: any): AudiometryExamFull {
     updated: r.updated || '',
   }
 }
-
-/* ---------- Símbolos / labels ---------- */
-const SYMBOL_OPTIONS_AIR_OD: { value: AudiogramSymbol; label: string }[] = [
-  { value: 'normal', label: '○' },
-  { value: 'no_response', label: '○↓' },
-  { value: 'masked', label: '▢' },
-  { value: 'masked_no_response', label: '▢↓' },
-]
-const SYMBOL_OPTIONS_AIR_OE: { value: AudiogramSymbol; label: string }[] = [
-  { value: 'normal', label: '×' },
-  { value: 'no_response', label: '×↓' },
-  { value: 'masked', label: '□' },
-  { value: 'masked_no_response', label: '□↓' },
-]
-const SYMBOL_OPTIONS_BONE_OD: { value: AudiogramSymbol; label: string }[] = [
-  { value: 'normal', label: '<' },
-  { value: 'no_response', label: '<↓' },
-  { value: 'masked', label: '[' },
-  { value: 'masked_no_response', label: '[↓' },
-]
-const SYMBOL_OPTIONS_BONE_OE: { value: AudiogramSymbol; label: string }[] = [
-  { value: 'normal', label: '>' },
-  { value: 'no_response', label: '>↓' },
-  { value: 'masked', label: ']' },
-  { value: 'masked_no_response', label: ']↓' },
-]
 
 /* ---------- Laudo sugerido ---------- */
 function degreeFromAvg(avg: number | null): string {
@@ -219,7 +195,7 @@ function buildSuggestedReport(
   return lines.join('\n')
 }
 
-/* ---------- Componente ---------- */
+/* ---------- Componente Principal ---------- */
 export default function Audiometria() {
   const { id, examId } = useParams<{ id: string; examId?: string }>()
   const navigate = useNavigate()
@@ -279,7 +255,6 @@ export default function Audiometria() {
         sex: patient.gender || '',
       }))
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patient?.id, isNew])
 
   const patientAge = useMemo(() => {
@@ -294,12 +269,12 @@ export default function Audiometria() {
   }
 
   const setPoint = (
-    target: 'air_od' | 'air_oe' | 'bone_od' | 'bone_oe',
+    target: 'air_od' | 'air_oe' | 'bone_od' | 'bone_oe' | 'ldl_od' | 'ldl_oe',
     freq: string,
     patch: Partial<{ db: number | null; symbol: AudiogramSymbol }>,
   ) => {
     setExam((prev) => {
-      const map = { ...prev[target] }
+      const map = { ...(prev[target] || {}) }
       const cur = map[freq] || { db: null, symbol: 'normal' }
       map[freq] = { ...cur, ...patch }
       return { ...prev, [target]: map }
@@ -350,6 +325,8 @@ export default function Audiometria() {
       air_oe: exam.air_oe,
       bone_od: exam.bone_od,
       bone_oe: exam.bone_oe,
+      ldl_od: exam.ldl_od,
+      ldl_oe: exam.ldl_oe,
       mt_od: exam.mt_od,
       mt_oe: exam.mt_oe,
       lrf_od: exam.lrf_od,
@@ -378,7 +355,6 @@ export default function Audiometria() {
         void _u
         setExam({ ...rest, id: mapped.id })
         toast({ title: 'Exame criado', description: 'Audiometria salva com sucesso.' })
-        // Substitui a URL para o examId real (sem recarregar a página)
         navigate(`/pacientes/${patient.id}/audiometria/${mapped.id}`, { replace: true })
       }
     } catch (err) {
@@ -441,7 +417,7 @@ export default function Audiometria() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in-50 duration-200">
+    <div className="space-y-6 animate-in fade-in-50 duration-200 pb-12">
       {/* Cabeçalho */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-3">
@@ -489,7 +465,7 @@ export default function Audiometria() {
         </div>
       </div>
 
-      {/* Cabeçalho do exame */}
+      {/* Identificação */}
       <Section title="Identificação" icon={<FileText className="w-4 h-4 text-teal-600" />}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Field label="Paciente">
@@ -591,7 +567,7 @@ export default function Audiometria() {
         </div>
       </Section>
 
-      {/* Otoscopia / Meatoscopia */}
+      {/* Meatoscopia / Otoscopia */}
       <Section
         title="Meatoscopia / Otoscopia"
         icon={<Stethoscope className="w-4 h-4 text-teal-600" />}
@@ -600,7 +576,7 @@ export default function Audiometria() {
           {(['OD', 'OE'] as const).map((side) => {
             const key = side === 'OD' ? 'otoscopy_od' : 'otoscopy_oe'
             const obsKey = side === 'OD' ? 'otoscopy_od_obs' : 'otoscopy_oe_obs'
-            const color = side === 'OD' ? 'text-blue-600' : 'text-red-600'
+            const color = side === 'OD' ? 'text-red-600' : 'text-blue-600'
             const value = exam[key] as 'Normal' | 'Alterada' | ''
             return (
               <div
@@ -608,7 +584,7 @@ export default function Audiometria() {
                 className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3"
               >
                 <h4 className={`text-xs font-bold uppercase tracking-wider ${color}`}>
-                  Orelha {side} (Direita)
+                  Orelha {side === 'OD' ? 'Direita (OD)' : 'Esquerda (OE)'}
                 </h4>
                 <div className="flex items-center gap-4">
                   <label className="flex items-center gap-1.5 text-xs cursor-pointer">
@@ -650,101 +626,68 @@ export default function Audiometria() {
         </div>
       </Section>
 
-      {/* Via Aérea + Via Óssea + Audiograma */}
-      <Section title="Audiograma Tonal" icon={<Ear className="w-4 h-4 text-teal-600" />}>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* Tabelas de entrada */}
-          <div className="space-y-5">
-            {/* Via Aérea */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Via Aérea (dB HL)
-              </h4>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <FreqTable
-                  title="OD"
-                  color="text-blue-600"
-                  freqs={AIR_FREQS}
-                  map={exam.air_od}
-                  symbols={SYMBOL_OPTIONS_AIR_OD}
-                  onDb={(freq, raw) => setPoint('air_od', freq, { db: handleDbInput(raw) })}
-                  onSymbol={(freq, sym) => setPoint('air_od', freq, { symbol: sym })}
-                  disabled={isSecretaria}
-                />
-                <FreqTable
-                  title="OE"
-                  color="text-red-600"
-                  freqs={AIR_FREQS}
-                  map={exam.air_oe}
-                  symbols={SYMBOL_OPTIONS_AIR_OE}
-                  onDb={(freq, raw) => setPoint('air_oe', freq, { db: handleDbInput(raw) })}
-                  onSymbol={(freq, sym) => setPoint('air_oe', freq, { symbol: sym })}
-                  disabled={isSecretaria}
-                />
-              </div>
-            </div>
-            {/* Via Óssea */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Via Óssea (dB HL)
-              </h4>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <FreqTable
-                  title="OD"
-                  color="text-blue-600"
-                  freqs={BONE_FREQS}
-                  map={exam.bone_od}
-                  symbols={SYMBOL_OPTIONS_BONE_OD}
-                  onDb={(freq, raw) => setPoint('bone_od', freq, { db: handleDbInput(raw) })}
-                  onSymbol={(freq, sym) => setPoint('bone_od', freq, { symbol: sym })}
-                  disabled={isSecretaria}
-                />
-                <FreqTable
-                  title="OE"
-                  color="text-red-600"
-                  freqs={BONE_FREQS}
-                  map={exam.bone_oe}
-                  symbols={SYMBOL_OPTIONS_BONE_OE}
-                  onDb={(freq, raw) => setPoint('bone_oe', freq, { db: handleDbInput(raw) })}
-                  onSymbol={(freq, sym) => setPoint('bone_oe', freq, { symbol: sym })}
-                  disabled={isSecretaria}
-                />
-              </div>
-            </div>
-          </div>
+      {/* Tabelas de Dados Editáveis do Audiograma (Grid Horizontal em Formato Clínico) */}
+      <Section
+        title="Entrada de Dados do Audiograma Tonal"
+        icon={<Ear className="w-4 h-4 text-teal-600" />}
+      >
+        <div className="space-y-8">
+          {/* Orelha Direita (OD) */}
+          <HorizontalAudiogramGrid
+            title="Audiometria Orelha Direita (OD)"
+            side="OD"
+            colorClass="text-red-600"
+            headerColorClass="text-red-500"
+            airMap={exam.air_od}
+            boneMap={exam.bone_od}
+            ldlMap={exam.ldl_od || emptyAudiogramMap(AIR_FREQS)}
+            onAirDb={(f, val) => setPoint('air_od', f, { db: handleDbInput(val) })}
+            onAirSymbol={(f, sym) => setPoint('air_od', f, { symbol: sym })}
+            onBoneDb={(f, val) => setPoint('bone_od', f, { db: handleDbInput(val) })}
+            onBoneSymbol={(f, sym) => setPoint('bone_od', f, { symbol: sym })}
+            onLdlDb={(f, val) => setPoint('ldl_od', f, { db: handleDbInput(val) })}
+            disabled={isSecretaria}
+          />
 
-          {/* Audiograma */}
-          <div className="p-4 rounded-xl border border-slate-200 bg-white">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Audiograma
-              </h4>
-              <div className="flex items-center gap-2 text-[10px]">
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full border-2 border-blue-600" />
-                  OD
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full border-2 border-red-600" />
-                  OE
-                </span>
-              </div>
-            </div>
-            <AudiogramChart
-              airOD={exam.air_od}
-              airOE={exam.air_oe}
-              boneOD={exam.bone_od}
-              boneOE={exam.bone_oe}
-            />
-          </div>
+          {/* Orelha Esquerda (OE) */}
+          <HorizontalAudiogramGrid
+            title="Audiometria Orelha Esquerda (OE)"
+            side="OE"
+            colorClass="text-blue-600"
+            headerColorClass="text-blue-500"
+            airMap={exam.air_oe}
+            boneMap={exam.bone_oe}
+            ldlMap={exam.ldl_oe || emptyAudiogramMap(AIR_FREQS)}
+            onAirDb={(f, val) => setPoint('air_oe', f, { db: handleDbInput(val) })}
+            onAirSymbol={(f, sym) => setPoint('air_oe', f, { symbol: sym })}
+            onBoneDb={(f, val) => setPoint('bone_oe', f, { db: handleDbInput(val) })}
+            onBoneSymbol={(f, sym) => setPoint('bone_oe', f, { symbol: sym })}
+            onLdlDb={(f, val) => setPoint('ldl_oe', f, { db: handleDbInput(val) })}
+            disabled={isSecretaria}
+          />
         </div>
+      </Section>
+
+      {/* Lado a lado: Os dois Gráficos do Audiograma */}
+      <Section
+        title="Audiograma Tonal (Lado a Lado)"
+        icon={<Activity className="w-4 h-4 text-teal-600" />}
+      >
+        <AudiogramChart
+          airOD={exam.air_od}
+          airOE={exam.air_oe}
+          boneOD={exam.bone_od}
+          boneOE={exam.bone_oe}
+          ldlOD={exam.ldl_od}
+          ldlOE={exam.ldl_oe}
+        />
       </Section>
 
       {/* Audiometria Vocal */}
       <Section title="Audiometria Vocal" icon={<Activity className="w-4 h-4 text-teal-600" />}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {(['OD', 'OE'] as const).map((side) => {
-            const color = side === 'OD' ? 'text-blue-600' : 'text-red-600'
+            const color = side === 'OD' ? 'text-red-600' : 'text-blue-600'
             const mtKey = side === 'OD' ? 'mt_od' : 'mt_oe'
             const lrfKey = side === 'OD' ? 'lrf_od' : 'lrf_oe'
             const ldvKey = side === 'OD' ? 'ldv_od' : 'ldv_oe'
@@ -754,7 +697,7 @@ export default function Audiometria() {
                 className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3"
               >
                 <h4 className={`text-xs font-bold uppercase tracking-wider ${color}`}>
-                  Orelha {side}
+                  Orelha {side === 'OD' ? 'Direita (OD)' : 'Esquerda (OE)'}
                 </h4>
                 <div className="grid grid-cols-3 gap-3">
                   <Field label="MT — Limiar Tonal Médio (dB)">
@@ -825,7 +768,7 @@ export default function Audiometria() {
               <tbody className="divide-y divide-slate-200 bg-white">
                 {(['od', 'oe'] as const).map((side) => {
                   const label = side === 'od' ? 'OD' : 'OE'
-                  const color = side === 'od' ? 'text-blue-600' : 'text-red-600'
+                  const color = side === 'od' ? 'text-red-600' : 'text-blue-600'
                   const row = exam.iprf[side]
                   return (
                     <tr key={side}>
@@ -912,20 +855,312 @@ export default function Audiometria() {
         </div>
       </Section>
 
-      {/* Resumo rápido do grau/tipo (informativo) */}
+      {/* Resumo rápido do grau/tipo */}
       <div className="flex flex-wrap items-center gap-3 bg-white p-4 rounded-2xl border border-slate-200">
-        <Badge className="bg-blue-50 text-blue-700 border-blue-200">
-          OD: {degreeFromAvg(avgAir(exam.air_od))} • {determineType(exam.air_od, exam.bone_od)}
-        </Badge>
         <Badge className="bg-red-50 text-red-700 border-red-200">
-          OE: {degreeFromAvg(avgAir(exam.air_oe))} • {determineType(exam.air_oe, exam.bone_oe)}
+          OD (Vermelho): {degreeFromAvg(avgAir(exam.air_od))} •{' '}
+          {determineType(exam.air_od, exam.bone_od)}
+        </Badge>
+        <Badge className="bg-blue-50 text-blue-700 border-blue-200">
+          OE (Azul): {degreeFromAvg(avgAir(exam.air_oe))} •{' '}
+          {determineType(exam.air_oe, exam.bone_oe)}
         </Badge>
       </div>
     </div>
   )
 }
 
-/* ---------- Subcomponentes ---------- */
+/* ---------- Componente Tabela Grid Horizontal estilo Referência ---------- */
+
+interface HorizontalAudiogramGridProps {
+  title: string
+  side: 'OD' | 'OE'
+  colorClass: string
+  headerColorClass: string
+  airMap: AudiogramMap
+  boneMap: AudiogramMap
+  ldlMap: AudiogramMap
+  onAirDb: (freq: string, raw: string) => void
+  onAirSymbol: (freq: string, sym: AudiogramSymbol) => void
+  onBoneDb: (freq: string, raw: string) => void
+  onBoneSymbol: (freq: string, sym: AudiogramSymbol) => void
+  onLdlDb: (freq: string, raw: string) => void
+  disabled?: boolean
+}
+
+function HorizontalAudiogramGrid({
+  title,
+  side,
+  colorClass,
+  headerColorClass,
+  airMap,
+  boneMap,
+  ldlMap,
+  onAirDb,
+  onAirSymbol,
+  onBoneDb,
+  onBoneSymbol,
+  onLdlDb,
+  disabled,
+}: HorizontalAudiogramGridProps) {
+  const freqs = AIR_FREQS
+  const isOD = side === 'OD'
+
+  // Símbolos
+  const airNormalSym = isOD ? '○' : '×'
+  const airNoRespSym = isOD ? '○↓' : '×↓'
+  const airMaskedSym = isOD ? 'Δ' : '□'
+
+  const boneNormalSym = isOD ? '<' : '>'
+  const boneNoRespSym = isOD ? '<↓' : '>↓'
+  const boneMaskedSym = isOD ? '[' : ']'
+
+  const absenceSym = isOD ? '⤓' : '⤓'
+
+  const formatFreqHeader = (f: string) => {
+    const n = Number(f)
+    if (n >= 1000) return `${n / 1000}k`
+    return f
+  }
+
+  return (
+    <div className="space-y-2">
+      <h3 className={`text-sm font-bold ${colorClass}`}>{title}</h3>
+      <div className="overflow-x-auto border border-slate-300 rounded-lg bg-white shadow-sm">
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="border-b border-slate-300 bg-slate-50">
+              <th className="py-2 px-3 text-left font-bold text-slate-700 w-44 border-r border-slate-200">
+                .
+              </th>
+              {freqs.map((f) => (
+                <th
+                  key={f}
+                  className={`py-2 px-1 text-center font-semibold border-r border-slate-200 ${headerColorClass}`}
+                  style={{ minWidth: '58px' }}
+                >
+                  {formatFreqHeader(f)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200">
+            {/* Linha 1: Aérea (Input dB) */}
+            <tr>
+              <td className="py-2 px-3 font-bold text-slate-700 bg-slate-50/80 border-r border-slate-200">
+                Aérea
+              </td>
+              {freqs.map((f) => {
+                const dbVal = airMap[f]?.db
+                return (
+                  <td key={f} className="p-1 border-r border-slate-200 text-center">
+                    <input
+                      type="number"
+                      value={dbVal ?? ''}
+                      onChange={(e) => onAirDb(f, e.target.value)}
+                      disabled={disabled}
+                      placeholder=""
+                      className="w-12 h-8 text-center text-xs font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+                    />
+                  </td>
+                )
+              })}
+            </tr>
+
+            {/* Linha 2: Masc / Ausências (Via Aérea Símbolos) */}
+            <tr>
+              <td className="py-2 px-3 font-semibold text-slate-600 bg-slate-50/80 border-r border-slate-200">
+                Masc / Ausências
+              </td>
+              {freqs.map((f) => {
+                const sym = airMap[f]?.symbol || 'normal'
+                return (
+                  <td key={f} className="p-1 border-r border-slate-200 text-center">
+                    <div className="flex items-center justify-center gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => onAirSymbol(f, 'masked')}
+                        disabled={disabled}
+                        title="Mascarado"
+                        className={`w-4 h-6 text-xs font-bold rounded ${
+                          sym === 'masked'
+                            ? 'bg-teal-600 text-white'
+                            : 'text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {airMaskedSym}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onAirSymbol(f, 'normal')}
+                        disabled={disabled}
+                        title="Normal"
+                        className={`w-4 h-6 text-xs font-bold rounded ${
+                          sym === 'normal'
+                            ? 'bg-teal-600 text-white'
+                            : 'text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {airNormalSym}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onAirSymbol(f, 'no_response')}
+                        disabled={disabled}
+                        title="Sem Resposta"
+                        className={`w-4 h-6 text-xs font-bold rounded ${
+                          sym === 'no_response' || sym === 'masked_no_response'
+                            ? 'bg-teal-600 text-white'
+                            : 'text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {airNoRespSym}
+                      </button>
+                    </div>
+                  </td>
+                )
+              })}
+            </tr>
+
+            {/* Linha 3: Óssea (Input dB para frequências 500, 1k, 1.5k, 2k, 3k, 4k) */}
+            <tr>
+              <td className="py-2 px-3 font-bold text-slate-700 bg-slate-50/80 border-r border-slate-200">
+                Óssea
+              </td>
+              {freqs.map((f) => {
+                const isBoneFreq = (BONE_FREQS as readonly string[]).includes(f)
+                const dbVal = boneMap[f]?.db
+                return (
+                  <td key={f} className="p-1 border-r border-slate-200 text-center">
+                    {isBoneFreq ? (
+                      <input
+                        type="number"
+                        value={dbVal ?? ''}
+                        onChange={(e) => onBoneDb(f, e.target.value)}
+                        disabled={disabled}
+                        placeholder=""
+                        className="w-12 h-8 text-center text-xs font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+                      />
+                    ) : (
+                      <div className="w-12 h-8 mx-auto bg-slate-50/50 rounded" />
+                    )}
+                  </td>
+                )
+              })}
+            </tr>
+
+            {/* Linha 4: Masc / Ausências (Via Óssea Símbolos) */}
+            <tr>
+              <td className="py-2 px-3 font-semibold text-slate-600 bg-slate-50/80 border-r border-slate-200">
+                Masc / Ausências
+              </td>
+              {freqs.map((f) => {
+                const isBoneFreq = (BONE_FREQS as readonly string[]).includes(f)
+                const sym = boneMap[f]?.symbol || 'normal'
+                if (!isBoneFreq) {
+                  return <td key={f} className="p-1 border-r border-slate-200 text-center" />
+                }
+                return (
+                  <td key={f} className="p-1 border-r border-slate-200 text-center">
+                    <div className="flex items-center justify-center gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => onBoneSymbol(f, 'masked')}
+                        disabled={disabled}
+                        title="Mascarado"
+                        className={`w-4 h-6 text-xs font-bold rounded ${
+                          sym === 'masked'
+                            ? 'bg-teal-600 text-white'
+                            : 'text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {boneMaskedSym}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onBoneSymbol(f, 'normal')}
+                        disabled={disabled}
+                        title="Normal"
+                        className={`w-4 h-6 text-xs font-bold rounded ${
+                          sym === 'normal'
+                            ? 'bg-teal-600 text-white'
+                            : 'text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {boneNormalSym}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onBoneSymbol(f, 'no_response')}
+                        disabled={disabled}
+                        title="Sem Resposta"
+                        className={`w-4 h-6 text-xs font-bold rounded ${
+                          sym === 'no_response' || sym === 'masked_no_response'
+                            ? 'bg-teal-600 text-white'
+                            : 'text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {boneNoRespSym}
+                      </button>
+                    </div>
+                  </td>
+                )
+              })}
+            </tr>
+
+            {/* Linha 5: Limiar de Desconforto (LDL) */}
+            <tr>
+              <td className="py-2 px-3 font-bold text-slate-700 bg-slate-50/80 border-r border-slate-200">
+                Limiar de Desconforto (LDL)
+              </td>
+              {freqs.map((f) => {
+                const ldlVal = ldlMap[f]?.db
+                return (
+                  <td key={f} className="p-1 border-r border-slate-200 text-center">
+                    <input
+                      type="number"
+                      value={ldlVal ?? ''}
+                      onChange={(e) => onLdlDb(f, e.target.value)}
+                      disabled={disabled}
+                      placeholder=""
+                      className="w-12 h-8 text-center text-xs font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+                    />
+                  </td>
+                )
+              })}
+            </tr>
+
+            {/* Linha 6: Ausências */}
+            <tr>
+              <td className="py-2 px-3 font-semibold text-slate-600 bg-slate-50/80 border-r border-slate-200">
+                Ausências
+              </td>
+              {freqs.map((f) => {
+                const airSym = airMap[f]?.symbol
+                const isNoResp = airSym === 'no_response' || airSym === 'masked_no_response'
+                return (
+                  <td key={f} className="p-1 border-r border-slate-200 text-center">
+                    <button
+                      type="button"
+                      onClick={() => onAirSymbol(f, isNoResp ? 'normal' : 'no_response')}
+                      disabled={disabled}
+                      title="Alternar ausência de resposta"
+                      className={`w-6 h-6 text-sm font-bold rounded mx-auto ${
+                        isNoResp ? 'bg-red-600 text-white' : 'text-slate-400 hover:bg-slate-200'
+                      }`}
+                    >
+                      {absenceSym}
+                    </button>
+                  </td>
+                )
+              })}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
 
 function Section({
   title,
@@ -952,90 +1187,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <Label className="text-[11px] font-semibold text-slate-600 block mb-1">{label}</Label>
       {children}
-    </div>
-  )
-}
-
-function FreqTable({
-  title,
-  color,
-  freqs,
-  map,
-  symbols,
-  onDb,
-  onSymbol,
-  disabled,
-}: {
-  title: string
-  color: string
-  freqs: readonly string[]
-  map: AudiogramMap
-  symbols: { value: AudiogramSymbol; label: string }[]
-  onDb: (freq: string, raw: string) => void
-  onSymbol: (freq: string, sym: AudiogramSymbol) => void
-  disabled?: boolean
-}) {
-  return (
-    <div className="space-y-2">
-      <h5 className={`text-xs font-bold ${color}`}>{title}</h5>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="bg-slate-100 text-slate-600 font-bold">
-              <th className="py-1.5 px-2 text-left">Hz</th>
-              <th className="py-1.5 px-2 text-center">dB</th>
-              <th className="py-1.5 px-2 text-center">Símbolo</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {freqs.map((f) => {
-              const pt = map[f] || { db: null, symbol: 'normal' }
-              return (
-                <tr key={f}>
-                  <td className="py-1 px-2 font-semibold text-slate-700 whitespace-nowrap">
-                    {Number(f) >= 1000 ? `${Number(f) / 1000}k` : f}
-                  </td>
-                  <td className="p-1">
-                    <Input
-                      type="number"
-                      value={pt.db ?? ''}
-                      onChange={(e) => onDb(f, e.target.value)}
-                      disabled={disabled}
-                      placeholder="—"
-                      className="h-8 w-16 text-center text-xs rounded-lg border-slate-300 mx-auto"
-                    />
-                  </td>
-                  <td className="p-1">
-                    <div className="flex items-center justify-center gap-1">
-                      {symbols.map((s) => {
-                        const active = pt.symbol === s.value
-                        return (
-                          <button
-                            key={s.value}
-                            type="button"
-                            onClick={() => onSymbol(f, s.value)}
-                            disabled={disabled}
-                            title={s.value}
-                            className={`w-7 h-7 rounded-md text-xs font-bold flex items-center justify-center border transition-colors ${
-                              active
-                                ? color.includes('blue')
-                                  ? 'bg-blue-600 text-white border-blue-600'
-                                  : 'bg-red-600 text-white border-red-600'
-                                : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'
-                            } ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
-                          >
-                            {s.label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
     </div>
   )
 }

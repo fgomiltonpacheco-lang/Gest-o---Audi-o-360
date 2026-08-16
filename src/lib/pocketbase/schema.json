@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T02:25:58.938Z",
+  "generatedAt": "2026-08-16T02:44:11.792Z",
   "collections": [
     {
       "name": "users",
@@ -1941,6 +1941,18 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "ldl_od",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ldl_oe",
+          "type": "json",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

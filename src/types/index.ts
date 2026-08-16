@@ -197,6 +197,7 @@ export interface AudiometryExam {
 
 // ===== Módulo de Audiometria Completa (audiometry_exams) =====
 export const AIR_FREQS = [
+  '125',
   '250',
   '500',
   '750',
@@ -255,6 +256,8 @@ export interface AudiometryExamFull {
   air_oe: AudiogramMap
   bone_od: AudiogramMap
   bone_oe: AudiogramMap
+  ldl_od?: AudiogramMap
+  ldl_oe?: AudiogramMap
   mt_od: number | null
   mt_oe: number | null
   lrf_od: number | null
@@ -311,6 +314,8 @@ export function emptyAudiometryExamFull(
     air_oe: emptyAudiogramMap(AIR_FREQS),
     bone_od: emptyAudiogramMap(BONE_FREQS),
     bone_oe: emptyAudiogramMap(BONE_FREQS),
+    ldl_od: emptyAudiogramMap(AIR_FREQS),
+    ldl_oe: emptyAudiogramMap(AIR_FREQS),
     mt_od: null,
     mt_oe: null,
     lrf_od: null,

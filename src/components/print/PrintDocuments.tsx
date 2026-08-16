@@ -13,20 +13,32 @@ import {
 import { formatDate, maskCPF, calculateAge } from '@/lib/formatters'
 import { AudiogramChart } from '@/components/AudiogramChart'
 
-const FREQUENCIES_AIR = ['250', '500', '1000', '2000', '3000', '4000', '6000', '8000']
-const FREQUENCIES_BONE = ['500', '1000', '2000', '4000']
+const FREQUENCIES_AIR = [
+  '125',
+  '250',
+  '500',
+  '750',
+  '1000',
+  '1500',
+  '2000',
+  '3000',
+  '4000',
+  '6000',
+  '8000',
+]
+const FREQUENCIES_BONE = ['500', '1000', '2000', '3000', '4000']
 const REFLEX_FREQS = ['500', '1000', '2000', '4000']
 
 const sectionTitle = (text: string) => (
   <h3
     style={{
-      fontSize: '12pt',
+      fontSize: '11pt',
       fontWeight: 700,
       color: '#0F2B5C',
       borderBottom: '1.5px solid #cbd5e1',
-      paddingBottom: '4px',
-      marginTop: '18px',
-      marginBottom: '8px',
+      paddingBottom: '3px',
+      marginTop: '14px',
+      marginBottom: '6px',
     }}
   >
     {text}
@@ -34,7 +46,7 @@ const sectionTitle = (text: string) => (
 )
 
 const row = (label: string, value: React.ReactNode) => (
-  <div style={{ display: 'flex', padding: '2px 0', fontSize: '10pt' }}>
+  <div style={{ display: 'flex', padding: '2px 0', fontSize: '9pt' }}>
     <span style={{ width: '38%', color: '#64748b', fontWeight: 600 }}>{label}:</span>
     <span style={{ flex: 1, color: '#1e293b', fontWeight: 500 }}>{value || '—'}</span>
   </div>
@@ -132,7 +144,7 @@ export function PatientFichaPrint({
         </>,
       )}
       {patient.generalNotes && (
-        <div style={{ fontSize: '10pt', marginTop: '6px', color: '#334155' }}>
+        <div style={{ fontSize: '9pt', marginTop: '6px', color: '#334155' }}>
           <strong style={{ color: '#64748b' }}>Observações: </strong>
           {patient.generalNotes}
         </div>
@@ -142,7 +154,7 @@ export function PatientFichaPrint({
       {record ? (
         <div
           style={{
-            fontSize: '10pt',
+            fontSize: '9pt',
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             gap: '4px 24px',
@@ -158,14 +170,14 @@ export function PatientFichaPrint({
           {row('Próximo retorno', formatDate(record.nextReturn))}
         </div>
       ) : (
-        <p style={{ fontSize: '10pt', color: '#94a3b8', fontStyle: 'italic' }}>
+        <p style={{ fontSize: '9pt', color: '#94a3b8', fontStyle: 'italic' }}>
           Nenhum prontuário clínico registrado.
         </p>
       )}
 
       {sectionTitle('Evoluções Clínicas')}
       {evolutions.length === 0 ? (
-        <p style={{ fontSize: '10pt', color: '#94a3b8', fontStyle: 'italic' }}>
+        <p style={{ fontSize: '9pt', color: '#94a3b8', fontStyle: 'italic' }}>
           Nenhuma evolução registrada.
         </p>
       ) : (
@@ -180,10 +192,10 @@ export function PatientFichaPrint({
                 breakInside: 'avoid',
               }}
             >
-              <div style={{ fontSize: '10pt', fontWeight: 700, color: '#0F2B5C' }}>
+              <div style={{ fontSize: '9pt', fontWeight: 700, color: '#0F2B5C' }}>
                 {i + 1}. {formatDate(evo.date)} — {evo.professionalName}
               </div>
-              <div style={{ fontSize: '10pt', color: '#334155', marginTop: '2px' }}>
+              <div style={{ fontSize: '9pt', color: '#334155', marginTop: '2px' }}>
                 {evo.description}
               </div>
             </div>
@@ -194,7 +206,7 @@ export function PatientFichaPrint({
   )
 }
 
-/* ============ AUDIOMETRIA ============ */
+/* ============ AUDIOMETRIA LEGADA ============ */
 export function AudiometryPrint({ exam }: { exam: AudiometryExam }) {
   const cell = (v: number | null | 'NR' | undefined) => {
     if (v === null || v === undefined) return '—'
@@ -203,7 +215,7 @@ export function AudiometryPrint({ exam }: { exam: AudiometryExam }) {
   }
   return (
     <div>
-      <div style={{ fontSize: '10pt', color: '#475569', marginBottom: '10px' }}>
+      <div style={{ fontSize: '9pt', color: '#475569', marginBottom: '10px' }}>
         <strong>Paciente:</strong> {exam.patientName} &nbsp;|&nbsp; <strong>Data:</strong>{' '}
         {formatDate(exam.date)} &nbsp;|&nbsp; <strong>Examinador:</strong> {exam.professionalName}
       </div>
@@ -215,28 +227,14 @@ export function AudiometryPrint({ exam }: { exam: AudiometryExam }) {
             <th>Orelha</th>
             {FREQUENCIES_AIR.map((f) => (
               <th key={f} style={{ textAlign: 'center' }}>
-                {f === '1000'
-                  ? '1k'
-                  : f === '2000'
-                    ? '2k'
-                    : f === '3000'
-                      ? '3k'
-                      : f === '4000'
-                        ? '4k'
-                        : f === '6000'
-                          ? '6k'
-                          : f === '8000'
-                            ? '8k'
-                            : f}
+                {Number(f) >= 1000 ? `${Number(f) / 1000}k` : f}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>
-              <strong>OD</strong>
-            </td>
+            <td style={{ color: '#dc2626', fontWeight: 700 }}>OD</td>
             {FREQUENCIES_AIR.map((f) => (
               <td key={f} style={{ textAlign: 'center' }}>
                 {cell(exam.airOD?.[f])}
@@ -244,9 +242,7 @@ export function AudiometryPrint({ exam }: { exam: AudiometryExam }) {
             ))}
           </tr>
           <tr>
-            <td>
-              <strong>OE</strong>
-            </td>
+            <td style={{ color: '#2563eb', fontWeight: 700 }}>OE</td>
             {FREQUENCIES_AIR.map((f) => (
               <td key={f} style={{ textAlign: 'center' }}>
                 {cell(exam.airOE?.[f])}
@@ -263,16 +259,14 @@ export function AudiometryPrint({ exam }: { exam: AudiometryExam }) {
             <th>Orelha</th>
             {FREQUENCIES_BONE.map((f) => (
               <th key={f} style={{ textAlign: 'center' }}>
-                {f === '1000' ? '1k' : f === '2000' ? '2k' : f === '4000' ? '4k' : f}
+                {Number(f) >= 1000 ? `${Number(f) / 1000}k` : f}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>
-              <strong>OD</strong>
-            </td>
+            <td style={{ color: '#dc2626', fontWeight: 700 }}>OD</td>
             {FREQUENCIES_BONE.map((f) => (
               <td key={f} style={{ textAlign: 'center' }}>
                 {cell(exam.boneOD?.[f])}
@@ -280,9 +274,7 @@ export function AudiometryPrint({ exam }: { exam: AudiometryExam }) {
             ))}
           </tr>
           <tr>
-            <td>
-              <strong>OE</strong>
-            </td>
+            <td style={{ color: '#2563eb', fontWeight: 700 }}>OE</td>
             {FREQUENCIES_BONE.map((f) => (
               <td key={f} style={{ textAlign: 'center' }}>
                 {cell(exam.boneOE?.[f])}
@@ -303,16 +295,12 @@ export function AudiometryPrint({ exam }: { exam: AudiometryExam }) {
         </thead>
         <tbody>
           <tr>
-            <td>
-              <strong>OD</strong>
-            </td>
+            <td style={{ color: '#dc2626', fontWeight: 700 }}>OD</td>
             <td style={{ textAlign: 'center' }}>{exam.srtOD ?? '—'}</td>
             <td style={{ textAlign: 'center' }}>{exam.iprfOD ?? '—'}</td>
           </tr>
           <tr>
-            <td>
-              <strong>OE</strong>
-            </td>
+            <td style={{ color: '#2563eb', fontWeight: 700 }}>OE</td>
             <td style={{ textAlign: 'center' }}>{exam.srtOE ?? '—'}</td>
             <td style={{ textAlign: 'center' }}>{exam.iprfOE ?? '—'}</td>
           </tr>
@@ -320,12 +308,12 @@ export function AudiometryPrint({ exam }: { exam: AudiometryExam }) {
       </table>
 
       {sectionTitle('Conclusão')}
-      <div style={{ fontSize: '10pt' }}>
+      <div style={{ fontSize: '9pt' }}>
         <strong>Grau da perda:</strong> {exam.lossDegree} &nbsp;|&nbsp; <strong>Tipo:</strong>{' '}
         {exam.lossType}
       </div>
       {exam.notes && (
-        <div style={{ fontSize: '10pt', marginTop: '6px', color: '#334155' }}>
+        <div style={{ fontSize: '9pt', marginTop: '6px', color: '#334155' }}>
           <strong style={{ color: '#64748b' }}>Observações: </strong>
           {exam.notes}
         </div>
@@ -336,40 +324,18 @@ export function AudiometryPrint({ exam }: { exam: AudiometryExam }) {
 
 /* ============ AUDIOMETRIA COMPLETA (audiometry_exams) ============ */
 export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
-  const sectionTitle = (text: string) => (
-    <h3
-      style={{
-        fontSize: '12pt',
-        fontWeight: 700,
-        color: '#0F2B5C',
-        borderBottom: '1.5px solid #cbd5e1',
-        paddingBottom: '4px',
-        marginTop: '18px',
-        marginBottom: '8px',
-      }}
-    >
-      {text}
-    </h3>
-  )
-  const row = (label: string, value: React.ReactNode) => (
-    <div style={{ display: 'flex', padding: '2px 0', fontSize: '10pt' }}>
-      <span style={{ width: '40%', color: '#64748b', fontWeight: 600 }}>{label}:</span>
-      <span style={{ flex: 1, color: '#1e293b', fontWeight: 500 }}>{value || '—'}</span>
-    </div>
-  )
-
   const thStyle: React.CSSProperties = {
     border: '1px solid #cbd5e1',
-    padding: '4px 8px',
-    background: '#f1f5f9',
-    fontSize: '9pt',
+    padding: '3px 4px',
+    background: '#f8fafc',
+    fontSize: '8pt',
     fontWeight: 700,
     textAlign: 'center',
   }
   const tdStyle: React.CSSProperties = {
     border: '1px solid #cbd5e1',
-    padding: '4px 8px',
-    fontSize: '9pt',
+    padding: '3px 4px',
+    fontSize: '8pt',
     textAlign: 'center',
   }
 
@@ -381,60 +347,120 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
     const symMap: Record<string, string> = {
       normal: '',
       no_response: '↓',
-      masked: '▢',
-      masked_no_response: '▢↓',
+      masked: 'm',
+      masked_no_response: 'm↓',
     }
     const suffix = symMap[p.symbol] || ''
     return `${p.db}${suffix}`
   }
 
   return (
-    <div>
-      {/* Identificação do paciente */}
-      <div style={{ fontSize: '10pt', color: '#475569', marginBottom: '10px' }}>
-        <strong>Paciente:</strong> {exam.patientName} &nbsp;|&nbsp; <strong>Data:</strong>{' '}
-        {formatDate(exam.date)} &nbsp;|&nbsp; <strong>CPF:</strong> {maskCPF(exam.cpf)}{' '}
-        &nbsp;|&nbsp; <strong>DN:</strong> {formatDate(exam.dob)} &nbsp;|&nbsp;{' '}
-        <strong>Idade:</strong> {exam.age || '—'} &nbsp;|&nbsp; <strong>Sexo:</strong>{' '}
-        {exam.sex || '—'}
-      </div>
-      <div style={{ fontSize: '10pt', color: '#475569', marginBottom: '10px' }}>
-        <strong>Encaminhado por:</strong> {exam.referred_by || '—'} &nbsp;|&nbsp;{' '}
-        <strong>Repouso Auditivo 14h:</strong> {exam.hearing_rest_14h ? 'Sim' : 'Não'} &nbsp;|&nbsp;{' '}
-        <strong>Audiômetro:</strong> {exam.audiometer || '—'} &nbsp;|&nbsp;{' '}
-        <strong>Calibração:</strong> {formatDate(exam.calibration)}
+    <div style={{ color: '#1e293b', fontSize: '9pt' }}>
+      {/* Cabeçalho de Identificação do Paciente detalhado */}
+      <div
+        style={{
+          border: '1px solid #cbd5e1',
+          borderRadius: '6px',
+          padding: '8px 12px',
+          background: '#f8fafc',
+          marginBottom: '10px',
+        }}
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '6px' }}>
+          <div>
+            <span style={{ color: '#64748b', fontSize: '8pt' }}>Nome: </span>
+            <strong style={{ fontSize: '10pt', color: '#0f172a' }}>
+              {exam.patientName || '—'}
+            </strong>
+          </div>
+          <div>
+            <span style={{ color: '#64748b', fontSize: '8pt' }}>CPF: </span>
+            <strong>{maskCPF(exam.cpf) || '—'}</strong>
+          </div>
+          <div>
+            <span style={{ color: '#64748b', fontSize: '8pt' }}>DN: </span>
+            <strong>{formatDate(exam.dob) || '—'}</strong>
+          </div>
+          <div>
+            <span style={{ color: '#64748b', fontSize: '8pt' }}>Idade / Sexo: </span>
+            <strong>
+              {exam.age ? `${exam.age} anos` : '—'} / {exam.sex || '—'}
+            </strong>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '2fr 1fr 1.5fr 1fr',
+            gap: '6px',
+            marginTop: '4px',
+            paddingTop: '4px',
+            borderTop: '1px solid #e2e8f0',
+          }}
+        >
+          <div>
+            <span style={{ color: '#64748b', fontSize: '8pt' }}>Encaminhado por: </span>
+            <strong>{exam.referred_by || '—'}</strong>
+          </div>
+          <div>
+            <span style={{ color: '#64748b', fontSize: '8pt' }}>Repouso 14h: </span>
+            <strong>{exam.hearing_rest_14h ? 'Sim' : 'Não'}</strong>
+          </div>
+          <div>
+            <span style={{ color: '#64748b', fontSize: '8pt' }}>Audiômetro: </span>
+            <strong>{exam.audiometer || '—'}</strong>
+          </div>
+          <div>
+            <span style={{ color: '#64748b', fontSize: '8pt' }}>Calibração: </span>
+            <strong>{formatDate(exam.calibration) || '—'}</strong>
+          </div>
+        </div>
       </div>
 
       {/* Meatoscopia */}
       {sectionTitle('Meatoscopia / Otoscopia')}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 24px' }}>
-        {row(
-          'OD',
-          `${exam.otoscopy_od || '—'}${exam.otoscopy_od_obs ? ` — ${exam.otoscopy_od_obs}` : ''}`,
-        )}
-        {row(
-          'OE',
-          `${exam.otoscopy_oe || '—'}${exam.otoscopy_oe_obs ? ` — ${exam.otoscopy_oe_obs}` : ''}`,
-        )}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '4px 20px',
+          marginBottom: '8px',
+        }}
+      >
+        <div>
+          <span style={{ color: '#dc2626', fontWeight: 700 }}>Orelha Direita (OD): </span>
+          <span>
+            {exam.otoscopy_od || 'Normal'} {exam.otoscopy_od_obs ? `(${exam.otoscopy_od_obs})` : ''}
+          </span>
+        </div>
+        <div>
+          <span style={{ color: '#2563eb', fontWeight: 700 }}>Orelha Esquerda (OE): </span>
+          <span>
+            {exam.otoscopy_oe || 'Normal'} {exam.otoscopy_oe_obs ? `(${exam.otoscopy_oe_obs})` : ''}
+          </span>
+        </div>
       </div>
 
-      {/* Audiograma (SVG) */}
+      {/* Gráficos de Audiograma Lado a Lado (OD Vermelho, OE Azul) */}
       {sectionTitle('Audiograma Tonal')}
-      <div style={{ breakInside: 'avoid' }}>
+      <div style={{ breakInside: 'avoid', marginBottom: '10px' }}>
         <AudiogramChart
           airOD={exam.air_od}
           airOE={exam.air_oe}
           boneOD={exam.bone_od}
           boneOE={exam.bone_oe}
+          ldlOD={exam.ldl_od}
+          ldlOE={exam.ldl_oe}
         />
       </div>
 
-      {/* Via Aérea tabela */}
-      {sectionTitle('Via Aérea (dB HL)')}
-      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+      {/* Tabelas de Limiares por Via Aérea, Óssea e LDL */}
+      {sectionTitle('Limiares Auditivos e Desconforto (dB HL)')}
+      <table style={{ borderCollapse: 'collapse', width: '100%', marginBottom: '10px' }}>
         <thead>
           <tr>
-            <th style={thStyle}>Orelha</th>
+            <th style={{ ...thStyle, width: '120px' }}>Via / Orelha</th>
             {AIR_FREQS.map((f) => (
               <th key={f} style={thStyle}>
                 {fmtFreq(f)}
@@ -444,7 +470,9 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
         </thead>
         <tbody>
           <tr>
-            <td style={{ ...tdStyle, fontWeight: 700, color: '#2563eb' }}>OD</td>
+            <td style={{ ...tdStyle, fontWeight: 700, color: '#dc2626', textAlign: 'left' }}>
+              OD - Aérea
+            </td>
             {AIR_FREQS.map((f) => (
               <td key={f} style={tdStyle}>
                 {cellPoint(f, exam.air_od)}
@@ -452,142 +480,184 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
             ))}
           </tr>
           <tr>
-            <td style={{ ...tdStyle, fontWeight: 700, color: '#dc2626' }}>OE</td>
+            <td style={{ ...tdStyle, fontWeight: 700, color: '#2563eb', textAlign: 'left' }}>
+              OE - Aérea
+            </td>
             {AIR_FREQS.map((f) => (
               <td key={f} style={tdStyle}>
                 {cellPoint(f, exam.air_oe)}
               </td>
             ))}
           </tr>
-        </tbody>
-      </table>
-
-      {/* Via Óssea tabela */}
-      {sectionTitle('Via Óssea (dB HL)')}
-      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-        <thead>
           <tr>
-            <th style={thStyle}>Orelha</th>
-            {BONE_FREQS.map((f) => (
-              <th key={f} style={thStyle}>
-                {fmtFreq(f)}
-              </th>
-            ))}
+            <td style={{ ...tdStyle, fontWeight: 700, color: '#dc2626', textAlign: 'left' }}>
+              OD - Óssea
+            </td>
+            {AIR_FREQS.map((f) => {
+              const isBone = (BONE_FREQS as readonly string[]).includes(f)
+              return (
+                <td key={f} style={tdStyle}>
+                  {isBone ? cellPoint(f, exam.bone_od) : '—'}
+                </td>
+              )
+            })}
           </tr>
-        </thead>
-        <tbody>
           <tr>
-            <td style={{ ...tdStyle, fontWeight: 700, color: '#2563eb' }}>OD</td>
-            {BONE_FREQS.map((f) => (
+            <td style={{ ...tdStyle, fontWeight: 700, color: '#2563eb', textAlign: 'left' }}>
+              OE - Óssea
+            </td>
+            {AIR_FREQS.map((f) => {
+              const isBone = (BONE_FREQS as readonly string[]).includes(f)
+              return (
+                <td key={f} style={tdStyle}>
+                  {isBone ? cellPoint(f, exam.bone_oe) : '—'}
+                </td>
+              )
+            })}
+          </tr>
+          <tr>
+            <td style={{ ...tdStyle, fontWeight: 700, color: '#dc2626', textAlign: 'left' }}>
+              OD - LDL
+            </td>
+            {AIR_FREQS.map((f) => (
               <td key={f} style={tdStyle}>
-                {cellPoint(f, exam.bone_od)}
+                {cellPoint(f, exam.ldl_od)}
               </td>
             ))}
           </tr>
           <tr>
-            <td style={{ ...tdStyle, fontWeight: 700, color: '#dc2626' }}>OE</td>
-            {BONE_FREQS.map((f) => (
+            <td style={{ ...tdStyle, fontWeight: 700, color: '#2563eb', textAlign: 'left' }}>
+              OE - LDL
+            </td>
+            {AIR_FREQS.map((f) => (
               <td key={f} style={tdStyle}>
-                {cellPoint(f, exam.bone_oe)}
+                {cellPoint(f, exam.ldl_oe)}
               </td>
             ))}
           </tr>
         </tbody>
       </table>
 
-      {/* Logoaudiometria */}
-      {sectionTitle('Índices Logoaudiométricos')}
-      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-        <thead>
-          <tr>
-            <th style={thStyle}>Orelha</th>
-            <th style={thStyle}>MT (dB)</th>
-            <th style={thStyle}>LRF (dB)</th>
-            <th style={thStyle}>LDV (dB)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style={{ ...tdStyle, fontWeight: 700, color: '#2563eb' }}>OD</td>
-            <td style={tdStyle}>{exam.mt_od ?? '—'}</td>
-            <td style={tdStyle}>{exam.lrf_od ?? '—'}</td>
-            <td style={tdStyle}>{exam.ldv_od ?? '—'}</td>
-          </tr>
-          <tr>
-            <td style={{ ...tdStyle, fontWeight: 700, color: '#dc2626' }}>OE</td>
-            <td style={tdStyle}>{exam.mt_oe ?? '—'}</td>
-            <td style={tdStyle}>{exam.lrf_oe ?? '—'}</td>
-            <td style={tdStyle}>{exam.ldv_oe ?? '—'}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      {/* IPRF */}
-      {sectionTitle('IPRF — Índice de Reconhecimento de Fala')}
-      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-        <thead>
-          <tr>
-            <th style={thStyle}>Orelha</th>
-            <th style={thStyle}>Intensidade (dB)</th>
-            <th style={thStyle}>Monossílabos (%)</th>
-            <th style={thStyle}>Dissílabos (%)</th>
-            <th style={thStyle}>Mascaramento (dB)</th>
-            <th style={thStyle}>Palavras Faladas</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(['od', 'oe'] as const).map((side) => {
-            const r: any = exam.iprf?.[side] || {}
-            const label = side === 'od' ? 'OD' : 'OE'
-            const color = side === 'od' ? '#2563eb' : '#dc2626'
-            return (
-              <tr key={side}>
-                <td style={{ ...tdStyle, fontWeight: 700, color }}>{label}</td>
-                <td style={tdStyle}>{r.intensidade || '—'}</td>
-                <td style={tdStyle}>{r.monossilabos || '—'}</td>
-                <td style={tdStyle}>{r.dissilabos || '—'}</td>
-                <td style={tdStyle}>{r.mascaramento || '—'}</td>
-                <td style={tdStyle}>{r.palavras || '—'}</td>
+      {/* Logoaudiometria e IPRF em um bloco compacto */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 2fr',
+          gap: '12px',
+          marginBottom: '10px',
+        }}
+      >
+        <div>
+          {sectionTitle('Limiares Vocais')}
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <thead>
+              <tr>
+                <th style={thStyle}>Orelha</th>
+                <th style={thStyle}>MT</th>
+                <th style={thStyle}>LRF</th>
+                <th style={thStyle}>LDV</th>
               </tr>
-            )
-          })}
-        </tbody>
-      </table>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ ...tdStyle, fontWeight: 700, color: '#dc2626' }}>OD</td>
+                <td style={tdStyle}>{exam.mt_od ?? '—'}</td>
+                <td style={tdStyle}>{exam.lrf_od ?? '—'}</td>
+                <td style={tdStyle}>{exam.ldv_od ?? '—'}</td>
+              </tr>
+              <tr>
+                <td style={{ ...tdStyle, fontWeight: 700, color: '#2563eb' }}>OE</td>
+                <td style={tdStyle}>{exam.mt_oe ?? '—'}</td>
+                <td style={tdStyle}>{exam.lrf_oe ?? '—'}</td>
+                <td style={tdStyle}>{exam.ldv_oe ?? '—'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          {sectionTitle('IPRF — Reconhecimento de Fala')}
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <thead>
+              <tr>
+                <th style={thStyle}>Orelha</th>
+                <th style={thStyle}>Intens.</th>
+                <th style={thStyle}>Monos.</th>
+                <th style={thStyle}>Diss.</th>
+                <th style={thStyle}>Masc.</th>
+                <th style={thStyle}>Palavras</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(['od', 'oe'] as const).map((side) => {
+                const r: any = exam.iprf?.[side] || {}
+                const label = side === 'od' ? 'OD' : 'OE'
+                const color = side === 'od' ? '#dc2626' : '#2563eb'
+                return (
+                  <tr key={side}>
+                    <td style={{ ...tdStyle, fontWeight: 700, color }}>{label}</td>
+                    <td style={tdStyle}>{r.intensidade || '—'}</td>
+                    <td style={tdStyle}>{r.monossilabos || '—'}</td>
+                    <td style={tdStyle}>{r.dissilabos || '—'}</td>
+                    <td style={tdStyle}>{r.mascaramento || '—'}</td>
+                    <td style={tdStyle}>{r.palavras || '—'}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Parecer */}
       {sectionTitle('Parecer Audiológico')}
       <div
-        style={{ fontSize: '10pt', color: '#334155', whiteSpace: 'pre-wrap', minHeight: '40px' }}
+        style={{
+          fontSize: '8.5pt',
+          color: '#334155',
+          whiteSpace: 'pre-wrap',
+          minHeight: '36px',
+          border: '1px solid #e2e8f0',
+          padding: '6px 8px',
+          borderRadius: '4px',
+          background: '#fdfdfe',
+        }}
       >
-        {exam.report || '—'}
+        {exam.report || 'Sem parecer cadastrado.'}
       </div>
 
       {/* Assinaturas */}
       <div
-        style={{ display: 'flex', justifyContent: 'space-between', marginTop: '60px', gap: '40px' }}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginTop: '40px',
+          gap: '40px',
+          breakInside: 'avoid',
+        }}
       >
         <div style={{ flex: 1, textAlign: 'center' }}>
           <div
             style={{
               borderTop: '1px solid #475569',
-              paddingTop: '6px',
-              fontSize: '10pt',
+              paddingTop: '4px',
+              fontSize: '9pt',
               fontWeight: 600,
             }}
           >
-            Fonoaudiólogo
+            Fonoaudiólogo(a) Responsável
           </div>
         </div>
         <div style={{ flex: 1, textAlign: 'center' }}>
           <div
             style={{
               borderTop: '1px solid #475569',
-              paddingTop: '6px',
-              fontSize: '10pt',
+              paddingTop: '4px',
+              fontSize: '9pt',
               fontWeight: 600,
             }}
           >
-            Cliente
+            Assinatura do Paciente / Responsável
           </div>
         </div>
       </div>
@@ -595,10 +665,10 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
       {/* Rodapé clínica */}
       <div
         style={{
-          marginTop: '24px',
-          paddingTop: '10px',
+          marginTop: '16px',
+          paddingTop: '6px',
           borderTop: '1px solid #cbd5e1',
-          fontSize: '9pt',
+          fontSize: '8pt',
           color: '#64748b',
           textAlign: 'center',
         }}
@@ -614,7 +684,7 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
 export function TympanometryPrint({ exam }: { exam: TympanometryExam }) {
   return (
     <div>
-      <div style={{ fontSize: '10pt', color: '#475569', marginBottom: '10px' }}>
+      <div style={{ fontSize: '9pt', color: '#475569', marginBottom: '10px' }}>
         <strong>Paciente:</strong> {exam.patientName} &nbsp;|&nbsp; <strong>Data:</strong>{' '}
         {formatDate(exam.date)} &nbsp;|&nbsp; <strong>Examinador:</strong> {exam.professionalName}
       </div>
@@ -632,18 +702,14 @@ export function TympanometryPrint({ exam }: { exam: TympanometryExam }) {
         </thead>
         <tbody>
           <tr>
-            <td>
-              <strong>OD</strong>
-            </td>
+            <td style={{ color: '#dc2626', fontWeight: 700 }}>OD</td>
             <td>Tipo {exam.tympanometryOD.curve}</td>
             <td>{exam.tympanometryOD.compliance}</td>
             <td>{exam.tympanometryOD.pressure}</td>
             <td>{exam.tympanometryOD.volume}</td>
           </tr>
           <tr>
-            <td>
-              <strong>OE</strong>
-            </td>
+            <td style={{ color: '#2563eb', fontWeight: 700 }}>OE</td>
             <td>Tipo {exam.tympanometryOE.curve}</td>
             <td>{exam.tympanometryOE.compliance}</td>
             <td>{exam.tympanometryOE.pressure}</td>
@@ -659,16 +725,14 @@ export function TympanometryPrint({ exam }: { exam: TympanometryExam }) {
             <th>Orelha</th>
             {REFLEX_FREQS.map((f) => (
               <th key={f} style={{ textAlign: 'center' }}>
-                {f === '1000' ? '1k' : f === '2000' ? '2k' : f === '4000' ? '4k' : f}
+                {Number(f) >= 1000 ? `${Number(f) / 1000}k` : f}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>
-              <strong>OD</strong>
-            </td>
+            <td style={{ color: '#dc2626', fontWeight: 700 }}>OD</td>
             {REFLEX_FREQS.map((f) => (
               <td key={f} style={{ textAlign: 'center' }}>
                 {exam.reflexesOD?.[f] ?? '—'}
@@ -676,9 +740,7 @@ export function TympanometryPrint({ exam }: { exam: TympanometryExam }) {
             ))}
           </tr>
           <tr>
-            <td>
-              <strong>OE</strong>
-            </td>
+            <td style={{ color: '#2563eb', fontWeight: 700 }}>OE</td>
             {REFLEX_FREQS.map((f) => (
               <td key={f} style={{ textAlign: 'center' }}>
                 {exam.reflexesOE?.[f] ?? '—'}
@@ -689,9 +751,9 @@ export function TympanometryPrint({ exam }: { exam: TympanometryExam }) {
       </table>
 
       {sectionTitle('Conclusão')}
-      <div style={{ fontSize: '10pt', color: '#334155' }}>{exam.conclusion}</div>
+      <div style={{ fontSize: '9pt', color: '#334155' }}>{exam.conclusion}</div>
       {exam.notes && (
-        <div style={{ fontSize: '10pt', marginTop: '6px', color: '#334155' }}>
+        <div style={{ fontSize: '9pt', marginTop: '6px', color: '#334155' }}>
           <strong style={{ color: '#64748b' }}>Observações: </strong>
           {exam.notes}
         </div>
@@ -715,7 +777,7 @@ export function BeraPrint({ exam }: { exam: BeraExam }) {
   )
   return (
     <div>
-      <div style={{ fontSize: '10pt', color: '#475569', marginBottom: '10px' }}>
+      <div style={{ fontSize: '9pt', color: '#475569', marginBottom: '10px' }}>
         <strong>Paciente:</strong> {exam.patientName} &nbsp;|&nbsp; <strong>Data:</strong>{' '}
         {formatDate(exam.date)} &nbsp;|&nbsp; <strong>Examinador:</strong> {exam.professionalName}
       </div>
@@ -746,22 +808,18 @@ export function BeraPrint({ exam }: { exam: BeraExam }) {
         </thead>
         <tbody>
           <tr>
-            <td>
-              <strong>OD</strong>
-            </td>
+            <td style={{ color: '#dc2626', fontWeight: 700 }}>OD</td>
             {w(exam.od)}
           </tr>
           <tr>
-            <td>
-              <strong>OE</strong>
-            </td>
+            <td style={{ color: '#2563eb', fontWeight: 700 }}>OE</td>
             {w(exam.oe)}
           </tr>
         </tbody>
       </table>
 
       {sectionTitle('Conclusão')}
-      <div style={{ fontSize: '10pt' }}>
+      <div style={{ fontSize: '9pt' }}>
         <strong>Classificação:</strong>{' '}
         <span
           style={{
@@ -773,7 +831,7 @@ export function BeraPrint({ exam }: { exam: BeraExam }) {
         </span>
       </div>
       {exam.notes && (
-        <div style={{ fontSize: '10pt', marginTop: '6px', color: '#334155' }}>
+        <div style={{ fontSize: '9pt', marginTop: '6px', color: '#334155' }}>
           <strong style={{ color: '#64748b' }}>Observações: </strong>
           {exam.notes}
         </div>
@@ -792,7 +850,7 @@ export function RelatorioPrint({
 }) {
   return (
     <div>
-      <div style={{ fontSize: '10pt', color: '#475569', marginBottom: '12px' }}>
+      <div style={{ fontSize: '9pt', color: '#475569', marginBottom: '12px' }}>
         <strong>Período:</strong> {periodLabel}
       </div>
       {sections.map((sec, i) => (
@@ -851,7 +909,7 @@ export function AgendaPrint({
 }) {
   return (
     <div>
-      <div style={{ fontSize: '10pt', color: '#475569', marginBottom: '12px' }}>
+      <div style={{ fontSize: '9pt', color: '#475569', marginBottom: '12px' }}>
         <strong>Período:</strong> {periodLabel} &nbsp;|&nbsp; <strong>Total:</strong>{' '}
         {appointments.length} agendamento(s)
       </div>
