@@ -699,12 +699,12 @@ export default function Prontuario() {
               )}
             </div>
 
-            {/* Exames Audiológicos Completos (audiometry_exams) */}
+            {/* Audiometria Tonal e Vocal (audiometry_exams) */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-teal-700 flex items-center gap-1.5">
                   <Activity className="w-4 h-4" />
-                  Exames Audiológicos Completos ({fullAudiometries.length})
+                  Audiometria Tonal e Vocal ({fullAudiometries.length})
                 </h4>
               </div>
               {loadingFullAudio ? (
