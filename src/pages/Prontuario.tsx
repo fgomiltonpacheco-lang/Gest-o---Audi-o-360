@@ -88,9 +88,13 @@ export default function Prontuario() {
     sales,
     installments,
     addAppointment,
+    currentUser,
   } = useApp()
 
   const patient = getPatient(id || '')
+
+  // Permissões: secretária não edita/exclui exames nem prontuário clínico
+  const isSecretaria = currentUser?.role === 'secretaria'
 
   // Tab State
   const [activeTab, setActiveTab] = useState('cadastrais')
@@ -503,6 +507,7 @@ export default function Prontuario() {
                   onChange={(e) => setMainComplaint(e.target.value)}
                   placeholder="Relato espontâneo do paciente quanto à sua audição..."
                   rows={2}
+                  disabled={isSecretaria}
                   className="rounded-xl mt-1 text-xs border-slate-300"
                 />
               </div>
@@ -514,6 +519,7 @@ export default function Prontuario() {
                   onChange={(e) => setAnamnesis(e.target.value)}
                   placeholder="Início dos sintomas, evolução temporal, episódios de tontura/vertigem..."
                   rows={2}
+                  disabled={isSecretaria}
                   className="rounded-xl mt-1 text-xs border-slate-300"
                 />
               </div>
@@ -528,6 +534,7 @@ export default function Prontuario() {
                     onChange={(e) => setHearingHistory(e.target.value)}
                     placeholder="Exposição a ruído, histórico de otites, cirurgias..."
                     rows={2}
+                    disabled={isSecretaria}
                     className="rounded-xl mt-1 text-xs border-slate-300"
                   />
                 </div>
@@ -538,6 +545,7 @@ export default function Prontuario() {
                     onChange={(e) => setCurrentMedications(e.target.value)}
                     placeholder="Anti-hipertensivos, ototóxicos, ansiolíticos..."
                     rows={2}
+                    disabled={isSecretaria}
                     className="rounded-xl mt-1 text-xs border-slate-300"
                   />
                 </div>
@@ -553,6 +561,7 @@ export default function Prontuario() {
                     onChange={(e) => setFamilyHistory(e.target.value)}
                     placeholder="Histórico familiar de perda auditiva precoce..."
                     rows={2}
+                    disabled={isSecretaria}
                     className="rounded-xl mt-1 text-xs border-slate-300"
                   />
                 </div>
@@ -565,6 +574,7 @@ export default function Prontuario() {
                     onChange={(e) => setDiagnosis(e.target.value)}
                     placeholder="Perda neurossensorial, mista, condutiva..."
                     rows={2}
+                    disabled={isSecretaria}
                     className="rounded-xl mt-1 text-xs border-slate-300"
                   />
                 </div>
@@ -578,6 +588,7 @@ export default function Prontuario() {
                     onChange={(e) => setConduct(e.target.value)}
                     placeholder="Indicação de amplificação sonora, encaminhamentos..."
                     rows={2}
+                    disabled={isSecretaria}
                     className="rounded-xl mt-1 text-xs border-slate-300"
                   />
                 </div>
@@ -587,19 +598,22 @@ export default function Prontuario() {
                     type="date"
                     value={nextReturn}
                     onChange={(e) => setNextReturn(e.target.value)}
+                    disabled={isSecretaria}
                     className="h-10 rounded-xl mt-1 text-xs border-slate-300"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end pt-2 border-t border-slate-100">
-                <Button
-                  type="submit"
-                  className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold shadow-sm px-6"
-                >
-                  Salvar Prontuário Clínico
-                </Button>
-              </div>
+              {!isSecretaria && (
+                <div className="flex justify-end pt-2 border-t border-slate-100">
+                  <Button
+                    type="submit"
+                    className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold shadow-sm px-6"
+                  >
+                    Salvar Prontuário Clínico
+                  </Button>
+                </div>
+              )}
             </form>
           </TabsContent>
 
@@ -607,51 +621,53 @@ export default function Prontuario() {
           <TabsContent value="exames" className="space-y-6 pt-5">
             <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
               <h3 className="text-sm font-bold text-slate-900">Histórico de Exames Audiológicos</h3>
-              <div className="flex items-center gap-2">
-                <TooltipProvider delayDuration={200}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span tabIndex={0} className="inline-flex">
-                        <Button
-                          size="sm"
-                          disabled={patientAudiometries.length < 2}
-                          onClick={() => setCompareModalOpen(true)}
-                          className="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl h-8 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <ArrowUpDown className="w-3.5 h-3.5 mr-1" />
-                          Comparar Audiometrias
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    {patientAudiometries.length < 2 && (
-                      <TooltipContent className="max-w-[220px] text-xs">
-                        São necessárias pelo menos 2 audiometrias para comparar
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
-                <Button
-                  size="sm"
-                  onClick={() => setAudioModalOpen(true)}
-                  className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-8"
-                >
-                  + Audiometria
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setTympModalOpen(true)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl h-8"
-                >
-                  + Imitanciometria
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setBeraModalOpen(true)}
-                  className="bg-pink-600 hover:bg-pink-700 text-white text-xs font-semibold rounded-xl h-8"
-                >
-                  + BERA
-                </Button>
-              </div>
+              {!isSecretaria && (
+                <div className="flex items-center gap-2">
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={0} className="inline-flex">
+                          <Button
+                            size="sm"
+                            disabled={patientAudiometries.length < 2}
+                            onClick={() => setCompareModalOpen(true)}
+                            className="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl h-8 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <ArrowUpDown className="w-3.5 h-3.5 mr-1" />
+                            Comparar Audiometrias
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {patientAudiometries.length < 2 && (
+                        <TooltipContent className="max-w-[220px] text-xs">
+                          São necessárias pelo menos 2 audiometrias para comparar
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
+                  <Button
+                    size="sm"
+                    onClick={() => setAudioModalOpen(true)}
+                    className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-8"
+                  >
+                    + Audiometria
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setTympModalOpen(true)}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl h-8"
+                  >
+                    + Imitanciometria
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setBeraModalOpen(true)}
+                    className="bg-pink-600 hover:bg-pink-700 text-white text-xs font-semibold rounded-xl h-8"
+                  >
+                    + BERA
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Audiometrias */}
@@ -696,21 +712,23 @@ export default function Prontuario() {
                         >
                           <Printer className="w-3.5 h-3.5" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setDeleteTarget({
-                              type: 'audiometry',
-                              id: exam.id,
-                              name: `Audiometria de ${formatDate(exam.date)}`,
-                            })
-                            setDeleteConfirmOpen(true)
-                          }}
-                          className="h-7 w-7 p-0 text-red-500 hover:bg-red-50 rounded-lg"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
+                        {!isSecretaria && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setDeleteTarget({
+                                type: 'audiometry',
+                                id: exam.id,
+                                name: `Audiometria de ${formatDate(exam.date)}`,
+                              })
+                              setDeleteConfirmOpen(true)
+                            }}
+                            className="h-7 w-7 p-0 text-red-500 hover:bg-red-50 rounded-lg"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </div>
 
@@ -769,21 +787,23 @@ export default function Prontuario() {
                         >
                           <Printer className="w-3.5 h-3.5" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setDeleteTarget({
-                              type: 'tympanometry',
-                              id: exam.id,
-                              name: `Imitanciometria de ${formatDate(exam.date)}`,
-                            })
-                            setDeleteConfirmOpen(true)
-                          }}
-                          className="h-7 w-7 p-0 text-red-500 hover:bg-red-50 rounded-lg"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
+                        {!isSecretaria && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setDeleteTarget({
+                                type: 'tympanometry',
+                                id: exam.id,
+                                name: `Imitanciometria de ${formatDate(exam.date)}`,
+                              })
+                              setDeleteConfirmOpen(true)
+                            }}
+                            className="h-7 w-7 p-0 text-red-500 hover:bg-red-50 rounded-lg"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs bg-white p-2.5 rounded-lg border border-slate-200">
@@ -843,21 +863,23 @@ export default function Prontuario() {
                         >
                           <Printer className="w-3.5 h-3.5" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setDeleteTarget({
-                              type: 'bera',
-                              id: exam.id,
-                              name: `BERA de ${formatDate(exam.date)}`,
-                            })
-                            setDeleteConfirmOpen(true)
-                          }}
-                          className="h-7 w-7 p-0 text-red-500 hover:bg-red-50 rounded-lg"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
+                        {!isSecretaria && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setDeleteTarget({
+                                type: 'bera',
+                                id: exam.id,
+                                name: `BERA de ${formatDate(exam.date)}`,
+                              })
+                              setDeleteConfirmOpen(true)
+                            }}
+                            className="h-7 w-7 p-0 text-red-500 hover:bg-red-50 rounded-lg"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                     {exam.notes && <p className="text-xs text-slate-700">{exam.notes}</p>}

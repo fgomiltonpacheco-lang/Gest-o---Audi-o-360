@@ -16,12 +16,39 @@ import Profile from '@/pages/Profile'
 import Users from '@/pages/Users'
 import NotFound from '@/pages/NotFound'
 import { Toaster } from '@/components/ui/toaster'
+import { useToast } from '@/hooks/use-toast'
 
 // Rota protegida: se não houver currentUser, redireciona para /login
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useApp()
   if (!currentUser) {
     return <Navigate to="/login" replace />
+  }
+  return <Layout>{children}</Layout>
+}
+
+// Rota restrita ao administrador: se o usuário não for admin, exibe toast e
+// redireciona para o Painel. Usada para /financeiro, /relatorios, /estoque e /usuarios.
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentUser } = useApp()
+  const { toast } = useToast()
+
+  React.useEffect(() => {
+    if (currentUser && currentUser.role !== 'admin') {
+      toast({
+        title: 'Acesso restrito',
+        description: 'Acesso restrito ao administrador.',
+        variant: 'destructive',
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id, currentUser?.role])
+
+  if (!currentUser) {
+    return <Navigate to="/login" replace />
+  }
+  if (currentUser.role !== 'admin') {
+    return <Navigate to="/" replace />
   }
   return <Layout>{children}</Layout>
 }
@@ -100,27 +127,27 @@ export function App() {
             <Route
               path="/financeiro"
               element={
-                <ProtectedRoute>
+                <AdminRoute>
                   <Financeiro />
-                </ProtectedRoute>
+                </AdminRoute>
               }
             />
 
             <Route
               path="/estoque"
               element={
-                <ProtectedRoute>
+                <AdminRoute>
                   <Estoque />
-                </ProtectedRoute>
+                </AdminRoute>
               }
             />
 
             <Route
               path="/relatorios"
               element={
-                <ProtectedRoute>
+                <AdminRoute>
                   <Relatorios />
-                </ProtectedRoute>
+                </AdminRoute>
               }
             />
 
@@ -136,9 +163,9 @@ export function App() {
             <Route
               path="/usuarios"
               element={
-                <ProtectedRoute>
+                <AdminRoute>
                   <Users />
-                </ProtectedRoute>
+                </AdminRoute>
               }
             />
 

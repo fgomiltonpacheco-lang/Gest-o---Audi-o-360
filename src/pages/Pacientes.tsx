@@ -33,8 +33,11 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { PatientModal } from '@/components/PatientModal'
 
 export default function Pacientes() {
-  const { patients, addPatient, updatePatient, deletePatient } = useApp()
+  const { patients, addPatient, updatePatient, deletePatient, currentUser } = useApp()
   const navigate = useNavigate()
+
+  // Permissão: secretária não pode excluir pacientes
+  const isSecretaria = currentUser?.role === 'secretaria'
 
   // Filtros
   const [search, setSearch] = useState('')
@@ -418,18 +421,20 @@ export default function Pacientes() {
                           </Button>
 
                           {/* Excluir */}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setPatientToDelete(patient)
-                              setDeleteConfirmOpen(true)
-                            }}
-                            className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg"
-                            title="Excluir Paciente"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          {!isSecretaria && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setPatientToDelete(patient)
+                                setDeleteConfirmOpen(true)
+                              }}
+                              className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg"
+                              title="Excluir Paciente"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
