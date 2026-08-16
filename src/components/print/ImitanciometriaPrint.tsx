@@ -99,13 +99,13 @@ export function ImitanciometriaPrint({
     return String(v)
   }
 
-  // ---- Gráfico simplificado da curva de complacência (timpanometria) ----
+  // ---- Gráfico da curva de complacência timpanométrica ----
   // Eixo X: pressão em daPa (range -400 a +200). Eixo Y: complacência em ml
-  // (range 0 a 5). Plota um ponto por orelha a partir de pressao_pico e
-  // complacencia. SVG inline, pequeno, não quebra a regra de 1 página A4.
+  // (range 0 a 5). Desenha uma curva suave (tipo tenda/gaussiana) baseada no
+  // tipo_curva (A, Ad, As, B, C), pressao_pico e complacencia de cada orelha.
   const TimpCurveGraph: React.FC<{ ear: 'OD' | 'OE' }> = ({ ear }) => {
     const W = 150
-    const H = 78
+    const H = 80
     const padL = 26
     const padR = 6
     const padT = 6
@@ -124,24 +124,90 @@ export function ImitanciometriaPrint({
       padT + plotH - ((Math.max(C_MIN, Math.min(C_MAX, c)) - C_MIN) / (C_MAX - C_MIN)) * plotH
 
     const timp = ear === 'OD' ? odTimp : oeTimp
-    const hasPoint =
-      timp != null &&
-      timp.pressao_pico != null &&
-      timp.complacencia != null &&
-      !isNaN(Number(timp.pressao_pico)) &&
-      !isNaN(Number(timp.complacencia))
-    const px = hasPoint ? xOf(Number(timp!.pressao_pico)) : null
-    const py = hasPoint ? yOf(Number(timp!.complacencia)) : null
-
     const color = ear === 'OD' ? '#dc2626' : '#2563eb'
     const zeroX = xOf(0)
 
     const ticksX = [-400, -200, 0, 200]
     const ticksY = [0, 1, 2, 3, 4, 5]
 
+    // Normaliza o tipo de curva em uma das categorias canônicas.
+    const tipoRaw = String(timp?.tipo_curva || '')
+      .toUpperCase()
+      .trim()
+    const normTipo: 'A' | 'Ad' | 'As' | 'B' | 'C' = (() => {
+      if (tipoRaw.startsWith('AD')) return 'Ad'
+      if (tipoRaw.startsWith('AS')) return 'As'
+      if (tipoRaw.startsWith('B')) return 'B'
+      if (tipoRaw.startsWith('C')) return 'C'
+      if (tipoRaw.startsWith('A')) return 'A'
+      return 'A'
+    })()
+
+    // Pressão de pico e complacência (defaults clínicos por tipo quando ausentes).
+    const peakP = (() => {
+      const v = timp?.pressao_pico
+      const n = v != null && !isNaN(Number(v)) ? Number(v) : NaN
+      if (!isNaN(n)) return n
+      return normTipo === 'C' ? -180 : 0
+    })()
+    const peakC = (() => {
+      const v = timp?.complacencia
+      const n = v != null && !isNaN(Number(v)) ? Number(v) : NaN
+      if (!isNaN(n)) return n
+      switch (normTipo) {
+        case 'Ad':
+          return 2.2
+        case 'As':
+          return 0.25
+        case 'B':
+          return 0.15
+        case 'C':
+          return 0.9
+        default:
+          return 1.0
+      }
+    })()
+
+    // Largura (sigma) da curva por tipo — Ad alargada, As estreita, B achatada.
+    const sigma = (() => {
+      switch (normTipo) {
+        case 'Ad':
+          return 130
+        case 'As':
+          return 38
+        case 'B':
+          return 600 // praticamente flat
+        case 'C':
+          return 75
+        default:
+          return 75
+      }
+    })()
+
+    // Amplitude base: B é sempre baixa; demais usam a complacência informada.
+    const amp = normTipo === 'B' ? Math.min(0.25, peakC) : peakC
+
+    // Gera pontos da curva (gaussiana) para o path.
+    const N = 48
+    const pts: { x: number; y: number }[] = []
+    for (let i = 0; i <= N; i++) {
+      const p = P_MIN + ((P_MAX - P_MIN) * i) / N
+      const c = amp * Math.exp(-((p - peakP) ** 2) / (2 * sigma * sigma))
+      pts.push({ x: xOf(p), y: yOf(c) })
+    }
+    const linePath = pts
+      .map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`)
+      .join(' ')
+    const fillPath = `${linePath} L ${xOf(P_MAX).toFixed(2)} ${yOf(0).toFixed(2)} L ${xOf(
+      P_MIN,
+    ).toFixed(2)} ${yOf(0).toFixed(2)} Z`
+
+    const px = xOf(peakP)
+    const py = yOf(amp)
+
     return (
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
-        {/* grade horizontal */}
+        {/* grade horizontal pontilhada */}
         {ticksY.map((c) => (
           <g key={`y-${c}`}>
             <line
@@ -149,8 +215,9 @@ export function ImitanciometriaPrint({
               x2={W - padR}
               y1={yOf(c)}
               y2={yOf(c)}
-              stroke="#e2e8f0"
+              stroke="#cbd5e1"
               strokeWidth={0.5}
+              strokeDasharray="1.5 1.5"
             />
             <text
               x={padL - 2}
@@ -162,6 +229,19 @@ export function ImitanciometriaPrint({
               {c}
             </text>
           </g>
+        ))}
+        {/* grade vertical pontilhada nos ticks X */}
+        {ticksX.map((p) => (
+          <line
+            key={`gx-${p}`}
+            x1={xOf(p)}
+            x2={xOf(p)}
+            y1={padT}
+            y2={padT + plotH}
+            stroke="#e2e8f0"
+            strokeWidth={0.4}
+            strokeDasharray="1.5 1.5"
+          />
         ))}
         {/* linha de pressão zero (destaque) */}
         <line
@@ -214,39 +294,39 @@ export function ImitanciometriaPrint({
         >
           Compl. (ml)
         </text>
-        {/* ponto */}
-        {hasPoint && px != null && py != null && (
-          <>
-            <line
-              x1={px}
-              y1={padT + plotH}
-              x2={px}
-              y2={py}
-              stroke={color}
-              strokeWidth={0.5}
-              strokeDasharray="2 2"
-            />
-            <line
-              x1={padL}
-              y1={py}
-              x2={px}
-              y2={py}
-              stroke={color}
-              strokeWidth={0.5}
-              strokeDasharray="2 2"
-            />
-            <circle cx={px} cy={py} r={2.6} fill={color} />
-          </>
-        )}
-        {/* rótulo da orelha */}
+        {/* área sob a curva (preenchimento suave) */}
+        <path d={fillPath} fill={color} opacity={0.1} />
+        {/* curva de complacência */}
+        <path d={linePath} fill="none" stroke={color} strokeWidth={1.4} strokeLinejoin="round" />
+        {/* marcador do pico */}
+        <line
+          x1={px}
+          y1={padT + plotH}
+          x2={px}
+          y2={py}
+          stroke={color}
+          strokeWidth={0.5}
+          strokeDasharray="2 2"
+        />
+        <line
+          x1={padL}
+          y1={py}
+          x2={px}
+          y2={py}
+          stroke={color}
+          strokeWidth={0.5}
+          strokeDasharray="2 2"
+        />
+        <circle cx={px} cy={py} r={2.2} fill={color} />
+        {/* rótulo da orelha + tipo */}
         <text
           x={W - padR}
-          y={padT + 6}
+          y={padT + 5}
           textAnchor="end"
           style={{ fontSize: 7, fontWeight: 700 }}
           fill={color}
         >
-          {ear}
+          {ear} · {normTipo}
         </text>
       </svg>
     )

@@ -1,15 +1,37 @@
 import React, { useMemo, useState } from 'react'
-import { DollarSign, TrendingUp, TrendingDown, Receipt, ShoppingBag, Building2 } from 'lucide-react'
+import {
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  Receipt,
+  ShoppingBag,
+  Building2,
+  BarChart3,
+} from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { formatCurrency, formatDate } from '@/lib/formatters'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  ReportHeader,
+  SummaryCard,
+  SummaryCardSkeleton,
+  ChartCard,
+  ChartSkeleton,
+  DateRangeFilter,
+  ProfessionalSelect,
+  EmptyState,
+  ReportTable,
+  type Period,
+  shortcutPeriod,
+  type ShortcutId,
+  prevPeriod,
+  inDateRange,
+  professionalOptions,
+  normalizePaymentMethod,
+  PAYMENT_GROUPS,
+  growthPct,
+  fmtPct,
+  exportToCSVGeneric,
+} from './shared'
 import {
   ResponsiveContainer,
   LineChart,
@@ -20,33 +42,27 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  Legend,
 } from 'recharts'
-import {
-  ReportHeader,
-  SummaryCard,
-  ChartCard,
-  PeriodFilterBar,
-  EmptyState,
-  type Period,
-  thisMonthRange,
-  last30Range,
-  prevPeriod,
-  inDateRange,
-  professionalOptions,
-  normalizePaymentMethod,
-  PAYMENT_GROUPS,
-  growthPct,
-  fmtPct,
-  downloadCSV,
-  ProfessionalSelect,
-} from './shared'
-import { BarChart3 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
+
+type Origem = 'Direta' | 'B2B'
+type Row = {
+  data: string
+  venda: string
+  cliente: string
+  itens: string
+  valor: number
+  forma: string
+  profissional: string
+  status: string
+  origem: Origem
+}
 
 export default function RelatorioFaturamento() {
-  const { sales, vendasB2B, appointments, currentUser } = useApp()
+  const { sales, vendasB2B, appointments, currentUser, dataLoading } = useApp()
 
-  const [period, setPeriod] = useState<Period>(() => thisMonthRange())
+  const [period, setPeriod] = useState<Period>(() => shortcutPeriod('this_month'))
   const [pmFilter, setPmFilter] = useState<string>('all')
   const [profFilter, setProfFilter] = useState<string>('all')
 
@@ -55,20 +71,7 @@ export default function RelatorioFaturamento() {
     [appointments, vendasB2B],
   )
 
-  const setShortcut = (s: 'this_month' | 'last_30d' | 'last_month' | 'this_year') => {
-    if (s === 'this_month') setPeriod(thisMonthRange())
-    else if (s === 'last_30d') setPeriod(last30Range())
-    else if (s === 'last_month') {
-      const t = new Date()
-      setPeriod({
-        from: new Date(t.getFullYear(), t.getMonth() - 1, 1).toISOString().split('T')[0],
-        to: new Date(t.getFullYear(), t.getMonth(), 0).toISOString().split('T')[0],
-      })
-    } else {
-      const y = new Date().getFullYear()
-      setPeriod({ from: `${y}-01-01`, to: `${y}-12-31` })
-    }
-  }
+  const onShortcut = (id: ShortcutId) => setPeriod(shortcutPeriod(id))
 
   // Vendas diretas (PDV/atendimento) ativas no período
   const directSales = useMemo(
@@ -91,17 +94,6 @@ export default function RelatorioFaturamento() {
     [vendasB2B, period],
   )
 
-  // Linhas unificadas para tabela/CSV
-  type Row = {
-    data: string
-    venda: string
-    cliente: string
-    itens: string
-    valor: number
-    forma: string
-    profissional: string
-    origem: 'Direta' | 'B2B'
-  }
   const rows: Row[] = useMemo(() => {
     const direct: Row[] = directSales.map((s) => ({
       data: s.date,
@@ -111,6 +103,7 @@ export default function RelatorioFaturamento() {
       valor: s.totalValue || 0,
       forma: normalizePaymentMethod(s.paymentMethod),
       profissional: currentUser?.name || '—',
+      status: s.status || 'Concluída',
       origem: 'Direta',
     }))
     const b2b: Row[] = b2bSales.map((v) => ({
@@ -121,6 +114,7 @@ export default function RelatorioFaturamento() {
       valor: v.valor_total || 0,
       forma: 'Boleto',
       profissional: v.especialista_nome || '—',
+      status: v.status || 'aprovada',
       origem: 'B2B',
     }))
     return [...direct, ...b2b]
@@ -150,7 +144,7 @@ export default function RelatorioFaturamento() {
 
   // Comparativo com período anterior
   const prev = prevPeriod(period)
-  const prevRows = useMemo(() => {
+  const prevTotal = useMemo(() => {
     const ds = sales.filter(
       (s) =>
         s.status !== 'Cancelado' &&
@@ -165,7 +159,7 @@ export default function RelatorioFaturamento() {
     bs.forEach((v) => (total += v.valor_total || 0))
     return total
   }, [sales, vendasB2B, prev])
-  const g = growthPct(receitaTotal, prevRows)
+  const g = growthPct(receitaTotal, prevTotal)
 
   const hasFilters = pmFilter !== 'all' || profFilter !== 'all'
   const clearFilters = () => {
@@ -175,20 +169,24 @@ export default function RelatorioFaturamento() {
 
   const handleExport = () => {
     if (!rows.length) return
-    downloadCSV(
+    exportToCSVGeneric(
       'relatorio-faturamento',
-      rows.map((r) => ({
-        Data: r.data,
-        Venda: r.venda,
-        Cliente: r.cliente,
-        Itens: r.itens,
-        'Valor Total': r.valor.toFixed(2),
-        'Forma de Pagamento': r.forma,
-        Profissional: r.profissional,
-        Origem: r.origem,
-      })),
+      [
+        { header: 'Data', accessor: (r) => r.data },
+        { header: 'Venda', accessor: (r) => r.venda },
+        { header: 'Cliente', accessor: (r) => r.cliente },
+        { header: 'Itens', accessor: (r) => r.itens },
+        { header: 'Valor Total', accessor: (r) => r.valor.toFixed(2) },
+        { header: 'Forma de Pagamento', accessor: (r) => r.forma },
+        { header: 'Profissional', accessor: (r) => r.profissional },
+        { header: 'Status', accessor: (r) => r.status },
+        { header: 'Origem', accessor: (r) => r.origem },
+      ],
+      rows,
     )
   }
+
+  const loading = dataLoading
 
   return (
     <div className="space-y-5 animate-in fade-in-50 duration-200">
@@ -202,34 +200,45 @@ export default function RelatorioFaturamento() {
 
       {/* Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <SummaryCard
-          label="Receita Total"
-          value={formatCurrency(receitaTotal)}
-          hint={`Período: ${formatDate(period.from)} a ${formatDate(period.to)}`}
-          icon={DollarSign}
-          tone="blue"
-        />
-        <SummaryCard
-          label="Ticket Médio"
-          value={formatCurrency(ticketMedio)}
-          hint={`${rows.length} venda(s)`}
-          icon={Receipt}
-          tone="purple"
-        />
-        <SummaryCard
-          label="Receita Direta"
-          value={formatCurrency(receitaDireta)}
-          hint="PDV / Atendimento"
-          icon={ShoppingBag}
-          tone="green"
-        />
-        <SummaryCard
-          label="Receita B2B"
-          value={formatCurrency(receitaB2B)}
-          hint="Empresas parceiras"
-          icon={Building2}
-          tone="amber"
-        />
+        {loading ? (
+          <>
+            <SummaryCardSkeleton />
+            <SummaryCardSkeleton />
+            <SummaryCardSkeleton />
+            <SummaryCardSkeleton />
+          </>
+        ) : (
+          <>
+            <SummaryCard
+              label="Receita Total"
+              value={formatCurrency(receitaTotal)}
+              hint={`Período: ${formatDate(period.from)} a ${formatDate(period.to)}`}
+              icon={DollarSign}
+              tone="blue"
+            />
+            <SummaryCard
+              label="Ticket Médio"
+              value={formatCurrency(ticketMedio)}
+              hint={`${rows.length} venda(s)`}
+              icon={Receipt}
+              tone="purple"
+            />
+            <SummaryCard
+              label="Receita Direta"
+              value={formatCurrency(receitaDireta)}
+              hint="PDV / Atendimento"
+              icon={ShoppingBag}
+              tone="green"
+            />
+            <SummaryCard
+              label="Receita B2B"
+              value={formatCurrency(receitaB2B)}
+              hint="Empresas parceiras"
+              icon={Building2}
+              tone="amber"
+            />
+          </>
+        )}
       </div>
 
       {/* Comparativo período anterior */}
@@ -244,7 +253,7 @@ export default function RelatorioFaturamento() {
         <div className="text-sm">
           <span className="font-semibold text-slate-700">Comparativo período anterior:</span>{' '}
           <span className="text-slate-500">
-            {formatCurrency(prevRows)} (anterior) → {formatCurrency(receitaTotal)} (atual)
+            {formatCurrency(prevTotal)} (anterior) → {formatCurrency(receitaTotal)} (atual)
           </span>{' '}
           <span
             className={`font-bold ${g === null ? 'text-slate-400' : g >= 0 ? 'text-emerald-600' : 'text-red-600'}`}
@@ -256,27 +265,37 @@ export default function RelatorioFaturamento() {
 
       {/* Receita por forma de pagamento */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {porForma.map((p) => (
-          <div key={p.forma} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-            <p className="text-[10px] font-semibold text-slate-500 uppercase">{p.forma}</p>
-            <p className="text-base font-bold text-slate-900 mt-1">{formatCurrency(p.valor)}</p>
-          </div>
-        ))}
+        {loading
+          ? Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm animate-pulse"
+              >
+                <div className="h-2.5 w-16 bg-slate-200 rounded" />
+                <div className="h-4 w-24 bg-slate-200 rounded mt-2" />
+              </div>
+            ))
+          : porForma.map((p) => (
+              <div
+                key={p.forma}
+                className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm"
+              >
+                <p className="text-[10px] font-semibold text-slate-500 uppercase">{p.forma}</p>
+                <p className="text-base font-bold text-slate-900 mt-1">{formatCurrency(p.valor)}</p>
+              </div>
+            ))}
       </div>
 
       {/* Filtros */}
-      <PeriodFilterBar
-        from={period.from}
-        to={period.to}
-        onFrom={(v) => setPeriod((p) => ({ ...p, from: v }))}
-        onTo={(v) => setPeriod((p) => ({ ...p, to: v }))}
-        onShortcut={setShortcut}
+      <DateRangeFilter
+        period={period}
+        onChange={setPeriod}
         hasFilters={hasFilters}
         onClear={clearFilters}
         extra={
           <>
             <div>
-              <label className="text-[11px] text-slate-500 mb-1 block">Forma de Pagamento</label>
+              <Label className="text-[11px] text-slate-500 mb-1 block">Forma de Pagamento</Label>
               <select
                 value={pmFilter}
                 onChange={(e) => setPmFilter(e.target.value)}
@@ -298,7 +317,9 @@ export default function RelatorioFaturamento() {
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <ChartCard title="Faturamento diário" subtitle="Receita por dia no período">
-          {dailyData.length === 0 ? (
+          {loading ? (
+            <ChartSkeleton />
+          ) : dailyData.length === 0 ? (
             <EmptyState message="Sem dados no período." icon={BarChart3} />
           ) : (
             <ResponsiveContainer width="100%" height={240}>
@@ -319,7 +340,9 @@ export default function RelatorioFaturamento() {
           )}
         </ChartCard>
         <ChartCard title="Faturamento por forma de pagamento" subtitle="Barras por categoria">
-          {porForma.every((p) => p.valor === 0) ? (
+          {loading ? (
+            <ChartSkeleton />
+          ) : porForma.every((p) => p.valor === 0) ? (
             <EmptyState message="Sem dados no período." icon={BarChart3} />
           ) : (
             <ResponsiveContainer width="100%" height={240}>
@@ -336,64 +359,83 @@ export default function RelatorioFaturamento() {
       </div>
 
       {/* Tabela */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow>
-                <TableHead className="text-xs uppercase">Data</TableHead>
-                <TableHead className="text-xs uppercase">Venda</TableHead>
-                <TableHead className="text-xs uppercase">Cliente</TableHead>
-                <TableHead className="text-xs uppercase">Itens</TableHead>
-                <TableHead className="text-xs uppercase text-right">Valor Total</TableHead>
-                <TableHead className="text-xs uppercase">Forma de Pagamento</TableHead>
-                <TableHead className="text-xs uppercase">Profissional</TableHead>
-                <TableHead className="text-xs uppercase">Origem</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8}>
-                    <EmptyState message="Nenhuma venda no período selecionado." icon={BarChart3} />
-                  </TableCell>
-                </TableRow>
-              ) : (
-                rows.map((r, i) => (
-                  <TableRow key={i} className="hover:bg-slate-50/60">
-                    <TableCell className="text-slate-600 whitespace-nowrap">
-                      {formatDate(r.data)}
-                    </TableCell>
-                    <TableCell className="font-semibold text-slate-800">{r.venda}</TableCell>
-                    <TableCell className="text-slate-700 max-w-[200px] truncate">
-                      {r.cliente}
-                    </TableCell>
-                    <TableCell className="text-slate-600 max-w-[260px] truncate">
-                      {r.itens || '—'}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold whitespace-nowrap">
-                      {formatCurrency(r.valor)}
-                    </TableCell>
-                    <TableCell className="text-slate-600">{r.forma}</TableCell>
-                    <TableCell className="text-slate-600">{r.profissional}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                          r.origem === 'B2B'
-                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        }`}
-                      >
-                        {r.origem}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+      <ReportTable
+        loading={loading}
+        emptyIcon={BarChart3}
+        emptyMessage="Nenhuma venda no período selecionado."
+        rows={rows}
+        columns={[
+          {
+            header: 'Data',
+            render: (r) => (
+              <span className="text-slate-600 whitespace-nowrap">{formatDate(r.data)}</span>
+            ),
+            csv: (r) => r.data,
+            total: () => 'Total',
+            className: 'text-slate-800',
+          },
+          {
+            header: 'Nº Venda',
+            render: (r) => <span className="font-semibold text-slate-800">{r.venda}</span>,
+            csv: (r) => r.venda,
+          },
+          {
+            header: 'Cliente',
+            render: (r) => (
+              <span className="text-slate-700 max-w-[200px] truncate block">{r.cliente}</span>
+            ),
+            csv: (r) => r.cliente,
+          },
+          {
+            header: 'Itens',
+            render: (r) => (
+              <span className="text-slate-600 max-w-[260px] truncate block">{r.itens || '—'}</span>
+            ),
+            csv: (r) => r.itens,
+          },
+          {
+            header: 'Valor Total',
+            className: 'text-right',
+            render: (r) => (
+              <span className="text-right font-semibold whitespace-nowrap block">
+                {formatCurrency(r.valor)}
+              </span>
+            ),
+            csv: (r) => r.valor.toFixed(2),
+            total: (rs) => (
+              <span className="text-right block">
+                {formatCurrency(rs.reduce((a, x) => a + x.valor, 0))}
+              </span>
+            ),
+          },
+          {
+            header: 'Forma de Pagamento',
+            render: (r) => <span className="text-slate-600">{r.forma}</span>,
+            csv: (r) => r.forma,
+          },
+          {
+            header: 'Profissional',
+            render: (r) => <span className="text-slate-600">{r.profissional}</span>,
+            csv: (r) => r.profissional,
+          },
+          {
+            header: 'Status',
+            render: (r) => (
+              <Badge
+                variant="outline"
+                className={
+                  r.origem === 'B2B'
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                }
+              >
+                {r.status}
+              </Badge>
+            ),
+            csv: (r) => r.status,
+          },
+        ]}
+      />
     </div>
   )
 }

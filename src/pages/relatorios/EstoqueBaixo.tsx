@@ -30,18 +30,28 @@ const statusBadge: Record<Status, { label: string; cls: string }> = {
 }
 
 export default function RelatorioEstoqueBaixo() {
-  const { stockItems, stockMovements } = useApp()
+  const { stockItems } = useApp()
   const [apenasAbaixo, setApenasAbaixo] = useState(true)
 
-  // Última movimentação por item
+  // Última movimentação por item — lê direto de stockItems (que já vem com
+  // .movements populado pelo AppContext).
   const ultimaMov = useMemo(() => {
     const m: Record<string, string> = {}
-    stockMovements.forEach((mv) => {
-      const cur = m[mv.stockItemId]
-      if (!cur || mv.date > cur) m[mv.stockItemId] = mv.date
+    stockItems.forEach((it) => {
+      const movs = (it as any).movements as
+        | Array<{ date?: string; stockItemId?: string }>
+        | undefined
+      if (movs && movs.length) {
+        const last = movs
+          .map((mv) => mv.date || '')
+          .filter(Boolean)
+          .sort()
+          .pop()
+        if (last) m[it.id] = last
+      }
     })
     return m
-  }, [stockMovements])
+  }, [stockItems])
 
   const rows = useMemo(() => {
     const list = stockItems.map((it) => {

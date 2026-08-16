@@ -9,15 +9,23 @@ import {
   Percent,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
-import { formatCurrency } from '@/lib/formatters'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  ReportHeader,
+  SummaryCard,
+  SummaryCardSkeleton,
+  ChartCard,
+  ChartSkeleton,
+  DateRangeFilter,
+  ProfessionalSelect,
+  EmptyState,
+  ReportTable,
+  type Period,
+  shortcutPeriod,
+  type ShortcutId,
+  inDateRange,
+  professionalOptions,
+  exportToCSVGeneric,
+} from './shared'
 import {
   ResponsiveContainer,
   BarChart,
@@ -28,27 +36,21 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts'
-import {
-  ReportHeader,
-  SummaryCard,
-  ChartCard,
-  PeriodFilterBar,
-  EmptyState,
-  type Period,
-  thisMonthRange,
-  last30Range,
-  inDateRange,
-  professionalOptions,
-  downloadCSV,
-  ProfessionalSelect,
-} from './shared'
 
 export default function RelatorioProducao() {
-  const { appointments, audiometries, tympanometries, beras, sales, vendasB2B, currentUser } =
-    useApp()
+  const {
+    appointments,
+    audiometries,
+    tympanometries,
+    beras,
+    sales,
+    vendasB2B,
+    currentUser,
+    dataLoading,
+  } = useApp()
 
   const isAdmin = currentUser?.role === 'admin'
-  const [period, setPeriod] = useState<Period>(() => thisMonthRange())
+  const [period, setPeriod] = useState<Period>(() => shortcutPeriod('this_month'))
   const [profFilter, setProfFilter] = useState<string>(isAdmin ? 'all' : currentUser?.name || 'all')
 
   const profs = useMemo(
@@ -56,20 +58,7 @@ export default function RelatorioProducao() {
     [appointments, vendasB2B],
   )
 
-  const setShortcut = (s: 'this_month' | 'last_30d' | 'last_month' | 'this_year') => {
-    if (s === 'this_month') setPeriod(thisMonthRange())
-    else if (s === 'last_30d') setPeriod(last30Range())
-    else if (s === 'last_month') {
-      const t = new Date()
-      setPeriod({
-        from: new Date(t.getFullYear(), t.getMonth() - 1, 1).toISOString().split('T')[0],
-        to: new Date(t.getFullYear(), t.getMonth(), 0).toISOString().split('T')[0],
-      })
-    } else {
-      const y = new Date().getFullYear()
-      setPeriod({ from: `${y}-01-01`, to: `${y}-12-31` })
-    }
-  }
+  const onShortcut = (id: ShortcutId) => setPeriod(shortcutPeriod(id))
 
   // Mapa appointmentId -> professionalName (para atribuir vendas diretas)
   const apptProf = useMemo(() => {
@@ -120,7 +109,7 @@ export default function RelatorioProducao() {
         if (/teste|aparelho/i.test(a.type || '')) r.testes += 1
       })
 
-    // Exames realizizados
+    // Exames realizados
     const countExam = (prof: string, date: string) => {
       if (!inDateRange(date, period.from, period.to)) return
       ensure(prof || '—').exames += 1
@@ -191,19 +180,22 @@ export default function RelatorioProducao() {
 
   const handleExport = () => {
     if (!rows.length) return
-    downloadCSV(
+    exportToCSVGeneric(
       'relatorio-producao-profissional',
-      rows.map((r) => ({
-        Profissional: r.profissional,
-        Atendimentos: r.atendimentos,
-        Exames: r.exames,
-        'Vendas Diretas': r.vendasDiretas,
-        'Vendas B2B': r.vendasB2B,
-        Testes: r.testes,
-        'Conversão %': r.conversao.toFixed(1).replace('.', ','),
-      })),
+      [
+        { header: 'Profissional', accessor: (r) => r.profissional },
+        { header: 'Atendimentos', accessor: (r) => r.atendimentos },
+        { header: 'Exames', accessor: (r) => r.exames },
+        { header: 'Vendas Diretas', accessor: (r) => r.vendasDiretas },
+        { header: 'Vendas B2B', accessor: (r) => r.vendasB2B },
+        { header: 'Testes', accessor: (r) => r.testes },
+        { header: 'Conversão %', accessor: (r) => r.conversao.toFixed(1).replace('.', ',') },
+      ],
+      rows,
     )
   }
+
+  const loading = dataLoading
 
   return (
     <div className="space-y-5 animate-in fade-in-50 duration-200">
@@ -216,44 +208,47 @@ export default function RelatorioProducao() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <SummaryCard
-          label="Atendimentos"
-          value={String(totais.atendimentos)}
-          icon={ClipboardList}
-          tone="blue"
-        />
-        <SummaryCard
-          label="Exames"
-          value={String(totais.exames)}
-          icon={Stethoscope}
-          tone="purple"
-        />
-        <SummaryCard
-          label="Vendas (PDV)"
-          value={String(totais.vendasDiretas)}
-          icon={ShoppingCart}
-          tone="green"
-        />
-        <SummaryCard
-          label="Vendas B2B"
-          value={String(totais.vendasB2B)}
-          icon={Building2}
-          tone="amber"
-        />
-        <SummaryCard
-          label="Testes c/ Aparelho"
-          value={String(totais.testes)}
-          icon={Ear}
-          tone="slate"
-        />
+        {loading ? (
+          Array.from({ length: 5 }).map((_, i) => <SummaryCardSkeleton key={i} />)
+        ) : (
+          <>
+            <SummaryCard
+              label="Atendimentos"
+              value={String(totais.atendimentos)}
+              icon={ClipboardList}
+              tone="blue"
+            />
+            <SummaryCard
+              label="Exames"
+              value={String(totais.exames)}
+              icon={Stethoscope}
+              tone="purple"
+            />
+            <SummaryCard
+              label="Vendas (PDV)"
+              value={String(totais.vendasDiretas)}
+              icon={ShoppingCart}
+              tone="green"
+            />
+            <SummaryCard
+              label="Vendas B2B"
+              value={String(totais.vendasB2B)}
+              icon={Building2}
+              tone="amber"
+            />
+            <SummaryCard
+              label="Testes c/ Aparelho"
+              value={String(totais.testes)}
+              icon={Ear}
+              tone="slate"
+            />
+          </>
+        )}
       </div>
 
-      <PeriodFilterBar
-        from={period.from}
-        to={period.to}
-        onFrom={(v) => setPeriod((p) => ({ ...p, from: v }))}
-        onTo={(v) => setPeriod((p) => ({ ...p, to: v }))}
-        onShortcut={setShortcut}
+      <DateRangeFilter
+        period={period}
+        onChange={setPeriod}
         hasFilters={hasFilters}
         onClear={clearFilters}
         extra={
@@ -264,7 +259,9 @@ export default function RelatorioProducao() {
       />
 
       <ChartCard title="Comparativo entre profissionais" subtitle="Atendimentos × Exames × Vendas">
-        {rows.length === 0 ? (
+        {loading ? (
+          <ChartSkeleton height={280} />
+        ) : rows.length === 0 ? (
           <EmptyState message="Sem dados no período." icon={BarChart3} />
         ) : (
           <ResponsiveContainer width="100%" height={280}>
@@ -293,49 +290,79 @@ export default function RelatorioProducao() {
         )}
       </ChartCard>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow>
-                <TableHead className="text-xs uppercase">Profissional</TableHead>
-                <TableHead className="text-xs uppercase text-right">Atendimentos</TableHead>
-                <TableHead className="text-xs uppercase text-right">Exames</TableHead>
-                <TableHead className="text-xs uppercase text-right">Vendas Diretas</TableHead>
-                <TableHead className="text-xs uppercase text-right">Vendas B2B</TableHead>
-                <TableHead className="text-xs uppercase text-right">Testes</TableHead>
-                <TableHead className="text-xs uppercase text-right">Conversão %</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7}>
-                    <EmptyState
-                      message="Nenhum profissional com produção no período."
-                      icon={Percent}
-                    />
-                  </TableCell>
-                </TableRow>
-              ) : (
-                rows.map((r) => (
-                  <TableRow key={r.profissional} className="hover:bg-slate-50/60">
-                    <TableCell className="font-semibold text-slate-800">{r.profissional}</TableCell>
-                    <TableCell className="text-right">{r.atendimentos}</TableCell>
-                    <TableCell className="text-right">{r.exames}</TableCell>
-                    <TableCell className="text-right">{r.vendasDiretas}</TableCell>
-                    <TableCell className="text-right">{r.vendasB2B}</TableCell>
-                    <TableCell className="text-right">{r.testes}</TableCell>
-                    <TableCell className="text-right font-semibold text-blue-700">
-                      {r.conversao.toFixed(1).replace('.', ',')}%
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+      <ReportTable
+        loading={loading}
+        emptyIcon={Percent}
+        emptyMessage="Nenhum profissional com produção no período."
+        rows={rows}
+        columns={[
+          {
+            header: 'Profissional',
+            render: (r) => <span className="font-semibold text-slate-800">{r.profissional}</span>,
+            csv: (r) => r.profissional,
+            total: () => 'Total',
+            className: 'text-slate-800',
+          },
+          {
+            header: 'Atendimentos',
+            className: 'text-right',
+            render: (r) => <span className="block text-right">{r.atendimentos}</span>,
+            csv: (r) => r.atendimentos,
+            total: (rs) => (
+              <span className="block text-right">{rs.reduce((a, x) => a + x.atendimentos, 0)}</span>
+            ),
+          },
+          {
+            header: 'Exames',
+            className: 'text-right',
+            render: (r) => <span className="block text-right">{r.exames}</span>,
+            csv: (r) => r.exames,
+            total: (rs) => (
+              <span className="block text-right">{rs.reduce((a, x) => a + x.exames, 0)}</span>
+            ),
+          },
+          {
+            header: 'Vendas Diretas',
+            className: 'text-right',
+            render: (r) => <span className="block text-right">{r.vendasDiretas}</span>,
+            csv: (r) => r.vendasDiretas,
+            total: (rs) => (
+              <span className="block text-right">
+                {rs.reduce((a, x) => a + x.vendasDiretas, 0)}
+              </span>
+            ),
+          },
+          {
+            header: 'Vendas B2B',
+            className: 'text-right',
+            render: (r) => <span className="block text-right">{r.vendasB2B}</span>,
+            csv: (r) => r.vendasB2B,
+            total: (rs) => (
+              <span className="block text-right">{rs.reduce((a, x) => a + x.vendasB2B, 0)}</span>
+            ),
+          },
+          {
+            header: 'Testes',
+            className: 'text-right',
+            render: (r) => <span className="block text-right">{r.testes}</span>,
+            csv: (r) => r.testes,
+            total: (rs) => (
+              <span className="block text-right">{rs.reduce((a, x) => a + x.testes, 0)}</span>
+            ),
+          },
+          {
+            header: 'Conversão %',
+            className: 'text-right',
+            render: (r) => (
+              <span className="block text-right font-semibold text-blue-700">
+                {r.conversao.toFixed(1).replace('.', ',')}%
+              </span>
+            ),
+            csv: (r) => r.conversao.toFixed(1).replace('.', ','),
+            total: () => <span className="block text-right">—</span>,
+          },
+        ]}
+      />
     </div>
   )
 }
