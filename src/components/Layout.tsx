@@ -385,7 +385,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </header>
 
       {/* ÁREA DE CONTEÚDO PRINCIPAL (Offset Desktop 260px e Topo 64px) */}
-      <main className="flex-1 lg:ml-[260px] pt-16 p-4 sm:p-6 lg:p-8 min-h-screen">
+      <main className="flex-1 lg:ml-[260px] pt-20 sm:pt-24 p-4 sm:p-6 lg:p-8 min-h-screen">
         <div className="max-w-7xl mx-auto space-y-6">{children}</div>
       </main>
 
