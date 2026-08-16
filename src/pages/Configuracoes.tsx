@@ -51,10 +51,12 @@ import {
   AlertTriangle,
   FileText,
   ShieldCheck,
+  MessageCircle,
 } from 'lucide-react'
 import type { Equipment, NfseB2BProvedor, NfseB2BAmbiente, PolicyTexts } from '@/types'
 import { getEquipmentStatus } from '@/types'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { Switch } from '@/components/ui/switch'
 
 // ============================================================
 // Tipos e constantes
@@ -257,6 +259,97 @@ export default function Configuracoes() {
     d.setFullYear(d.getFullYear() + 1)
     return d.toISOString().split('T')[0]
   })()
+
+  // ---- WhatsApp (Lembretes) ----
+  const [waConfigId, setWaConfigId] = useState<string>('')
+  const [waApiToken, setWaApiToken] = useState('')
+  const [waApiUrl, setWaApiUrl] = useState('')
+  const [waInstancia, setWaInstancia] = useState('')
+  const [waProvedor, setWaProvedor] = useState('evolution')
+  const [waTemplate, setWaTemplate] = useState(
+    'Olá {nome_paciente}! Este é um lembrete da sua consulta na Audição 360.\n' +
+      '📅 Data: {data_consulta}\n' +
+      '🕐 Horário: {horario}\n' +
+      '📋 Procedimento: {procedimento}\n' +
+      'Confirme sua presença respondendo SIM ou cancele respondendo NÃO.\n' +
+      'Endereço: Rua Herculano Coelho de Souza, 1047 — Caçador/SC',
+  )
+  const [waDiasAntes, setWaDiasAntes] = useState<number>(1)
+  const [waHorarioEnvio, setWaHorarioEnvio] = useState('09:00')
+  const [waAtivo, setWaAtivo] = useState(false)
+  const [waLoading, setWaLoading] = useState(false)
+  const [waSaving, setWaSaving] = useState(false)
+
+  const loadWhatsappConfig = useCallback(async () => {
+    setWaLoading(true)
+    try {
+      const records = await pb.collection('whatsapp_config').getFullList({ sort: '-created' })
+      if (records.length > 0) {
+        const r = records[0] as any
+        setWaConfigId(r.id)
+        setWaApiToken(r.api_token || '')
+        setWaApiUrl(r.api_url || '')
+        setWaInstancia(r.instancia || '')
+        setWaProvedor(r.provedor || 'evolution')
+        setWaTemplate(
+          r.template_mensagem ||
+            'Olá {nome_paciente}! Este é um lembrete da sua consulta na Audição 360.\n' +
+              '📅 Data: {data_consulta}\n' +
+              '🕐 Horário: {horario}\n' +
+              '📋 Procedimento: {procedimento}\n' +
+              'Confirme sua presença respondendo SIM ou cancele respondendo NÃO.\n' +
+              'Endereço: Rua Herculano Coelho de Souza, 1047 — Caçador/SC',
+        )
+        setWaDiasAntes(Number(r.dias_antes) || 1)
+        setWaHorarioEnvio(r.horario_envio || '09:00')
+        setWaAtivo(!!r.ativo)
+      }
+    } catch (err) {
+      console.error('Erro ao carregar configuração WhatsApp:', err)
+    } finally {
+      setWaLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (currentUser?.role === 'admin') {
+      loadWhatsappConfig()
+    }
+  }, [currentUser?.role, loadWhatsappConfig])
+
+  const handleSaveWhatsapp = async () => {
+    setWaSaving(true)
+    try {
+      const payload = {
+        api_token: waApiToken,
+        api_url: waApiUrl,
+        instancia: waInstancia,
+        provedor: waProvedor,
+        template_mensagem: waTemplate,
+        dias_antes: waDiasAntes,
+        horario_envio: waHorarioEnvio,
+        ativo: waAtivo,
+      }
+      if (waConfigId) {
+        await pb.collection('whatsapp_config').update(waConfigId, payload)
+      } else {
+        const rec: any = await pb.collection('whatsapp_config').create(payload)
+        setWaConfigId(rec.id)
+      }
+      toast({
+        title: 'Configuração WhatsApp salva',
+        description: 'Os parâmetros de envio de lembretes foram atualizados.',
+      })
+    } catch (err) {
+      toast({
+        title: 'Erro ao salvar',
+        description: describeError(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setWaSaving(false)
+    }
+  }
 
   // ---- NFS-e de Comissão B2B ----
   const [nfseAliquota, setNfseAliquota] = useState<string>('3.00')
@@ -626,6 +719,13 @@ export default function Configuracoes() {
           >
             <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
             LGPD
+          </TabsTrigger>
+          <TabsTrigger
+            value="whatsapp"
+            className="rounded-lg text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm px-4 py-2"
+          >
+            <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
+            WhatsApp
           </TabsTrigger>
         </TabsList>
 
@@ -1403,6 +1503,212 @@ export default function Configuracoes() {
                     >
                       <Save className="w-4 h-4" />
                       {lgpdSaving ? 'Salvando...' : 'Salvar Textos LGPD'}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ============ ABA: WHATSAPP ============ */}
+        <TabsContent value="whatsapp" className="mt-4">
+          <Card className="rounded-2xl border-slate-200 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-emerald-600" />
+                Lembretes por WhatsApp
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                Configure o envio automático de lembretes de consulta para reduzir a taxa de
+                no-show. O paciente confirma a presença respondendo SIM ou cancela respondendo NÃO.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {waLoading ? (
+                <p className="text-xs text-slate-400 py-4 text-center">Carregando...</p>
+              ) : (
+                <>
+                  {/* Toggle de envio automático */}
+                  <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">Envio automático</p>
+                      <p className="text-[11px] text-slate-500">
+                        Quando ativo, lembretes são criados e enviados automaticamente.
+                      </p>
+                    </div>
+                    <Switch checked={waAtivo} onCheckedChange={setWaAtivo} />
+                  </div>
+
+                  {/* Provedor + credenciais */}
+                  <div className="space-y-3 pt-2 border-t border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Provedor & Credenciais
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs font-semibold text-slate-700">Provedor</Label>
+                        <Select value={waProvedor} onValueChange={setWaProvedor}>
+                          <SelectTrigger className="h-10 rounded-xl mt-1 text-sm border-slate-300">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="evolution" className="text-xs">
+                              Evolution API
+                            </SelectItem>
+                            <SelectItem value="zapi" className="text-xs">
+                              Z-API
+                            </SelectItem>
+                            <SelectItem value="whatsapp_business" className="text-xs">
+                              WhatsApp Business API
+                            </SelectItem>
+                            <SelectItem value="outro" className="text-xs">
+                              Outro
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-semibold text-slate-700">
+                          Instância / Telefone remetente
+                        </Label>
+                        <Input
+                          value={waInstancia}
+                          onChange={(e) => setWaInstancia(e.target.value)}
+                          placeholder="5549999999999"
+                          className="h-10 rounded-xl mt-1 text-sm border-slate-300 font-mono"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label className="text-xs font-semibold text-slate-700">
+                          URL base da API
+                        </Label>
+                        <Input
+                          value={waApiUrl}
+                          onChange={(e) => setWaApiUrl(e.target.value)}
+                          placeholder="https://api.evolution-api.com/v1"
+                          className="h-10 rounded-xl mt-1 text-sm border-slate-300 font-mono"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label className="text-xs font-semibold text-slate-700">
+                          Token / Chave da API
+                        </Label>
+                        <Input
+                          type="password"
+                          value={waApiToken}
+                          onChange={(e) => setWaApiToken(e.target.value)}
+                          placeholder="token de acesso à API do provedor"
+                          className="h-10 rounded-xl mt-1 text-sm border-slate-300 font-mono"
+                        />
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          Pode também ser definido como variável de ambiente{' '}
+                          <span className="font-mono">WHATSAPP_API_TOKEN</span>.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Regras de envio */}
+                  <div className="space-y-3 pt-2 border-t border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Regras de Envio
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs font-semibold text-slate-700">
+                          Quantos dias antes enviar
+                        </Label>
+                        <Select
+                          value={String(waDiasAntes)}
+                          onValueChange={(v) => setWaDiasAntes(Number(v))}
+                        >
+                          <SelectTrigger className="h-10 rounded-xl mt-1 text-sm border-slate-300">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1" className="text-xs">
+                              1 dia antes
+                            </SelectItem>
+                            <SelectItem value="2" className="text-xs">
+                              2 dias antes
+                            </SelectItem>
+                            <SelectItem value="7" className="text-xs">
+                              1 semana antes
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-semibold text-slate-700">
+                          Horário padrão de envio
+                        </Label>
+                        <Select value={waHorarioEnvio} onValueChange={setWaHorarioEnvio}>
+                          <SelectTrigger className="h-10 rounded-xl mt-1 text-sm border-slate-300 font-mono">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            {TIME_OPTIONS.filter((t) => {
+                              const h = Number(t.split(':')[0])
+                              return h >= 8 && h < 20
+                            }).map((t) => (
+                              <SelectItem key={t} value={t} className="text-xs font-mono">
+                                {t}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          Envios permitidos apenas entre 08:00 e 20:00.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Template de mensagem */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Template de Mensagem
+                    </h4>
+                    <Textarea
+                      value={waTemplate}
+                      onChange={(e) => setWaTemplate(e.target.value)}
+                      rows={8}
+                      className="rounded-xl text-xs border-slate-300 resize-y font-mono leading-relaxed"
+                    />
+                    <p className="text-[11px] text-slate-400">
+                      Variáveis disponíveis: <span className="font-mono">{`{nome_paciente}`}</span>,{' '}
+                      <span className="font-mono">{`{data_consulta}`}</span>,{' '}
+                      <span className="font-mono">{`{horario}`}</span>,{' '}
+                      <span className="font-mono">{`{procedimento}`}</span>.
+                    </p>
+                  </div>
+
+                  {/* Webhook info */}
+                  <div className="rounded-xl border border-blue-200 bg-blue-50/50 px-4 py-3">
+                    <p className="text-[11px] font-semibold text-blue-800 uppercase tracking-wider">
+                      Webhook de respostas
+                    </p>
+                    <p className="text-xs text-blue-700 mt-1">
+                      Configure o provedor para encaminhar as respostas dos pacientes para:
+                    </p>
+                    <code className="block mt-1.5 text-[11px] font-mono text-blue-900 bg-white border border-blue-200 rounded-lg px-2 py-1.5">
+                      POST {pb.baseUrl}/api/whatsapp/webhook
+                    </code>
+                    <p className="text-[11px] text-blue-600 mt-1.5">
+                      Corpo esperado:{' '}
+                      <span className="font-mono">{`{ "phone": "55...", "message": "SIM" }`}</span>
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end pt-2 border-t border-slate-100">
+                    <Button
+                      onClick={handleSaveWhatsapp}
+                      disabled={waSaving}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-sm flex items-center gap-2 h-10 px-5"
+                    >
+                      <Save className="w-4 h-4" />
+                      {waSaving ? 'Salvando...' : 'Salvar Configuração WhatsApp'}
                     </Button>
                   </div>
                 </>

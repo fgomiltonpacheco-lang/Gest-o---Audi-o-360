@@ -1147,3 +1147,86 @@ export const AUDIT_ACAO_LABELS: Record<AuditAcaoTrail, string> = {
   exportar: 'Exportar',
   imprimir: 'Imprimir',
 }
+
+// ===== Módulo de Lembretes de WhatsApp =====
+
+export type LembreteStatusEnvio = 'pendente' | 'enviado' | 'falhou' | 'entregue' | 'lido'
+export type LembreteStatusConfirmacao = 'aguardando' | 'confirmado' | 'cancelado' | 'sem_resposta'
+
+export interface LembreteWhatsapp {
+  id: string
+  agendamento_id: string
+  paciente_id?: string
+  telefone: string
+  mensagem: string
+  /** Data/hora agendada para o envio (ISO). */
+  data_envio: string
+  status_envio: LembreteStatusEnvio
+  status_confirmacao: LembreteStatusConfirmacao
+  /** Data/hora da resposta do paciente (ISO). */
+  data_confirmacao?: string
+  resposta_paciente?: string
+  tentativas: number
+  error_message?: string
+  created: string
+  updated: string
+  /** Campos populados a partir do expand (relações). */
+  agendamento?: {
+    id: string
+    date: string
+    time: string
+    patientName: string
+    type: string
+    status: string
+  }
+  paciente?: {
+    id: string
+    name: string
+    mobile?: string
+    phone?: string
+  }
+}
+
+export interface WhatsappConfig {
+  id: string
+  api_token: string
+  api_url: string
+  instancia: string
+  provedor: string
+  template_mensagem: string
+  dias_antes: number
+  horario_envio: string
+  ativo: boolean
+  created: string
+  updated: string
+}
+
+export const LEMBRETE_STATUS_ENVIO_LABELS: Record<LembreteStatusEnvio, string> = {
+  pendente: 'Pendente',
+  enviado: 'Enviado',
+  falhou: 'Falhou',
+  entregue: 'Entregue',
+  lido: 'Lido',
+}
+
+export const LEMBRETE_STATUS_CONFIRMACAO_LABELS: Record<LembreteStatusConfirmacao, string> = {
+  aguardando: 'Aguardando',
+  confirmado: 'Confirmado',
+  cancelado: 'Cancelado',
+  sem_resposta: 'Sem Resposta',
+}
+
+export const LEMBRETE_STATUS_ENVIO_CLASS: Record<LembreteStatusEnvio, string> = {
+  pendente: 'bg-slate-100 text-slate-700 border-slate-200',
+  enviado: 'bg-blue-100 text-blue-700 border-blue-200',
+  falhou: 'bg-red-100 text-red-700 border-red-200',
+  entregue: 'bg-teal-100 text-teal-700 border-teal-200',
+  lido: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+}
+
+export const LEMBRETE_STATUS_CONFIRMACAO_CLASS: Record<LembreteStatusConfirmacao, string> = {
+  aguardando: 'bg-amber-100 text-amber-700 border-amber-200',
+  confirmado: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  cancelado: 'bg-red-100 text-red-700 border-red-200',
+  sem_resposta: 'bg-slate-100 text-slate-600 border-slate-200',
+}

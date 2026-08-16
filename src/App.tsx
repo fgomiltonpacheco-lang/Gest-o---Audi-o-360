@@ -37,6 +37,7 @@ import Auditoria from '@/pages/Auditoria'
 import ContasReceberPage from '@/pages/ContasReceber'
 import Inadimplentes from '@/pages/Inadimplentes'
 import FluxoProjetado from '@/pages/FluxoProjetado'
+import Lembretes from '@/pages/Lembretes'
 import NotFound from '@/pages/NotFound'
 import { Toaster } from '@/components/ui/toaster'
 import { useToast } from '@/hooks/use-toast'
@@ -152,6 +153,14 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <Agenda />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/agenda/lembretes"
+              element={
+                <ProtectedRoute>
+                  <Lembretes />
                 </ProtectedRoute>
               }
             />

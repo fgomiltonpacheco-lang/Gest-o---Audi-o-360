@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T22:36:14.470Z",
+  "generatedAt": "2026-08-16T22:56:43.451Z",
   "collections": [
     {
       "name": "users",
@@ -4103,6 +4103,186 @@
         "CREATE INDEX idx_recebimentos_conta ON recebimentos (conta_receber_id)",
         "CREATE INDEX idx_recebimentos_data ON recebimentos (data_recebimento)"
       ]
+    },
+    {
+      "name": "lembretes_whatsapp",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "agendamento_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "appointments"
+        },
+        {
+          "name": "paciente_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "telefone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mensagem",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_envio",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status_envio",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["pendente", "enviado", "falhou", "entregue", "lido"]
+        },
+        {
+          "name": "status_confirmacao",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["aguardando", "confirmado", "cancelado", "sem_resposta"]
+        },
+        {
+          "name": "data_confirmacao",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "resposta_paciente",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tentativas",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "error_message",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_lembretes_status_envio ON lembretes_whatsapp (status_envio)",
+        "CREATE INDEX idx_lembretes_status_conf ON lembretes_whatsapp (status_confirmacao)",
+        "CREATE INDEX idx_lembretes_data_envio ON lembretes_whatsapp (data_envio)",
+        "CREATE INDEX idx_lembretes_agendamento ON lembretes_whatsapp (agendamento_id)",
+        "CREATE INDEX idx_lembretes_paciente ON lembretes_whatsapp (paciente_id)"
+      ]
+    },
+    {
+      "name": "whatsapp_config",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.role = 'admin'",
+        "update": "@request.auth.role = 'admin'",
+        "delete": "@request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "api_token",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "api_url",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "instancia",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "provedor",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "template_mensagem",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dias_antes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "horario_envio",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ativo",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
     }
   ]
 }
