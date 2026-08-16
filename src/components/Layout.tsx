@@ -16,6 +16,7 @@ import {
   PieChart,
   Handshake,
   Menu,
+  MessageCircle,
   X,
   LogOut,
   Ear,
@@ -49,8 +50,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Mobile sidebar state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [logoutModalOpen, setLogoutModalOpen] = useState(false)
-  const [relatoriosOpen, setRelatoriosOpen] = useState(
-    () => typeof window !== 'undefined' && window.location.pathname.startsWith('/relatorios'),
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() =>
+    typeof window !== 'undefined'
+      ? {
+          '/relatorios': window.location.pathname.startsWith('/relatorios'),
+          '/agenda': window.location.pathname.startsWith('/agenda'),
+        }
+      : {},
   )
 
   interface NavItem {
@@ -87,6 +93,19 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           name: 'Agenda',
           path: '/agenda',
           icon: Calendar,
+          children: [
+            {
+              name: 'Agenda',
+              path: '/agenda',
+              icon: Calendar,
+              exact: true,
+            },
+            {
+              name: 'Lembretes',
+              path: '/agenda/lembretes',
+              icon: MessageCircle,
+            },
+          ],
         },
       ],
     },
@@ -287,11 +306,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     // Item com submenu
     if (item.children && item.children.length > 0) {
       const parentActive = location.pathname.startsWith(item.path)
-      const open = relatoriosOpen || parentActive
+      const open = openMenus[item.path] || parentActive
       return (
         <div key={item.path}>
           <button
-            onClick={() => setRelatoriosOpen((v) => !v)}
+            onClick={() => setOpenMenus((prev) => ({ ...prev, [item.path]: !prev[item.path] }))}
             className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 relative w-full text-left ${
               parentActive
                 ? 'bg-white/10 text-white font-semibold shadow-sm'

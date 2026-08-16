@@ -24,6 +24,7 @@ import {
   Lock,
   LockOpen,
   Clock3,
+  MessageCircle,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -34,7 +35,14 @@ import {
   getAppointmentColor,
 } from '@/lib/formatters'
 import { getHolidayOnDate, getYearHolidays } from '@/lib/holidays'
-import { Appointment, AppointmentType, AppointmentStatus, PatientPlanType } from '@/types'
+import {
+  Appointment,
+  AppointmentType,
+  AppointmentStatus,
+  PatientPlanType,
+  type LembreteWhatsapp,
+  type LembreteStatusConfirmacao,
+} from '@/types'
 import pb from '@/lib/pocketbase/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -243,6 +251,49 @@ function ReceptionDot({ reception }: { reception?: string }) {
   return null
 }
 
+// ---------- Lembretes de WhatsApp (status de confirmação) ----------
+
+const LEMBRETE_CONFIRMACAO_VISUAL: Record<
+  LembreteStatusConfirmacao,
+  { emoji: string; label: string; cls: string }
+> = {
+  confirmado: {
+    emoji: '✅',
+    label: 'Confirmado via WhatsApp',
+    cls: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  },
+  cancelado: {
+    emoji: '❌',
+    label: 'Cancelado via WhatsApp',
+    cls: 'bg-red-50 text-red-700 border-red-200',
+  },
+  aguardando: {
+    emoji: '⏳',
+    label: 'Aguardando confirmação',
+    cls: 'bg-amber-50 text-amber-700 border-amber-200',
+  },
+  sem_resposta: {
+    emoji: '📤',
+    label: 'Enviado sem resposta',
+    cls: 'bg-slate-100 text-slate-600 border-slate-300',
+  },
+}
+
+function LembreteStatusBadge({ lembrete }: { lembrete?: LembreteWhatsapp }) {
+  if (!lembrete) return null
+  const cfg = LEMBRETE_CONFIRMACAO_VISUAL[lembrete.status_confirmacao]
+  return (
+    <Badge
+      variant="outline"
+      className={`text-[10px] font-bold px-1.5 py-0 h-4 border ${cfg.cls}`}
+      title={cfg.label}
+    >
+      <MessageCircle className="w-2.5 h-2.5 mr-0.5" />
+      {cfg.emoji}
+    </Badge>
+  )
+}
+
 export default function Agenda() {
   const { appointments, addAppointment, updateAppointment, deleteAppointment } = useApp()
   const navigate = useNavigate()
@@ -343,6 +394,77 @@ export default function Agenda() {
     loadConfig()
     loadBlockedDays()
   }, [loadConfig, loadBlockedDays])
+
+  // ---------- Lembretes de WhatsApp (visão Dia) ----------
+  // Busca os lembretes da coleção lembretes_whatsapp filtrando pelo
+  // agendamento_id de cada appointment do dia selecionado, montando um mapa
+  // agendamento_id -> lembrete para exibir o status de confirmação ao lado de
+  // cada agendamento e um resumo no topo da visão do dia.
+  const [lembretesMap, setLembretesMap] = useState<Record<string, LembreteWhatsapp>>({})
+
+  const loadLembretes = useCallback(async () => {
+    const dayAppIds = appointments
+      .filter((a) => a.date === selectedDateStr)
+      .map((a) => a.id)
+      .filter(Boolean)
+    if (dayAppIds.length === 0) {
+      setLembretesMap({})
+      return
+    }
+    try {
+      const filter = dayAppIds.map((id) => `agendamento_id = "${id}"`).join(' || ')
+      const records = (await pb.collection('lembretes_whatsapp').getFullList({ filter })) as any[]
+      const map: Record<string, LembreteWhatsapp> = {}
+      for (const r of records) {
+        const aid = r.agendamento_id || ''
+        if (!aid) continue
+        // Em caso de múltiplos lembretes para o mesmo agendamento, mantém o
+        // mais recente (pela data_envio).
+        const existing = map[aid]
+        if (existing && (existing.data_envio || '') >= (r.data_envio || '')) continue
+        map[aid] = {
+          id: r.id,
+          agendamento_id: aid,
+          paciente_id: r.paciente_id || '',
+          telefone: r.telefone || '',
+          mensagem: r.mensagem || '',
+          data_envio: r.data_envio || '',
+          status_envio: r.status_envio || 'pendente',
+          status_confirmacao: r.status_confirmacao || 'aguardando',
+          data_confirmacao: r.data_confirmacao || '',
+          resposta_paciente: r.resposta_paciente || '',
+          tentativas: Number(r.tentativas) || 0,
+          error_message: r.error_message || '',
+          created: r.created || '',
+          updated: r.updated || '',
+        }
+      }
+      setLembretesMap(map)
+    } catch (err) {
+      console.error('Erro ao carregar lembretes do dia:', err)
+      setLembretesMap({})
+    }
+  }, [appointments, selectedDateStr])
+
+  useEffect(() => {
+    loadLembretes()
+  }, [loadLembretes])
+
+  // Resumo de confirmações do dia (visão Dia).
+  const dayLembreteStats = useMemo(() => {
+    const dayApps = appointments.filter((a) => a.date === selectedDateStr)
+    let confirmados = 0
+    let pendentes = 0
+    let cancelados = 0
+    for (const a of dayApps) {
+      const l = lembretesMap[a.id]
+      if (!l) continue
+      if (l.status_confirmacao === 'confirmado') confirmados++
+      else if (l.status_confirmacao === 'cancelado') cancelados++
+      else pendentes++
+    }
+    return { total: confirmados + pendentes + cancelados, confirmados, pendentes, cancelados }
+  }, [appointments, selectedDateStr, lembretesMap])
 
   // Tratar estado vindo de navegação externa (ex.: clicar em "Agendar Retorno" no prontuário).
   // Em vez de abrir o modal imediatamente, guardamos os dados do paciente e
@@ -743,6 +865,16 @@ export default function Agenda() {
                 {partialBlocksOf(selectedDateStr).length} bloqueio(s) parcial(is)
               </Badge>
             )}
+            {viewMode === 'dia' && dayLembreteStats.total > 0 && (
+              <Badge
+                variant="outline"
+                className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[11px]"
+              >
+                <MessageCircle className="w-3 h-3 mr-1" />
+                {dayLembreteStats.confirmados} confirmado(s), {dayLembreteStats.pendentes}{' '}
+                pendente(s)
+              </Badge>
+            )}
           </div>
           <p className="text-xs text-slate-500 mt-1 capitalize">{periodLabel}</p>
         </div>
@@ -1028,6 +1160,7 @@ export default function Agenda() {
                                   <StatusBadge status={app.status} />
                                   <PlanBadge plan={plan} />
                                   <ReceptionBadge reception={app.reception} />
+                                  <LembreteStatusBadge lembrete={lembretesMap[app.id]} />
                                 </div>
                                 <p className="text-[11px] text-slate-600 mt-0.5">
                                   {getProceduresLabel(app)} • {app.duration} min •{' '}
