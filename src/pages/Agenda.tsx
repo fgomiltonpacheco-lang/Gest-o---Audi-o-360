@@ -1522,6 +1522,7 @@ export default function Agenda() {
         initialDate={modalInitialDate}
         initialTime={modalInitialTime}
         allowEncaixe={allowEncaixe && !appointmentToEdit}
+        isEncaixe={allowEncaixe && !appointmentToEdit}
         onSave={handleSaveAppointment}
       />
 

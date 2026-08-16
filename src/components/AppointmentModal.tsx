@@ -51,6 +51,7 @@ interface AppointmentModalProps {
   initialPatientId?: string
   initialPatientName?: string
   allowEncaixe?: boolean
+  isEncaixe?: boolean
   onSave: (appData: any, options?: { ignoreConflict?: boolean }) => boolean
 }
 

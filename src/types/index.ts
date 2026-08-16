@@ -138,6 +138,8 @@ export interface Appointment {
   planType?: PatientPlanType
   /** Estado de recepção: "" (não chegou), "presente" (na recepção), "atendendo" (em atendimento). */
   reception?: string
+  /** Marca o agendamento como encaixe (paciente inserido em horário ocupado). */
+  isEncaixe?: boolean
   /**
    * Lista de procedimentos efetivamente realizados no atendimento. Pode ter
    * múltiplos itens quando o profissional acrescenta procedimentos durante o

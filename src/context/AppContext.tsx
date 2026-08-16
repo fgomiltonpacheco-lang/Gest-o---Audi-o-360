@@ -143,6 +143,7 @@ const mapAppointment = (r: any): Appointment => {
     notes: r.notes || '',
     planType,
     reception: r.reception || '',
+    isEncaixe: r.isEncaixe === true,
     proceduresList,
     createdAt: toDateStr(r.created),
   }
