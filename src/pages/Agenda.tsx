@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import {
   Calendar as CalendarIcon,
@@ -246,6 +246,7 @@ function ReceptionDot({ reception }: { reception?: string }) {
 export default function Agenda() {
   const { appointments, addAppointment, updateAppointment, deleteAppointment } = useApp()
   const navigate = useNavigate()
+  const location = useLocation()
   const { print } = usePrint()
 
   const [viewMode, setViewMode] = useState<ViewMode>('dia')
@@ -260,6 +261,8 @@ export default function Agenda() {
   const [appointmentToEdit, setAppointmentToEdit] = useState<Appointment | null>(null)
   const [modalInitialDate, setModalInitialDate] = useState<string>('')
   const [modalInitialTime, setModalInitialTime] = useState<string>('09:00')
+  const [modalInitialPatientId, setModalInitialPatientId] = useState<string>('')
+  const [modalInitialPatientName, setModalInitialPatientName] = useState<string>('')
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [appointmentToDelete, setAppointmentToDelete] = useState<Appointment | null>(null)
@@ -331,6 +334,25 @@ export default function Agenda() {
     loadConfig()
     loadBlockedDays()
   }, [loadConfig, loadBlockedDays])
+
+  // Tratar estado vindo de navegação externa (ex.: clicar em "Agendar Retorno" no prontuário)
+  useEffect(() => {
+    if (location.state && (location.state as any).openModal) {
+      const state = location.state as {
+        openModal: boolean
+        patientId?: string
+        patientName?: string
+      }
+      setAppointmentToEdit(null)
+      setModalInitialDate(new Date().toISOString().split('T')[0])
+      setModalInitialTime('09:00')
+      setModalInitialPatientId(state.patientId || '')
+      setModalInitialPatientName(state.patientName || '')
+      setModalOpen(true)
+      // Limpar o estado do history para não reabrir o modal em re-render ou navegações
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state])
 
   // Helpers de bloqueio
   // Bloqueios totais (dia inteiro) da data.
@@ -729,6 +751,8 @@ export default function Agenda() {
               setAppointmentToEdit(null)
               setModalInitialDate(selectedDateStr)
               setModalInitialTime('09:00')
+              setModalInitialPatientId('')
+              setModalInitialPatientName('')
               setModalOpen(true)
             }}
             className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
@@ -936,6 +960,8 @@ export default function Agenda() {
                                 setAppointmentToEdit(null)
                                 setModalInitialDate(selectedDateStr)
                                 setModalInitialTime(time)
+                                setModalInitialPatientId('')
+                                setModalInitialPatientName('')
                                 setModalOpen(true)
                               }}
                               className="text-[11px] text-amber-700 font-semibold flex items-center gap-1 hover:underline py-1"
@@ -954,6 +980,8 @@ export default function Agenda() {
                               setAppointmentToEdit(null)
                               setModalInitialDate(selectedDateStr)
                               setModalInitialTime(time)
+                              setModalInitialPatientId('')
+                              setModalInitialPatientName('')
                               setModalOpen(true)
                             }}
                             className="opacity-0 group-hover:opacity-100 text-[11px] text-teal-600 font-semibold flex items-center gap-1 hover:underline py-1"
@@ -1203,6 +1231,8 @@ export default function Agenda() {
                         setAppointmentToEdit(null)
                         setModalInitialDate(dStr)
                         setModalInitialTime('09:00')
+                        setModalInitialPatientId('')
+                        setModalInitialPatientName('')
                         setModalOpen(true)
                       }}
                       className="w-full text-[11px] text-teal-600 hover:bg-teal-50 h-7 rounded-lg mt-2 font-semibold"
@@ -1511,10 +1541,18 @@ export default function Agenda() {
       {/* Modal de Agendamento */}
       <AppointmentModal
         open={modalOpen}
-        onOpenChange={setModalOpen}
+        onOpenChange={(open) => {
+          setModalOpen(open)
+          if (!open) {
+            setModalInitialPatientId('')
+            setModalInitialPatientName('')
+          }
+        }}
         appointmentToEdit={appointmentToEdit}
         initialDate={modalInitialDate}
         initialTime={modalInitialTime}
+        initialPatientId={modalInitialPatientId}
+        initialPatientName={modalInitialPatientName}
         allowEncaixe={allowEncaixe && !appointmentToEdit}
         isEncaixe={allowEncaixe && !appointmentToEdit}
         onSave={handleSaveAppointment}

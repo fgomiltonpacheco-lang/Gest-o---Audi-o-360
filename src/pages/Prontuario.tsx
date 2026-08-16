@@ -318,11 +318,19 @@ export default function Prontuario() {
               Voltar
             </Button>
             <Button
-              onClick={() => setAppointmentModalOpen(true)}
+              onClick={() =>
+                navigate('/agenda', {
+                  state: {
+                    openModal: true,
+                    patientId: patient.id,
+                    patientName: patient.name,
+                  },
+                })
+              }
               className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
             >
               <Calendar className="w-4 h-4" />
-              Agendar Atendimento
+              Agendar Retorno
             </Button>
             <Button
               variant="outline"
