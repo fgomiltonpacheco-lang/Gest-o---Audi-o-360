@@ -1,17 +1,10 @@
 import React, { useMemo, useState } from 'react'
 import { ShieldCheck, AlertTriangle, ShieldX, Shield, MessageCircle } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
-import { formatCurrency, formatDate } from '@/lib/formatters'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { formatDate } from '@/lib/formatters'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -19,7 +12,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ReportHeader, SummaryCard, EmptyState, downloadCSV } from './shared'
+import {
+  ReportHeader,
+  SummaryCard,
+  SummaryCardSkeleton,
+  DateRangeFilter,
+  EmptyState,
+  ReportTable,
+  type Period,
+  ymd,
+  exportToCSVGeneric,
+} from './shared'
 
 type WStatus = 'valida' | 'vencendo' | 'vencida'
 type Range = '30' | '60' | '90' | 'all'
@@ -33,46 +36,79 @@ const statusBadge: Record<WStatus, { label: string; cls: string }> = {
   vencida: { label: 'Vencida', cls: 'bg-red-50 text-red-700 border-red-200' },
 }
 
+type Row = {
+  id: string
+  paciente: string
+  pacienteId: string
+  aparelho: string
+  modelo: string
+  dataVenda: string
+  inicioGarantia: string
+  fimGarantia: string
+  dias: number
+  status: WStatus
+  phone: string
+}
+
 export default function RelatorioGarantias() {
-  const { hearingAids, patients } = useApp()
+  const { hearingAids, patients, dataLoading } = useApp()
   const [range, setRange] = useState<Range>('30')
   const [statusFilter, setStatusFilter] = useState<'all' | WStatus>('all')
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const today = useMemo(() => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    return d
+  }, [])
 
-  // Telefone do paciente (lookup) — HearingAid não carrega phone
+  // Período derivado do preset de vencimento (para o DateRangeFilter). Quando
+  // "all", cobre um horizonte amplo a partir de hoje.
+  const period: Period = useMemo(() => {
+    if (range === 'all') {
+      const from = new Date(today)
+      from.setDate(from.getDate() - 365 * 3) // vencidas nos últimos 3 anos
+      return { from: ymd(from), to: ymd(new Date(today.getTime() + 365 * 2 * 86400000)) }
+    }
+    const n = Number(range)
+    const to = new Date(today)
+    to.setDate(to.getDate() + n)
+    return { from: ymd(today), to: ymd(to) }
+  }, [range, today])
+
+  // Telefone do paciente (lookup) — HearingAid não carrega phone.
   const phoneByPatient = useMemo(() => {
     const m: Record<string, string> = {}
-    patients.forEach((p) => (m[p.id] = p.phone || ''))
+    patients.forEach((p) => (m[p.id] = p.phone || p.mobile || ''))
     return m
   }, [patients])
 
-  const rows = useMemo(() => {
+  const rows: Row[] = useMemo(() => {
     let list = hearingAids
       .filter((h) => h.warrantyEndDate && (h.status === 'Vendido' || h.status === 'Em uso'))
       .map((h) => {
         const end = new Date(h.warrantyEndDate + 'T00:00:00')
         const dias = Math.ceil((end.getTime() - today.getTime()) / 86400000)
-        // Início da garantia derivado do fim - meses (fallback: data da venda)
         const inicio =
-          h.warrantyEndDate && h.warrantyMonths
-            ? new Date(end.getTime() - h.warrantyMonths * 30 * 86400000).toISOString().split('T')[0]
+          h.warrantyMonths && h.warrantyEndDate
+            ? ymd(new Date(end.getTime() - h.warrantyMonths * 30 * 86400000))
             : h.saleDate || ''
         return {
           id: h.id,
           paciente: h.patientName || '—',
-          aparelho: `${h.brand} ${h.model}`,
+          pacienteId: h.patientId || '',
+          aparelho: `${h.brand} ${h.model}`.trim(),
+          modelo: h.model || '',
           dataVenda: h.saleDate || '',
           inicioGarantia: inicio,
-          fimGarantia: h.warrantyEndDate,
+          fimGarantia: h.warrantyEndDate || '',
           dias,
           status: statusOf(dias),
           phone: (h.patientId && phoneByPatient[h.patientId]) || '',
         }
       })
 
-    // Filtro de período (próximos N dias): mostra vencendo dentro do horizonte + vencidas
+    // Filtro de período (horizonte): mostra garantias que vencem dentro da
+    // janela selecionada + já vencidas.
     if (range !== 'all') {
       const n = Number(range)
       list = list.filter((r) => r.dias <= n)
@@ -86,6 +122,7 @@ export default function RelatorioGarantias() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hearingAids, range, statusFilter, today, phoneByPatient])
 
+  // Cards: totais sobre o universo de aparelhos com garantia (não filtrados por horizonte).
   const totalComGarantia = hearingAids.filter(
     (h) => h.warrantyEndDate && (h.status === 'Vendido' || h.status === 'Em uso'),
   ).length
@@ -95,30 +132,37 @@ export default function RelatorioGarantias() {
 
   const handleExport = () => {
     if (!rows.length) return
-    downloadCSV(
+    exportToCSVGeneric(
       'relatorio-garantias',
-      rows.map((r) => ({
-        Paciente: r.paciente,
-        Aparelho: r.aparelho,
-        'Data da Venda': r.dataVenda,
-        'Início Garantia': r.inicioGarantia,
-        'Fim Garantia': r.fimGarantia,
-        Status: statusBadge[r.status].label,
-        'Dias Restantes': r.dias,
-      })),
+      [
+        { header: 'Paciente', accessor: (r) => r.paciente },
+        { header: 'Aparelho', accessor: (r) => r.aparelho },
+        { header: 'Data da Compra', accessor: (r) => r.dataVenda },
+        { header: 'Início Garantia', accessor: (r) => r.inicioGarantia },
+        { header: 'Fim Garantia', accessor: (r) => r.fimGarantia },
+        { header: 'Dias Restantes', accessor: (r) => r.dias },
+        { header: 'Status', accessor: (r) => statusBadge[r.status].label },
+      ],
+      rows,
     )
   }
 
-  const notifyWhatsApp = (r: (typeof rows)[number]) => {
+  const notifyWhatsApp = (r: Row) => {
     const phone = (r.phone || '').replace(/\D/g, '')
-    const msg = `Olá ${r.paciente}! Este é um lembrete da Audição360: a garantia do seu aparelho auditivo ${r.aparelho} ${
-      r.dias < 0 ? 'venceu' : `vence em ${r.dias} dia(s) (${formatDate(r.fimGarantia)})`
-    }. Entre em contato para renovarmos ou verificarmos o seu equipamento.`
+    const msg = `Olá ${r.paciente}, sua garantia do aparelho ${r.modelo} vence em ${r.dias} dias. Entre em contato com a Audição360.`
     const url = phone
       ? `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`
       : `https://wa.me/?text=${encodeURIComponent(msg)}`
     window.open(url, '_blank')
   }
+
+  const hasFilters = statusFilter !== 'all' || range !== '30'
+  const clearFilters = () => {
+    setRange('30')
+    setStatusFilter('all')
+  }
+
+  const loading = dataLoading
 
   return (
     <div className="space-y-5 animate-in fade-in-50 duration-200">
@@ -131,124 +175,161 @@ export default function RelatorioGarantias() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <SummaryCard
-          label="Total c/ Garantia"
-          value={String(totalComGarantia)}
-          icon={ShieldCheck}
-          tone="blue"
-        />
-        <SummaryCard
-          label="Vencendo em 30 dias"
-          value={String(vencendo30)}
-          icon={AlertTriangle}
-          tone="amber"
-        />
-        <SummaryCard label="Vencidas" value={String(vencidas)} icon={ShieldX} tone="red" />
-        <SummaryCard label="Válidas" value={String(validas)} icon={ShieldCheck} tone="green" />
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => <SummaryCardSkeleton key={i} />)
+        ) : (
+          <>
+            <SummaryCard
+              label="Total c/ Garantia"
+              value={String(totalComGarantia)}
+              icon={ShieldCheck}
+              tone="blue"
+            />
+            <SummaryCard
+              label="Vencendo em 30 dias"
+              value={String(vencendo30)}
+              icon={AlertTriangle}
+              tone="amber"
+            />
+            <SummaryCard label="Vencidas" value={String(vencidas)} icon={ShieldX} tone="red" />
+            <SummaryCard label="Válidas" value={String(validas)} icon={ShieldCheck} tone="green" />
+          </>
+        )}
       </div>
 
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3 items-end">
-        <div>
-          <label className="text-[11px] text-slate-500 mb-1 block">Período</label>
-          <Select value={range} onValueChange={(v) => setRange(v as Range)}>
-            <SelectTrigger className="w-[180px] h-9 rounded-lg text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="30">Próximos 30 dias</SelectItem>
-              <SelectItem value="60">Próximos 60 dias</SelectItem>
-              <SelectItem value="90">Próximos 90 dias</SelectItem>
-              <SelectItem value="all">Todas as garantias</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <label className="text-[11px] text-slate-500 mb-1 block">Status</label>
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-            <SelectTrigger className="w-[180px] h-9 rounded-lg text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="valida">Válida</SelectItem>
-              <SelectItem value="vencendo">Vencendo</SelectItem>
-              <SelectItem value="vencida">Vencida</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      <DateRangeFilter
+        period={period}
+        onChange={() => {
+          /* período derivado do preset; mantido apenas para exibição */
+        }}
+        hasFilters={hasFilters}
+        onClear={clearFilters}
+        extra={
+          <div className="flex gap-2">
+            <div>
+              <Label className="text-[11px] text-slate-500 mb-1 block">Horizonte</Label>
+              <Select value={range} onValueChange={(v) => setRange(v as Range)}>
+                <SelectTrigger className="w-[170px] h-9 rounded-lg text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">Próximos 30 dias</SelectItem>
+                  <SelectItem value="60">Próximos 60 dias</SelectItem>
+                  <SelectItem value="90">Próximos 90 dias</SelectItem>
+                  <SelectItem value="all">Todas as garantias</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-[11px] text-slate-500 mb-1 block">Status</Label>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                <SelectTrigger className="w-[150px] h-9 rounded-lg text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="valida">Válida</SelectItem>
+                  <SelectItem value="vencendo">Vencendo</SelectItem>
+                  <SelectItem value="vencida">Vencida</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        }
+      />
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow>
-                <TableHead className="text-xs uppercase">Paciente</TableHead>
-                <TableHead className="text-xs uppercase">Aparelho</TableHead>
-                <TableHead className="text-xs uppercase">Data da Venda</TableHead>
-                <TableHead className="text-xs uppercase">Início Garantia</TableHead>
-                <TableHead className="text-xs uppercase">Fim Garantia</TableHead>
-                <TableHead className="text-xs uppercase">Status</TableHead>
-                <TableHead className="text-xs uppercase text-right">Dias Restantes</TableHead>
-                <TableHead className="text-xs uppercase text-center">Ação</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8}>
-                    <EmptyState message="Nenhuma garantia no filtro selecionado." icon={Shield} />
-                  </TableCell>
-                </TableRow>
+      <ReportTable
+        loading={loading}
+        emptyIcon={Shield}
+        emptyMessage="Nenhum dado encontrado no período selecionado."
+        rows={rows}
+        columns={[
+          {
+            header: 'Paciente',
+            render: (r) =>
+              r.pacienteId ? (
+                <a
+                  href={`/pacientes/${r.pacienteId}/prontuario`}
+                  className="font-semibold text-slate-800 hover:text-blue-700 hover:underline"
+                >
+                  {r.paciente}
+                </a>
               ) : (
-                rows.map((r) => (
-                  <TableRow key={r.id} className="hover:bg-slate-50/60">
-                    <TableCell className="font-semibold text-slate-800">{r.paciente}</TableCell>
-                    <TableCell className="text-slate-600">{r.aparelho}</TableCell>
-                    <TableCell className="text-slate-600 whitespace-nowrap">
-                      {r.dataVenda ? formatDate(r.dataVenda) : '—'}
-                    </TableCell>
-                    <TableCell className="text-slate-600 whitespace-nowrap">
-                      {r.inicioGarantia ? formatDate(r.inicioGarantia) : '—'}
-                    </TableCell>
-                    <TableCell className="text-slate-600 whitespace-nowrap">
-                      {formatDate(r.fimGarantia)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={statusBadge[r.status].cls}>
-                        {statusBadge[r.status].label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      <span
-                        className={
-                          r.dias < 0
-                            ? 'text-red-600'
-                            : r.dias <= 30
-                              ? 'text-amber-600'
-                              : 'text-green-600'
-                        }
-                      >
-                        {r.dias}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 text-xs rounded-lg border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                        onClick={() => notifyWhatsApp(r)}
-                      >
-                        <MessageCircle className="w-3.5 h-3.5 mr-1" /> Notificar
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+                <span className="font-semibold text-slate-800">{r.paciente}</span>
+              ),
+            csv: (r) => r.paciente,
+          },
+          {
+            header: 'Aparelho',
+            render: (r) => <span className="text-slate-600">{r.aparelho}</span>,
+            csv: (r) => r.aparelho,
+          },
+          {
+            header: 'Data da Compra',
+            render: (r) => (
+              <span className="text-slate-600 whitespace-nowrap">
+                {r.dataVenda ? formatDate(r.dataVenda) : '—'}
+              </span>
+            ),
+            csv: (r) => r.dataVenda,
+          },
+          {
+            header: 'Início Garantia',
+            render: (r) => (
+              <span className="text-slate-600 whitespace-nowrap">
+                {r.inicioGarantia ? formatDate(r.inicioGarantia) : '—'}
+              </span>
+            ),
+            csv: (r) => r.inicioGarantia,
+          },
+          {
+            header: 'Fim Garantia',
+            render: (r) => (
+              <span className="text-slate-600 whitespace-nowrap">{formatDate(r.fimGarantia)}</span>
+            ),
+            csv: (r) => r.fimGarantia,
+          },
+          {
+            header: 'Dias Restantes',
+            className: 'text-right',
+            render: (r) => (
+              <span
+                className={`block text-right font-semibold ${
+                  r.dias < 0 ? 'text-red-600' : r.dias <= 30 ? 'text-amber-600' : 'text-green-600'
+                }`}
+              >
+                {r.dias}
+              </span>
+            ),
+            csv: (r) => r.dias,
+          },
+          {
+            header: 'Status',
+            render: (r) => (
+              <Badge variant="outline" className={statusBadge[r.status].cls}>
+                {statusBadge[r.status].label}
+              </Badge>
+            ),
+            csv: (r) => statusBadge[r.status].label,
+          },
+          {
+            header: 'Ação',
+            className: 'text-center',
+            render: (r) => (
+              <div className="flex justify-center">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs rounded-lg border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                  onClick={() => notifyWhatsApp(r)}
+                >
+                  <MessageCircle className="w-3.5 h-3.5 mr-1" /> WhatsApp
+                </Button>
+              </div>
+            ),
+          },
+        ]}
+      />
     </div>
   )
 }
