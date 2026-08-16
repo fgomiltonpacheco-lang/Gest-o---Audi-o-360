@@ -55,7 +55,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { AppointmentModal } from '@/components/AppointmentModal'
-import { AttendanceModal } from '@/components/AttendanceModal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { usePrint } from '@/components/print/PrintProvider'
 import { AgendaPrint } from '@/components/print/PrintDocuments'
@@ -264,10 +263,6 @@ export default function Agenda() {
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [appointmentToDelete, setAppointmentToDelete] = useState<Appointment | null>(null)
-
-  // Modal de atendimento (Atender)
-  const [attendanceOpen, setAttendanceOpen] = useState(false)
-  const [attendanceAppointment, setAttendanceAppointment] = useState<Appointment | null>(null)
 
   // Configuração da clínica (horários de funcionamento)
   const [operatingHours, setOperatingHours] = useState<OperatingHours>(DEFAULT_OPERATING_HOURS)
@@ -528,13 +523,12 @@ export default function Agenda() {
     }
   }
 
-  // Ação: abrir o modal de atendimento para acrescentar/remover
-  // procedimentos e finalizar. Substitui o fluxo antigo que navegava direto
-  // para o prontuário. Mantém compatibilidade: o botão "Abrir prontuário"
-  // dentro do modal faz a navegação para preenchimento clínico.
+  // Ação: iniciar atendimento — navega DIRETO para o prontuário do paciente,
+  // sem nenhuma etapa intermediária (modal de procedimentos removido).
   const handleFulfill = (app: Appointment) => {
-    setAttendanceAppointment(app)
-    setAttendanceOpen(true)
+    if (app.patientId) {
+      navigate(`/pacientes/${app.patientId}/prontuario`)
+    }
   }
 
   // Marcar chegada do paciente na recepção
@@ -1524,19 +1518,6 @@ export default function Agenda() {
         allowEncaixe={allowEncaixe && !appointmentToEdit}
         isEncaixe={allowEncaixe && !appointmentToEdit}
         onSave={handleSaveAppointment}
-      />
-
-      {/* Modal de Atendimento (adicionar/remover procedimentos e finalizar) */}
-      <AttendanceModal
-        open={attendanceOpen}
-        onOpenChange={setAttendanceOpen}
-        appointment={attendanceAppointment}
-        onFinish={() => {
-          setAttendanceAppointment(null)
-        }}
-        onOpenProntuario={(patientId) => {
-          navigate(`/pacientes/${patientId}/prontuario`)
-        }}
       />
 
       {/* Confirmação de Exclusão */}

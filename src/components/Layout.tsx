@@ -153,8 +153,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      {/* SIDEBAR DESKTOP (Fixa 260px) */}
-      <aside className="hidden lg:flex flex-col fixed top-0 left-0 bottom-0 w-[260px] bg-navy-700 text-white z-40 border-r border-navy-900/40 shadow-xl select-none">
+      {/* SIDEBAR DESKTOP (Fixa 260px) — `transform-none` anula qualquer acidente
+          de stacking que desfaria o `fixed` e faria a sidebar rolar com a página. */}
+      <aside className="hidden lg:flex flex-col fixed top-0 left-0 bottom-0 w-[260px] bg-navy-700 text-white z-40 border-r border-navy-900/40 shadow-xl select-none transform-none">
         {/* Topo / Logo */}
         <div className="h-20 px-4 flex items-center justify-center border-b border-white/10 bg-white overflow-hidden">
           <Link to="/" className="flex items-center justify-center w-full h-full py-2">
@@ -414,7 +415,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </header>
 
-      {/* ÁREA DE CONTEÚDO PRINCIPAL (Offset Desktop 260px e Topo 64px) */}
+      {/* ÁREA DE CONTEÚDO PRINCIPAL (Offset Desktop 260px e Topo 64px).
+          A sidebar e o header são fixed, então apenas esta área rola. */}
       <main className="flex-1 lg:ml-[260px] pt-20 sm:pt-24 p-4 sm:p-6 lg:px-8 lg:pb-8 min-h-screen">
         <div className="max-w-7xl mx-auto space-y-6">{children}</div>
       </main>
