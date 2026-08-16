@@ -1,29 +1,28 @@
 import React from 'react'
-import { AudiogramMap } from '@/types'
+import { AudiogramMap, AudiogramSymbol } from '@/types'
 
 /**
- * Componente de Audiograma Tonal em SVG (padrão clínico).
+ * AudiogramChart — componente SVG de audiograma tonal (padrão ASHA).
  *
- * Cores:
- *  - OD (Orelha Direita): VERMELHO (#dc2626)
- *  - OE (Orelha Esquerda): AZUL (#2563eb)
+ * Orelha Direita (OD): VERMELHO (#dc2626)
+ * Orelha Esquerda (OE): AZUL (#2563eb)
  *
  * Símbolos:
  *  - Via Aérea OD: ○ (normal) / △ (mascarado)
  *  - Via Aérea OE: ✕ (normal) / □ (mascarado)
  *  - Via Óssea OD: < (normal) / [ (mascarado)
  *  - Via Óssea OE: > (normal) / ] (mascarado)
- *  - Ausente: símbolo + seta para baixo
+ *  - Ausente (no_response): símbolo + seta para baixo
  *
- * Linhas: sólidas para via aérea, tracejadas para via óssea.
- * Zona verde clara de 0 a 25 dB (faixa de normalidade).
+ * Linhas: sólidas (via aérea) e tracejadas (via óssea).
+ * Faixa verde de 0 a 25 dB (audição normal).
  */
 
-export const COLOR_OD = '#dc2626' // Vermelho para OD
-export const COLOR_OE = '#2563eb' // Azul para OE
+export const COLOR_OD = '#dc2626' // Vermelho
+export const COLOR_OE = '#2563eb' // Azul
 
-/** Frequências exibidas no eixo X (escala logarítmica). */
-const CHART_FREQS = [
+/** Frequências do eixo X (escala logarítmica). */
+export const CHART_FREQS = [
   '125',
   '250',
   '500',
@@ -37,14 +36,6 @@ const CHART_FREQS = [
   '8000',
 ] as const
 
-// Dimensões do SVG
-const W = 440
-const H = 400
-const PAD_L = 46
-const PAD_R = 18
-const PAD_T = 22
-const PAD_B = 38
-
 const DB_MIN = -10
 const DB_MAX = 120
 const DB_STEP = 10
@@ -53,28 +44,12 @@ for (let v = DB_MIN; v <= DB_MAX; v += DB_STEP) DB_VALUES.push(v)
 
 const freqLog = (f: string) => Math.log2(Number(f))
 
-const xForFreq = (freq: string): number => {
-  const logs = CHART_FREQS.map((f) => freqLog(f))
-  const minF = logs[0]
-  const maxF = logs[logs.length - 1]
-  const span = maxF - minF || 1
-  const fl = freqLog(freq)
-  const norm = (fl - minF) / span
-  return PAD_L + norm * (W - PAD_L - PAD_R)
-}
-
-const yForDb = (db: number): number => {
-  const innerH = H - PAD_T - PAD_B
-  const norm = (db - DB_MIN) / (DB_MAX - DB_MIN)
-  return PAD_T + norm * innerH
-}
-
-/* ---------- Símbolos ---------- */
+/* ---------- Símbolos SVG ---------- */
 const arrowDown = (cx: number, cy: number, color: string) => (
   <g key={`arr-${cx}-${cy}-${color}`}>
-    <line x1={cx} y1={cy + 6} x2={cx} y2={cy + 17} stroke={color} strokeWidth={1.8} />
+    <line x1={cx} y1={cy + 6} x2={cx} y2={cy + 16} stroke={color} strokeWidth={1.8} />
     <polyline
-      points={`${cx - 3.5},${cy + 12} ${cx},${cy + 18} ${cx + 3.5},${cy + 12}`}
+      points={`${cx - 3.5},${cy + 11} ${cx},${cy + 17} ${cx + 3.5},${cy + 11}`}
       fill="none"
       stroke={color}
       strokeWidth={1.8}
@@ -82,7 +57,7 @@ const arrowDown = (cx: number, cy: number, color: string) => (
   </g>
 )
 
-/* Via Aérea OD (Vermelho) — ○ / △ */
+/* Via Aérea OD — ○ / △ */
 const symbolAirOdNormal = (cx: number, cy: number, color: string, noResp: boolean, key: string) => (
   <g key={key}>
     <circle cx={cx} cy={cy} r={5.5} fill="none" stroke={color} strokeWidth={2} />
@@ -101,7 +76,7 @@ const symbolAirOdMasked = (cx: number, cy: number, color: string, noResp: boolea
   </g>
 )
 
-/* Via Aérea OE (Azul) — ✕ / □ */
+/* Via Aérea OE — ✕ / □ */
 const symbolAirOeNormal = (cx: number, cy: number, color: string, noResp: boolean, key: string) => (
   <g key={key}>
     <line x1={cx - 5} y1={cy - 5} x2={cx + 5} y2={cy + 5} stroke={color} strokeWidth={2} />
@@ -124,7 +99,7 @@ const symbolAirOeMasked = (cx: number, cy: number, color: string, noResp: boolea
   </g>
 )
 
-/* Via Óssea OD (Vermelho) — < / [ */
+/* Via Óssea OD — < / [ */
 const symbolBoneOdNormal = (
   cx: number,
   cy: number,
@@ -160,7 +135,7 @@ const symbolBoneOdMasked = (
   </g>
 )
 
-/* Via Óssea OE (Azul) — > / ] */
+/* Via Óssea OE — > / ] */
 const symbolBoneOeNormal = (
   cx: number,
   cy: number,
@@ -196,18 +171,7 @@ const symbolBoneOeMasked = (
   </g>
 )
 
-/* Símbolo LDL: U (limiar de desconforto) */
-const symbolLdl = (cx: number, cy: number, color: string, key: string) => (
-  <g key={key}>
-    <path
-      d={`M ${cx - 4} ${cy - 4} L ${cx - 4} ${cy + 3} L ${cx + 4} ${cy + 3} L ${cx + 4} ${cy - 4}`}
-      fill="none"
-      stroke={color}
-      strokeWidth={2}
-    />
-  </g>
-)
-
+/* ---------- Single-ear chart ---------- */
 interface SingleEarChartProps {
   side: 'OD' | 'OE'
   air: AudiogramMap
@@ -215,9 +179,9 @@ interface SingleEarChartProps {
   ldl?: AudiogramMap
   title?: string
   width?: number | string
-  /** Modo compacto: reduz dimensões/legendas internas (usado na impressão). */
+  /** Modo compacto: reduz dimensões (impressão). */
   compact?: boolean
-  /** Oculta a legenda interna de símbolos. */
+  /** Oculta a legenda interna. */
   hideLegend?: boolean
 }
 
@@ -233,9 +197,8 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
 }) => {
   const color = side === 'OD' ? COLOR_OD : COLOR_OE
 
-  // Dimensões adaptáveis quando em modo compacto (impressão)
-  const W = compact ? 360 : 440
-  const H = compact ? 300 : 400
+  const W = compact ? 360 : 460
+  const H = compact ? 300 : 420
   const PAD_L = compact ? 30 : 46
   const PAD_R = compact ? 12 : 18
   const PAD_T = compact ? 12 : 22
@@ -246,8 +209,7 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
     const minF = logs[0]
     const maxF = logs[logs.length - 1]
     const span = maxF - minF || 1
-    const fl = freqLog(freq)
-    const norm = (fl - minF) / span
+    const norm = (freqLog(freq) - minF) / span
     return PAD_L + norm * (W - PAD_L - PAD_R)
   }
 
@@ -267,10 +229,11 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
   const bonePts = buildPoints(bone, boneFreqs)
   const ldlPts = ldl ? buildPoints(ldl, CHART_FREQS) : []
 
-  const isNoResp = (sym: string) => sym === 'no_response' || sym === 'masked_no_response'
-  const isMasked = (sym: string) => sym === 'masked' || sym === 'masked_no_response'
+  const isNoResp = (sym: AudiogramSymbol | undefined) =>
+    sym === 'no_response' || sym === 'masked_no_response'
+  const isMasked = (sym: AudiogramSymbol | undefined) =>
+    sym === 'masked' || sym === 'masked_no_response'
 
-  // Linha contínua (aérea) / tracejada (óssea) conectando pontos não-ausentes
   const buildPath = (pts: typeof airPts): string => {
     const valid = pts.filter((p) => !isNoResp(p.point.symbol))
     if (valid.length < 2) return ''
@@ -344,7 +307,7 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
           )
         })}
 
-        {/* Grade vertical (Hz) + labels eixo X */}
+        {/* Grade vertical (Hz) + labels */}
         {CHART_FREQS.map((f) => {
           const x = xForFreq(f)
           return (
@@ -363,7 +326,7 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
           )
         })}
 
-        {/* Borda do gráfico */}
+        {/* Borda */}
         <rect
           x={PAD_L}
           y={PAD_T}
@@ -376,7 +339,6 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
 
         {/* Linha Aérea (sólida) */}
         {airPath && <path d={airPath} fill="none" stroke={color} strokeWidth={1.8} />}
-
         {/* Linha Óssea (tracejada) */}
         {bonePath && (
           <path d={bonePath} fill="none" stroke={color} strokeWidth={1.8} strokeDasharray="4 3" />
@@ -389,11 +351,10 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
           const nr = isNoResp(p.point.symbol)
           const mk = isMasked(p.point.symbol)
           const key = `air-${side}-${i}`
-          if (side === 'OD') {
+          if (side === 'OD')
             return mk
               ? symbolAirOdMasked(cx, cy, color, nr, key)
               : symbolAirOdNormal(cx, cy, color, nr, key)
-          }
           return mk
             ? symbolAirOeMasked(cx, cy, color, nr, key)
             : symbolAirOeNormal(cx, cy, color, nr, key)
@@ -406,21 +367,13 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
           const nr = isNoResp(p.point.symbol)
           const mk = isMasked(p.point.symbol)
           const key = `bone-${side}-${i}`
-          if (side === 'OD') {
+          if (side === 'OD')
             return mk
               ? symbolBoneOdMasked(cx, cy, color, nr, key)
               : symbolBoneOdNormal(cx, cy, color, nr, key)
-          }
           return mk
             ? symbolBoneOeMasked(cx, cy, color, nr, key)
             : symbolBoneOeNormal(cx, cy, color, nr, key)
-        })}
-
-        {/* Símbolos LDL */}
-        {ldlPts.map((p, i) => {
-          const cx = xForFreq(p.freq)
-          const cy = yForDb(p.point.db as number)
-          return symbolLdl(cx, cy, color, `ldl-${side}-${i}`)
         })}
 
         {/* Legenda interna */}
@@ -458,6 +411,7 @@ export const SingleEarAudiogramChart: React.FC<SingleEarChartProps> = ({
   )
 }
 
+/* ---------- Dual chart (OD + OE lado a lado) ---------- */
 interface DualAudiogramChartProps {
   airOD: AudiogramMap
   airOE: AudiogramMap
@@ -488,6 +442,7 @@ export const AudiogramChart: React.FC<DualAudiogramChartProps> = ({
   compact = false,
   hideLegend = false,
 }) => {
+  const fmtDb = (v: number | null | undefined) => (v === null || v === undefined ? '—' : `${v} dB`)
   return (
     <div
       className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full"
@@ -512,9 +467,7 @@ export const AudiogramChart: React.FC<DualAudiogramChartProps> = ({
             color: COLOR_OD,
           }}
         >
-          ORELHA DIREITA &nbsp;—&nbsp; SRT:{' '}
-          {srtOD === null || srtOD === undefined ? '—' : `${srtOD} dB`} &nbsp;|&nbsp; LDV:{' '}
-          {ldvOD === null || ldvOD === undefined ? '—' : `${ldvOD} dB`}
+          ORELHA DIREITA &nbsp;—&nbsp; SRT: {fmtDb(srtOD)} &nbsp;|&nbsp; LDV: {fmtDb(ldvOD)}
         </div>
       </div>
       <div className={compact ? '' : 'border border-blue-100 bg-blue-50/20 p-2 rounded-xl'}>
@@ -536,9 +489,7 @@ export const AudiogramChart: React.FC<DualAudiogramChartProps> = ({
             color: COLOR_OE,
           }}
         >
-          ORELHA ESQUERDA &nbsp;—&nbsp; SRT:{' '}
-          {srtOE === null || srtOE === undefined ? '—' : `${srtOE} dB`} &nbsp;|&nbsp; LDV:{' '}
-          {ldvOE === null || ldvOE === undefined ? '—' : `${ldvOE} dB`}
+          ORELHA ESQUERDA &nbsp;—&nbsp; SRT: {fmtDb(srtOE)} &nbsp;|&nbsp; LDV: {fmtDb(ldvOE)}
         </div>
       </div>
     </div>

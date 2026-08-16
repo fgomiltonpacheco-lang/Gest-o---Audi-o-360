@@ -243,6 +243,8 @@ export interface IprfVocalRow {
   intensidade: string
   monossilabos: string
   dissilabos: string
+  /** Níveis adicionais de intensidade (ex.: "100% a 45 dB, 76% a 95 dB"). */
+  niveis: string
 }
 
 export interface IprfVocalData {
@@ -302,6 +304,10 @@ export interface AudiometryExamFull {
   // Laudo clínico
   loss_degree: string
   loss_type: string
+  loss_configuration: string
+  /** Níveis adicionais de IPRF (texto livre), por orelha. */
+  iprf_levels_od: string
+  iprf_levels_oe: string
   report: string
   created: string
   updated: string
@@ -316,6 +322,7 @@ export const LOSS_DEGREE_OPTIONS = [
   'Profunda',
 ] as const
 export const LOSS_TYPE_OPTIONS = ['Condutiva', 'Neurossensorial', 'Mista'] as const
+export const LOSS_CONFIGURATION_OPTIONS = ['Plana', 'Ascendente', 'Descendente', 'Mista'] as const
 
 export function emptyAudiogramMap(freqs: readonly string[]): AudiogramMap {
   const m: AudiogramMap = {}
@@ -341,6 +348,7 @@ export function emptyIprfVocal(): IprfVocalData {
     intensidade: '',
     monossilabos: '',
     dissilabos: '',
+    niveis: '',
   })
   return { od: emptyRow(), oe: emptyRow() }
 }
@@ -393,6 +401,9 @@ export function emptyAudiometryExamFull(
     marital_status: '',
     loss_degree: '',
     loss_type: '',
+    loss_configuration: '',
+    iprf_levels_od: '',
+    iprf_levels_oe: '',
     report: '',
   }
 }

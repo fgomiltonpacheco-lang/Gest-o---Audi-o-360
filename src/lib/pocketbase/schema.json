@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T04:02:24.477Z",
+  "generatedAt": "2026-08-16T04:16:51.273Z",
   "collections": [
     {
       "name": "users",
@@ -2045,6 +2045,25 @@
         {
           "name": "iprf_vocal",
           "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "loss_configuration",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["", "Plana", "Ascendente", "Descendente", "Mista"]
+        },
+        {
+          "name": "iprf_levels_od",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "iprf_levels_oe",
+          "type": "text",
           "required": false,
           "system": false
         }

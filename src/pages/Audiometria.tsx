@@ -28,12 +28,14 @@ import {
   IprfVocalData,
   LOSS_DEGREE_OPTIONS,
   LOSS_TYPE_OPTIONS,
+  LOSS_CONFIGURATION_OPTIONS,
   emptyAudiogramMap,
   emptyIprfVocal,
   emptyAudiometryExamFull,
 } from '@/types'
 import { calculateAge, formatDate, maskCPF } from '@/lib/formatters'
 import { mediaTritonal, mediaQuadritonal } from '@/lib/audiogram'
+import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
 
 /* Frequências exibidas nas grades de entrada (sem 125 Hz). */
 const AIR_GRID_FREQS = ['250', '500', '750', '1000', '1500', '2000', '3000', '4000', '6000', '8000']
@@ -42,6 +44,11 @@ const BONE_GRID_FREQS = ['500', '1000', '2000', '3000', '4000']
 /* Audiometria usa como default o aparelho AD229b (modelo do PDF de referência). */
 const DEFAULT_AUDIOMETER = 'AD229b'
 const SPECIALIST_NAME = 'MILTON SOARES PACHECO'
+const SPECIALIST_CRFA = '3-11981-5'
+const CLINIC_ADDRESS = 'R. Sadoc Correa, 373 - St. Central, Araguaína - TO, 77803-060'
+const CLINIC_PHONE = '(63) 3421-2611'
+const REPORT_REFERENCE =
+  'Laudo audiológico baseado em Silman e Silverman (1997) adaptada de Carhart (1945) e Lloyd e Kaplan (1978); Jerger, Speaks e Trammell (1968).'
 
 /* ---------- Mappers ---------- */
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -63,12 +70,12 @@ function normalizeMap(raw: any, freqs: readonly string[]): AudiogramMap {
 }
 
 function normalizeIprfVocal(raw: any): IprfVocalData {
-  const emptyRow = () => ({ intensidade: '', monossilabos: '', dissilabos: '' })
   if (!raw || typeof raw !== 'object') return emptyIprfVocal()
   const norm = (r: any) => ({
     intensidade: r?.intensidade ?? '',
     monossilabos: r?.monossilabos ?? '',
     dissilabos: r?.dissilabos ?? '',
+    niveis: r?.niveis ?? '',
   })
   return { od: norm(raw.od), oe: norm(raw.oe) }
 }
@@ -117,6 +124,8 @@ function mapExam(r: any): AudiometryExamFull {
     iprf_od: numOr(r.iprf_od),
     iprf_oe: numOr(r.iprf_oe),
     iprf_vocal: normalizeIprfVocal(r.iprf_vocal),
+    iprf_levels_od: r.iprf_levels_od || '',
+    iprf_levels_oe: r.iprf_levels_oe || '',
     srt_od: numOr(r.srt_od),
     srt_oe: numOr(r.srt_oe),
     masking_air_od: numOr(r.masking_air_od),
@@ -128,6 +137,7 @@ function mapExam(r: any): AudiometryExamFull {
     marital_status: r.marital_status || '',
     loss_degree: r.loss_degree || '',
     loss_type: r.loss_type || '',
+    loss_configuration: r.loss_configuration || '',
     report: r.report || '',
     created: r.created || '',
     updated: r.updated || '',
@@ -176,7 +186,7 @@ function determineType(air: AudiogramMap, bone: AudiogramMap): string {
   return 'Neurossensorial'
 }
 
-/** Descreve a configuração dos limiares (ascendente, descendente, plana, etc.). */
+/** Descreve a configuração dos limiares (Plana, Ascendente, Descendente, Mista). */
 function describeConfiguration(air: AudiogramMap): string {
   const order = ['250', '500', '1000', '2000', '4000', '8000']
   const pts: number[] = []
@@ -185,13 +195,14 @@ function describeConfiguration(air: AudiogramMap): string {
     if (v !== null && v !== undefined) pts.push(v)
   })
   if (pts.length < 3) return ''
-  // Compara o limiar mais grave com o mais agudo
   const low = (pts[0] + pts[1]) / 2
   const high = (pts[pts.length - 1] + pts[pts.length - 2]) / 2
+  const mid = pts.length > 2 ? pts[Math.floor(pts.length / 2)] : (low + high) / 2
   const diff = high - low
-  if (Math.abs(diff) <= 10) return 'configuração plana'
-  if (diff > 10) return 'configuração descendente'
-  return 'configuração ascendente'
+  if (Math.abs(diff) <= 10) return 'Plana'
+  if (diff > 10 && Math.abs(mid - low) <= 15 && Math.abs(high - mid) <= 15) return 'Descendente'
+  if (diff < -10 && Math.abs(mid - low) <= 15 && Math.abs(low - mid) <= 15) return 'Ascendente'
+  return 'Mista'
 }
 
 function buildSuggestedReport(
@@ -219,15 +230,15 @@ function buildSuggestedReport(
       `perda auditiva do tipo ${type.toLowerCase()}`,
       `de grau ${degree.toLowerCase()}`,
     ]
-    if (config) parts.push(`e ${config}`)
+    if (config) parts.push(`com configuração ${config.toLowerCase()}`)
     lines.push(`À ${sideLabel}: ${parts.join(' ')}.`)
   }
 
   describeEar(airOD, boneOD, 'direita')
   describeEar(airOE, boneOE, 'esquerda')
 
-  lines.push('(Silman e Silverman (1997) adaptada de Carhart (1945) e Lloyd e Kaplan (1978).)')
-  // Segunda referência — dificuldade para compreender a fala (Jerger)
+  lines.push(REPORT_REFERENCE)
+
   const odDegree = degreeFromAvg(avgAir(airOD))
   const oeDegree = degreeFromAvg(avgAir(airOE))
   const diffLabel = (d: string) => {
@@ -273,6 +284,8 @@ function detailedAge(dob: string | undefined, refDate?: string): string {
 }
 
 /* ---------- Componente Principal ---------- */
+type ExamState = Omit<AudiometryExamFull, 'id' | 'created' | 'updated'> & { id?: string }
+
 export default function Audiometria() {
   const { id, examId } = useParams<{ id: string; examId?: string }>()
   const navigate = useNavigate()
@@ -286,9 +299,7 @@ export default function Audiometria() {
 
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
-  const [exam, setExam] = useState<
-    Omit<AudiometryExamFull, 'id' | 'created' | 'updated'> & { id?: string }
-  >(() => {
+  const [exam, setExam] = useState<ExamState>(() => {
     const base = emptyAudiometryExamFull(id || '', patient?.name || '')
     return { ...base, audiometer: DEFAULT_AUDIOMETER }
   })
@@ -336,12 +347,13 @@ export default function Audiometria() {
         audiometer: prev.audiometer || DEFAULT_AUDIOMETER,
       }))
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patient?.id, isNew])
 
   const patientAgeDetailed = useMemo(() => detailedAge(exam.dob, exam.date), [exam.dob, exam.date])
 
   /* ---------- Updaters ---------- */
-  const setField = <K extends keyof typeof exam>(key: K, value: (typeof exam)[K]) => {
+  const setField = <K extends keyof ExamState>(key: K, value: ExamState[K]) => {
     setExam((prev) => ({ ...prev, [key]: value }))
   }
 
@@ -413,6 +425,8 @@ export default function Audiometria() {
       iprf_od: exam.iprf_od,
       iprf_oe: exam.iprf_oe,
       iprf_vocal: exam.iprf_vocal,
+      iprf_levels_od: exam.iprf_levels_od,
+      iprf_levels_oe: exam.iprf_levels_oe,
       srt_od: exam.srt_od,
       srt_oe: exam.srt_oe,
       masking_air_od: exam.masking_air_od,
@@ -424,6 +438,7 @@ export default function Audiometria() {
       marital_status: exam.marital_status,
       loss_degree: exam.loss_degree,
       loss_type: exam.loss_type,
+      loss_configuration: exam.loss_configuration,
       report: exam.report,
     }
     try {
@@ -477,12 +492,16 @@ export default function Audiometria() {
   /* ---------- Laudo sugerido ---------- */
   const handleSuggestedReport = () => {
     const text = buildSuggestedReport(exam.air_od, exam.air_oe, exam.bone_od, exam.bone_oe)
-    setField('report', text)
-    const odAvg = avgAir(exam.air_od)
-    const odDegree = degreeFromAvg(odAvg)
-    const odType = determineType(exam.air_od, exam.bone_od)
-    if (odDegree) setField('loss_degree', odDegree)
-    if (odType && odType !== 'Normal') setField('loss_type', odType)
+    setExam((prev) => ({
+      ...prev,
+      report: text,
+      loss_degree: degreeFromAvg(avgAir(exam.air_od)) || prev.loss_degree,
+      loss_type: (() => {
+        const t = determineType(exam.air_od, exam.bone_od)
+        return t && t !== 'Normal' ? t : prev.loss_type
+      })(),
+      loss_configuration: describeConfiguration(exam.air_od) || prev.loss_configuration,
+    }))
     toast({ title: 'Laudo sugerido gerado', description: 'Revise e edite conforme necessário.' })
   }
 
@@ -504,11 +523,6 @@ export default function Audiometria() {
       </div>
     )
   }
-
-  const odTrito = mediaTritonal(exam.air_od)
-  const odQuadri = mediaQuadritonal(exam.air_od)
-  const oeTrito = mediaTritonal(exam.air_oe)
-  const oeQuadri = mediaQuadritonal(exam.air_oe)
 
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-200 pb-12">
@@ -596,6 +610,13 @@ export default function Audiometria() {
                 className="h-10 rounded-xl text-xs border-slate-300"
               />
             </Field>
+            <Field label="Especialista">
+              <Input
+                value={SPECIALIST_NAME}
+                readOnly
+                className="h-10 rounded-xl text-xs bg-slate-50 border-slate-200"
+              />
+            </Field>
             <Field label="Audiômetro">
               <Input
                 value={exam.audiometer}
@@ -652,11 +673,8 @@ export default function Audiometria() {
           />
         </Section>
 
-        {/* SRT, LDV, Mascaramento por orelha */}
-        <Section
-          title="SRT, LDV e Mascaramento"
-          icon={<Activity className="w-4 h-4 text-teal-600" />}
-        >
+        {/* SRT, LDV */}
+        <Section title="SRT e LDV" icon={<Activity className="w-4 h-4 text-teal-600" />}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(['OD', 'OE'] as const).map((side) => {
               const color = side === 'OD' ? 'text-red-600' : 'text-blue-600'
@@ -666,9 +684,6 @@ export default function Audiometria() {
                   : 'border-slate-200 hover:border-blue-200'
               const srtKey = side === 'OD' ? 'srt_od' : 'srt_oe'
               const ldvKey = side === 'OD' ? 'ldv_od' : 'ldv_oe'
-              const lrfKey = side === 'OD' ? 'lrf_od' : 'lrf_oe'
-              const maskAirKey = side === 'OD' ? 'masking_air_od' : 'masking_air_oe'
-              const maskBoneKey = side === 'OD' ? 'masking_bone_od' : 'masking_bone_oe'
               return (
                 <div
                   key={side}
@@ -678,7 +693,7 @@ export default function Audiometria() {
                     Orelha {side === 'OD' ? 'Direita (OD)' : 'Esquerda (OE)'}
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="SRT (dB)">
+                    <Field label="SRT — Limiar de Reconhecimento de Fala (dB)">
                       <Input
                         type="number"
                         value={exam[srtKey] ?? ''}
@@ -692,55 +707,13 @@ export default function Audiometria() {
                         className="h-10 rounded-xl text-xs font-medium border-slate-300 bg-white"
                       />
                     </Field>
-                    <Field label="LDV (dB)">
+                    <Field label="LDV — Limiar de Detecção de Voz (dB)">
                       <Input
                         type="number"
                         value={exam[ldvKey] ?? ''}
                         onChange={(e) =>
                           setField(
                             ldvKey as any,
-                            e.target.value === '' ? null : Number(e.target.value),
-                          )
-                        }
-                        disabled={isSecretaria}
-                        className="h-10 rounded-xl text-xs font-medium border-slate-300 bg-white"
-                      />
-                    </Field>
-                    <Field label="LRF (dB)">
-                      <Input
-                        type="number"
-                        value={exam[lrfKey] ?? ''}
-                        onChange={(e) =>
-                          setField(
-                            lrfKey as any,
-                            e.target.value === '' ? null : Number(e.target.value),
-                          )
-                        }
-                        disabled={isSecretaria}
-                        className="h-10 rounded-xl text-xs font-medium border-slate-300 bg-white"
-                      />
-                    </Field>
-                    <Field label="Masc. V.A. (dB)">
-                      <Input
-                        type="number"
-                        value={exam[maskAirKey] ?? ''}
-                        onChange={(e) =>
-                          setField(
-                            maskAirKey as any,
-                            e.target.value === '' ? null : Number(e.target.value),
-                          )
-                        }
-                        disabled={isSecretaria}
-                        className="h-10 rounded-xl text-xs font-medium border-slate-300 bg-white"
-                      />
-                    </Field>
-                    <Field label="Masc. V.O. (dB)">
-                      <Input
-                        type="number"
-                        value={exam[maskBoneKey] ?? ''}
-                        onChange={(e) =>
-                          setField(
-                            maskBoneKey as any,
                             e.target.value === '' ? null : Number(e.target.value),
                           )
                         }
@@ -755,9 +728,9 @@ export default function Audiometria() {
           </div>
         </Section>
 
-        {/* IPRF (vocal estruturado) */}
+        {/* IPRF (Índice de Reconhecimento Percentual de Fala) */}
         <Section
-          title="I.P.R.F. (Logoaudiometria)"
+          title="I.P.R.F. (Índice de Reconhecimento Percentual de Fala)"
           icon={<Activity className="w-4 h-4 text-teal-600" />}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -769,6 +742,7 @@ export default function Audiometria() {
                   : 'border-slate-200 hover:border-blue-200'
               const sideKey = side === 'OD' ? 'od' : 'oe'
               const row = exam.iprf_vocal[sideKey]
+              const levelsKey = side === 'OD' ? 'iprf_levels_od' : 'iprf_levels_oe'
               return (
                 <div
                   key={side}
@@ -778,20 +752,6 @@ export default function Audiometria() {
                     Orelha {side === 'OD' ? 'Direita (OD)' : 'Esquerda (OE)'}
                   </h4>
                   <div className="grid grid-cols-3 gap-3">
-                    <Field label="Intensidade (dB)">
-                      <Input
-                        type="number"
-                        value={row.intensidade}
-                        onChange={(e) =>
-                          setField('iprf_vocal', {
-                            ...exam.iprf_vocal,
-                            [sideKey]: { ...row, intensidade: e.target.value },
-                          })
-                        }
-                        disabled={isSecretaria}
-                        className="h-10 rounded-xl text-xs font-medium border-slate-300 bg-white"
-                      />
-                    </Field>
                     <Field label="Monossílabos (%)">
                       <Input
                         type="number"
@@ -800,6 +760,20 @@ export default function Audiometria() {
                           setField('iprf_vocal', {
                             ...exam.iprf_vocal,
                             [sideKey]: { ...row, monossilabos: e.target.value },
+                          })
+                        }
+                        disabled={isSecretaria}
+                        className="h-10 rounded-xl text-xs font-medium border-slate-300 bg-white"
+                      />
+                    </Field>
+                    <Field label="Intensidade Monoss. (dB)">
+                      <Input
+                        type="number"
+                        value={row.intensidade}
+                        onChange={(e) =>
+                          setField('iprf_vocal', {
+                            ...exam.iprf_vocal,
+                            [sideKey]: { ...row, intensidade: e.target.value },
                           })
                         }
                         disabled={isSecretaria}
@@ -821,9 +795,105 @@ export default function Audiometria() {
                       />
                     </Field>
                   </div>
+                  <Field label="Níveis de intensidade (ex.: 100% a 45 dB, 76% a 95 dB)">
+                    <Input
+                      value={exam[levelsKey] || row.niveis || ''}
+                      onChange={(e) => setField(levelsKey as any, e.target.value)}
+                      disabled={isSecretaria}
+                      placeholder="100% a 45 dB, 76% a 95 dB"
+                      className="h-10 rounded-xl text-xs font-medium border-slate-300 bg-white"
+                    />
+                  </Field>
                 </div>
               )
             })}
+          </div>
+        </Section>
+
+        {/* Mascaramento */}
+        <Section title="Mascaramento" icon={<Activity className="w-4 h-4 text-teal-600" />}>
+          <div className="overflow-x-auto border border-slate-300 rounded-lg bg-white shadow-sm">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-300 bg-slate-50">
+                  <th className="py-2 px-3 text-left font-bold text-slate-700 border-r border-slate-200">
+                    Via
+                  </th>
+                  <th className="py-2 px-3 text-center font-semibold text-red-600 border-r border-slate-200">
+                    O.D. (dB)
+                  </th>
+                  <th className="py-2 px-3 text-center font-semibold text-blue-600">O.E. (dB)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                <tr>
+                  <td className="py-2 px-3 font-bold text-slate-700 border-r border-slate-200">
+                    V.A. (Via Aérea)
+                  </td>
+                  <td className="p-2 border-r border-slate-200 text-center">
+                    <Input
+                      type="number"
+                      value={exam.masking_air_od ?? ''}
+                      onChange={(e) =>
+                        setField(
+                          'masking_air_od',
+                          e.target.value === '' ? null : Number(e.target.value),
+                        )
+                      }
+                      disabled={isSecretaria}
+                      className="w-20 h-8 mx-auto text-center text-xs font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white"
+                    />
+                  </td>
+                  <td className="p-2 text-center">
+                    <Input
+                      type="number"
+                      value={exam.masking_air_oe ?? ''}
+                      onChange={(e) =>
+                        setField(
+                          'masking_air_oe',
+                          e.target.value === '' ? null : Number(e.target.value),
+                        )
+                      }
+                      disabled={isSecretaria}
+                      className="w-20 h-8 mx-auto text-center text-xs font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white"
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-bold text-slate-700 border-r border-slate-200">
+                    V.O. (Via Óssea)
+                  </td>
+                  <td className="p-2 border-r border-slate-200 text-center">
+                    <Input
+                      type="number"
+                      value={exam.masking_bone_od ?? ''}
+                      onChange={(e) =>
+                        setField(
+                          'masking_bone_od',
+                          e.target.value === '' ? null : Number(e.target.value),
+                        )
+                      }
+                      disabled={isSecretaria}
+                      className="w-20 h-8 mx-auto text-center text-xs font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white"
+                    />
+                  </td>
+                  <td className="p-2 text-center">
+                    <Input
+                      type="number"
+                      value={exam.masking_bone_oe ?? ''}
+                      onChange={(e) =>
+                        setField(
+                          'masking_bone_oe',
+                          e.target.value === '' ? null : Number(e.target.value),
+                        )
+                      }
+                      disabled={isSecretaria}
+                      className="w-20 h-8 mx-auto text-center text-xs font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </Section>
 
@@ -853,10 +923,10 @@ export default function Audiometria() {
           </div>
         </Section>
 
-        {/* Grau / Tipo / Parecer */}
+        {/* Grau / Tipo / Configuração / Parecer */}
         <Section title="Parecer Audiológico" icon={<FileText className="w-4 h-4 text-teal-600" />}>
           <div className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Field label="Grau da Perda">
                 <Select
                   value={exam.loss_degree || '__none'}
@@ -895,6 +965,25 @@ export default function Audiometria() {
                   </SelectContent>
                 </Select>
               </Field>
+              <Field label="Configuração">
+                <Select
+                  value={exam.loss_configuration || '__none'}
+                  onValueChange={(v) => setField('loss_configuration', v === '__none' ? '' : v)}
+                  disabled={isSecretaria}
+                >
+                  <SelectTrigger className="h-10 rounded-xl text-xs">
+                    <SelectValue placeholder="Selecione a configuração" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">—</SelectItem>
+                    {LOSS_CONFIGURATION_OPTIONS.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
             </div>
 
             <div className="flex items-center justify-between">
@@ -922,6 +1011,7 @@ export default function Audiometria() {
               rows={6}
               className="rounded-xl text-xs border-slate-300 resize-y"
             />
+            <p className="text-[10px] text-slate-500 italic text-justify">{REPORT_REFERENCE}</p>
           </div>
         </Section>
       </div>
@@ -971,17 +1061,20 @@ function ExamPreview({
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 clinic-audiometry">
       <div className="space-y-4">
-        {/* Cabeçalho da clínica */}
+        {/* Cabeçalho da clínica com logo */}
         <div className="flex items-start justify-between border-b-2 border-navy-700 pb-3">
-          <div>
-            <h2 className="text-lg font-extrabold tracking-tight" style={{ color: '#0F2B5C' }}>
-              Audição360
-            </h2>
-            <p className="text-[11px] text-slate-500 leading-tight">
-              R. Sadoc Correa, 373 - St. Central, Araguaína - TO, 77803-060
-              <br />
-              Telefone: (63) 3421-2611
-            </p>
+          <div className="flex items-center gap-3">
+            <img src={logoImg} alt="Audição360" className="max-h-12 max-w-[140px] object-contain" />
+            <div>
+              <h2 className="text-lg font-extrabold tracking-tight" style={{ color: '#0F2B5C' }}>
+                Audição360
+              </h2>
+              <p className="text-[11px] text-slate-500 leading-tight">
+                {CLINIC_ADDRESS}
+                <br />
+                Telefone: {CLINIC_PHONE}
+              </p>
+            </div>
           </div>
           <div className="text-right text-[11px] text-slate-700">
             <div>
@@ -1085,16 +1178,22 @@ function ExamPreview({
           </div>
         </div>
 
+        {/* Grau / Tipo / Configuração */}
+        {(exam.loss_degree || exam.loss_type || exam.loss_configuration) && (
+          <div className="text-[11px] text-slate-800">
+            <strong>Grau:</strong> {exam.loss_degree || '—'} &nbsp;|&nbsp; <strong>Tipo:</strong>{' '}
+            {exam.loss_type || '—'} &nbsp;|&nbsp; <strong>Configuração:</strong>{' '}
+            {exam.loss_configuration || '—'}
+          </div>
+        )}
+
         {/* Parecer */}
         <div>
           <SectionLabel>PARECER AUDIOLÓGICO</SectionLabel>
           <div className="border border-slate-300 rounded-md p-2 text-[11px] text-slate-800 whitespace-pre-wrap min-h-[60px]">
             {exam.report || '—'}
           </div>
-          <p className="text-[9px] text-slate-500 italic mt-1 text-justify">
-            (Silman e Silverman (1997) adaptada de Carhart (1945) e Lloyd e Kaplan (1978).) (Jerger,
-            Speaks e Trammell, 1968).
-          </p>
+          <p className="text-[9px] text-slate-500 italic mt-1 text-justify">{REPORT_REFERENCE}</p>
         </div>
 
         {/* Assinatura */}
@@ -1103,7 +1202,7 @@ function ExamPreview({
             <div className="border-t border-slate-500 pt-1 text-[12px] font-bold text-slate-800">
               {SPECIALIST_NAME}
             </div>
-            <div className="text-[10px] text-slate-500">Fonoaudiólogo — CRFa 3-11981-5</div>
+            <div className="text-[10px] text-slate-500">Fonoaudiólogo — CRfa {SPECIALIST_CRFA}</div>
           </div>
         </div>
       </div>
@@ -1263,13 +1362,13 @@ function IprfTable({ exam }: { exam: AudiometryExamFull }) {
   const td = 'border border-slate-400 text-[10px] text-center px-1 py-0.5'
   const odRow = exam.iprf_vocal.od
   const oeRow = exam.iprf_vocal.oe
+  const odLevels = exam.iprf_levels_od || odRow.niveis || ''
+  const oeLevels = exam.iprf_levels_oe || oeRow.niveis || ''
   const fmtIprf = (r: { intensidade: string; monossilabos: string; dissilabos: string }) => {
     const intens = r.intensidade ? `${r.intensidade} dB` : '- dB'
-    const monoPct = r.monossilabos ? `${r.monossilabos}%` : '100%'
-    const monoDb = r.intensidade ? `${r.intensidade} dB` : '- dB'
-    const dissiPct = r.dissilabos ? `${r.dissilabos}%` : '100%'
-    const dissiDb = r.intensidade ? `${r.intensidade} dB` : '- dB'
-    return `${intens} - ${monoPct} Monossílabos (${monoDb}) / ${dissiPct} Dissílabos (${dissiDb})`
+    const monoPct = r.monossilabos ? `${r.monossilabos}%` : '-'
+    const dissiPct = r.dissilabos ? `${r.dissilabos}%` : '-'
+    return `${intens} — ${monoPct} Monossílabos / ${dissiPct} Dissílabos`
   }
   return (
     <div>
@@ -1288,10 +1387,17 @@ function IprfTable({ exam }: { exam: AudiometryExamFull }) {
         </thead>
         <tbody>
           <tr>
-            <td className={`${td} text-left font-semibold`}>I.P.R.F</td>
+            <td className={`${td} text-left font-semibold`}>Monossílabos / Dissílabos</td>
             <td className={td}>{fmtIprf(odRow)}</td>
             <td className={td}>{fmtIprf(oeRow)}</td>
           </tr>
+          {(odLevels || oeLevels) && (
+            <tr>
+              <td className={`${td} text-left font-semibold`}>Níveis</td>
+              <td className={td}>{odLevels || '—'}</td>
+              <td className={td}>{oeLevels || '—'}</td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
@@ -1348,7 +1454,7 @@ interface ConductionGridProps {
   disabled?: boolean
 }
 
-/** Símbolos textuais exibidos nos botões (referência clínica). */
+/** Símbolos textuais exibidos nos botões (referência clínica ASHA). */
 function symbolsFor(kind: 'air' | 'bone', side: 'OD' | 'OE') {
   if (kind === 'air') {
     if (side === 'OD')

@@ -8,10 +8,11 @@ import {
   BeraExam,
   AudiometryExamFull,
   AudiogramMap,
-  AudiogramSymbol,
+  IprfVocalRow,
   AIR_FREQS,
   BONE_FREQS,
 } from '@/types'
+import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
 import { formatDate, maskCPF, calculateAge } from '@/lib/formatters'
 import { SingleEarAudiogramChart } from '@/components/AudiogramChart'
 import { mediaTritonal, mediaQuadritonal } from '@/lib/audiogram'
@@ -340,8 +341,19 @@ export function AudiometryPrint({ exam }: { exam: AudiometryExam }) {
 }
 
 /* ============ AUDIOMETRIA COMPLETA (audiometry_exams) ============ */
-/* Layout compacto para caber em 1 página A4 — segue o modelo do PDF de referência. */
+/* Layout compacto para caber em 1 página A4 — segue o modelo clínico de referência. */
 const SPECIALIST_PRINT = 'MILTON SOARES PACHECO'
+const SPECIALIST_CRFA = '3-11981-5'
+const CLINIC_NAME = 'Audição360'
+const CLINIC_ADDRESS = 'R. Sadoc Correa, 373 - St. Central, Araguaína - TO, 77803-060'
+const CLINIC_PHONE = '(63) 3421-2611'
+
+const emptyIprfVocalRow = (): IprfVocalRow => ({
+  intensidade: '',
+  monossilabos: '',
+  dissilabos: '',
+  niveis: '',
+})
 
 export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
   const thStyle: React.CSSProperties = {
@@ -399,26 +411,26 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
   const fmtDb = (v: number | null | undefined) =>
     v === null || v === undefined ? '- dB' : `${v} dB`
 
-  const fmtIprfPrint = (r: { intensidade: string; monossilabos: string; dissilabos: string }) => {
+  const fmtIprfPrint = (r: IprfVocalRow) => {
     const intens = r.intensidade ? `${r.intensidade} dB` : '- dB'
-    const monoPct = r.monossilabos ? `${r.monossilabos}%` : '100%'
+    const monoPct = r.monossilabos ? `${r.monossilabos}%` : '-'
     const monoDb = r.intensidade ? `${r.intensidade} dB` : '- dB'
-    const dissiPct = r.dissilabos ? `${r.dissilabos}%` : '100%'
+    const dissiPct = r.dissilabos ? `${r.dissilabos}%` : '-'
     const dissiDb = r.intensidade ? `${r.intensidade} dB` : '- dB'
-    return `${intens} - ${monoPct} Monossílabos (${monoDb}) / ${dissiPct} Dissílabos (${dissiDb})`
+    return `${intens} — ${monoPct} Monossílabos (${monoDb}) / ${dissiPct} Dissílabos (${dissiDb})`
   }
 
-  const srtOd = exam.srt_od
-  const srtOe = exam.srt_oe
-  const ldvOd = exam.ldv_od
-  const ldvOe = exam.ldv_oe
+  const odVocal = exam.iprf_vocal?.od ?? emptyIprfVocalRow()
+  const oeVocal = exam.iprf_vocal?.oe ?? emptyIprfVocalRow()
+  const odLevels = exam.iprf_levels_od || odVocal.niveis || ''
+  const oeLevels = exam.iprf_levels_oe || oeVocal.niveis || ''
 
   return (
     <div
       className="audiometry-print audiometry-print-full"
       style={{ color: '#1e293b', fontSize: '7.5pt', lineHeight: 1.25 }}
     >
-      {/* Cabeçalho da clínica */}
+      {/* Cabeçalho da clínica com logo */}
       <div
         style={{
           display: 'flex',
@@ -429,12 +441,19 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
           marginBottom: '4px',
         }}
       >
-        <div>
-          <div style={{ fontSize: '11pt', fontWeight: 800, color: '#0F2B5C' }}>Audição360</div>
-          <div style={{ fontSize: '7pt', color: '#64748b', lineHeight: 1.25 }}>
-            R. Sadoc Correa, 373 - St. Central, Araguaína - TO, 77803-060
-            <br />
-            Telefone: (63) 3421-2611
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img
+            src={logoImg}
+            alt="Audição360"
+            style={{ maxHeight: '34px', maxWidth: '120px', objectFit: 'contain' }}
+          />
+          <div>
+            <div style={{ fontSize: '11pt', fontWeight: 800, color: '#0F2B5C' }}>{CLINIC_NAME}</div>
+            <div style={{ fontSize: '7pt', color: '#64748b', lineHeight: 1.25 }}>
+              {CLINIC_ADDRESS}
+              <br />
+              Telefone: {CLINIC_PHONE}
+            </div>
           </div>
         </div>
         <div style={{ textAlign: 'right', fontSize: '7.5pt' }}>
@@ -500,14 +519,7 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
 
       {/* Legenda */}
       <div style={{ marginBottom: '4px' }}>
-        <div
-          style={{
-            fontSize: '7.5pt',
-            fontWeight: 700,
-            color: '#0F2B5C',
-            marginBottom: '1px',
-          }}
-        >
+        <div style={{ fontSize: '7.5pt', fontWeight: 700, color: '#0F2B5C', marginBottom: '1px' }}>
           LEGENDA
         </div>
         <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '6.5pt' }}>
@@ -602,7 +614,7 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
               fontWeight: 700,
             }}
           >
-            SRT: {fmtDb(srtOd)} &nbsp;|&nbsp; LDV: {fmtDb(ldvOd)}
+            SRT: {fmtDb(exam.srt_od)} &nbsp;|&nbsp; LDV: {fmtDb(exam.ldv_od)}
           </div>
         </div>
         <div style={{ width: '50%', breakInside: 'avoid' }}>
@@ -635,7 +647,7 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
               fontWeight: 700,
             }}
           >
-            SRT: {fmtDb(srtOe)} &nbsp;|&nbsp; LDV: {fmtDb(ldvOe)}
+            SRT: {fmtDb(exam.srt_oe)} &nbsp;|&nbsp; LDV: {fmtDb(exam.ldv_oe)}
           </div>
         </div>
       </div>
@@ -715,18 +727,17 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
           </thead>
           <tbody>
             <tr>
-              <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 600 }}>I.P.R.F</td>
-              <td style={{ ...tdStyle, fontSize: '6.5pt' }}>
-                {fmtIprfPrint(
-                  exam.iprf_vocal?.od ?? { intensidade: '', monossilabos: '', dissilabos: '' },
-                )}
-              </td>
-              <td style={{ ...tdStyle, fontSize: '6.5pt' }}>
-                {fmtIprfPrint(
-                  exam.iprf_vocal?.oe ?? { intensidade: '', monossilabos: '', dissilabos: '' },
-                )}
-              </td>
+              <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 600 }}>Monossílabos</td>
+              <td style={{ ...tdStyle, fontSize: '6.5pt' }}>{fmtIprfPrint(odVocal)}</td>
+              <td style={{ ...tdStyle, fontSize: '6.5pt' }}>{fmtIprfPrint(oeVocal)}</td>
             </tr>
+            {(odLevels || oeLevels) && (
+              <tr>
+                <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 600 }}>Níveis</td>
+                <td style={{ ...tdStyle, fontSize: '6.5pt' }}>{odLevels || '—'}</td>
+                <td style={{ ...tdStyle, fontSize: '6.5pt' }}>{oeLevels || '—'}</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -784,11 +795,12 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
         </div>
       </div>
 
-      {/* Grau e Tipo */}
-      {(exam.loss_degree || exam.loss_type) && (
+      {/* Grau, Tipo e Configuração */}
+      {(exam.loss_degree || exam.loss_type || exam.loss_configuration) && (
         <div style={{ fontSize: '7pt', marginBottom: '2px' }}>
           <strong>Grau:</strong> {exam.loss_degree || '—'} &nbsp;|&nbsp; <strong>Tipo:</strong>{' '}
-          {exam.loss_type || '—'}
+          {exam.loss_type || '—'} &nbsp;|&nbsp; <strong>Configuração:</strong>{' '}
+          {exam.loss_configuration || '—'}
         </div>
       )}
 
@@ -829,8 +841,8 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
             fontStyle: 'italic',
           }}
         >
-          (Silman e Silverman (1997) adaptada de Carhart (1945) e Lloyd e Kaplan (1978).) (Jerger,
-          Speaks e Trammell, 1968).
+          Laudo audiológico baseado em Silman e Silverman (1997) adaptada de Carhart (1945) e Lloyd
+          e Kaplan (1978); Jerger, Speaks e Trammell (1968).
         </p>
       </div>
 
@@ -850,7 +862,7 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
           {SPECIALIST_PRINT}
         </div>
         <div style={{ fontSize: '6.5pt', color: '#475569', marginTop: '1px' }}>
-          Fonoaudiólogo — CRFa 3-11981-5
+          Fonoaudiólogo — CRFa {SPECIALIST_CRFA}
         </div>
       </div>
 
@@ -865,7 +877,7 @@ export function AudiometriaFullPrint({ exam }: { exam: AudiometryExamFull }) {
           paddingTop: '2px',
         }}
       >
-        R. Sadoc Correa, 373 - St. Central, Araguaína - TO, 77803-060 &nbsp;•&nbsp; (63) 3421-2611
+        {CLINIC_ADDRESS} &nbsp;•&nbsp; {CLINIC_PHONE}
       </div>
     </div>
   )
