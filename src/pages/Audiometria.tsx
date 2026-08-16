@@ -549,8 +549,10 @@ export default function Audiometria() {
         </div>
       </div>
 
-      {/* Prévia do exame (formato clínico compacto, visível na tela E na impressão) */}
-      <ExamPreview exam={exam as AudiometryExamFull} patientAgeDetailed={patientAgeDetailed} />
+      {/* Prévia do exame (formato clínico compacto — visível APENAS na impressão) */}
+      <div className="hidden print:block">
+        <ExamPreview exam={exam as AudiometryExamFull} patientAgeDetailed={patientAgeDetailed} />
+      </div>
 
       {/* ===================== Grade de Entrada de Dados (NÃO imprime) ===================== */}
       <div className="no-print space-y-6">
