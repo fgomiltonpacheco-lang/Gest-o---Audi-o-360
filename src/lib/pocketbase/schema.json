@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T21:12:05.379Z",
+  "generatedAt": "2026-08-16T21:31:01.203Z",
   "collections": [
     {
       "name": "users",
@@ -3396,6 +3396,147 @@
         "CREATE INDEX idx_audit_logs_paciente ON audit_logs (paciente_id)",
         "CREATE INDEX idx_audit_logs_acao ON audit_logs (acao)",
         "CREATE INDEX idx_audit_logs_created ON audit_logs (created)"
+      ]
+    },
+    {
+      "name": "audit_trail",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = \"admin\"",
+        "view": "@request.auth.role = \"admin\"",
+        "create": "",
+        "update": "",
+        "delete": ""
+      },
+      "fields": [
+        {
+          "name": "timestamp",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "usuario_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "usuario_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "usuario_perfil",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["admin", "profissional", "secretaria"]
+        },
+        {
+          "name": "modulo",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "pacientes",
+            "agenda",
+            "prontuario",
+            "audiometria",
+            "vendas_pdv",
+            "vendas_b2b",
+            "caixa",
+            "estoque",
+            "configuracoes",
+            "parceiros",
+            "relatorios"
+          ]
+        },
+        {
+          "name": "acao",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "criar",
+            "editar",
+            "deletar",
+            "cancelar",
+            "estornar",
+            "emitir_nf",
+            "abrir_caixa",
+            "fechar_caixa",
+            "acessar",
+            "exportar",
+            "imprimir"
+          ]
+        },
+        {
+          "name": "entidade_tipo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "entidade_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "entidade_descricao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "alteracoes",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ip",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "user_agent",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "contexto",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_audit_trail_usuario ON audit_trail (usuario_id)",
+        "CREATE INDEX idx_audit_trail_modulo ON audit_trail (modulo)",
+        "CREATE INDEX idx_audit_trail_acao ON audit_trail (acao)",
+        "CREATE INDEX idx_audit_trail_entidade ON audit_trail (entidade_tipo, entidade_id)",
+        "CREATE INDEX idx_audit_trail_created ON audit_trail (created)"
       ]
     }
   ]

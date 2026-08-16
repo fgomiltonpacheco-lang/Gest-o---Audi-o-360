@@ -982,3 +982,83 @@ export interface PolicyTexts {
   pesquisa: { texto: string; versao: string }
   politica_privacidade: string
 }
+
+// ===== Trilha de Auditoria (audit_trail) =====
+
+export type AuditModulo =
+  | 'pacientes'
+  | 'agenda'
+  | 'prontuario'
+  | 'audiometria'
+  | 'vendas_pdv'
+  | 'vendas_b2b'
+  | 'caixa'
+  | 'estoque'
+  | 'configuracoes'
+  | 'parceiros'
+  | 'relatorios'
+
+export type AuditAcaoTrail =
+  | 'criar'
+  | 'editar'
+  | 'deletar'
+  | 'cancelar'
+  | 'estornar'
+  | 'emitir_nf'
+  | 'abrir_caixa'
+  | 'fechar_caixa'
+  | 'acessar'
+  | 'exportar'
+  | 'imprimir'
+
+export interface AuditTrailAlteracao {
+  before: unknown
+  after: unknown
+}
+
+export interface AuditTrail {
+  id: string
+  timestamp: string
+  usuario_id?: string
+  usuario_nome: string
+  usuario_perfil?: string
+  modulo: AuditModulo
+  acao: AuditAcaoTrail
+  entidade_tipo: string
+  entidade_id: string
+  entidade_descricao: string
+  alteracoes: Record<string, AuditTrailAlteracao>
+  ip: string
+  user_agent: string
+  contexto?: Record<string, unknown> | null
+  created: string
+  updated: string
+}
+
+export const AUDIT_MODULO_LABELS: Record<AuditModulo, string> = {
+  pacientes: 'Pacientes',
+  agenda: 'Agenda',
+  prontuario: 'Prontuário',
+  audiometria: 'Audiometria',
+  vendas_pdv: 'Vendas PDV',
+  vendas_b2b: 'Vendas B2B',
+  caixa: 'Caixa',
+  estoque: 'Estoque',
+  configuracoes: 'Configurações',
+  parceiros: 'Parceiros',
+  relatorios: 'Relatórios',
+}
+
+export const AUDIT_ACAO_LABELS: Record<AuditAcaoTrail, string> = {
+  criar: 'Criar',
+  editar: 'Editar',
+  deletar: 'Deletar',
+  cancelar: 'Cancelar',
+  estornar: 'Estornar',
+  emitir_nf: 'Emitir NF',
+  abrir_caixa: 'Abrir Caixa',
+  fechar_caixa: 'Fechar Caixa',
+  acessar: 'Acessar',
+  exportar: 'Exportar',
+  imprimir: 'Imprimir',
+}

@@ -25,6 +25,7 @@ import RelatorioComissoesB2B from '@/pages/RelatorioComissoesB2B'
 import NovaVendaB2B from '@/pages/NovaVendaB2B'
 import DetalhesVendaB2B from '@/pages/DetalhesVendaB2B'
 import EmpresasParceiras from '@/pages/EmpresasParceiras'
+import Auditoria from '@/pages/Auditoria'
 import NotFound from '@/pages/NotFound'
 import { Toaster } from '@/components/ui/toaster'
 import { useToast } from '@/hooks/use-toast'
@@ -271,6 +272,16 @@ export function App() {
               element={
                 <AdminRoute>
                   <Configuracoes />
+                </AdminRoute>
+              }
+            />
+
+            {/* ===== Trilha de Auditoria (Admin only) ===== */}
+            <Route
+              path="/admin/auditoria"
+              element={
+                <AdminRoute>
+                  <Auditoria />
                 </AdminRoute>
               }
             />

@@ -21,6 +21,7 @@ import {
   UserCog,
   ListChecks,
   SlidersHorizontal,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
@@ -141,6 +142,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           name: 'Configurações',
           path: '/configuracoes',
           icon: SlidersHorizontal,
+          adminOnly: true,
+        },
+        {
+          name: 'Auditoria',
+          path: '/admin/auditoria',
+          icon: ShieldCheck,
           adminOnly: true,
         },
       ],
