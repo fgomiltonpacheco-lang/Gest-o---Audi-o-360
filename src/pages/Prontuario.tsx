@@ -225,12 +225,22 @@ export default function Prontuario() {
     addHearingAid(data)
   }
 
-  const handleDeleteItem = () => {
+  const handleDeleteItem = async () => {
     if (!deleteTarget) return
     if (deleteTarget.type === 'evolution') deleteEvolution(deleteTarget.id)
     if (deleteTarget.type === 'audiometry') deleteAudiometry(deleteTarget.id)
     if (deleteTarget.type === 'tympanometry') deleteTympanometry(deleteTarget.id)
     if (deleteTarget.type === 'bera') deleteBera(deleteTarget.id)
+    if (deleteTarget.type === 'audiometry_exam') {
+      try {
+        await pb.collection('audiometry_exams').delete(deleteTarget.id)
+        if (patient?.id) {
+          await loadFullAudiometries(patient.id)
+        }
+      } catch (err) {
+        console.error('Erro ao excluir exame de audiometria:', err)
+      }
+    }
     setDeleteTarget(null)
   }
 
@@ -696,16 +706,6 @@ export default function Prontuario() {
                   <Activity className="w-4 h-4" />
                   Exames Audiológicos Completos ({fullAudiometries.length})
                 </h4>
-                {!isSecretaria && (
-                  <Button
-                    size="sm"
-                    onClick={() => navigate(`/pacientes/${patient.id}/audiometria/novo`)}
-                    className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-8"
-                  >
-                    <Plus className="w-3.5 h-3.5 mr-1" />
-                    Novo Exame
-                  </Button>
-                )}
               </div>
               {loadingFullAudio ? (
                 <p className="text-xs text-slate-400 italic">Carregando exames...</p>
@@ -719,12 +719,11 @@ export default function Prontuario() {
                     const date = exam.date ? formatDate(exam.date) : '—'
                     const report = (exam.report || '').slice(0, 80)
                     return (
-                      <button
+                      <div
                         key={exam.id}
-                        onClick={() => navigate(`/pacientes/${patient.id}/audiometria/${exam.id}`)}
                         className="w-full text-left p-3 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:border-teal-300 hover:shadow-sm transition-all flex items-center justify-between gap-3"
                       >
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <span className="text-xs font-extrabold text-slate-900">
                             Audiometria — {date}
                           </span>
@@ -735,10 +734,36 @@ export default function Prontuario() {
                             </p>
                           )}
                         </div>
-                        <Badge className="bg-teal-50 text-navy-700 border-teal-200 shrink-0">
-                          Ver / Editar
-                        </Badge>
-                      </button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              navigate(`/pacientes/${patient.id}/audiometria/${exam.id}`)
+                            }
+                            className="bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-semibold h-7 px-3 rounded-lg"
+                          >
+                            Ver / Editar
+                          </Button>
+                          {!isSecretaria && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setDeleteTarget({
+                                  type: 'audiometry_exam',
+                                  id: exam.id,
+                                  name: `Audiometria de ${date}`,
+                                })
+                                setDeleteConfirmOpen(true)
+                              }}
+                              className="h-7 w-7 p-0 text-red-500 hover:bg-red-50 rounded-lg"
+                              title="Excluir exame"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     )
                   })}
                 </div>
