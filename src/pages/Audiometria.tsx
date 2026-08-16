@@ -740,37 +740,26 @@ export default function Audiometria() {
         </div>
       </Section>
 
-      {/* Audiometria Vocal */}
+      {/* Audiometria Vocal & IPRF */}
       <Section title="Audiometria Vocal" icon={<Activity className="w-4 h-4 text-teal-600" />}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
           {(['OD', 'OE'] as const).map((side) => {
             const color = side === 'OD' ? 'text-red-600' : 'text-blue-600'
-            const mtKey = side === 'OD' ? 'mt_od' : 'mt_oe'
+            const borderCard =
+              side === 'OD'
+                ? 'border-slate-200 hover:border-red-200'
+                : 'border-slate-200 hover:border-blue-200'
             const lrfKey = side === 'OD' ? 'lrf_od' : 'lrf_oe'
             const ldvKey = side === 'OD' ? 'ldv_od' : 'ldv_oe'
             return (
               <div
                 key={side}
-                className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3"
+                className={`p-4 rounded-2xl border bg-slate-50/50 shadow-sm transition-colors space-y-3 ${borderCard}`}
               >
-                <h4 className={`text-xs font-bold uppercase tracking-wider ${color}`}>
+                <h4 className={`text-xs font-extrabold uppercase tracking-wider ${color}`}>
                   Orelha {side === 'OD' ? 'Direita (OD)' : 'Esquerda (OE)'}
                 </h4>
-                <div className="grid grid-cols-3 gap-3">
-                  <Field label="MT — Limiar Tonal Médio (dB)">
-                    <Input
-                      type="number"
-                      value={exam[mtKey] ?? ''}
-                      onChange={(e) =>
-                        setField(
-                          mtKey as any,
-                          e.target.value === '' ? null : Number(e.target.value),
-                        )
-                      }
-                      disabled={isSecretaria}
-                      className="h-10 rounded-xl text-xs border-slate-300"
-                    />
-                  </Field>
+                <div className="grid grid-cols-2 gap-4">
                   <Field label="LRF (dB)">
                     <Input
                       type="number"
@@ -782,7 +771,7 @@ export default function Audiometria() {
                         )
                       }
                       disabled={isSecretaria}
-                      className="h-10 rounded-xl text-xs border-slate-300"
+                      className="h-10 rounded-xl text-xs font-medium border-slate-300 bg-white focus:ring-2 focus:ring-teal-500/20"
                     />
                   </Field>
                   <Field label="LDV (dB)">
@@ -796,7 +785,7 @@ export default function Audiometria() {
                         )
                       }
                       disabled={isSecretaria}
-                      className="h-10 rounded-xl text-xs border-slate-300"
+                      className="h-10 rounded-xl text-xs font-medium border-slate-300 bg-white focus:ring-2 focus:ring-teal-500/20"
                     />
                   </Field>
                 </div>
@@ -805,21 +794,31 @@ export default function Audiometria() {
           })}
         </div>
 
-        {/* IPRF */}
-        <div className="mt-5 p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+        {/* IPRF Card */}
+        <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 shadow-sm space-y-3">
+          <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
             IPRF — Índice de Reconhecimento de Fala
           </h4>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs border border-slate-200 rounded-lg overflow-hidden">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+            <table className="w-full text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-100 text-slate-600 font-bold">
-                  <th className="py-2 px-3 text-left">Orelha</th>
-                  <th className="py-2 px-3 text-center">Intensidade (dB)</th>
-                  <th className="py-2 px-3 text-center">Monossílabos (%)</th>
-                  <th className="py-2 px-3 text-center">Dissílabos (%)</th>
-                  <th className="py-2 px-3 text-center">Mascaramento (dB)</th>
-                  <th className="py-2 px-3 text-center">Palavras Faladas</th>
+                <tr className="bg-slate-100/90 text-slate-700 font-bold border-b border-slate-200">
+                  <th className="py-2.5 px-4 text-left font-extrabold w-24 border-r border-slate-200">
+                    Orelha
+                  </th>
+                  <th className="py-2.5 px-3 text-center font-bold border-r border-slate-200">
+                    Intensidade (dB)
+                  </th>
+                  <th className="py-2.5 px-3 text-center font-bold border-r border-slate-200">
+                    Monossílabos (%)
+                  </th>
+                  <th className="py-2.5 px-3 text-center font-bold border-r border-slate-200">
+                    Dissílabos (%)
+                  </th>
+                  <th className="py-2.5 px-3 text-center font-bold border-r border-slate-200">
+                    Mascaramento (dB)
+                  </th>
+                  <th className="py-2.5 px-3 text-center font-bold">Palavras Faladas</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 bg-white">
@@ -828,46 +827,48 @@ export default function Audiometria() {
                   const color = side === 'od' ? 'text-red-600' : 'text-blue-600'
                   const row = exam.iprf[side]
                   return (
-                    <tr key={side}>
-                      <td className={`py-2 px-3 font-bold ${color}`}>{label}</td>
-                      <td className="p-1">
+                    <tr key={side} className="hover:bg-slate-50/50 transition-colors">
+                      <td className={`py-2 px-4 font-black ${color} border-r border-slate-200`}>
+                        {label}
+                      </td>
+                      <td className="p-1.5 border-r border-slate-200">
                         <Input
                           value={row.intensidade}
                           onChange={(e) => setIprfRow(side, 'intensidade', e.target.value)}
                           disabled={isSecretaria}
-                          className="h-8 text-center text-xs rounded-lg border-slate-300"
+                          className="h-9 text-center text-xs font-medium rounded-lg border-slate-300 focus:ring-2 focus:ring-teal-500/20"
                         />
                       </td>
-                      <td className="p-1">
+                      <td className="p-1.5 border-r border-slate-200">
                         <Input
                           value={row.monossilabos}
                           onChange={(e) => setIprfRow(side, 'monossilabos', e.target.value)}
                           disabled={isSecretaria}
-                          className="h-8 text-center text-xs rounded-lg border-slate-300"
+                          className="h-9 text-center text-xs font-medium rounded-lg border-slate-300 focus:ring-2 focus:ring-teal-500/20"
                         />
                       </td>
-                      <td className="p-1">
+                      <td className="p-1.5 border-r border-slate-200">
                         <Input
                           value={row.dissilabos}
                           onChange={(e) => setIprfRow(side, 'dissilabos', e.target.value)}
                           disabled={isSecretaria}
-                          className="h-8 text-center text-xs rounded-lg border-slate-300"
+                          className="h-9 text-center text-xs font-medium rounded-lg border-slate-300 focus:ring-2 focus:ring-teal-500/20"
                         />
                       </td>
-                      <td className="p-1">
+                      <td className="p-1.5 border-r border-slate-200">
                         <Input
                           value={row.mascaramento}
                           onChange={(e) => setIprfRow(side, 'mascaramento', e.target.value)}
                           disabled={isSecretaria}
-                          className="h-8 text-center text-xs rounded-lg border-slate-300"
+                          className="h-9 text-center text-xs font-medium rounded-lg border-slate-300 focus:ring-2 focus:ring-teal-500/20"
                         />
                       </td>
-                      <td className="p-1">
+                      <td className="p-1.5">
                         <Input
                           value={row.palavras}
                           onChange={(e) => setIprfRow(side, 'palavras', e.target.value)}
                           disabled={isSecretaria}
-                          className="h-8 text-center text-xs rounded-lg border-slate-300"
+                          className="h-9 text-center text-xs font-medium rounded-lg border-slate-300 focus:ring-2 focus:ring-teal-500/20"
                         />
                       </td>
                     </tr>
