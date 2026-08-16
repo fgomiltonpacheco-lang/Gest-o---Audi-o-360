@@ -560,7 +560,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           id: r.id,
           name: r.name || r.email || 'Usuário',
           email: r.email || '',
-          role: r.role === 'profissional' ? 'profissional' : 'admin',
+          role:
+            r.role === 'profissional'
+              ? 'profissional'
+              : r.role === 'secretaria'
+                ? 'secretaria'
+                : 'admin',
           avatar: r.avatar || undefined,
           crmCrfa: r.crmCrfa || undefined,
         })
@@ -587,7 +592,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         id: r.id,
         name: r.name || r.email || 'Usuário',
         email: r.email || '',
-        role: r.role === 'profissional' ? 'profissional' : 'admin',
+        role:
+          r.role === 'profissional'
+            ? 'profissional'
+            : r.role === 'secretaria'
+              ? 'secretaria'
+              : 'admin',
         avatar: r.avatar || undefined,
         crmCrfa: r.crmCrfa || undefined,
       }

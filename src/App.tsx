@@ -13,6 +13,7 @@ import Financeiro from '@/pages/Financeiro'
 import Estoque from '@/pages/Estoque'
 import Relatorios from '@/pages/Relatorios'
 import Profile from '@/pages/Profile'
+import Users from '@/pages/Users'
 import NotFound from '@/pages/NotFound'
 import { Toaster } from '@/components/ui/toaster'
 
@@ -128,6 +129,15 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/usuarios"
+              element={
+                <ProtectedRoute>
+                  <Users />
                 </ProtectedRoute>
               }
             />

@@ -14,6 +14,8 @@ import {
   LogOut,
   Ear,
   Settings,
+  UserCog,
+  type LucideIcon,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { getInitials, getAvatarColor } from '@/lib/formatters'
@@ -36,8 +38,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [logoutModalOpen, setLogoutModalOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
 
+  interface NavItem {
+    name: string
+    path: string
+    icon: LucideIcon
+    exact?: boolean
+    adminOnly?: boolean
+  }
+
   // Menu agrupado institucional
-  const navigationGroups = [
+  const allNavigationGroups: { groupTitle: string; items: NavItem[] }[] = [
     {
       groupTitle: 'Visão Geral',
       items: [
@@ -102,9 +112,22 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           path: '/perfil',
           icon: Settings,
         },
+        {
+          name: 'Usuários',
+          path: '/usuarios',
+          icon: UserCog,
+          adminOnly: true,
+        },
       ],
     },
   ]
+
+  const navigationGroups = allNavigationGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.adminOnly || currentUser?.role === 'admin'),
+    }))
+    .filter((group) => group.items.length > 0)
 
   const isCurrentActive = (path: string, exact = false) => {
     if (exact) return location.pathname === path
