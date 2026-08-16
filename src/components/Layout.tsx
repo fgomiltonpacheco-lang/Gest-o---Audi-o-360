@@ -11,6 +11,7 @@ import {
   BarChart3,
   ShoppingCart,
   Building2,
+  PieChart,
   Handshake,
   Menu,
   X,
@@ -98,6 +99,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           name: 'Vendas B2B',
           path: '/vendas-b2b',
           icon: Building2,
+          adminOnly: true,
+        },
+        {
+          name: 'Comissões B2B',
+          path: '/relatorios/comissoes-b2b',
+          icon: PieChart,
           adminOnly: true,
         },
         {

@@ -21,6 +21,7 @@ import Users from '@/pages/Users'
 import Procedimentos from '@/pages/Procedimentos'
 import Configuracoes from '@/pages/Configuracoes'
 import VendasB2B from '@/pages/VendasB2B'
+import RelatorioComissoesB2B from '@/pages/RelatorioComissoesB2B'
 import NovaVendaB2B from '@/pages/NovaVendaB2B'
 import DetalhesVendaB2B from '@/pages/DetalhesVendaB2B'
 import EmpresasParceiras from '@/pages/EmpresasParceiras'
@@ -200,6 +201,14 @@ export function App() {
               element={
                 <AdminRoute>
                   <DetalhesVendaB2B />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/relatorios/comissoes-b2b"
+              element={
+                <AdminRoute>
+                  <RelatorioComissoesB2B />
                 </AdminRoute>
               }
             />
