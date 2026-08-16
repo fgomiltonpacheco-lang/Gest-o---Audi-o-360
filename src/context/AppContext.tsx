@@ -19,6 +19,8 @@ import {
   SystemAlert,
   AidMaintenance,
   AidAdjustment,
+  AppointmentProcedureItem,
+  PatientPlanType,
 } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
@@ -95,25 +97,56 @@ const mapPatient = (r: any): Patient => ({
   lastVisit: r.lastVisit || toDateStr(r.created),
 })
 
-const mapAppointment = (r: any): Appointment => ({
-  id: r.id,
-  patientId: r.patientId || '',
-  patientName: r.patientName || '',
-  patientPhone: r.patientPhone || '',
-  procedureId: r.procedureId || '',
-  // `type` continua sendo o nome exibido (procedimento ou tipo legado).
-  type: r.type || 'Avaliação auditiva',
-  date: r.date || '',
-  time: r.time || '',
-  duration: Number(r.duration) || 60,
-  value: r.value != null ? Number(r.value) : undefined,
-  professionalName: r.professionalName || '',
-  status: r.status || 'Agendado',
-  notes: r.notes || '',
-  planType: r.planType === 'Convênio' ? 'Convênio' : r.planType === 'SUS' ? 'SUS' : 'Particular',
-  reception: r.reception || '',
-  createdAt: toDateStr(r.created),
-})
+const mapAppointment = (r: any): Appointment => {
+  const planType: PatientPlanType =
+    r.planType === 'Convênio' ? 'Convênio' : r.planType === 'SUS' ? 'SUS' : 'Particular'
+  const procedureId = r.procedureId || ''
+  const type = r.type || 'Avaliação auditiva'
+  const value = r.value != null ? Number(r.value) : undefined
+
+  // proceduresList: se já existir no registro, normaliza; caso contrário,
+  // monta um fallback a partir dos campos legados para manter compatibilidade.
+  let proceduresList: AppointmentProcedureItem[] = []
+  if (Array.isArray(r.proceduresList) && r.proceduresList.length > 0) {
+    proceduresList = r.proceduresList.map((p: any) => ({
+      procedureId: String(p?.procedureId || ''),
+      procedureName: String(p?.procedureName || ''),
+      value: Number(p?.value) || 0,
+      planType:
+        p?.planType === 'Convênio' ? 'Convênio' : p?.planType === 'SUS' ? 'SUS' : 'Particular',
+    }))
+  } else if (procedureId || (type && type !== 'Avaliação auditiva')) {
+    proceduresList = [
+      {
+        procedureId,
+        procedureName: type,
+        value: Number(value || 0),
+        planType,
+      },
+    ]
+  }
+
+  return {
+    id: r.id,
+    patientId: r.patientId || '',
+    patientName: r.patientName || '',
+    patientPhone: r.patientPhone || '',
+    procedureId,
+    // `type` continua sendo o nome exibido (procedimento ou tipo legado).
+    type,
+    date: r.date || '',
+    time: r.time || '',
+    duration: Number(r.duration) || 60,
+    value,
+    professionalName: r.professionalName || '',
+    status: r.status || 'Agendado',
+    notes: r.notes || '',
+    planType,
+    reception: r.reception || '',
+    proceduresList,
+    createdAt: toDateStr(r.created),
+  }
+}
 
 const mapClinicalRecord = (r: any): ClinicalRecord => ({
   patientId: r.patientId || '',
@@ -934,6 +967,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notes: appData.notes || '',
       planType: appData.planType || 'Particular',
       reception: appData.reception ?? '',
+      // proceduresList: espelha a lista enviada (quando houver). Para novos
+      // agendamentos criados pelo AppointmentModal, montamos um item a partir
+      // do procedimento principal para manter consistência.
+      proceduresList:
+        appData.proceduresList && appData.proceduresList.length > 0
+          ? appData.proceduresList
+          : [
+              {
+                procedureId: appData.procedureId || '',
+                procedureName: appData.type || '',
+                value: appData.value ?? 0,
+                planType: appData.planType || 'Particular',
+              },
+            ],
     }
     pb.collection('appointments')
       .create(payload)

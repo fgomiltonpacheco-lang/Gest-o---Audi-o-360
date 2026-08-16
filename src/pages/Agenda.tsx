@@ -37,9 +37,35 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { AppointmentModal } from '@/components/AppointmentModal'
+import { AttendanceModal } from '@/components/AttendanceModal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { usePrint } from '@/components/print/PrintProvider'
 import { AgendaPrint } from '@/components/print/PrintDocuments'
+
+// ---------- Helpers de procedimentos múltiplos ----------
+
+/**
+ * Retorna o rótulo de procedimentos para o card da agenda. Quando há
+ * múltiplos procedimentos, mostra o primeiro + contador; caso contrário,
+ * devolve o nome único (comportamento legado).
+ */
+function getProceduresLabel(app: Appointment): string {
+  const list = app.proceduresList
+  if (!list || list.length <= 1) return app.type
+  const extra = list.length - 1
+  const firstName = list[0]?.procedureName || app.type
+  return `${firstName} + ${extra} procedimento${extra > 1 ? 's' : ''}`
+}
+
+/**
+ * Soma o valor de todos os procedimentos da lista. Quando não há lista,
+ * usa o `value` legado.
+ */
+function getProceduresTotal(app: Appointment): number {
+  const list = app.proceduresList
+  if (!list || list.length === 0) return Number(app.value || 0)
+  return list.reduce((sum, it) => sum + (Number(it.value) || 0), 0)
+}
 
 type ViewMode = 'dia' | 'semana' | 'mes' | 'lista'
 
@@ -133,6 +159,10 @@ export default function Agenda() {
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [appointmentToDelete, setAppointmentToDelete] = useState<Appointment | null>(null)
+
+  // Modal de atendimento (Atender)
+  const [attendanceOpen, setAttendanceOpen] = useState(false)
+  const [attendanceAppointment, setAttendanceAppointment] = useState<Appointment | null>(null)
 
   // String da data selecionada: YYYY-MM-DD
   const selectedDateStr = selectedDate.toISOString().split('T')[0]
@@ -252,11 +282,13 @@ export default function Agenda() {
     }
   }
 
-  // Ação rápida: Realizar atendimento (leva ao prontuário).
-  // Só deve ser acionado quando o paciente já está "presente" na recepção.
+  // Ação: abrir o modal de atendimento para acrescentar/remover
+  // procedimentos e finalizar. Substitui o fluxo antigo que navegava direto
+  // para o prontuário. Mantém compatibilidade: o botão "Abrir prontuário"
+  // dentro do modal faz a navegação para preenchimento clínico.
   const handleFulfill = (app: Appointment) => {
-    updateAppointment(app.id, { status: 'Realizado', reception: 'atendendo' })
-    navigate(`/pacientes/${app.patientId}/prontuario`)
+    setAttendanceAppointment(app)
+    setAttendanceOpen(true)
   }
 
   // Marcar chegada do paciente na recepção
@@ -490,10 +522,11 @@ export default function Agenda() {
                                 <ReceptionBadge reception={app.reception} />
                               </div>
                               <p className="text-[11px] text-slate-600 mt-0.5">
-                                {app.type} • {app.duration} min • {app.professionalName}
+                                {getProceduresLabel(app)} • {app.duration} min •{' '}
+                                {app.professionalName}
                               </p>
                               <p className="text-[11px] text-slate-700 font-semibold mt-0.5">
-                                {formatCurrency(app.value)}
+                                {formatCurrency(getProceduresTotal(app))}
                               </p>
                               {app.notes && (
                                 <p className="text-[10px] text-slate-500 italic mt-0.5 truncate">
@@ -622,7 +655,7 @@ export default function Agenda() {
                               {app.patientName}
                             </span>
                             <span className="text-[10px] text-slate-500 block truncate">
-                              {app.type}
+                              {getProceduresLabel(app)}
                             </span>
                             <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                               <Badge
@@ -788,7 +821,7 @@ export default function Agenda() {
                           <span
                             className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${typeConfig.bg} ${typeConfig.text} ${typeConfig.border}`}
                           >
-                            {app.type}
+                            {getProceduresLabel(app)}
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-slate-700">{app.professionalName}</td>
@@ -807,7 +840,7 @@ export default function Agenda() {
                           <PlanBadge plan={app.planType || 'Particular'} />
                         </td>
                         <td className="py-3.5 px-4 font-mono text-xs text-slate-700 font-semibold">
-                          {formatCurrency(app.value)}
+                          {formatCurrency(getProceduresTotal(app))}
                         </td>
                         <td className="py-3.5 px-4">
                           <ReceptionBadge reception={app.reception} />
@@ -929,6 +962,19 @@ export default function Agenda() {
         initialDate={modalInitialDate}
         initialTime={modalInitialTime}
         onSave={handleSaveAppointment}
+      />
+
+      {/* Modal de Atendimento (adicionar/remover procedimentos e finalizar) */}
+      <AttendanceModal
+        open={attendanceOpen}
+        onOpenChange={setAttendanceOpen}
+        appointment={attendanceAppointment}
+        onFinish={() => {
+          setAttendanceAppointment(null)
+        }}
+        onOpenProntuario={(patientId) => {
+          navigate(`/pacientes/${patientId}/prontuario`)
+        }}
       />
 
       {/* Confirmação de Exclusão */}

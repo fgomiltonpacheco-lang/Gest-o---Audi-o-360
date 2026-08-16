@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T01:17:41.407Z",
+  "generatedAt": "2026-08-16T01:24:53.200Z",
   "collections": [
     {
       "name": "users",
@@ -348,6 +348,12 @@
         {
           "name": "reception",
           "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "proceduresList",
+          "type": "json",
           "required": false,
           "system": false
         }

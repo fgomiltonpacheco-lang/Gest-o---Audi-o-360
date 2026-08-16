@@ -75,6 +75,18 @@ export type AppointmentType =
 
 export type AppointmentStatus = 'Agendado' | 'Confirmado' | 'Realizado' | 'Faltou' | 'Cancelado'
 
+/**
+ * Item de procedimento vinculado a um agendamento. O array `proceduresList`
+ * substitui gradualmente o `procedureId`/`value` legados, permitindo que um
+ * atendimento contenha vários procedimentos com seus respectivos valores.
+ */
+export interface AppointmentProcedureItem {
+  procedureId: string
+  procedureName: string
+  value: number
+  planType: PatientPlanType
+}
+
 export interface Procedure {
   id: string
   name: string
@@ -126,6 +138,13 @@ export interface Appointment {
   planType?: PatientPlanType
   /** Estado de recepção: "" (não chegou), "presente" (na recepção), "atendendo" (em atendimento). */
   reception?: string
+  /**
+   * Lista de procedimentos efetivamente realizados no atendimento. Pode ter
+   * múltiplos itens quando o profissional acrescenta procedimentos durante o
+   * atendimento. Fallback: quando ausente, monta-se um array com o
+   * `procedureId`/`type`/`value` legados.
+   */
+  proceduresList?: AppointmentProcedureItem[]
   createdAt: string
 }
 
