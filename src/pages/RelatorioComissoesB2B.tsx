@@ -38,20 +38,30 @@ import type { VendaB2B, NFServicoStatus } from '@/types'
 
 const PAGE_SIZE = 10
 
-/** Rótulo do status de NF exibido na coluna "Status NF". */
+/** Rótulo do status de NF exibido na coluna "NFS-e". */
 const nfStatusLabel: Record<NFServicoStatus, string> = {
   rascunho: 'Pendente',
   emitida: 'Emitida',
   cancelada: 'Cancelada',
+  cancelada_prefeitura: 'Cancelada',
 }
 
 const nfStatusColors: Record<NFServicoStatus, string> = {
   rascunho: 'bg-amber-50 text-amber-700 border-amber-200',
   emitida: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   cancelada: 'bg-red-50 text-red-700 border-red-200',
+  cancelada_prefeitura: 'bg-red-50 text-red-700 border-red-200',
 }
 
 type FiltroComissao = 'todas' | 'receber' | 'recebidas'
+type FiltroNfse = 'todas' | 'emitida' | 'pendente' | 'cancelada'
+
+/** Normaliza o status da NFS-e para o valor do filtro. */
+function nfseFiltroDe(status: NFServicoStatus | undefined): FiltroNfse {
+  if (!status || status === 'rascunho') return 'pendente'
+  if (status === 'emitida') return 'emitida'
+  return 'cancelada' // cancelada | cancelada_prefeitura
+}
 
 /** Converte "YYYY-MM-DD" -> "YYYY-MM". */
 function toYearMonth(ymd: string | undefined | null): string {
@@ -81,6 +91,7 @@ export default function RelatorioComissoesB2B() {
   const [filterFrom, setFilterFrom] = useState('')
   const [filterTo, setFilterTo] = useState('')
   const [filterStatus, setFilterStatus] = useState<FiltroComissao>('todas')
+  const [filterNfse, setFilterNfse] = useState<FiltroNfse>('todas')
   const [filterEmpresa, setFilterEmpresa] = useState('all')
   const [filterBusca, setFilterBusca] = useState('')
 
@@ -119,7 +130,8 @@ export default function RelatorioComissoesB2B() {
       .filter((v) => v.status_repasse === 'pendente')
       .reduce((acc, v) => acc + (v.valor_comissao || 0), 0)
     const totalVendas = vendasAtivas.length
-    return { totalComissoes, comissoesRecebidas, comissoesAReceber, totalVendas }
+    const nfsePendentes = vendasAtivas.filter((v) => v.nf?.status === 'rascunho').length
+    return { totalComissoes, comissoesRecebidas, comissoesAReceber, totalVendas, nfsePendentes }
   }, [vendasAtivas])
 
   // Lista filtrada (todos os filtros, inclusive status da comissão, empresa e busca)
@@ -129,12 +141,13 @@ export default function RelatorioComissoesB2B() {
       .filter((v) => {
         if (filterStatus === 'receber' && v.status_repasse !== 'pendente') return false
         if (filterStatus === 'recebidas' && v.status_repasse !== 'recebido') return false
+        if (filterNfse !== 'todas' && nfseFiltroDe(v.nf?.status) !== filterNfse) return false
         if (filterEmpresa !== 'all' && v.cliente_empresa_id !== filterEmpresa) return false
         if (busca && !(v.numero_venda || '').toLowerCase().includes(busca)) return false
         return true
       })
       .sort((a, b) => (a.data_venda < b.data_venda ? 1 : -1))
-  }, [vendasAtivas, filterStatus, filterEmpresa, filterBusca])
+  }, [vendasAtivas, filterStatus, filterNfse, filterEmpresa, filterBusca])
 
   // Totais do rodapé (sobre a lista filtrada)
   const totais = useMemo(() => {
@@ -180,6 +193,7 @@ export default function RelatorioComissoesB2B() {
     !!filterFrom ||
     !!filterTo ||
     filterStatus !== 'todas' ||
+    filterNfse !== 'todas' ||
     filterEmpresa !== 'all' ||
     !!filterBusca.trim()
 
@@ -187,6 +201,7 @@ export default function RelatorioComissoesB2B() {
     setFilterFrom('')
     setFilterTo('')
     setFilterStatus('todas')
+    setFilterNfse('todas')
     setFilterEmpresa('all')
     setFilterBusca('')
     setPage(1)
@@ -293,7 +308,7 @@ export default function RelatorioComissoesB2B() {
       </div>
 
       {/* Cards de resumo */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -355,6 +370,21 @@ export default function RelatorioComissoesB2B() {
             </div>
             <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
               <ShoppingCart className="w-4 h-4 text-slate-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-amber-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider">
+                NFS-e Pendentes
+              </p>
+              <p className="text-xl font-extrabold text-amber-700 mt-1">{resumo.nfsePendentes}</p>
+              <p className="text-[10px] text-amber-600 mt-0.5">Aguardando emissão</p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center">
+              <Receipt className="w-4 h-4 text-amber-600" />
             </div>
           </div>
         </div>
@@ -514,7 +544,7 @@ export default function RelatorioComissoesB2B() {
             </Button>
           )}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
           <div>
             <Label className="text-[11px] text-slate-500 mb-1 block">Data início</Label>
             <Input
@@ -555,6 +585,26 @@ export default function RelatorioComissoesB2B() {
                 <SelectItem value="todas">Todas</SelectItem>
                 <SelectItem value="receber">A Receber</SelectItem>
                 <SelectItem value="recebidas">Recebidas</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-[11px] text-slate-500 mb-1 block">Status da NFS-e</Label>
+            <Select
+              value={filterNfse}
+              onValueChange={(v) => {
+                setFilterNfse(v as FiltroNfse)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 rounded-lg text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas</SelectItem>
+                <SelectItem value="emitida">Emitida</SelectItem>
+                <SelectItem value="pendente">Pendente</SelectItem>
+                <SelectItem value="cancelada">Cancelada</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -613,7 +663,7 @@ export default function RelatorioComissoesB2B() {
                 <TableHead className="text-xs uppercase tracking-wider text-right">
                   Valor Comissão
                 </TableHead>
-                <TableHead className="text-xs uppercase tracking-wider">Status NF</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider">NFS-e</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider">Status Repasse</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider">Data Recebimento</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider text-right">Ações</TableHead>
@@ -652,9 +702,16 @@ export default function RelatorioComissoesB2B() {
                         {formatCurrency(v.valor_comissao)}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={nfStatusColors[nfStatus]}>
-                          {nfStatusLabel[nfStatus]}
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          {v.nf?.numero_nfse && (
+                            <span className="text-xs font-bold text-slate-800 whitespace-nowrap">
+                              Nº {v.nf.numero_nfse}
+                            </span>
+                          )}
+                          <Badge variant="outline" className={nfStatusColors[nfStatus]}>
+                            {nfStatusLabel[nfStatus]}
+                          </Badge>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge

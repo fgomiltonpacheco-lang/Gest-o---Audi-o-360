@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import {
   ArrowLeft,
   Building2,
@@ -12,6 +12,8 @@ import {
   ShieldAlert,
   Wallet,
   Download,
+  Loader2,
+  AlertTriangle,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { useToast } from '@/hooks/use-toast'
@@ -45,6 +47,14 @@ import {
 } from '@/components/ui/dialog'
 import { usePrint } from '@/components/print/PrintProvider'
 import { NFServicoComissaoPrint } from '@/components/print/NFServicoComissaoPrint'
+import {
+  emitirNfse,
+  cancelarNfse,
+  baixarPdfNfse,
+  isApiConfigurada,
+  type NfseApiConfig,
+  type NfseDados,
+} from '@/lib/nfse-api'
 import type { VendaB2B, VendaB2BStatus, NFServicoStatus } from '@/types'
 
 const statusLabel: Record<VendaB2BStatus, string> = {
@@ -145,6 +155,22 @@ export default function DetalhesVendaB2B() {
     pdf_url: '',
   })
   const [emitLoading, setEmitLoading] = useState(false)
+  const [baixarPdfLoading, setBaixarPdfLoading] = useState(false)
+
+  /** Constrói o objeto NfseApiConfig a partir das configurações salvas. */
+  const nfseApiConfig: NfseApiConfig | null = useMemo(() => {
+    if (!nfseB2BConfig) return null
+    return {
+      baseUrl: nfseB2BConfig.url_api || '',
+      usuario: nfseB2BConfig.login_api || '',
+      senha: nfseB2BConfig.token_api || '',
+      ambiente: nfseB2BConfig.ambiente,
+      provedor: nfseB2BConfig.provedor,
+      codigoMunicipio: nfseB2BConfig.codigo_municipio,
+    }
+  }, [nfseB2BConfig])
+
+  const apiConfigurada = isApiConfigurada(nfseApiConfig)
 
   useEffect(() => {
     fetchNfseB2BConfig()
@@ -230,19 +256,71 @@ export default function DetalhesVendaB2B() {
     setEmitLoading(true)
     try {
       const base = venda.valor_comissao // RN2: base = comissão
-      const iss = (base * Number(nfForm.aliquota_iss || 0)) / 100
+      const aliquota = Number(nfForm.aliquota_iss) || 0
+      const iss = (base * aliquota) / 100
       const liquido = base - iss
+      const discriminacao = nfForm.discriminacao_servico || DEFAULT_DISCRIMINACAO
+      const itemLista = nfForm.item_lista_servico || '10.01'
+
+      // Chama a API da prefeitura (se configurada). Se não houver URL base,
+      // a função retorna erro — exibimos e não persistimos a NFS-e.
+      let numeroNfse = nfForm.numero_nfse.trim()
+      let codigoVerificacao = nfForm.codigo_verificacao.trim()
+      let pdfUrl = nfForm.pdf_url.trim()
+
+      if (nfseApiConfig) {
+        const dados: NfseDados = {
+          prestador: {
+            cnpj: '',
+            inscricaoMunicipal: nfseB2BConfig?.inscricao_municipal || '',
+            razaoSocial: clinicSettings?.nome,
+            municipio: nfseB2BConfig?.municipio,
+            uf: nfseB2BConfig?.uf,
+          },
+          tomador: {
+            cnpj: nfForm.tomador_cnpj.trim(),
+            razaoSocial: nfForm.tomador_razao_social.trim(),
+            endereco: nfForm.tomador_endereco.trim(),
+            municipio: nfForm.tomador_municipio.trim(),
+            uf: nfForm.tomador_uf.trim(),
+            cep: nfForm.tomador_cep.trim(),
+            email: nfForm.tomador_email.trim(),
+          },
+          servico: {
+            valorBase: base,
+            aliquotaIss: aliquota,
+            valorIss: iss,
+            valorLiquido: liquido,
+            itemListaServico: itemLista,
+            discriminacao,
+          },
+          numeroVendaB2B: venda.numero_venda,
+        }
+        const resp = await emitirNfse(nfseApiConfig, dados)
+        if (!resp.sucesso) {
+          toast({
+            title: 'Erro ao emitir NFS-e na prefeitura',
+            description: resp.erro,
+            variant: 'destructive',
+          })
+          return
+        }
+        numeroNfse = resp.numeroNfse || numeroNfse
+        codigoVerificacao = resp.codigoVerificacao || codigoVerificacao
+        pdfUrl = resp.pdfUrl || pdfUrl
+      }
+
       const result = await addNFServicoComissao({
         venda_b2b_id: venda.id,
-        numero_nfse: nfForm.numero_nfse.trim(),
-        codigo_verificacao: nfForm.codigo_verificacao.trim(),
+        numero_nfse: numeroNfse,
+        codigo_verificacao: codigoVerificacao,
         data_emissao: nfForm.data_emissao,
         valor_base: base,
-        aliquota_iss: Number(nfForm.aliquota_iss) || 0,
+        aliquota_iss: aliquota,
         valor_iss: iss,
         valor_liquido: liquido,
-        discriminacao_servico: nfForm.discriminacao_servico || DEFAULT_DISCRIMINACAO,
-        item_lista_servico: nfForm.item_lista_servico || '10.01',
+        discriminacao_servico: discriminacao,
+        item_lista_servico: itemLista,
         tomador_cnpj: nfForm.tomador_cnpj.trim(),
         tomador_razao_social: nfForm.tomador_razao_social.trim(),
         tomador_endereco: nfForm.tomador_endereco.trim(),
@@ -250,7 +328,7 @@ export default function DetalhesVendaB2B() {
         tomador_uf: nfForm.tomador_uf.trim(),
         tomador_cep: nfForm.tomador_cep.trim(),
         tomador_email: nfForm.tomador_email.trim(),
-        pdf_url: nfForm.pdf_url.trim(),
+        pdf_url: pdfUrl,
         status: 'emitida',
       })
       if (result) {
@@ -269,7 +347,26 @@ export default function DetalhesVendaB2B() {
     }
     setCancelNfLoading(true)
     try {
-      const res = await cancelNFServicoComissao(nf.id, cancelNfMotivo)
+      // RN4: cancelar NFS-e na prefeitura antes de cancelar venda B2B.
+      // Se a API estiver configurada e a NFS-e estiver ativa, chama a prefeitura.
+      if (nfseApiConfig && nf.numero_nfse && nf.status === 'emitida') {
+        const resp = await cancelarNfse(nfseApiConfig, nf.numero_nfse, cancelNfMotivo.trim())
+        if (!resp.sucesso) {
+          toast({
+            title: 'Erro ao cancelar NFS-e na prefeitura',
+            description: resp.erro,
+            variant: 'destructive',
+          })
+          return
+        }
+      }
+      // Atualiza o registro local para 'cancelada_prefeitura' quando a API confirmou,
+      // senão mantém 'cancelada' (cancelamento apenas interno).
+      const novoStatus: 'cancelada' | 'cancelada_prefeitura' =
+        nfseApiConfig && nf.numero_nfse && nf.status === 'emitida'
+          ? 'cancelada_prefeitura'
+          : 'cancelada'
+      const res = await cancelNFServicoComissao(nf.id, cancelNfMotivo, novoStatus)
       if (res.success) {
         setCancelNfOpen(false)
         setCancelNfMotivo('')
@@ -309,9 +406,46 @@ export default function DetalhesVendaB2B() {
     })
   }
 
-  const handleBaixarPdf = () => {
-    if (!nf?.pdf_url) return
-    window.open(nf.pdf_url, '_blank')
+  const handleBaixarPdf = async () => {
+    if (!nf) return
+    // Se houver URL remota de PDF, abre diretamente.
+    if (nf.pdf_url) {
+      window.open(nf.pdf_url, '_blank')
+      return
+    }
+    // Caso contrário, baixa via API da prefeitura (se configurada).
+    if (!nfseApiConfig || !apiConfigurada) {
+      toast({
+        title: 'PDF indisponível',
+        description: 'Configure a API da prefeitura nas Configurações para baixar o PDF.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (!nf.numero_nfse) {
+      toast({ title: 'NFS-e sem número', variant: 'destructive' })
+      return
+    }
+    setBaixarPdfLoading(true)
+    try {
+      const blob = await baixarPdfNfse(nfseApiConfig, nf.numero_nfse)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `NFSe-${nf.numero_nfse}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao baixar PDF',
+        description: err?.message,
+        variant: 'destructive',
+      })
+    } finally {
+      setBaixarPdfLoading(false)
+    }
   }
 
   const handleAprovar = async () => {
@@ -540,16 +674,20 @@ export default function DetalhesVendaB2B() {
                         >
                           <Printer className="w-3.5 h-3.5 mr-1" /> Imprimir
                         </Button>
-                        {nf.pdf_url && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handleBaixarPdf}
-                            className="rounded-lg text-xs"
-                          >
-                            <Download className="w-3.5 h-3.5 mr-1" /> Baixar PDF
-                          </Button>
-                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleBaixarPdf}
+                          disabled={baixarPdfLoading}
+                          className="rounded-lg text-xs"
+                        >
+                          {baixarPdfLoading ? (
+                            <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                          ) : (
+                            <Download className="w-3.5 h-3.5 mr-1" />
+                          )}{' '}
+                          Baixar PDF
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"
@@ -634,6 +772,24 @@ export default function DetalhesVendaB2B() {
                   A NFS-e de Comissão é emitida sobre o valor da comissão (R${' '}
                   {formatCurrency(venda.valor_comissao)}), e não sobre o valor total da venda.
                 </div>
+
+                {/* Aviso de API não configurada */}
+                {!apiConfigurada && (
+                  <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                    <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <div>
+                      Configure a API da prefeitura nas{' '}
+                      <Link
+                        to="/configuracoes"
+                        className="font-bold underline hover:text-amber-900"
+                      >
+                        Configurações
+                      </Link>{' '}
+                      para emitir a NFS-e diretamente. Sem a API, a NFS-e será registrada apenas
+                      localmente (número/código devem ser informados manualmente).
+                    </div>
+                  </div>
+                )}
 
                 {/* Referência: valor total da venda (não tributado) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -844,8 +1000,18 @@ export default function DetalhesVendaB2B() {
                   disabled={emitLoading}
                   className="rounded-xl text-sm bg-blue-700 hover:bg-blue-800 text-white"
                 >
-                  <FileText className="w-4 h-4 mr-1.5" />
-                  {emitLoading ? 'Emitindo...' : 'Emitir NFS-e de Comissão'}
+                  {emitLoading ? (
+                    <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <FileText className="w-4 h-4 mr-1.5" />
+                  )}
+                  {emitLoading
+                    ? apiConfigurada
+                      ? 'Emitindo na prefeitura...'
+                      : 'Salvando...'
+                    : apiConfigurada
+                      ? 'Emitir NFS-e na Prefeitura'
+                      : 'Emitir NFS-e de Comissão'}
                 </Button>
               </div>
             ) : (

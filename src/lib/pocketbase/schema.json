@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T20:34:04.008Z",
+  "generatedAt": "2026-08-16T20:41:25.949Z",
   "collections": [
     {
       "name": "users",
@@ -372,119 +372,71 @@
       },
       "fields": [
         {
-          "name": "numero_nfse",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "codigo_verificacao",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "data_emissao",
-          "type": "date",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "valor_base",
-          "type": "number",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "aliquota_iss",
-          "type": "number",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "valor_iss",
-          "type": "number",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "valor_liquido",
-          "type": "number",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "discriminacao_servico",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "item_lista_servico",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "tomador_cnpj",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "tomador_razao_social",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "tomador_endereco",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "tomador_municipio",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "tomador_uf",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "tomador_cep",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "tomador_email",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "motivo_cancelamento",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "pdf_url",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "status",
-          "type": "select",
+          "name": "patientId",
+          "type": "relation",
           "required": false,
           "system": false,
-          "selectValues": ["rascunho", "emitida", "cancelada", "cancelada_prefeitura"]
+          "collectionRef": "patients"
+        },
+        {
+          "name": "patientName",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mainComplaint",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "anamnesis",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hearingHistory",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "currentMedications",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "familyHistory",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "diagnosis",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "conduct",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "nextReturn",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "text",
+          "required": false,
+          "system": false
         },
         {
           "name": "created",
@@ -502,118 +454,8 @@
         }
       ],
       "indexes": [
-        "CREATE INDEX idx_nf_servico_venda ON nf_servico_comissao (venda_b2b_id)",
-        "CREATE INDEX idx_nf_servico_numero ON nf_servico_comissao (numero_nfse)",
-        "CREATE INDEX idx_nf_servico_status ON nf_servico_comissao (status)"
+        "CREATE UNIQUE INDEX idx_clinical_records_patient ON clinical_records (patientId)"
       ]
-    },
-    {
-      "name": "nfse_b2b_config",
-      "type": "base",
-      "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.role = 'admin'",
-        "update": "@request.auth.role = 'admin'",
-        "delete": "@request.auth.role = 'admin'"
-      },
-      "fields": [
-        {
-          "name": "municipio",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "uf",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "codigo_municipio",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "provedor",
-          "type": "select",
-          "required": false,
-          "system": false,
-          "selectValues": ["BETHA", "NOTABLU", "SIMPLISS", "GINFES", "ABRASF", "OUTRO"]
-        },
-        {
-          "name": "url_api",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "login_api",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "token_api",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "inscricao_municipal",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "aliquota_iss_padrao",
-          "type": "number",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "item_lista_servico",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "discriminacao_padrao",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "ambiente",
-          "type": "select",
-          "required": false,
-          "system": false,
-          "selectValues": ["homologacao", "producao"]
-        },
-        {
-          "name": "ativo",
-          "type": "bool",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "created",
-          "type": "autodate",
-          "required": false,
-          "system": false,
-          "autodateTriggers": ["onCreate"]
-        },
-        {
-          "name": "updated",
-          "type": "autodate",
-          "required": false,
-          "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
-        }
-      ],
-      "indexes": []
     },
     {
       "name": "evolutions",

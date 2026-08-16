@@ -750,7 +750,7 @@ interface AppContextType {
   nfServicoComissao: NFServicoComissao[]
   fetchNFServicoComissao: (vendaId?: string) => Promise<void>
   addNFServicoComissao: (
-    data: Omit<NFServicoComissao, 'id' | 'created'>,
+    data: Omit<NFServicoComissao, 'id' | 'created' | 'updated'>,
   ) => Promise<NFServicoComissao | null>
   updateNFServicoComissao: (
     id: string,
@@ -759,6 +759,7 @@ interface AppContextType {
   cancelNFServicoComissao: (
     id: string,
     motivo: string,
+    status?: 'cancelada' | 'cancelada_prefeitura',
   ) => Promise<{ success: boolean; message?: string }>
   // Configuração da NFS-e de comissão B2B
   nfseB2BConfig: NfseB2BConfig | null
@@ -3197,7 +3198,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }
 
   const addNFServicoComissao = async (
-    data: Omit<NFServicoComissao, 'id' | 'created'>,
+    data: Omit<NFServicoComissao, 'id' | 'created' | 'updated'>,
   ): Promise<NFServicoComissao | null> => {
     try {
       const rec: any = await pb.collection('nf_servico_comissao').create({
@@ -3290,6 +3291,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const cancelNFServicoComissao = async (
     id: string,
     motivo: string,
+    status: 'cancelada' | 'cancelada_prefeitura' = 'cancelada',
   ): Promise<{ success: boolean; message?: string }> => {
     try {
       if (!motivo?.trim()) {
@@ -3298,7 +3300,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Busca a NF atual para localizar a venda vinculada.
       const nfRec: any = await pb.collection('nf_servico_comissao').getOne(id)
       const result = await updateNFServicoComissao(id, {
-        status: 'cancelada',
+        status,
         motivo_cancelamento: motivo.trim(),
       })
       if (!result.success) return result

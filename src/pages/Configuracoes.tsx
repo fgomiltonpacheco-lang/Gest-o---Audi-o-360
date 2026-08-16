@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -48,8 +49,9 @@ import {
   Stethoscope,
   Pencil,
   AlertTriangle,
+  FileText,
 } from 'lucide-react'
-import type { Equipment } from '@/types'
+import type { Equipment, NfseB2BProvedor, NfseB2BAmbiente } from '@/types'
 import { getEquipmentStatus } from '@/types'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 
@@ -135,6 +137,9 @@ export default function Configuracoes() {
     addEquipment,
     updateEquipment,
     deleteEquipment,
+    nfseB2BConfig,
+    fetchNfseB2BConfig,
+    saveNfseB2BConfig,
   } = useApp()
   const { toast } = useToast()
 
@@ -249,6 +254,82 @@ export default function Configuracoes() {
     d.setFullYear(d.getFullYear() + 1)
     return d.toISOString().split('T')[0]
   })()
+
+  // ---- NFS-e de Comissão B2B ----
+  const [nfseAliquota, setNfseAliquota] = useState<string>('3.00')
+  const [nfseItemServico, setNfseItemServico] = useState<string>('10.01')
+  const [nfseDiscriminacao, setNfseDiscriminacao] = useState<string>(
+    'Intermediação comercial - Comissão sobre venda de aparelhos auditivos',
+  )
+  const [nfseInscMunicipal, setNfseInscMunicipal] = useState<string>('')
+  const [nfseMunicipio, setNfseMunicipio] = useState<string>('Caçador')
+  const [nfseUf, setNfseUf] = useState<string>('SC')
+  const [nfseCodigoMunicipio, setNfseCodigoMunicipio] = useState<string>('4203006')
+  const [nfseProvedor, setNfseProvedor] = useState<NfseB2BProvedor>('BETHA')
+  const [nfseAmbiente, setNfseAmbiente] = useState<NfseB2BAmbiente>('homologacao')
+  const [nfseUrlApi, setNfseUrlApi] = useState<string>('')
+  const [nfseLogin, setNfseLogin] = useState<string>('')
+  const [nfseToken, setNfseToken] = useState<string>('')
+  const [nfseSaving, setNfseSaving] = useState(false)
+
+  useEffect(() => {
+    if (currentUser?.role === 'admin' && !nfseB2BConfig) {
+      fetchNfseB2BConfig()
+    }
+  }, [currentUser?.role, nfseB2BConfig, fetchNfseB2BConfig])
+
+  useEffect(() => {
+    if (nfseB2BConfig) {
+      setNfseAliquota(String(nfseB2BConfig.aliquota_iss_padrao ?? 3))
+      setNfseItemServico(nfseB2BConfig.item_lista_servico || '10.01')
+      setNfseDiscriminacao(
+        nfseB2BConfig.discriminacao_padrao ||
+          'Intermediação comercial - Comissão sobre venda de aparelhos auditivos',
+      )
+      setNfseInscMunicipal(nfseB2BConfig.inscricao_municipal || '')
+      setNfseMunicipio(nfseB2BConfig.municipio || 'Caçador')
+      setNfseUf(nfseB2BConfig.uf || 'SC')
+      setNfseCodigoMunicipio(nfseB2BConfig.codigo_municipio || '4203006')
+      setNfseProvedor(nfseB2BConfig.provedor || 'BETHA')
+      setNfseAmbiente(nfseB2BConfig.ambiente || 'homologacao')
+      setNfseUrlApi(nfseB2BConfig.url_api || '')
+      setNfseLogin(nfseB2BConfig.login_api || '')
+      setNfseToken(nfseB2BConfig.token_api || '')
+    }
+  }, [nfseB2BConfig])
+
+  const handleSaveNfse = async () => {
+    setNfseSaving(true)
+    const aliquota = Number(String(nfseAliquota).replace(',', '.')) || 0
+    const res = await saveNfseB2BConfig({
+      aliquota_iss_padrao: aliquota,
+      item_lista_servico: nfseItemServico.trim(),
+      discriminacao_padrao: nfseDiscriminacao.trim(),
+      inscricao_municipal: nfseInscMunicipal.trim(),
+      municipio: nfseMunicipio.trim(),
+      uf: nfseUf.trim().toUpperCase(),
+      codigo_municipio: nfseCodigoMunicipio.trim(),
+      provedor: nfseProvedor,
+      ambiente: nfseAmbiente,
+      url_api: nfseUrlApi.trim(),
+      login_api: nfseLogin.trim(),
+      token_api: nfseToken,
+      ativo: true,
+    })
+    setNfseSaving(false)
+    toast(
+      res.success
+        ? {
+            title: 'Configuração NFS-e salva',
+            description: 'Os parâmetros da NFS-e de comissão foram atualizados.',
+          }
+        : {
+            title: 'Erro ao salvar',
+            description: res.message || 'Não foi possível salvar a configuração NFS-e.',
+            variant: 'destructive',
+          },
+    )
+  }
 
   const loadConfig = useCallback(async () => {
     setHoursLoading(true)
@@ -487,6 +568,13 @@ export default function Configuracoes() {
           >
             <CalendarOff className="w-3.5 h-3.5 mr-1.5" />
             Feriados e Bloqueios
+          </TabsTrigger>
+          <TabsTrigger
+            value="nfse"
+            className="rounded-lg text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm px-4 py-2"
+          >
+            <FileText className="w-3.5 h-3.5 mr-1.5" />
+            NFS-e
           </TabsTrigger>
         </TabsList>
 
@@ -928,6 +1016,229 @@ export default function Configuracoes() {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ============ ABA: NFS-e ============ */}
+        <TabsContent value="nfse" className="mt-4">
+          <Card className="rounded-2xl border-slate-200 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-navy-700" />
+                NFS-e de Comissão B2B
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                Parâmetros para emissão de Nota Fiscal de Serviço Eletrônica sobre a comissão de
+                vendas B2B. O ISS é calculado sempre sobre o valor da comissão.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {/* Parâmetros fiscais */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Parâmetros Fiscais
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">
+                      Alíquota padrão de ISS (%) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      value={nfseAliquota}
+                      onChange={(e) => setNfseAliquota(e.target.value)}
+                      placeholder="3.00"
+                      inputMode="decimal"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Padrão Caçador/SC: 3.00%. Usado quando o tipo não tem alíquota própria.
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">
+                      Código do item de serviço municipal
+                    </Label>
+                    <Input
+                      value={nfseItemServico}
+                      onChange={(e) => setNfseItemServico(e.target.value)}
+                      placeholder="10.01"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Item da lista de serviços da prefeitura (ex.: 10.01).
+                    </p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-xs font-semibold text-slate-700">
+                      Texto padrão de discriminação
+                    </Label>
+                    <Textarea
+                      value={nfseDiscriminacao}
+                      onChange={(e) => setNfseDiscriminacao(e.target.value)}
+                      placeholder="Intermediação comercial - Comissão sobre venda de aparelhos auditivos"
+                      rows={2}
+                      className="rounded-xl mt-1 text-sm border-slate-300 resize-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Dados do prestador */}
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Dados do Prestador (Audição360)
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">
+                      Inscrição Municipal
+                    </Label>
+                    <Input
+                      value={nfseInscMunicipal}
+                      onChange={(e) => setNfseInscMunicipal(e.target.value)}
+                      placeholder="Inscrição municipal da empresa emissora"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">Município</Label>
+                    <Input
+                      value={nfseMunicipio}
+                      onChange={(e) => setNfseMunicipio(e.target.value)}
+                      placeholder="Caçador"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">UF</Label>
+                    <Input
+                      value={nfseUf}
+                      onChange={(e) => setNfseUf(e.target.value.toUpperCase().slice(0, 2))}
+                      placeholder="SC"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">
+                      Código IBGE do município
+                    </Label>
+                    <Input
+                      value={nfseCodigoMunicipio}
+                      onChange={(e) => setNfseCodigoMunicipio(e.target.value)}
+                      placeholder="4203006"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Configurações da API da prefeitura */}
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Configurações da API da Prefeitura
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">Provedor</Label>
+                    <Select
+                      value={nfseProvedor}
+                      onValueChange={(v) => setNfseProvedor(v as NfseB2BProvedor)}
+                    >
+                      <SelectTrigger className="h-10 rounded-xl mt-1 text-sm border-slate-300">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BETHA" className="text-xs">
+                          Betha
+                        </SelectItem>
+                        <SelectItem value="NOTABLU" className="text-xs">
+                          Nota Blu
+                        </SelectItem>
+                        <SelectItem value="SIMPLISS" className="text-xs">
+                          SimplISS
+                        </SelectItem>
+                        <SelectItem value="GINFES" className="text-xs">
+                          Ginfes
+                        </SelectItem>
+                        <SelectItem value="ABRASF" className="text-xs">
+                          ABRASF (genérico)
+                        </SelectItem>
+                        <SelectItem value="OUTRO" className="text-xs">
+                          Outro
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">Ambiente</Label>
+                    <Select
+                      value={nfseAmbiente}
+                      onValueChange={(v) => setNfseAmbiente(v as NfseB2BAmbiente)}
+                    >
+                      <SelectTrigger className="h-10 rounded-xl mt-1 text-sm border-slate-300">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="homologacao" className="text-xs">
+                          Homologação
+                        </SelectItem>
+                        <SelectItem value="producao" className="text-xs">
+                          Produção
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-xs font-semibold text-slate-700">URL base da API</Label>
+                    <Input
+                      value={nfseUrlApi}
+                      onChange={(e) => setNfseUrlApi(e.target.value)}
+                      placeholder="https://api.prefeitura.gov.br/nfse"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">Usuário / Login</Label>
+                    <Input
+                      value={nfseLogin}
+                      onChange={(e) => setNfseLogin(e.target.value)}
+                      placeholder="usuário da API"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">Senha / Token</Label>
+                    <Input
+                      type="password"
+                      value={nfseToken}
+                      onChange={(e) => setNfseToken(e.target.value)}
+                      placeholder="token de acesso"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                </div>
+                {!nfseUrlApi.trim() && (
+                  <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                    <p className="text-[11px] text-amber-700">
+                      A URL base da API não está configurada. A emissão de NFS-e ficará indisponível
+                      até que este campo seja preenchido.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2 border-t border-slate-100">
+                <Button
+                  onClick={handleSaveNfse}
+                  disabled={nfseSaving}
+                  className="bg-navy-700 hover:bg-navy-800 text-white font-semibold rounded-xl shadow-sm flex items-center gap-2 h-10 px-5"
+                >
+                  <Save className="w-4 h-4" />
+                  {nfseSaving ? 'Salvando...' : 'Salvar Configuração NFS-e'}
+                </Button>
               </div>
             </CardContent>
           </Card>
