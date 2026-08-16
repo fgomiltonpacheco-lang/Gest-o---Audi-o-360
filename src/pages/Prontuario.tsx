@@ -1,4 +1,4 @@
-import React, { useState, Suspense, lazy } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, Suspense, lazy } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useApp } from '@/context/AppContext'
@@ -25,6 +25,10 @@ import {
   Package,
   Receipt,
   Check,
+  Play,
+  XCircle,
+  Building2,
+  ShoppingCart,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { CompareAudiometriesModal } from '@/components/CompareAudiometriesModal'
@@ -56,6 +60,8 @@ import {
   Procedure,
   StockItem,
   Patient,
+  Sale,
+  PDVPaymentMethod,
 } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
@@ -961,51 +967,60 @@ export default function Prontuario() {
             </TabsContent>
 
             {/* 4. ABA APARELHOS */}
-            <TabsContent value="aparelhos" className="space-y-4 pt-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900">
-                  Aparelhos Auditivos do Paciente
-                </h3>
-                <Button
-                  size="sm"
-                  onClick={() => setAidModalOpen(true)}
-                  className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-9"
-                >
-                  <Plus className="w-3.5 h-3.5 mr-1" />
-                  Vincular Aparelho
-                </Button>
-              </div>
+            <TabsContent value="aparelhos" className="space-y-5 pt-5">
+              {/* Seção: Teste com Aparelho */}
+              <TesteAparelhoSection patient={patient} />
 
-              {patientAids.length === 0 ? (
-                <div className="text-center py-10 text-slate-400 text-xs bg-slate-50 rounded-xl">
-                  Nenhum aparelho auditivo vinculado a este paciente.
+              {/* Seção: Aparelhos vinculados */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Aparelhos Auditivos do Paciente
+                  </h3>
+                  <Button
+                    size="sm"
+                    onClick={() => setAidModalOpen(true)}
+                    className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-9"
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    Vincular Aparelho
+                  </Button>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {patientAids.map((aid) => (
-                    <div
-                      key={aid.id}
-                      className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 flex items-center justify-between gap-4"
-                    >
-                      <div>
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-900">
-                          {aid.brand} {aid.model}
-                        </h4>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Tipo: {aid.type} • Lado: {aid.side} • Série: {aid.serialNumber}
-                        </p>
-                        <p className="text-[11px] text-slate-600 mt-1">
-                          Garantia até: <strong>{formatDate(aid.warrantyEndDate)}</strong> •{' '}
-                          {aid.powerSource}
-                        </p>
+
+                {patientAids.length === 0 ? (
+                  <div className="text-center py-10 text-slate-400 text-xs bg-slate-50 rounded-xl">
+                    Nenhum aparelho auditivo vinculado a este paciente.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {patientAids.map((aid) => (
+                      <div
+                        key={aid.id}
+                        className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 flex items-center justify-between gap-4"
+                      >
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                            {aid.brand} {aid.model}
+                          </h4>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Tipo: {aid.type} • Lado: {aid.side} • Série: {aid.serialNumber}
+                          </p>
+                          <p className="text-[11px] text-slate-600 mt-1">
+                            Garantia até: <strong>{formatDate(aid.warrantyEndDate)}</strong> •{' '}
+                            {aid.powerSource}
+                          </p>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className="bg-teal-50 text-navy-700 border-teal-200"
+                        >
+                          {aid.status}
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className="bg-teal-50 text-navy-700 border-teal-200">
-                        {aid.status}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </TabsContent>
 
             {/* 5. ABA EVOLUÇÃO */}
@@ -1225,6 +1240,711 @@ function InfoRow({
       >
         {value}
       </span>
+    </div>
+  )
+}
+
+/* ---------- Subcomponente: Teste com Aparelho (Aba Aparelhos) ---------- */
+interface HearingAidTest {
+  id: string
+  patient_id: string
+  patient_name: string
+  inventory_item_id: string
+  product_name: string
+  brand: string
+  model: string
+  start_date: string
+  side: string
+  status: string
+  observations: string
+  sale_type: string
+  sale_id: string
+  sale_number: string
+  created: string
+}
+
+function TesteAparelhoSection({ patient }: { patient: Patient }) {
+  const {
+    stockItems,
+    empresasParceiras,
+    fetchEmpresasParceiras,
+    addVendaB2B,
+    addSale,
+    addStockExit,
+    currentUser,
+  } = useApp()
+  const { toast } = useToast()
+
+  const [tests, setTests] = useState<HearingAidTest[]>([])
+  const [loading, setLoading] = useState(false)
+
+  // Form de novo teste
+  const today = new Date().toISOString().split('T')[0]
+  const [newOpen, setNewOpen] = useState(false)
+  const [selItemId, setSelItemId] = useState('')
+  const [startDate, setStartDate] = useState(today)
+  const [side, setSide] = useState('Bilateral')
+  const [observations, setObservations] = useState('')
+
+  // Modal venda B2B
+  const [b2bOpen, setB2bOpen] = useState(false)
+  const [b2bTarget, setB2bTarget] = useState<HearingAidTest | null>(null)
+  const [b2bEmpresaId, setB2bEmpresaId] = useState('')
+  const [b2bPercentual, setB2bPercentual] = useState(30)
+  const [b2bValor, setB2bValor] = useState(0)
+  const [savingB2B, setSavingB2B] = useState(false)
+
+  // Modal venda direta
+  const [diretaOpen, setDiretaOpen] = useState(false)
+  const [diretaTarget, setDiretaTarget] = useState<HearingAidTest | null>(null)
+  const [diretaValor, setDiretaValor] = useState(0)
+  const [diretaDesconto, setDiretaDesconto] = useState(0)
+  const [diretaPagamento, setDiretaPagamento] = useState<PDVPaymentMethod>('Dinheiro')
+  const [savingDireta, setSavingDireta] = useState(false)
+
+  // Empresas ativas
+  const empresasAtivas = useMemo(
+    () => empresasParceiras.filter((e) => e.status === 'ativo'),
+    [empresasParceiras],
+  )
+
+  // Aparelhos auditivos disponíveis (mesma lógica do NovaVendaB2B)
+  const aparelhosAuditivos = useMemo(
+    () =>
+      stockItems.filter(
+        (p) =>
+          (p.category || '').toLowerCase().replace(/ó/g, 'o') === 'aparelhos auditivos' &&
+          (p.currentQuantity || 0) > 0,
+      ),
+    [stockItems],
+  )
+
+  const loadTests = useCallback(async () => {
+    try {
+      setLoading(true)
+      const recs = await pb.collection('hearing_aid_tests').getFullList({
+        filter: `patient_id = "${patient.id}"`,
+        sort: '-created',
+      })
+      setTests(recs as any[])
+    } catch (err) {
+      console.error('Erro ao carregar testes de aparelho:', err)
+      setTests([])
+    } finally {
+      setLoading(false)
+    }
+  }, [patient.id])
+
+  useEffect(() => {
+    loadTests()
+  }, [loadTests])
+
+  useEffect(() => {
+    fetchEmpresasParceiras()
+  }, [fetchEmpresasParceiras])
+
+  const onSelectItem = (id: string) => {
+    setSelItemId(id)
+  }
+
+  const handleCreateTest = async () => {
+    const item = aparelhosAuditivos.find((p) => p.id === selItemId)
+    if (!item) {
+      toast({ title: 'Selecione um aparelho do estoque', variant: 'destructive' })
+      return
+    }
+    if (!startDate) {
+      toast({ title: 'Informe a data de início', variant: 'destructive' })
+      return
+    }
+    try {
+      const rec: any = await pb.collection('hearing_aid_tests').create({
+        patient_id: patient.id,
+        patient_name: patient.name,
+        inventory_item_id: item.id,
+        product_name: item.name,
+        brand: item.brand || '',
+        model: item.model || '',
+        start_date: startDate,
+        side,
+        status: 'Em teste',
+        observations: observations.trim(),
+        sale_type: '',
+        sale_id: '',
+        sale_number: '',
+      })
+      setTests((prev) => [rec, ...prev])
+      toast({
+        title: 'Teste iniciado',
+        description: `${item.name} marcado como "Em teste" para ${patient.name}.`,
+      })
+      setSelItemId('')
+      setStartDate(today)
+      setSide('Bilateral')
+      setObservations('')
+      setNewOpen(false)
+    } catch (err) {
+      console.error('Erro ao criar teste:', err)
+      toast({
+        title: 'Erro ao iniciar teste',
+        description: 'Não foi possível registrar o teste. Tente novamente.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleCancelTest = async (t: HearingAidTest) => {
+    try {
+      await pb.collection('hearing_aid_tests').update(t.id, { status: 'Cancelado' })
+      setTests((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: 'Cancelado' } : x)))
+      toast({ title: 'Teste cancelado', description: `Teste de ${t.product_name} cancelado.` })
+    } catch (err) {
+      console.error('Erro ao cancelar teste:', err)
+      toast({ title: 'Erro ao cancelar teste', variant: 'destructive' })
+    }
+  }
+
+  const openB2B = (t: HearingAidTest) => {
+    const item = stockItems.find((p) => p.id === t.inventory_item_id)
+    setB2bTarget(t)
+    setB2bEmpresaId('')
+    setB2bPercentual(30)
+    setB2bValor(item?.salePrice || 0)
+    setB2bOpen(true)
+  }
+
+  const handleConfirmB2B = async () => {
+    if (!b2bTarget) return
+    if (!b2bEmpresaId) {
+      toast({ title: 'Selecione a empresa parceira', variant: 'destructive' })
+      return
+    }
+    setSavingB2B(true)
+    try {
+      const valorSubtotal = Number(b2bValor) || 0
+      const venda = await addVendaB2B({
+        cliente_empresa_id: b2bEmpresaId,
+        cliente_empresa_nome:
+          empresasParceiras.find((e) => e.id === b2bEmpresaId)?.razao_social || '',
+        data_venda: today,
+        valor_total: valorSubtotal,
+        percentual_comissao: Number(b2bPercentual) || 0,
+        valor_comissao: (valorSubtotal * (Number(b2bPercentual) || 0)) / 100,
+        valor_repasse: valorSubtotal - (valorSubtotal * (Number(b2bPercentual) || 0)) / 100,
+        status: 'aprovada',
+        especialista_id: currentUser?.id || '',
+        especialista_nome: currentUser?.name || '',
+        observacoes: `Origem: teste de aparelho do paciente ${patient.name} (${b2bTarget.product_name}).`,
+        itens: [
+          {
+            produto_id: b2bTarget.inventory_item_id,
+            produto_nome: b2bTarget.product_name,
+            quantidade: 1,
+            valor_unitario: valorSubtotal,
+            valor_subtotal: valorSubtotal,
+          },
+        ],
+      })
+
+      if (!venda) {
+        toast({ title: 'Erro ao criar venda B2B', variant: 'destructive' })
+        return
+      }
+
+      // A baixa no estoque é feita pela própria addVendaB2B quando status='aprovada'.
+
+      // Atualiza o teste
+      await pb.collection('hearing_aid_tests').update(b2bTarget.id, {
+        status: 'Convertido em venda B2B',
+        sale_type: 'B2B',
+        sale_id: venda.id,
+        sale_number: venda.numero_venda,
+      })
+      setTests((prev) =>
+        prev.map((x) =>
+          x.id === b2bTarget.id
+            ? {
+                ...x,
+                status: 'Convertido em venda B2B',
+                sale_type: 'B2B',
+                sale_id: venda.id,
+                sale_number: venda.numero_venda,
+              }
+            : x,
+        ),
+      )
+
+      toast({
+        title: 'Venda B2B criada com sucesso!',
+        description: `${venda.numero_venda} registrada e estoque baixado.`,
+      })
+      setB2bOpen(false)
+      setB2bTarget(null)
+    } catch (err) {
+      console.error('Erro ao confirmar venda B2B:', err)
+      toast({ title: 'Erro ao criar venda B2B', variant: 'destructive' })
+    } finally {
+      setSavingB2B(false)
+    }
+  }
+
+  const openDireta = (t: HearingAidTest) => {
+    const item = stockItems.find((p) => p.id === t.inventory_item_id)
+    setDiretaTarget(t)
+    setDiretaValor(item?.salePrice || 0)
+    setDiretaDesconto(0)
+    setDiretaPagamento('Dinheiro')
+    setDiretaOpen(true)
+  }
+
+  const handleConfirmDireta = async () => {
+    if (!diretaTarget) return
+    setSavingDireta(true)
+    try {
+      const valor = Number(diretaValor) || 0
+      const desconto = Number(diretaDesconto) || 0
+      const total = Math.max(0, valor - desconto)
+
+      // Baixa no estoque
+      addStockExit(
+        diretaTarget.inventory_item_id,
+        1,
+        `Venda direta (Teste)`,
+        currentUser?.name || 'Sistema',
+        diretaTarget.patient_name,
+        today,
+      )
+
+      // Cria venda via addSale
+      const newSale: Sale = addSale({
+        patientId: patient.id,
+        patientName: patient.name,
+        date: today,
+        itemsDescription: `1x ${diretaTarget.product_name} (Venda direta a partir de teste)`,
+        totalValue: total,
+        paymentMethod: diretaPagamento,
+        installmentsCount: 1,
+        interestPercent: 0,
+        firstDueDate: today,
+        status: 'Concluída',
+        type: 'PDV',
+        items: [
+          {
+            id: diretaTarget.inventory_item_id,
+            name: diretaTarget.product_name,
+            type: 'inventory',
+            stockItemId: diretaTarget.inventory_item_id,
+            quantity: 1,
+            unitPrice: valor,
+            subtotal: total,
+          },
+        ],
+        subtotal: valor,
+        discountValue: desconto,
+        discountPercent: valor > 0 ? (desconto / valor) * 100 : 0,
+      })
+
+      // Atualiza o teste
+      await pb.collection('hearing_aid_tests').update(diretaTarget.id, {
+        status: 'Convertido em venda direta',
+        sale_type: 'Direta',
+        sale_id: newSale.id,
+        sale_number: String(newSale.number),
+      })
+      setTests((prev) =>
+        prev.map((x) =>
+          x.id === diretaTarget.id
+            ? {
+                ...x,
+                status: 'Convertido em venda direta',
+                sale_type: 'Direta',
+                sale_id: newSale.id,
+                sale_number: String(newSale.number),
+              }
+            : x,
+        ),
+      )
+
+      toast({
+        title: 'Venda direta registrada!',
+        description: `Venda #${newSale.number} criada e estoque baixado.`,
+      })
+      setDiretaOpen(false)
+      setDiretaTarget(null)
+    } catch (err) {
+      console.error('Erro ao confirmar venda direta:', err)
+      toast({ title: 'Erro ao criar venda direta', variant: 'destructive' })
+    } finally {
+      setSavingDireta(false)
+    }
+  }
+
+  const statusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'Em teste':
+        return 'bg-amber-50 text-amber-700 border-amber-200'
+      case 'Convertido em venda B2B':
+        return 'bg-blue-50 text-blue-700 border-blue-200'
+      case 'Convertido em venda direta':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      case 'Cancelado':
+        return 'bg-slate-100 text-slate-500 border-slate-200'
+      default:
+        return 'bg-slate-50 text-slate-700 border-slate-200'
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+          <Play className="w-4 h-4 text-teal-600" />
+          Teste com Aparelho
+        </h3>
+        <Button
+          size="sm"
+          onClick={() => setNewOpen(true)}
+          className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl h-9"
+        >
+          <Plus className="w-3.5 h-3.5 mr-1" />
+          Iniciar Teste
+        </Button>
+      </div>
+
+      {loading ? (
+        <p className="text-xs text-slate-400 italic">Carregando testes...</p>
+      ) : tests.length === 0 ? (
+        <div className="text-center py-8 text-slate-400 text-xs bg-slate-50 rounded-xl border border-dashed border-slate-200">
+          Nenhum teste de aparelho registrado para este paciente.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {tests.map((t) => (
+            <div
+              key={t.id}
+              className="p-4 rounded-xl border border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900">{t.product_name}</h4>
+                  <Badge variant="outline" className={statusBadgeClass(t.status)}>
+                    {t.status}
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {t.brand} {t.model} • Início: {formatDate(t.start_date)} • Orelha: {t.side}
+                </p>
+                {t.sale_number && (
+                  <p className="text-[11px] text-slate-600 mt-0.5">
+                    Venda: <strong>{t.sale_number}</strong> ({t.sale_type})
+                  </p>
+                )}
+                {t.observations && (
+                  <p className="text-[11px] text-slate-600 mt-0.5 italic">{t.observations}</p>
+                )}
+              </div>
+
+              {t.status === 'Em teste' && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    onClick={() => openB2B(t)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg h-8"
+                    title="Vender como B2B"
+                  >
+                    <Building2 className="w-3.5 h-3.5 mr-1" />
+                    Vender como B2B
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => openDireta(t)}
+                    className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-lg h-8"
+                    title="Vender Direto (Estoque)"
+                  >
+                    <ShoppingCart className="w-3.5 h-3.5 mr-1" />
+                    Vender Direto
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleCancelTest(t)}
+                    className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 rounded-lg"
+                    title="Cancelar teste"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal: Novo Teste */}
+      <Dialog open={newOpen} onOpenChange={setNewOpen}>
+        <DialogContent className="max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900">
+              Iniciar Teste com Aparelho
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">Aparelho do Estoque *</Label>
+              <Select value={selItemId} onValueChange={onSelectItem}>
+                <SelectTrigger className="h-10 rounded-xl mt-1 text-xs">
+                  <SelectValue placeholder="Selecione um aparelho auditivo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {aparelhosAuditivos.length === 0 ? (
+                    <SelectItem value="_empty" disabled>
+                      Nenhum aparelho auditivo em estoque
+                    </SelectItem>
+                  ) : (
+                    aparelhosAuditivos.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                        {p.brand ? ` — ${p.brand}` : ''}
+                        {p.model ? ` ${p.model}` : ''} (Saldo: {p.currentQuantity})
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Data de Início</Label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="h-10 rounded-xl mt-1 text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Orelha Testada</Label>
+                <Select value={side} onValueChange={setSide}>
+                  <SelectTrigger className="h-10 rounded-xl mt-1 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Direito">Direito</SelectItem>
+                    <SelectItem value="Esquerdo">Esquerdo</SelectItem>
+                    <SelectItem value="Bilateral">Bilateral</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">Observações</Label>
+              <Textarea
+                value={observations}
+                onChange={(e) => setObservations(e.target.value)}
+                placeholder="Ajustes iniciais, impressões do paciente durante o teste..."
+                rows={3}
+                className="rounded-xl mt-1 text-xs border-slate-300"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setNewOpen(false)}
+              className="rounded-xl text-xs"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCreateTest}
+              className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold"
+            >
+              <Play className="w-3.5 h-3.5 mr-1" />
+              Iniciar Teste
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Venda B2B */}
+      <Dialog open={b2bOpen} onOpenChange={setB2bOpen}>
+        <DialogContent className="max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-blue-700" />
+              Vender como B2B
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 border border-slate-200">
+              {b2bTarget?.product_name} — {b2bTarget?.brand} {b2bTarget?.model}
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">Empresa Parceira *</Label>
+              <Select value={b2bEmpresaId} onValueChange={setB2bEmpresaId}>
+                <SelectTrigger className="h-10 rounded-xl mt-1 text-xs">
+                  <SelectValue placeholder="Selecione a empresa..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {empresasAtivas.length === 0 ? (
+                    <SelectItem value="_empty" disabled>
+                      Nenhuma empresa ativa
+                    </SelectItem>
+                  ) : (
+                    empresasAtivas.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.razao_social}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Comissão (%)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="0.01"
+                  value={b2bPercentual}
+                  onChange={(e) => setB2bPercentual(Number(e.target.value))}
+                  className="h-10 rounded-xl mt-1 text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Valor de Venda (R$)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={b2bValor}
+                  onChange={(e) => setB2bValor(Number(e.target.value))}
+                  className="h-10 rounded-xl mt-1 text-xs"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-xs bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <span className="font-semibold text-blue-700">
+                Comissão ({(Number(b2bPercentual) || 0).toFixed(2)}%)
+              </span>
+              <span className="font-bold text-blue-700">
+                {formatCurrency(((Number(b2bValor) || 0) * (Number(b2bPercentual) || 0)) / 100)}
+              </span>
+            </div>
+          </div>
+          <DialogFooter className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setB2bOpen(false)}
+              disabled={savingB2B}
+              className="rounded-xl text-xs"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmB2B}
+              disabled={savingB2B}
+              className="bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-xs font-semibold"
+            >
+              <Building2 className="w-3.5 h-3.5 mr-1" />
+              {savingB2B ? 'Salvando...' : 'Confirmar Venda B2B'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Venda Direta */}
+      <Dialog open={diretaOpen} onOpenChange={setDiretaOpen}>
+        <DialogContent className="max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-teal-600" />
+              Vender Direto (Estoque)
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 border border-slate-200">
+              {diretaTarget?.product_name} — {diretaTarget?.brand} {diretaTarget?.model}
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">Valor de Venda (R$)</Label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={diretaValor}
+                onChange={(e) => setDiretaValor(Number(e.target.value))}
+                className="h-10 rounded-xl mt-1 text-xs"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Desconto (R$)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={diretaDesconto}
+                  onChange={(e) => setDiretaDesconto(Number(e.target.value))}
+                  className="h-10 rounded-xl mt-1 text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Forma de Pagamento</Label>
+                <Select
+                  value={diretaPagamento}
+                  onValueChange={(v) => setDiretaPagamento(v as PDVPaymentMethod)}
+                >
+                  <SelectTrigger className="h-10 rounded-xl mt-1 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                    <SelectItem value="Cartão de Débito">Cartão de Débito</SelectItem>
+                    <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
+                    <SelectItem value="PIX">PIX</SelectItem>
+                    <SelectItem value="Boleto">Boleto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-xs bg-teal-50 border border-teal-200 rounded-lg p-3">
+              <span className="font-semibold text-teal-700">Total Líquido</span>
+              <span className="font-bold text-teal-700">
+                {formatCurrency(
+                  Math.max(0, (Number(diretaValor) || 0) - (Number(diretaDesconto) || 0)),
+                )}
+              </span>
+            </div>
+          </div>
+          <DialogFooter className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDiretaOpen(false)}
+              disabled={savingDireta}
+              className="rounded-xl text-xs"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmDireta}
+              disabled={savingDireta}
+              className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold"
+            >
+              <ShoppingCart className="w-3.5 h-3.5 mr-1" />
+              {savingDireta ? 'Salvando...' : 'Confirmar Venda'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T19:29:02.027Z",
+  "generatedAt": "2026-08-16T19:35:57.979Z",
   "collections": [
     {
       "name": "users",
@@ -2826,6 +2826,124 @@
         "CREATE INDEX idx_nf_servico_venda ON nf_servico_comissao (venda_b2b_id)",
         "CREATE INDEX idx_nf_servico_numero ON nf_servico_comissao (numero_nf)",
         "CREATE INDEX idx_nf_servico_status ON nf_servico_comissao (status)"
+      ]
+    },
+    {
+      "name": "hearing_aid_tests",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "patient_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "patient_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "inventory_item_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "inventory"
+        },
+        {
+          "name": "product_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "brand",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "model",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "start_date",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "side",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Em teste",
+            "Convertido em venda B2B",
+            "Convertido em venda direta",
+            "Cancelado"
+          ]
+        },
+        {
+          "name": "observations",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sale_type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sale_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sale_number",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_hearing_aid_tests_patient ON hearing_aid_tests (patient_id)",
+        "CREATE INDEX idx_hearing_aid_tests_status ON hearing_aid_tests (status)",
+        "CREATE INDEX idx_hearing_aid_tests_inventory ON hearing_aid_tests (inventory_item_id)"
       ]
     }
   ]
