@@ -541,9 +541,9 @@ export default function Audiometria() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in-50 duration-200 pb-12">
+    <div className="space-y-3 animate-in fade-in-50 duration-200 pb-12">
       {/* Cabeçalho da página */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -554,13 +554,10 @@ export default function Audiometria() {
             Voltar
           </Button>
           <div>
-            <h1 className="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            <h1 className="text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
               <Activity className="w-5 h-5 text-teal-600" />
               Audiometria
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {patient.name} • {isNew ? 'Novo exame' : `Exame de ${formatDate(exam.date)}`}
-            </p>
           </div>
         </div>
       </div>
@@ -571,7 +568,7 @@ export default function Audiometria() {
       </div>
 
       {/* ===================== Entrada de Dados por Orelha ===================== */}
-      <div className="no-print space-y-6">
+      <div className="no-print space-y-3">
         {/* Audiometria Orelha Direita (VERMELHO) */}
         <EarAudiometrySection
           side="OD"
@@ -633,7 +630,7 @@ export default function Audiometria() {
                           )
                         }
                         disabled={isSecretaria}
-                        className="h-10 rounded-xl text-xs font-medium border-slate-300 bg-white"
+                        className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
                       />
                     </Field>
                     <Field label="LDV — Limiar de Detecção de Voz (dB)">
@@ -647,7 +644,7 @@ export default function Audiometria() {
                           )
                         }
                         disabled={isSecretaria}
-                        className="h-10 rounded-xl text-xs font-medium border-slate-300 bg-white"
+                        className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
                       />
                     </Field>
                   </div>
@@ -692,7 +689,7 @@ export default function Audiometria() {
                           })
                         }
                         disabled={isSecretaria}
-                        className="h-10 rounded-xl text-xs font-medium border-slate-300 bg-white"
+                        className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
                       />
                     </Field>
                     <Field label="Intensidade Monoss. (dB)">
@@ -706,7 +703,7 @@ export default function Audiometria() {
                           })
                         }
                         disabled={isSecretaria}
-                        className="h-10 rounded-xl text-xs font-medium border-slate-300 bg-white"
+                        className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
                       />
                     </Field>
                     <Field label="Dissílabos (%)">
@@ -720,7 +717,7 @@ export default function Audiometria() {
                           })
                         }
                         disabled={isSecretaria}
-                        className="h-10 rounded-xl text-xs font-medium border-slate-300 bg-white"
+                        className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
                       />
                     </Field>
                   </div>
@@ -730,7 +727,7 @@ export default function Audiometria() {
                       onChange={(e) => setField(levelsKey as any, e.target.value)}
                       disabled={isSecretaria}
                       placeholder="100% a 45 dB, 76% a 95 dB"
-                      className="h-10 rounded-xl text-xs font-medium border-slate-300 bg-white"
+                      className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
                     />
                   </Field>
                 </div>
@@ -770,7 +767,7 @@ export default function Audiometria() {
                         )
                       }
                       disabled={isSecretaria}
-                      className="w-20 h-8 mx-auto text-center text-xs font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white"
+                      className="w-20 h-8 mx-auto text-center text-[11px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white"
                     />
                   </td>
                   <td className="p-2 text-center">
@@ -784,7 +781,7 @@ export default function Audiometria() {
                         )
                       }
                       disabled={isSecretaria}
-                      className="w-20 h-8 mx-auto text-center text-xs font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white"
+                      className="w-20 h-8 mx-auto text-center text-[11px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white"
                     />
                   </td>
                 </tr>
@@ -803,7 +800,7 @@ export default function Audiometria() {
                         )
                       }
                       disabled={isSecretaria}
-                      className="w-20 h-8 mx-auto text-center text-xs font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white"
+                      className="w-20 h-8 mx-auto text-center text-[11px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white"
                     />
                   </td>
                   <td className="p-2 text-center">
@@ -817,7 +814,7 @@ export default function Audiometria() {
                         )
                       }
                       disabled={isSecretaria}
-                      className="w-20 h-8 mx-auto text-center text-xs font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white"
+                      className="w-20 h-8 mx-auto text-center text-[11px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white"
                     />
                   </td>
                 </tr>
@@ -862,7 +859,7 @@ export default function Audiometria() {
                   onValueChange={(v) => setField('loss_degree', v === '__none' ? '' : v)}
                   disabled={isSecretaria}
                 >
-                  <SelectTrigger className="h-10 rounded-xl text-xs">
+                  <SelectTrigger className="h-8 rounded-xl text-[11px]">
                     <SelectValue placeholder="Selecione o grau" />
                   </SelectTrigger>
                   <SelectContent>
@@ -881,7 +878,7 @@ export default function Audiometria() {
                   onValueChange={(v) => setField('loss_type', v === '__none' ? '' : v)}
                   disabled={isSecretaria}
                 >
-                  <SelectTrigger className="h-10 rounded-xl text-xs">
+                  <SelectTrigger className="h-8 rounded-xl text-[11px]">
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
@@ -900,7 +897,7 @@ export default function Audiometria() {
                   onValueChange={(v) => setField('loss_configuration', v === '__none' ? '' : v)}
                   disabled={isSecretaria}
                 >
-                  <SelectTrigger className="h-10 rounded-xl text-xs">
+                  <SelectTrigger className="h-8 rounded-xl text-[11px]">
                     <SelectValue placeholder="Selecione a configuração" />
                   </SelectTrigger>
                   <SelectContent>
@@ -946,7 +943,7 @@ export default function Audiometria() {
       </div>
 
       {/* Rodapé de ações */}
-      <div className="no-print flex flex-col sm:flex-row items-center justify-end gap-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="no-print flex flex-col sm:flex-row items-center justify-end gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
         <Button
           variant="outline"
           onClick={handlePrint}
@@ -1021,7 +1018,7 @@ function EarAudiometrySection({
   // LDL: Ausente (símbolo de ausência em LDL)
 
   const symBtnClass = (active: boolean) =>
-    `px-1 py-0.5 min-w-[20px] h-6 text-xs sm:text-sm font-bold rounded flex items-center justify-center transition-all select-none ${
+    `px-1 py-0 min-w-[20px] h-5 text-[10px] font-bold rounded flex items-center justify-center transition-all select-none ${
       active
         ? isOd
           ? 'bg-red-600 text-white shadow-sm scale-105'
@@ -1030,29 +1027,27 @@ function EarAudiometrySection({
     }`
 
   const resetBtnClass = (active: boolean) =>
-    `p-0.5 w-5 h-6 text-[10px] rounded flex items-center justify-center transition-all ${
+    `p-0.5 w-4 h-5 text-[10px] rounded flex items-center justify-center transition-all ${
       active
         ? 'text-slate-400 bg-slate-100'
         : 'text-slate-500 hover:bg-slate-200 border border-slate-200 bg-slate-50'
     }`
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-3">
-      <h2 className={`text-sm sm:text-base font-extrabold tracking-tight ${titleColor}`}>
-        {title}
-      </h2>
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-3 space-y-2">
+      <h2 className={`text-xs sm:text-sm font-extrabold tracking-tight ${titleColor}`}>{title}</h2>
 
       <div className="overflow-x-auto border border-slate-300 rounded-lg bg-white">
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="border-b border-slate-300 bg-white">
-              <th className="py-2.5 px-3 text-center text-slate-400 font-bold border-r border-slate-200 w-36">
+              <th className="py-1.5 px-2 text-center text-slate-400 font-bold border-r border-slate-200 w-28">
                 .
               </th>
               {ALL_INPUT_FREQS.map((f) => (
                 <th
                   key={f}
-                  className={`py-2.5 px-1 text-center font-bold border-r border-slate-200 min-w-[56px] ${headerFreqColor}`}
+                  className={`py-1.5 px-1 text-center font-bold border-r border-slate-200 min-w-[48px] ${headerFreqColor}`}
                 >
                   {fmtFreq(f)}
                 </th>
@@ -1062,20 +1057,20 @@ function EarAudiometrySection({
           <tbody className="divide-y divide-slate-200">
             {/* 1. Linha Aérea (Inputs dB) */}
             <tr>
-              <td className="py-2 px-3 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
+              <td className="py-1 px-2 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
                 Aérea
               </td>
               {ALL_INPUT_FREQS.map((f) => {
                 const dbVal = airMap[f]?.db
                 return (
-                  <td key={f} className="p-1.5 border-r border-slate-200 text-center align-middle">
+                  <td key={f} className="p-1 border-r border-slate-200 text-center align-middle">
                     <input
                       type="number"
                       value={dbVal ?? ''}
                       onChange={(e) => onAirDb(f, e.target.value)}
                       disabled={disabled}
                       placeholder=""
-                      className={`w-full h-8 text-center text-xs font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 ${
+                      className={`w-full h-7 text-center text-[11px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 ${
                         isOd ? 'focus:ring-red-400' : 'focus:ring-blue-400'
                       }`}
                     />
@@ -1086,7 +1081,7 @@ function EarAudiometrySection({
 
             {/* 2. Linha Masc / Ausências (Aérea) */}
             <tr>
-              <td className="py-2 px-3 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
+              <td className="py-1 px-2 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
                 Masc / Ausências
               </td>
               {ALL_INPUT_FREQS.map((f) => {
@@ -1188,23 +1183,23 @@ function EarAudiometrySection({
 
             {/* 3. Linha Óssea (Inputs dB) — apenas 500, 1000, 2000, 3000 e 4000 Hz */}
             <tr>
-              <td className="py-2 px-3 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
+              <td className="py-1 px-2 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
                 Óssea
               </td>
               {ALL_INPUT_FREQS.map((f) => {
                 if (!BONE_FREQ_SET.has(f)) {
-                  return <td key={f} className="p-1.5 border-r border-slate-200" />
+                  return <td key={f} className="p-1 border-r border-slate-200" />
                 }
                 const dbVal = boneMap[f]?.db
                 return (
-                  <td key={f} className="p-1.5 border-r border-slate-200 text-center align-middle">
+                  <td key={f} className="p-1 border-r border-slate-200 text-center align-middle">
                     <input
                       type="number"
                       value={dbVal ?? ''}
                       onChange={(e) => onBoneDb(f, e.target.value)}
                       disabled={disabled}
                       placeholder=""
-                      className={`w-full h-8 text-center text-xs font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 ${
+                      className={`w-full h-7 text-center text-[11px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 ${
                         isOd ? 'focus:ring-red-400' : 'focus:ring-blue-400'
                       }`}
                     />
@@ -1215,7 +1210,7 @@ function EarAudiometrySection({
 
             {/* 4. Linha Masc / Ausências (Óssea) */}
             <tr>
-              <td className="py-2 px-3 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
+              <td className="py-1 px-2 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
                 Masc / Ausências
               </td>
               {ALL_INPUT_FREQS.map((f) => {
@@ -1317,20 +1312,20 @@ function EarAudiometrySection({
 
             {/* 5. Linha Limiar de Desconforto (LDL) (Inputs dB) */}
             <tr>
-              <td className="py-2 px-3 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
+              <td className="py-1 px-2 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
                 Limiar de Desconforto (LDL)
               </td>
               {ALL_INPUT_FREQS.map((f) => {
                 const dbVal = ldlMap[f]?.db
                 return (
-                  <td key={f} className="p-1.5 border-r border-slate-200 text-center align-middle">
+                  <td key={f} className="p-1 border-r border-slate-200 text-center align-middle">
                     <input
                       type="number"
                       value={dbVal ?? ''}
                       onChange={(e) => onLdlDb(f, e.target.value)}
                       disabled={disabled}
                       placeholder=""
-                      className={`w-full h-8 text-center text-xs font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 ${
+                      className={`w-full h-7 text-center text-[11px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 ${
                         isOd ? 'focus:ring-red-400' : 'focus:ring-blue-400'
                       }`}
                     />
@@ -1341,7 +1336,7 @@ function EarAudiometrySection({
 
             {/* 6. Linha Ausências (LDL) */}
             <tr>
-              <td className="py-2 px-3 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
+              <td className="py-1 px-2 font-bold text-slate-800 text-right border-r border-slate-200 bg-white">
                 Ausências
               </td>
               {ALL_INPUT_FREQS.map((f) => {
@@ -1789,8 +1784,8 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6">
-      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 pb-4 border-b border-slate-100 mb-4">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-4">
+      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 pb-2 border-b border-slate-100 mb-2">
         {icon}
         {title}
       </h3>
@@ -1802,7 +1797,7 @@ function Section({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <Label className="text-[11px] font-semibold text-slate-600 block mb-1">{label}</Label>
+      <Label className="text-[10px] font-semibold text-slate-600 block mb-0.5">{label}</Label>
       {children}
     </div>
   )
