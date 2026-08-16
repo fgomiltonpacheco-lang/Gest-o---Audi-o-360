@@ -7,6 +7,8 @@ import {
   Users,
   Ear,
   TrendingUp,
+  TrendingDown,
+  Info,
   DollarSign,
   AlertTriangle,
   FileSpreadsheet,
@@ -37,6 +39,12 @@ import {
   Line,
   CartesianGrid,
 } from 'recharts'
+import {
+  Tooltip as UiTooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 type PeriodShortcut = '7d' | '30d' | 'this_month' | 'last_month' | 'this_year'
 
@@ -52,6 +60,70 @@ const PIE_COLORS = [
   '#14b8a6', // Teal
   '#6366f1', // Indigo
 ]
+
+const MONTH_ABBR = [
+  'Jan',
+  'Fev',
+  'Mar',
+  'Abr',
+  'Mai',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Set',
+  'Out',
+  'Nov',
+  'Dez',
+]
+
+// PRNG determinístico com seed fixa — garante que os valores simulados de
+// 2024 sejam os mesmos a cada renderização.
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed * 9999 + 7) * 10000
+  return x - Math.floor(x)
+}
+
+// Variação sazonal aplicada ao fator base (jan/dez mais baixos, out/nov mais altos).
+const SEASONAL_FACTOR = [0.92, 0.88, 0.95, 1.0, 1.02, 0.96, 0.9, 0.94, 1.05, 1.08, 1.0, 0.85]
+
+// Badge "Dados Simulados" com tooltip explicativo sobre a natureza dos dados de 2024.
+function SimuladoBadge() {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <UiTooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-semibold border border-amber-200 cursor-help">
+            <Info className="w-3 h-3" />
+            Dados Simulados
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-[240px] text-xs">
+          Dados simulados para demonstração. A partir de 2026 a comparação será real.
+        </TooltipContent>
+      </UiTooltip>
+    </TooltipProvider>
+  )
+}
+
+// Legenda customizada para o gráfico comparativo — adiciona o badge "Dados
+// Simulados" ao lado da série de 2024.
+function ComparisonLegend(props: {
+  payload?: Array<{ dataKey?: string; value?: string; color?: string }>
+}) {
+  const { payload } = props
+  if (!payload || payload.length === 0) return null
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-4 text-xs pt-2">
+      {payload.map((entry) => (
+        <div key={entry.dataKey} className="flex items-center gap-1.5">
+          <span className="inline-block w-3 h-3 rounded-sm" style={{ background: entry.color }} />
+          <span className="font-medium text-slate-600">{entry.value}</span>
+          {entry.dataKey === 'ano2024' && <SimuladoBadge />}
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export default function Relatorios() {
   const { patients, appointments, hearingAids, sales, installments, stockItems, cashMovements } =
@@ -240,6 +312,91 @@ export default function Relatorios() {
 
     return { totals, months, monthsTotals }
   }, [appointments, startDate, endDate])
+
+  // 10. Comparativo Mensal: Este Ano (2025, real) vs Ano Anterior (2024, simulado)
+  // Totais reais de faturamento por mês de 2025 (apenas atendimentos "Realizado").
+  const real2025Monthly = useMemo(() => {
+    const totals = new Array(12).fill(0)
+    appointments.forEach((a) => {
+      if (a.status !== 'Realizado') return
+      const d = new Date(`${a.date}T00:00:00`)
+      if (isNaN(d.getTime())) return
+      if (d.getFullYear() !== 2025) return
+      const items =
+        Array.isArray(a.proceduresList) && a.proceduresList.length > 0 ? a.proceduresList : null
+      let val = 0
+      if (items) {
+        items.forEach((it) => {
+          val += Number(it.value) || 0
+        })
+      } else {
+        val = Number(a.value) || 0
+      }
+      totals[d.getMonth()] += val
+    })
+    return totals
+  }, [appointments])
+
+  // Dados simulados de 2024: 60% a 85% do valor real de 2025, com variação
+  // sazonal e seed fixo por mês para consistência entre renderizações.
+  const simulated2024Monthly = useMemo(() => {
+    return real2025Monthly.map((real2025, m) => {
+      if (real2025 <= 0) return 0
+      const base = 0.6 + seededRandom(m + 1) * 0.25 // 0.60 a 0.85
+      const factor = Math.min(0.85, Math.max(0.6, base * SEASONAL_FACTOR[m]))
+      return Math.round(real2025 * factor)
+    })
+  }, [real2025Monthly])
+
+  // Meses exibidos no comparativo conforme o período selecionado.
+  const comparisonMonths = useMemo(() => {
+    const today = new Date()
+    const curMonth = today.getMonth() // 0-based
+    let months: number[] = []
+    if (period === 'this_year') {
+      for (let m = 0; m <= curMonth; m++) months.push(m)
+    } else if (period === 'this_month') {
+      months = [curMonth]
+    } else if (period === 'last_month') {
+      months = [(curMonth - 1 + 12) % 12]
+    } else {
+      const s = new Date(`${startDate}T00:00:00`)
+      const e = new Date(`${endDate}T00:00:00`)
+      if (!isNaN(s.getTime()) && !isNaN(e.getTime())) {
+        const cur = new Date(s.getFullYear(), s.getMonth(), 1)
+        const end = new Date(e.getFullYear(), e.getMonth(), 1)
+        while (cur <= end) {
+          if (cur.getFullYear() === 2025) months.push(cur.getMonth())
+          cur.setMonth(cur.getMonth() + 1)
+        }
+      }
+      if (months.length === 0) months = [curMonth]
+    }
+    return months
+  }, [period, startDate, endDate])
+
+  // Linhas do comparativo (gráfico + tabela) e totais.
+  const yearComparisonData = useMemo(() => {
+    const rows = comparisonMonths.map((m) => {
+      const real = real2025Monthly[m]
+      const sim = simulated2024Monthly[m]
+      const diff = real - sim
+      const pct = sim > 0 ? (diff / sim) * 100 : 0
+      return {
+        monthIndex: m,
+        mes: MONTH_ABBR[m],
+        ano2024: sim,
+        ano2025: real,
+        diff,
+        pct,
+      }
+    })
+    const total2024 = rows.reduce((s, r) => s + r.ano2024, 0)
+    const total2025 = rows.reduce((s, r) => s + r.ano2025, 0)
+    const totalDiff = total2025 - total2024
+    const totalPct = total2024 > 0 ? (totalDiff / total2024) * 100 : 0
+    return { rows, total2024, total2025, totalDiff, totalPct }
+  }, [comparisonMonths, real2025Monthly, simulated2024Monthly])
 
   // 5. Receita vs Despesa (Linhas duplas)
   const cashFlowTrendData = useMemo(() => {
@@ -549,6 +706,147 @@ export default function Relatorios() {
               {billingByTypeData.totals.convenioCount} atendimento(s) no período
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Comparativo Mensal: Este Ano vs Ano Anterior */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-teal-600" />
+              Comparativo Mensal: Este Ano vs Ano Anterior
+            </h3>
+            <p className="text-xs text-slate-400">
+              Faturamento total realizado — 2025 (real) comparado a 2024 (simulado)
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge className="bg-teal-50 text-teal-700 text-[10px] font-semibold">
+              Este Ano (2025)
+            </Badge>
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-semibold border border-amber-200">
+              Ano Anterior (2024)
+            </span>
+            <SimuladoBadge />
+          </div>
+        </div>
+
+        {/* Gráfico de barras agrupadas */}
+        <div className="h-72 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={yearComparisonData.rows}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="mes" fontSize={11} stroke="#94a3b8" />
+              <YAxis
+                fontSize={11}
+                stroke="#94a3b8"
+                tickFormatter={(v) => formatCurrency(v)}
+                width={90}
+              />
+              <Tooltip formatter={(v: number) => formatCurrency(v)} />
+              <Legend content={<ComparisonLegend />} />
+              <Bar
+                dataKey="ano2024"
+                fill="#94a3b8"
+                name="Ano Anterior (2024)"
+                radius={[6, 6, 0, 0]}
+              />
+              <Bar dataKey="ano2025" fill="#00A6A6" name="Este Ano (2025)" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Tabela comparativa */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-500">
+                <th className="text-left font-semibold py-2 px-2">Mês</th>
+                <th className="text-right font-semibold py-2 px-2">
+                  <span className="inline-flex items-center gap-1.5">
+                    2024
+                    <SimuladoBadge />
+                  </span>
+                </th>
+                <th className="text-right font-semibold py-2 px-2">2025</th>
+                <th className="text-right font-semibold py-2 px-2">Variação (R$)</th>
+                <th className="text-right font-semibold py-2 px-2">Variação (%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {yearComparisonData.rows.map((r) => {
+                const positive = r.diff >= 0
+                return (
+                  <tr key={r.monthIndex} className="border-b border-slate-100">
+                    <td className="py-2 px-2 font-semibold text-slate-700">{r.mes}</td>
+                    <td className="py-2 px-2 text-right text-slate-500 font-medium">
+                      {formatCurrency(r.ano2024)}
+                    </td>
+                    <td className="py-2 px-2 text-right text-teal-700 font-medium">
+                      {formatCurrency(r.ano2025)}
+                    </td>
+                    <td
+                      className={`py-2 px-2 text-right font-semibold ${
+                        positive ? 'text-emerald-600' : 'text-red-600'
+                      }`}
+                    >
+                      <span className="inline-flex items-center justify-end gap-1">
+                        {positive ? (
+                          <TrendingUp className="w-3 h-3" />
+                        ) : (
+                          <TrendingDown className="w-3 h-3" />
+                        )}
+                        {positive ? '+' : ''}
+                        {formatCurrency(r.diff)}
+                      </span>
+                    </td>
+                    <td
+                      className={`py-2 px-2 text-right font-semibold ${
+                        positive ? 'text-emerald-600' : 'text-red-600'
+                      }`}
+                    >
+                      {positive ? '↑' : '↓'} {Math.abs(r.pct).toFixed(1)}%
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="bg-slate-50 font-extrabold text-slate-900">
+                <td className="py-2.5 px-2">Total</td>
+                <td className="py-2.5 px-2 text-right text-slate-600">
+                  {formatCurrency(yearComparisonData.total2024)}
+                </td>
+                <td className="py-2.5 px-2 text-right text-teal-700">
+                  {formatCurrency(yearComparisonData.total2025)}
+                </td>
+                <td
+                  className={`py-2.5 px-2 text-right ${
+                    yearComparisonData.totalDiff >= 0 ? 'text-emerald-600' : 'text-red-600'
+                  }`}
+                >
+                  <span className="inline-flex items-center justify-end gap-1">
+                    {yearComparisonData.totalDiff >= 0 ? (
+                      <TrendingUp className="w-3 h-3" />
+                    ) : (
+                      <TrendingDown className="w-3 h-3" />
+                    )}
+                    {yearComparisonData.totalDiff >= 0 ? '+' : ''}
+                    {formatCurrency(yearComparisonData.totalDiff)}
+                  </span>
+                </td>
+                <td
+                  className={`py-2.5 px-2 text-right ${
+                    yearComparisonData.totalDiff >= 0 ? 'text-emerald-600' : 'text-red-600'
+                  }`}
+                >
+                  {yearComparisonData.totalDiff >= 0 ? '↑' : '↓'}{' '}
+                  {Math.abs(yearComparisonData.totalPct).toFixed(1)}%
+                </td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </div>
 
