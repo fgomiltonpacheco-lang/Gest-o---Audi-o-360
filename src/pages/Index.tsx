@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import {
@@ -16,6 +16,9 @@ import {
   Package,
   CreditCard,
   Plus,
+  Building2,
+  TrendingUp,
+  Receipt,
 } from 'lucide-react'
 import {
   formatCurrency,
@@ -28,8 +31,23 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
 export default function Index() {
-  const { currentUser, patients, appointments, hearingAids, sales, installments, alerts } = useApp()
+  const {
+    currentUser,
+    patients,
+    appointments,
+    hearingAids,
+    sales,
+    installments,
+    alerts,
+    vendasB2B,
+    fetchVendasB2B,
+  } = useApp()
   const navigate = useNavigate()
+
+  // Carrega vendas B2B para o card de resumo
+  useEffect(() => {
+    fetchVendasB2B()
+  }, [fetchVendasB2B])
 
   // Data atual
   const today = new Date()
@@ -66,6 +84,41 @@ export default function Index() {
     (i) => i.status === 'Atrasado' || (i.status === 'Pendente' && i.dueDate < todayStr),
   )
   const overdueCount = overdueInstallments.length
+
+  // Resumo de Vendas B2B do mês atual
+  const mesesPtBr = [
+    'janeiro',
+    'fevereiro',
+    'março',
+    'abril',
+    'maio',
+    'junho',
+    'julho',
+    'agosto',
+    'setembro',
+    'outubro',
+    'novembro',
+    'dezembro',
+  ]
+  const mesAtualLabel = `${mesesPtBr[today.getMonth()]}/${today.getFullYear()}`
+
+  const b2bResumo = useMemo(() => {
+    const ativas = vendasB2B.filter((v) => v.status !== 'cancelada')
+    const doMes = ativas.filter((v) => (v.data_venda || '').slice(0, 7) === thisMonthStr)
+    // Vendas aprovadas/concluídas (não canceladas) do mês
+    const vendasMes = doMes
+      .filter(
+        (v) => v.status === 'aprovada' || v.status === 'concluida' || v.status === 'nf_emitida',
+      )
+      .reduce((acc, v) => acc + (v.valor_total || 0), 0)
+    const comissaoMes = doMes.reduce((acc, v) => acc + (v.valor_comissao || 0), 0)
+    // Comissões a receber: vendas aprovadas (NF ainda não emitida)
+    const comissaoReceber = ativas
+      .filter((v) => v.status === 'aprovada')
+      .reduce((acc, v) => acc + (v.valor_comissao || 0), 0)
+    const nfsPendentes = ativas.filter((v) => v.status === 'aprovada').length
+    return { vendasMes, comissaoMes, comissaoReceber, nfsPendentes }
+  }, [vendasB2B, thisMonthStr])
 
   // Próximos agendamentos Hoje e Amanhã
   const upcomingToday = appointments
@@ -223,6 +276,65 @@ export default function Index() {
             </div>
           )
         })}
+      </div>
+
+      {/* Card de Vendas B2B */}
+      <div
+        onClick={() => navigate('/vendas-b2b')}
+        className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shadow-inner text-2xl">
+              🏢
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900 group-hover:text-blue-700 transition-colors">
+                Vendas B2B
+              </h3>
+              <p className="text-[11px] text-slate-400 capitalize">{mesAtualLabel}</p>
+            </div>
+          </div>
+          <Building2 className="w-5 h-5 text-slate-300 group-hover:text-blue-600 transition-colors" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+          <div>
+            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+              Vendas B2B do Mês
+            </p>
+            <p className="text-lg font-extrabold text-slate-900 mt-0.5">
+              {formatCurrency(b2bResumo.vendasMes)}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+              Comissões do Mês
+            </p>
+            <p className="text-lg font-extrabold text-emerald-600 mt-0.5">
+              {formatCurrency(b2bResumo.comissaoMes)}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+              Comissões a Receber
+            </p>
+            <p className="text-lg font-extrabold text-emerald-600 mt-0.5">
+              {formatCurrency(b2bResumo.comissaoReceber)}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+              NFs Pendentes
+            </p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-lg font-extrabold text-amber-600">
+                {b2bResumo.nfsPendentes}
+              </span>
+              <Receipt className="w-4 h-4 text-amber-500" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Seção Principal: Próximos Agendamentos (60%) e Central de Alertas (40%) */}

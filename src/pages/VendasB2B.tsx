@@ -11,6 +11,7 @@ import {
   Receipt,
   X,
   Filter,
+  Download,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { useToast } from '@/hooks/use-toast'
@@ -139,6 +140,91 @@ export default function VendasB2B() {
     }
   }
 
+  // Mapa de empresas por id (para obter CNPJ na exportação)
+  const empresaById = useMemo(() => {
+    const m: Record<string, { razao_social: string; cnpj: string }> = {}
+    empresasParceiras.forEach((e) => {
+      m[e.id] = { razao_social: e.razao_social, cnpj: e.cnpj }
+    })
+    return m
+  }, [empresasParceiras])
+
+  const handleExportCSV = () => {
+    if (filtered.length === 0) {
+      toast({
+        title: 'Nada para exportar',
+        description: 'Não há vendas B2B visíveis com os filtros atuais.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // Escapa campo CSV: envolve em aspas e duplica aspas internas
+    const esc = (val: unknown): string => {
+      const s = val === null || val === undefined ? '' : String(val)
+      return `"${s.replace(/"/g, '""')}"`
+    }
+    // Formata valor monetário como número (ex.: 3000.00) sem símbolo R$
+    const num = (v: number | undefined | null): string => {
+      const n = Number(v || 0)
+      return n.toFixed(2).replace(/\.(?=\d{0,1}$)/, '.')
+    }
+
+    const headers = [
+      'Número da Venda',
+      'Data',
+      'Empresa (razão social)',
+      'CNPJ',
+      'Valor Total',
+      '% Comissão',
+      'Valor Comissão',
+      'Valor Repasse',
+      'Status',
+      'Especialista',
+    ]
+
+    const rows = filtered.map((v) => {
+      const emp = empresaById[v.cliente_empresa_id]
+      return [
+        esc(v.numero_venda),
+        esc(v.data_venda),
+        esc(emp?.razao_social || v.cliente_empresa_nome || ''),
+        esc(emp?.cnpj || ''),
+        num(v.valor_total),
+        num(v.percentual_comissao),
+        num(v.valor_comissao),
+        num(v.valor_repasse),
+        esc(statusLabel[v.status]),
+        esc(v.especialista_nome),
+      ].join(',')
+    })
+
+    // BOM UTF-8 para abrir corretamente no Excel em português
+    const csvContent = '\uFEFF' + [headers.map(esc).join(','), ...rows].join('\r\n')
+
+    const now = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const stamp =
+      `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
+      `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+    const filename = `vendas-b2b-${stamp}.csv`
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    toast({
+      title: 'Exportação concluída',
+      description: `${filtered.length} venda(s) exportada(s) em ${filename}.`,
+    })
+  }
+
   return (
     <div className="space-y-5 animate-in fade-in-50 duration-200">
       {/* Cabeçalho */}
@@ -232,16 +318,25 @@ export default function VendasB2B() {
             <Filter className="w-4 h-4" /> Filtros
             {hasFilters && <Badge className="bg-blue-100 text-blue-700 ml-1">Ativos</Badge>}
           </button>
-          {hasFilters && (
+          <div className="flex items-center gap-2">
+            {hasFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="h-7 text-xs text-slate-500"
+              >
+                <X className="w-3 h-3 mr-1" /> Limpar
+              </Button>
+            )}
             <Button
-              variant="ghost"
+              onClick={handleExportCSV}
               size="sm"
-              onClick={clearFilters}
-              className="h-7 text-xs text-slate-500"
+              className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm"
             >
-              <X className="w-3 h-3 mr-1" /> Limpar
+              <Download className="w-3.5 h-3.5 mr-1.5" /> Exportar CSV
             </Button>
-          )}
+          </div>
         </div>
         {showFilters && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-2 border-t border-slate-100">
