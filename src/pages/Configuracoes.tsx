@@ -671,8 +671,8 @@ export default function Configuracoes() {
         {/* ============ ABA: HORÁRIOS ============ */}
         <TabsContent value="hours" className="mt-4">
           <Card className="rounded-2xl border-slate-200 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-bold text-slate-900">
+            <CardHeader className="pb-2 pt-4 px-4">
+              <CardTitle className="text-base font-bold text-slate-900">
                 Horários de Funcionamento
               </CardTitle>
               <CardDescription className="text-xs text-slate-500">
@@ -680,27 +680,28 @@ export default function Configuracoes() {
                 gerar a grade de atendimentos.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5">
+            <CardContent className="p-4 pt-2 space-y-4">
               {hoursLoading ? (
-                <p className="text-xs text-slate-400 py-6 text-center">Carregando...</p>
+                <p className="text-xs text-slate-400 py-4 text-center">Carregando...</p>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2">
                     {DAY_KEYS.map(({ key, label }) => {
                       const day = hours[key]
                       return (
                         <div
                           key={key}
-                          className={`rounded-xl border p-3 space-y-3 ${
+                          className={`rounded-xl border p-2 space-y-1.5 transition-colors ${
                             day.open
                               ? 'border-teal-200 bg-teal-50/30'
                               : 'border-slate-200 bg-slate-50/60'
                           }`}
                         >
                           <div className="flex items-center justify-between">
-                            <Label className="text-sm font-bold text-slate-800">{label}</Label>
-                            <div className="flex items-center gap-2">
+                            <Label className="text-xs font-bold text-slate-800">{label}</Label>
+                            <div className="flex items-center gap-1.5">
                               <Checkbox
+                                id={`day-check-${key}`}
                                 checked={day.open}
                                 onCheckedChange={(v) =>
                                   setHours((prev) => ({
@@ -708,16 +709,20 @@ export default function Configuracoes() {
                                     [key]: { ...prev[key], open: !!v },
                                   }))
                                 }
+                                className="h-4 w-4"
                               />
-                              <span className="text-[11px] font-semibold text-slate-500">
+                              <Label
+                                htmlFor={`day-check-${key}`}
+                                className="text-[11px] font-medium text-slate-600 cursor-pointer select-none"
+                              >
                                 {day.open ? 'Abre' : 'Fechado'}
-                              </span>
+                              </Label>
                             </div>
                           </div>
                           {day.open && (
-                            <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                               <div>
-                                <Label className="text-[10px] uppercase tracking-wide text-slate-400">
+                                <Label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
                                   Início
                                 </Label>
                                 <Select
@@ -729,7 +734,7 @@ export default function Configuracoes() {
                                     }))
                                   }
                                 >
-                                  <SelectTrigger className="h-9 rounded-lg border-slate-300 text-xs font-mono">
+                                  <SelectTrigger className="h-7 px-2 text-[11px] rounded-md border-slate-300 font-mono">
                                     <SelectValue placeholder="Início" />
                                   </SelectTrigger>
                                   <SelectContent className="max-h-60">
@@ -742,7 +747,7 @@ export default function Configuracoes() {
                                 </Select>
                               </div>
                               <div>
-                                <Label className="text-[10px] uppercase tracking-wide text-slate-400">
+                                <Label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
                                   Fim
                                 </Label>
                                 <Select
@@ -754,7 +759,7 @@ export default function Configuracoes() {
                                     }))
                                   }
                                 >
-                                  <SelectTrigger className="h-9 rounded-lg border-slate-300 text-xs font-mono">
+                                  <SelectTrigger className="h-7 px-2 text-[11px] rounded-md border-slate-300 font-mono">
                                     <SelectValue placeholder="Fim" />
                                   </SelectTrigger>
                                   <SelectContent className="max-h-60">
@@ -773,16 +778,16 @@ export default function Configuracoes() {
                     })}
                   </div>
 
-                  <div className="flex flex-col sm:flex-row sm:items-end gap-4 pt-2 border-t border-slate-100">
-                    <div>
-                      <Label className="text-xs font-semibold text-slate-700">
-                        Intervalo da grade (minutos)
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs font-semibold text-slate-700 whitespace-nowrap">
+                        Intervalo da grade:
                       </Label>
                       <Select
                         value={String(slotMinutes)}
                         onValueChange={(v) => setSlotMinutes(Number(v))}
                       >
-                        <SelectTrigger className="h-9 w-40 rounded-lg border-slate-300 text-xs font-semibold mt-1">
+                        <SelectTrigger className="h-8 w-28 rounded-lg border-slate-300 text-xs font-semibold">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -801,9 +806,9 @@ export default function Configuracoes() {
                     <Button
                       onClick={handleSaveHours}
                       disabled={hoursSaving}
-                      className="bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-xl shadow-sm flex items-center gap-2 h-10 px-5"
+                      className="bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-xl shadow-sm flex items-center gap-2 h-9 px-4 text-xs"
                     >
-                      <Save className="w-4 h-4" />
+                      <Save className="w-3.5 h-3.5" />
                       {hoursSaving ? 'Salvando...' : 'Salvar Configuração'}
                     </Button>
                   </div>
