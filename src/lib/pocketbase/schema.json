@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T20:41:25.949Z",
+  "generatedAt": "2026-08-16T21:06:36.867Z",
   "collections": [
     {
       "name": "users",
@@ -3114,6 +3114,289 @@
         }
       ],
       "indexes": []
+    },
+    {
+      "name": "consentimentos",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.role = \"admin\"",
+        "delete": "@request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "paciente_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "tipo_consentimento",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["dados_cadastrais", "dados_saude", "marketing", "pesquisa"]
+        },
+        {
+          "name": "versao_termo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_aceitacao",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ip_aceitacao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "usuario_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "usuario_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["aceito", "revogado", "expirado"]
+        },
+        {
+          "name": "data_revogacao",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_consentimentos_paciente ON consentimentos (paciente_id)",
+        "CREATE INDEX idx_consentimentos_status ON consentimentos (status)"
+      ]
+    },
+    {
+      "name": "policy_texts",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.role = \"admin\"",
+        "update": "@request.auth.role = \"admin\"",
+        "delete": "@request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "dados_cadastrais_texto",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dados_cadastrais_versao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dados_saude_texto",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dados_saude_versao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "marketing_texto",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "marketing_versao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pesquisa_texto",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pesquisa_versao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "politica_privacidade",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "audit_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = \"admin\"",
+        "view": "@request.auth.role = \"admin\"",
+        "create": "",
+        "update": "",
+        "delete": ""
+      },
+      "fields": [
+        {
+          "name": "usuario_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "usuario_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "acao",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "acessou_prontuario",
+            "editou_prontuario",
+            "editou_exame",
+            "editou_evolucao",
+            "editou_anamnese",
+            "editou_aparelhos",
+            "cancelou_venda",
+            "estornou_venda",
+            "editou_financeiro",
+            "acessou_dados_sensiveis"
+          ]
+        },
+        {
+          "name": "paciente_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "paciente_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recurso",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recurso_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "detalhes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ip",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "user_agent",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_audit_logs_usuario ON audit_logs (usuario_id)",
+        "CREATE INDEX idx_audit_logs_paciente ON audit_logs (paciente_id)",
+        "CREATE INDEX idx_audit_logs_acao ON audit_logs (acao)",
+        "CREATE INDEX idx_audit_logs_created ON audit_logs (created)"
+      ]
     }
   ]
 }

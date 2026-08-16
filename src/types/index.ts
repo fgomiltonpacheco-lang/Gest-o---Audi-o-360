@@ -876,11 +876,109 @@ export interface NFServicoComissao {
 // Alertas do Sistema
 export interface SystemAlert {
   id: string
-  type: 'warranty' | 'followup' | 'installment' | 'stock' | 'calibration'
+  type: 'warranty' | 'followup' | 'installment' | 'stock' | 'calibration' | 'lgpd'
   severity: 'warning' | 'danger' | 'info'
   title: string
   description: string
   linkUrl: string
   targetId?: string
   date?: string
+}
+
+// ===== LGPD — Consentimentos, Auditoria e Política de Privacidade =====
+
+export type TipoConsentimento = 'dados_cadastrais' | 'dados_saude' | 'marketing' | 'pesquisa'
+export type StatusConsentimento = 'aceito' | 'revogado' | 'expirado'
+
+export interface Consentimento {
+  id: string
+  paciente_id: string
+  tipo_consentimento: TipoConsentimento
+  versao_termo: string
+  data_aceitacao: string // datetime ISO
+  ip_aceitacao: string
+  usuario_id: string
+  usuario_nome?: string
+  status: StatusConsentimento
+  data_revogacao?: string | null
+  observacoes?: string
+}
+
+export type AuditAcao =
+  | 'acessou_prontuario'
+  | 'editou_prontuario'
+  | 'editou_exame'
+  | 'editou_evolucao'
+  | 'editou_anamnese'
+  | 'editou_aparelhos'
+  | 'cancelou_venda'
+  | 'estornou_venda'
+  | 'editou_financeiro'
+  | 'acessou_dados_sensiveis'
+
+export interface AuditLog {
+  id: string
+  usuario_id: string
+  usuario_nome: string
+  acao: AuditAcao
+  paciente_id?: string | null
+  paciente_nome?: string
+  recurso: string
+  recurso_id?: string | null
+  detalhes?: string // JSON { before, after }
+  ip: string
+  user_agent: string
+  created_at: string
+}
+
+/** Textos padrão dos termos de consentimento (LGPD). */
+export const TIPOS_CONSENTIMENTO: TipoConsentimento[] = [
+  'dados_cadastrais',
+  'dados_saude',
+  'marketing',
+  'pesquisa',
+]
+
+export const ROTULO_CONSENTIMENTO: Record<TipoConsentimento, string> = {
+  dados_cadastrais: 'Dados Cadastrais',
+  dados_saude: 'Dados de Saúde',
+  marketing: 'Marketing',
+  pesquisa: 'Pesquisa',
+}
+
+/** Textos-padrão exibidos quando não há termo configurado pelo admin. */
+export const TEXTO_PADRAO_CONSENTIMENTO: Record<TipoConsentimento, string> = {
+  dados_cadastrais:
+    'CONSENTIMENTO PARA TRATAMENTO DE DADOS CADASTRAIS (LGPD - Lei 13.709/2018)\n\n' +
+    'Eu, abaixo identificado, autorizo a AUDIÇÃO360 a coletar, armazenar e tratar meus dados cadastrais ' +
+    '(nome, CPF, data de nascimento, endereço, telefones e e-mail), exclusivamente para fins de cadastro, ' +
+    'agendamento e comunicação relacionados aos serviços audiológicos prestados.\n\n' +
+    'Estou ciente de que posso solicitar, a qualquer momento, a visualização, correção ou exclusão dos meus dados, ' +
+    'bem como revogar este consentimento, mediante solicitação por escrito à clínica.',
+  dados_saude:
+    'CONSENTIMENTO PARA TRATAMENTO DE DADOS DE SAÚDE (LGPD - Lei 13.709/2018)\n\n' +
+    'Eu, abaixo identificado, autorizo a AUDIÇÃO360 a coletar, armazenar e tratar meus dados de saúde ' +
+    '(histórico clínico, resultados de exames audiológicos, anamnese, evolução e demais informações sensíveis), ' +
+    'necessários à prestação de cuidados e serviços audiológicos.\n\n' +
+    'Estou ciente de que os dados sensíveis serão tratados com sigilo e somente compartilhados quando exigido por ' +
+    'lei ou mediante autorização expressa. Posso revogar este consentimento a qualquer momento.',
+  marketing:
+    'CONSENTIMENTO PARA USO DE DADOS EM MARKETING (LGPD - Lei 13.709/2018)\n\n' +
+    'Eu, abaixo identificado, autorizo a AUDIÇÃO360 a utilizar meus dados de contato (e-mail, telefone e WhatsApp) ' +
+    'para o envio de comunicações promocionais, novidades e ofertas relacionadas a produtos e serviços auditivos.\n\n' +
+    'Estou ciente de que posso cancelar o recebimento dessas comunicações a qualquer momento, bastando solicitar ' +
+    'pelo canal informado na mensagem ou diretamente à clínica.',
+  pesquisa:
+    'CONSENTIMENTO PARA USO DE DADOS EM PESQUISA (LGPD - Lei 13.709/2018)\n\n' +
+    'Eu, abaixo identificado, autorizo a AUDIÇÃO360 a utilizar meus dados, de forma anônima ou agregada, ' +
+    'em estudos, pesquisas e estatísticas clínicas, com finalidade acadêmica ou de aprimoramento dos serviços.\n\n' +
+    'Estou ciente de que minha identificação não será divulgada e que posso revogar este consentimento a qualquer momento.',
+}
+
+export interface PolicyTexts {
+  dados_cadastrais: { texto: string; versao: string }
+  dados_saude: { texto: string; versao: string }
+  marketing: { texto: string; versao: string }
+  pesquisa: { texto: string; versao: string }
+  politica_privacidade: string
 }
