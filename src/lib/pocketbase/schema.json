@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T04:27:13.880Z",
+  "generatedAt": "2026-08-17T04:56:45.408Z",
   "collections": [
     {
       "name": "users",
@@ -3879,6 +3879,18 @@
         {
           "name": "meatoscopia_oe_obs",
           "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "curva_timpanometrica_od",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "curva_timpanometrica_oe",
+          "type": "json",
           "required": false,
           "system": false
         }
