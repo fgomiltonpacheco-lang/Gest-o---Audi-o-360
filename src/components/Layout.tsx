@@ -321,6 +321,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           path: '/configuracoes',
           icon: SlidersHorizontal,
           roles: ADMIN_ONLY,
+          children: [
+            {
+              name: 'Geral',
+              path: '/configuracoes',
+              icon: SlidersHorizontal,
+              exact: true,
+              roles: ADMIN_ONLY,
+            },
+            {
+              name: 'Modelos de Laudo',
+              path: '/configuracoes/laudos',
+              icon: FileText,
+              roles: ADMIN_ONLY,
+            },
+          ],
         },
         {
           name: 'Auditoria',

@@ -1450,3 +1450,167 @@ export const LEMBRETE_STATUS_CONFIRMACAO_CLASS: Record<LembreteStatusConfirmacao
   cancelado: 'bg-red-100 text-red-700 border-red-200',
   sem_resposta: 'bg-slate-100 text-slate-600 border-slate-200',
 }
+
+// ===== Módulo de Configuração de Laudos (modelos de impressão) =====
+
+export type ExamReportTipoExame =
+  | 'audiometria'
+  | 'imitanciometria'
+  | 'teste_aparelho'
+  | 'personalizado'
+export type ExamReportStatus = 'rascunho' | 'publicado' | 'arquivado'
+export type ExamReportOrientacao = 'retrato' | 'paisagem'
+
+export type LayoutElementType =
+  | 'text'
+  | 'field'
+  | 'image'
+  | 'line'
+  | 'table'
+  | 'audiogram'
+  | 'timpanogram'
+  | 'signature'
+  | 'section'
+  | 'rectangle'
+  | 'watermark'
+  | 'divider'
+
+export interface LayoutElementStyle {
+  fontFamily?: string
+  fontSize?: number
+  bold?: boolean
+  italic?: boolean
+  underline?: boolean
+  align?: 'left' | 'center' | 'right' | 'justify'
+  color?: string | null
+  backgroundColor?: string | null
+  borderColor?: string | null
+  borderWidth?: number
+  padding?: number
+  lineHeight?: number
+}
+
+export interface LayoutElementProps {
+  // text
+  content?: string
+  contentType?: 'static' | 'dynamic'
+  dynamicField?: string
+  fallback?: string
+  // field
+  fieldPath?: string
+  showLabel?: boolean
+  // image
+  src?: string
+  opacity?: number
+  fit?: 'contain' | 'cover' | 'fill'
+  // line / rectangle
+  direction?: 'horizontal' | 'vertical'
+  thickness?: number
+  color?: string
+  // table
+  columns?: { label: string; field: string; width?: number }[]
+  rows?: Record<string, string>[]
+  headerBgColor?: string
+  alternateRowColor?: string
+  borderColor?: string
+  fontSize?: number
+  dynamicSource?: 'iprf_od' | 'iprf_oe' | 'timpanometria' | 'reflexos' | 'identificacao' | null
+  // audiogram
+  mode?: 'combined' | 'od_only' | 'oe_only' | 'side_by_side'
+  showBone?: boolean
+  showAir?: boolean
+  showLegend?: boolean
+  lineThickness?: number
+  odColor?: string
+  oeColor?: string
+  showAbsentPoints?: boolean
+  frequencies?: number[]
+  intensityRange?: [number, number]
+  // signature
+  who?: 'profissional' | 'paciente' | 'responsavel'
+  label?: string
+  showName?: boolean
+  showCrfa?: boolean
+  lineWidth?: number
+  // section
+  title?: string
+  children?: string[]
+  collapsible?: boolean
+  titleBgColor?: string
+}
+
+export interface LayoutElement {
+  id: string
+  type: LayoutElementType
+  label: string
+  x: number
+  y: number
+  width: number
+  height: number
+  locked?: boolean
+  visible?: boolean
+  zIndex?: number
+  style?: LayoutElementStyle
+  props?: LayoutElementProps
+}
+
+export interface ExamReportTemplate {
+  id: string
+  nome_modelo: string
+  tipo_exame: ExamReportTipoExame
+  descricao?: string
+  versao: number
+  status: ExamReportStatus
+  largura_pagina: number
+  altura_pagina: number
+  orientacao: ExamReportOrientacao
+  margem_superior: number
+  margem_inferior: number
+  margem_esquerda: number
+  margem_direita: number
+  estrutura_layout: LayoutElement[]
+  logo_url?: string
+  cabecalho_configuracao?: Record<string, unknown>
+  rodape_configuracao?: Record<string, unknown>
+  fonte_padrao?: string
+  tamanho_fonte_padrao?: number
+  cor_primaria?: string
+  cor_secundaria?: string
+  observacoes?: string
+  criado_por?: string
+  atualizado_por?: string
+  publicado_por?: string
+  publicado_em?: string
+  created?: string
+  updated?: string
+}
+
+export interface ExamReportTemplateVersion {
+  id: string
+  template_id: string
+  numero_versao: number
+  estrutura_layout: LayoutElement[]
+  alterado_por?: string
+  motivo_alteracao?: string
+  created?: string
+}
+
+export const EXAM_REPORT_TIPO_LABELS: Record<ExamReportTipoExame, string> = {
+  audiometria: 'Audiometria',
+  imitanciometria: 'Imitanciometria',
+  teste_aparelho: 'Teste com Aparelho',
+  personalizado: 'Personalizado',
+}
+
+export const EXAM_REPORT_STATUS_LABELS: Record<ExamReportStatus, string> = {
+  rascunho: 'Rascunho',
+  publicado: 'Publicado',
+  arquivado: 'Arquivado',
+}
+
+/** Tamanho de folha padrão → dimensões em mm (largura, altura) para retrato. */
+export const PAGE_SIZES: Record<string, { largura: number; altura: number; label: string }> = {
+  A4: { largura: 210, altura: 297, label: 'A4 (210 × 297 mm)' },
+  Carta: { largura: 216, altura: 279, label: 'Carta (216 × 279 mm)' },
+  Oficio: { largura: 216, altura: 330, label: 'Ofício (216 × 330 mm)' },
+}

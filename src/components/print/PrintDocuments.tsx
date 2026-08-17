@@ -17,6 +17,9 @@ import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
 import { formatDate, maskCPF, calculateAge } from '@/lib/formatters'
 import { AudiogramaSVG } from '@/components/print/AudiogramaSVG'
 import { mediaTritonal, mediaQuadritonal } from '@/lib/audiogram'
+import { TemplateRenderer, type TemplateDataContext } from '@/components/print/TemplateRenderer'
+import { getPublishedTemplate } from '@/lib/examReportTemplates'
+import type { ExamReportTemplate, ExamReportTipoExame } from '@/types'
 
 const FREQUENCIES_AIR = [
   '250',
@@ -800,6 +803,86 @@ export function AudiometriaFullPrint({
       </div>
     </div>
   )
+}
+
+/* ============ INTEGRAÇÃO: MODELOS DE LAUDO CONFIGURÁVEIS ============ */
+
+/**
+ * Busca o modelo publicado para o tipo de exame. Retorna null se não houver
+ * modelo publicado — nesse caso o chamador deve usar o layout padrão (fallback).
+ *
+ * Uso:
+ *   const tpl = await getActiveTemplate('audiometria')
+ *   if (tpl) { usar TemplateRenderer } else { usar AudiometriaFullPrint }
+ */
+export async function getActiveTemplate(
+  tipoExame: ExamReportTipoExame,
+): Promise<ExamReportTemplate | null> {
+  try {
+    return await getPublishedTemplate(tipoExame)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Constrói um TemplateDataContext a partir de dados de audiometria.
+ * Permite usar o TemplateRenderer com exames reais do banco.
+ */
+export function buildAudiometryContext(args: {
+  patientName?: string
+  patientCpf?: string
+  patientBirthDate?: string
+  patientSex?: string
+  patientPhone?: string
+  examDate?: string
+  professionalName?: string
+  professionalCrfa?: string
+  exam: Record<string, unknown>
+  clinicName?: string
+  clinicAddress?: string
+  clinicPhone?: string
+  clinicEmail?: string
+}): TemplateDataContext {
+  return {
+    paciente: {
+      nome: args.patientName,
+      cpf: args.patientCpf,
+      data_nascimento: args.patientBirthDate,
+      sexo: args.patientSex,
+      telefone: args.patientPhone,
+    },
+    exame: {
+      ...args.exam,
+      data: args.examDate,
+    },
+    profissional: {
+      nome: args.professionalName,
+      crfa: args.professionalCrfa,
+    },
+    clinica: {
+      nome: args.clinicName,
+      endereco: args.clinicAddress,
+      telefone: args.clinicPhone,
+      email: args.clinicEmail,
+    },
+  }
+}
+
+/**
+ * Renderiza o laudo usando o template ativo (se houver) ou um fallback.
+ * Retorna o nó React a ser impresso.
+ */
+export async function renderExamReport(args: {
+  tipoExame: ExamReportTipoExame
+  context: TemplateDataContext
+  fallback: React.ReactNode
+}): Promise<React.ReactNode> {
+  const tpl = await getActiveTemplate(args.tipoExame)
+  if (tpl) {
+    return <TemplateRenderer template={tpl} data={args.context} scale={1} />
+  }
+  return args.fallback
 }
 
 /* ============ IMITANCIOMETRIA ============ */

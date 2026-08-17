@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T03:28:25.651Z",
+  "generatedAt": "2026-08-17T03:39:18.076Z",
   "collections": [
     {
       "name": "users",
@@ -4703,6 +4703,252 @@
         "CREATE INDEX idx_despesas_pagamento ON despesas (data_pagamento)",
         "CREATE INDEX idx_despesas_categoria ON despesas (categoria)",
         "CREATE INDEX idx_despesas_usuario ON despesas (usuario_id)"
+      ]
+    },
+    {
+      "name": "exam_report_templates",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.role = \"admin\"",
+        "update": "@request.auth.role = \"admin\"",
+        "delete": "@request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "nome_modelo",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "tipo_exame",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["audiometria", "imitanciometria", "teste_aparelho", "personalizado"]
+        },
+        {
+          "name": "descricao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "versao",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["rascunho", "publicado", "arquivado"]
+        },
+        {
+          "name": "largura_pagina",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "altura_pagina",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "orientacao",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["retrato", "paisagem"]
+        },
+        {
+          "name": "margem_superior",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "margem_inferior",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "margem_esquerda",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "margem_direita",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estrutura_layout",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "logo_url",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cabecalho_configuracao",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rodape_configuracao",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "fonte_padrao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tamanho_fonte_padrao",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cor_primaria",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cor_secundaria",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "criado_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "atualizado_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "publicado_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "publicado_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_exam_report_templates_tipo ON exam_report_templates (tipo_exame)",
+        "CREATE INDEX idx_exam_report_templates_status ON exam_report_templates (status)",
+        "CREATE INDEX idx_exam_report_templates_created ON exam_report_templates (created)"
+      ]
+    },
+    {
+      "name": "exam_report_template_versions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.role = \"admin\"",
+        "update": "@request.auth.role = \"admin\"",
+        "delete": "@request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "template_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "numero_versao",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estrutura_layout",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "alterado_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "motivo_alteracao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_exam_report_versions_template ON exam_report_template_versions (template_id)",
+        "CREATE INDEX idx_exam_report_versions_created ON exam_report_template_versions (created)"
       ]
     }
   ]

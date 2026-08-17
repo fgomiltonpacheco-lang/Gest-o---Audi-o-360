@@ -293,6 +293,26 @@ onRecordCreateRequest(
             )
           },
         },
+        exam_report_templates: {
+          modulo: 'configuracoes',
+          entidade_tipo: 'exam_report_templates',
+          descricao: function (r) {
+            return 'Modelo de laudo: ' + (r.getString('nome_modelo') || r.getId())
+          },
+        },
+        exam_report_template_versions: {
+          modulo: 'configuracoes',
+          entidade_tipo: 'exam_report_template_versions',
+          descricao: function (r) {
+            return (
+              'Versão de modelo de laudo #' +
+              (r.get('numero_versao') || '') +
+              ' (template ' +
+              (r.getString('template_id') || '') +
+              ')'
+            )
+          },
+        },
       }
 
       var meta = META[collectionName]
@@ -402,6 +422,8 @@ onRecordCreateRequest(
   'contas_receber',
   'recebimentos',
   'despesas',
+  'exam_report_templates',
+  'exam_report_template_versions',
 )
 
 // ============================================================
@@ -763,6 +785,34 @@ onRecordUpdateRequest(
             )
           },
         },
+        exam_report_templates: {
+          modulo: 'configuracoes',
+          entidade_tipo: 'exam_report_templates',
+          statusField: 'status',
+          cancelValue: 'arquivado',
+          estornoValue: '',
+          acaoEspecial: '',
+          descricao: function (r) {
+            return 'Modelo de laudo: ' + (r.getString('nome_modelo') || r.getId())
+          },
+        },
+        exam_report_template_versions: {
+          modulo: 'configuracoes',
+          entidade_tipo: 'exam_report_template_versions',
+          statusField: '',
+          cancelValue: '',
+          estornoValue: '',
+          acaoEspecial: '',
+          descricao: function (r) {
+            return (
+              'Versão de modelo de laudo #' +
+              (r.get('numero_versao') || '') +
+              ' (template ' +
+              (r.getString('template_id') || '') +
+              ')'
+            )
+          },
+        },
       }
 
       var meta = META[collectionName]
@@ -1082,6 +1132,8 @@ onRecordUpdateRequest(
   'contas_receber',
   'recebimentos',
   'despesas',
+  'exam_report_templates',
+  'exam_report_template_versions',
 )
 
 // ============================================================
@@ -1323,6 +1375,26 @@ onRecordDeleteRequest(
               (r.getString('descricao') || r.getId()) +
               ' — R$ ' +
               (r.get('valor') || 0)
+            )
+          },
+        },
+        exam_report_templates: {
+          modulo: 'configuracoes',
+          entidade_tipo: 'exam_report_templates',
+          descricao: function (r) {
+            return 'Modelo de laudo: ' + (r.getString('nome_modelo') || r.getId())
+          },
+        },
+        exam_report_template_versions: {
+          modulo: 'configuracoes',
+          entidade_tipo: 'exam_report_template_versions',
+          descricao: function (r) {
+            return (
+              'Versão de modelo de laudo #' +
+              (r.get('numero_versao') || '') +
+              ' (template ' +
+              (r.getString('template_id') || '') +
+              ')'
             )
           },
         },

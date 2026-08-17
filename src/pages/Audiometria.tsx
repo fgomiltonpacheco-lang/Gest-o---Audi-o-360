@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import { useToast } from '@/hooks/use-toast'
 import { usePrint } from '@/components/print/PrintProvider'
-import { AudiometriaFullPrint } from '@/components/print/PrintDocuments'
+import { AudiometriaFullPrint, renderExamReport, buildAudiometryContext } from '@/components/print/PrintDocuments'
 import { AudiogramChart } from '@/components/AudiogramChart'
 import pb from '@/lib/pocketbase/client'
 import { ClientResponseError } from 'pocketbase'
@@ -521,25 +521,46 @@ export default function Audiometria() {
     }
   }
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     const fullExam: AudiometryExamFull = {
       ...(exam as AudiometryExamFull),
       id: exam.id || 'novo',
       created: '',
       updated: '',
     }
+    // Tenta usar o modelo de laudo publicado; se não houver, usa o layout padrão.
+    const fallbackNode = (
+      <AudiometriaFullPrint
+        exam={fullExam}
+        clinicSettings={clinicSettings}
+        professional={
+          currentUser ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa } : null
+        }
+      />
+    )
+    const ctx = buildAudiometryContext({
+      patientName: patient?.name,
+      patientCpf: patient?.cpf,
+      patientBirthDate: patient?.birthDate,
+      patientSex: patient?.gender,
+      patientPhone: patient?.mobile,
+      examDate: exam.date,
+      professionalName: currentUser?.name,
+      professionalCrfa: currentUser?.crmCrfa,
+      exam: exam as unknown as Record<string, unknown>,
+      clinicName: clinicSettings?.nome,
+      clinicAddress: clinicSettings?.endereco,
+      clinicPhone: clinicSettings?.telefone,
+    })
+    const bodyNode = await renderExamReport({
+      tipoExame: 'audiometria',
+      context: ctx,
+      fallback: fallbackNode,
+    })
     print({
       title: 'Audiometria',
       subtitle: `${patient?.name || ''} — ${formatDate(exam.date)}`,
-      body: (
-        <AudiometriaFullPrint
-          exam={fullExam}
-          clinicSettings={clinicSettings}
-          professional={
-            currentUser ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa } : null
-          }
-        />
-      ),
+      body: bodyNode,
     })
   }
 

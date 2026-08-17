@@ -41,6 +41,10 @@ import FluxoProjetado from '@/pages/FluxoProjetado'
 import Despesas from '@/pages/Despesas'
 import Lembretes from '@/pages/Lembretes'
 import NotFound from '@/pages/NotFound'
+import ExamReportTemplatesList from '@/pages/laudos/ExamReportTemplatesList'
+import ExamReportTemplateNovo from '@/pages/laudos/ExamReportTemplateNovo'
+import ExamReportTemplateEditor from '@/pages/laudos/ExamReportTemplateEditor'
+import ExamReportTemplatePreview from '@/pages/laudos/ExamReportTemplatePreview'
 import { Toaster } from '@/components/ui/toaster'
 import { useToast } from '@/hooks/use-toast'
 
@@ -430,6 +434,40 @@ export function App() {
               element={
                 <AdminRoute>
                   <Configuracoes />
+                </AdminRoute>
+              }
+            />
+
+            {/* ===== Modelos de Laudo (Admin only) ===== */}
+            <Route
+              path="/configuracoes/laudos"
+              element={
+                <AdminRoute>
+                  <ExamReportTemplatesList />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/configuracoes/laudos/novo"
+              element={
+                <AdminRoute>
+                  <ExamReportTemplateNovo />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/configuracoes/laudos/:id/editor"
+              element={
+                <AdminRoute>
+                  <ExamReportTemplateEditor />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/configuracoes/laudos/:id/preview"
+              element={
+                <AdminRoute>
+                  <ExamReportTemplatePreview />
                 </AdminRoute>
               }
             />
