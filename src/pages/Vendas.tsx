@@ -24,6 +24,7 @@ import { useApp } from '@/context/AppContext'
 import { useToast } from '@/hooks/use-toast'
 import { usePrint } from '@/components/print/PrintProvider'
 import { formatCurrency, formatDate } from '@/lib/formatters'
+import NfseEmitirModal from '@/components/NfseEmitirModal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -90,6 +91,7 @@ export default function Vendas() {
     patients,
     stockItems,
     baixarEstoqueVenda,
+    nfseEmitidas,
   } = useApp()
   const { toast } = useToast()
   const { print } = usePrint()
@@ -105,6 +107,7 @@ export default function Vendas() {
   const [cancelTarget, setCancelTarget] = useState<Sale | null>(null)
   const [cancelReason, setCancelReason] = useState('')
   const [cancelMode, setCancelMode] = useState<'Cancelado' | 'Estornado'>('Cancelado')
+  const [nfEmitirSale, setNfEmitirSale] = useState<Sale | null>(null)
 
   const isAdmin = currentUser?.role === 'admin'
 
@@ -496,13 +499,16 @@ export default function Vendas() {
     }
   }
 
-  // ---- Emitir NF (placeholder) ----
-  const handleEmitirNF = (sale: Sale) => {
-    toast({
-      title: 'Emissão de NF em configuração.',
-      description: 'Disponível em breve.',
+  // Mapa de NFS-e emitidas por saleId (autorizadas/enviadas) para exibir badge.
+  const nfPorSaleId = useMemo(() => {
+    const m: Record<string, boolean> = {}
+    nfseEmitidas.forEach((n) => {
+      if (n.sale && (n.status === 'autorizada' || n.status === 'enviada')) {
+        m[n.sale] = true
+      }
     })
-  }
+    return m
+  }, [nfseEmitidas])
 
   return (
     <div className="space-y-5 animate-in fade-in-50 duration-200">
@@ -778,14 +784,25 @@ export default function Vendas() {
                       {formatCurrency(s.totalValue)}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge
-                        className={
-                          statusColors[s.status] || 'bg-slate-100 text-slate-600 border-slate-200'
-                        }
-                        variant="outline"
-                      >
-                        {s.status}
-                      </Badge>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <Badge
+                          className={
+                            statusColors[s.status] || 'bg-slate-100 text-slate-600 border-slate-200'
+                          }
+                          variant="outline"
+                        >
+                          {s.status}
+                        </Badge>
+                        {nfPorSaleId[s.id] && (
+                          <Badge
+                            className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px]"
+                            variant="outline"
+                            title="NFS-e emitida"
+                          >
+                            NF-e
+                          </Badge>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
@@ -1004,7 +1021,7 @@ export default function Vendas() {
             {/* Emitir NF — visível para todos quando Pago ou Concluída */}
             {detailSale && (detailSale.status === 'Pago' || detailSale.status === 'Concluída') && (
               <Button
-                onClick={() => handleEmitirNF(detailSale)}
+                onClick={() => setNfEmitirSale(detailSale)}
                 className="rounded-xl text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
               >
                 <FileText className="w-3.5 h-3.5 mr-1.5" /> Emitir NF
@@ -1511,6 +1528,13 @@ export default function Vendas() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Emissão de NFS-e */}
+      <NfseEmitirModal
+        sale={nfEmitirSale}
+        open={!!nfEmitirSale}
+        onOpenChange={(o) => !o && setNfEmitirSale(null)}
+      />
     </div>
   )
 }

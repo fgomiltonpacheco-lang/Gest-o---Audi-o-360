@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T19:16:05.396Z",
+  "generatedAt": "2026-08-17T19:55:05.555Z",
   "collections": [
     {
       "name": "users",
@@ -5149,6 +5149,157 @@
         "CREATE INDEX idx_ordens_servico_numero ON ordens_servico (ano, numero)",
         "CREATE UNIQUE INDEX idx_ordens_servico_ano_numero ON ordens_servico (ano, numero)"
       ]
+    },
+    {
+      "name": "nfse_emitidas",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.role = 'admin'",
+        "update": "@request.auth.role = 'admin'",
+        "delete": "@request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "sale",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "sales"
+        },
+        {
+          "name": "tipo_venda",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["PDV", "B2B"]
+        },
+        {
+          "name": "numero_rps",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "numero_lote",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "numero_nfse",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "codigo_verificacao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["pendente", "enviada", "autorizada", "cancelada", "erro"]
+        },
+        {
+          "name": "valor_servico",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aliquota_iss",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_iss",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_liquido",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "discriminacao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tomador_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tomador_cpf_cnpj",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "xml_envio",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "xml_retorno",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_emissao",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observacao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pdf_url",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "erro_mensagem",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
     }
   ]
 }

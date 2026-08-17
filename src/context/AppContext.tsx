@@ -50,7 +50,11 @@ import {
   DespesaCategoria,
   DespesaFormaPagamento,
   DespesaStatus,
+  NfseEmitida,
+  NfseEmitidaStatus,
+  NfseEmitidaTipoVenda,
 } from '@/types'
+import { emitirNfse as emitirNfseApi, type NfseApiConfig, type NfseDados } from '@/lib/nfse-api'
 import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
@@ -692,6 +696,30 @@ const mapDespesa = (r: any): Despesa => ({
   updated: toDateStr(r.updated),
 })
 
+const mapNfseEmitida = (r: any): NfseEmitida => ({
+  id: r.id,
+  sale: r.sale || undefined,
+  tipo_venda: (r.tipo_venda === 'B2B' ? 'B2B' : 'PDV') as NfseEmitidaTipoVenda,
+  numero_rps: r.numero_rps || undefined,
+  numero_lote: r.numero_lote || undefined,
+  numero_nfse: r.numero_nfse || undefined,
+  codigo_verificacao: r.codigo_verificacao || undefined,
+  status: (r.status || 'pendente') as NfseEmitidaStatus,
+  valor_servico: Number(r.valor_servico) || 0,
+  aliquota_iss: Number(r.aliquota_iss) || 0,
+  valor_iss: Number(r.valor_iss) || 0,
+  valor_liquido: Number(r.valor_liquido) || 0,
+  discriminacao: r.discriminacao || '',
+  tomador_nome: r.tomador_nome || '',
+  tomador_cpf_cnpj: r.tomador_cpf_cnpj || '',
+  pdf_url: r.pdf_url || undefined,
+  erro_mensagem: r.erro_mensagem || undefined,
+  data_emissao: r.data_emissao ? toDateStr(r.data_emissao) : undefined,
+  observacao: r.observacao || undefined,
+  created: toDateStr(r.created),
+  updated: toDateStr(r.updated),
+})
+
 const mapVendaB2B = (r: any): VendaB2B => {
   const itens = Array.isArray(r.expand?.itens_venda_b2b_venda_b2b_id)
     ? r.expand.itens_venda_b2b_venda_b2b_id.map(mapItemVendaB2B)
@@ -966,6 +994,26 @@ interface AppContextType {
     data: Partial<Omit<NfseB2BConfig, 'id' | 'created' | 'updated'>>,
   ) => Promise<{ success: boolean; message?: string }>
 
+  // NFS-e emitidas (Vendas PDV)
+  nfseEmitidas: NfseEmitida[]
+  fetchNfseEmitidas: () => Promise<void>
+  /**
+   * Emite uma NFS-e para uma venda PDV. Monta os dados de tomador e serviço,
+   * chama a API da prefeitura (quando configurada) e persiste o resultado em
+   * `nfse_emitidas` — mesmo em caso de erro (status 'erro'), para auditoria.
+   * Retorna o registro criado/atualizado.
+   */
+  emitirNfseVenda: (
+    saleId: string,
+    dados: {
+      tomadorNome: string
+      tomadorCpfCnpj: string
+      discriminacao: string
+      aliquotaIss?: number
+      observacao?: string
+    },
+  ) => Promise<NfseEmitida | null>
+
   // LGPD — Consentimentos e Política de Privacidade
   fetchConsentimentos: (pacienteId: string) => Promise<Consentimento[]>
   registrarConsentimento: (
@@ -1083,6 +1131,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Despesas
   const [despesas, setDespesas] = useState<Despesa[]>([])
+
+  // NFS-e emitidas (Vendas PDV)
+  const [nfseEmitidas, setNfseEmitidas] = useState<NfseEmitida[]>([])
 
   // Segurança — configurações globais + estado 2FA + timeout
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings | null>(null)
@@ -1213,6 +1264,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setDespesas(despesasList.map(mapDespesa))
       } catch (e) {
         console.warn('Erro ao carregar despesas:', e)
+      }
+
+      // ---- NFS-e emitidas (Vendas PDV) ----
+      try {
+        const nfseList = await pb.collection('nfse_emitidas').getFullList({ sort: '-created' })
+        setNfseEmitidas(nfseList.map(mapNfseEmitida))
+      } catch (e) {
+        console.warn('Erro ao carregar NFS-e emitidas:', e)
       }
     } catch (err) {
       console.error('Erro ao carregar dados do PocketBase:', err)
@@ -1635,6 +1694,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNfseB2BConfig(null)
     setContasReceber([])
     setDespesas([])
+    setNfseEmitidas([])
     toast({
       title: 'Sessão encerrada',
       description: 'Você saiu do sistema com segurança.',
@@ -4494,6 +4554,163 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }
 
+  // ---------- NFS-e emitidas (Vendas PDV) ----------
+  const fetchNfseEmitidas = useCallback(async () => {
+    try {
+      const list = await pb.collection('nfse_emitidas').getFullList({ sort: '-created' })
+      setNfseEmitidas(list.map(mapNfseEmitida))
+    } catch (err) {
+      console.error('Erro ao carregar NFS-e emitidas:', err)
+    }
+  }, [])
+
+  /**
+   * Emite uma NFS-e para uma venda PDV. Reutiliza a config `nfse_b2b_config`.
+   * Persiste o registro em `nfse_emitidas` mesmo em caso de erro (status 'erro').
+   */
+  const emitirNfseVenda = useCallback(
+    async (
+      saleId: string,
+      dados: {
+        tomadorNome: string
+        tomadorCpfCnpj: string
+        discriminacao: string
+        aliquotaIss?: number
+        observacao?: string
+      },
+    ): Promise<NfseEmitida | null> => {
+      try {
+        // 1) Busca a venda
+        const saleRec: any = await pb.collection('sales').getOne(saleId)
+        const valorServico = Number(saleRec.totalValue) || 0
+        const aliquota =
+          dados.aliquotaIss != null
+            ? Number(dados.aliquotaIss)
+            : Number(nfseB2BConfig?.aliquota_iss_padrao) || 0
+        const valorIss = (valorServico * aliquota) / 100
+        const valorLiquido = valorServico - valorIss
+        const discriminacao = dados.discriminacao || ''
+        const tomadorNome = dados.tomadorNome || 'CONSUMIDOR FINAL'
+        const tomadorCpfCnpj = (dados.tomadorCpfCnpj || '').replace(/\D/g, '')
+
+        // 2) Configura a API (se houver)
+        const config: NfseApiConfig | null = nfseB2BConfig
+          ? {
+              baseUrl: nfseB2BConfig.url_api || '',
+              usuario: nfseB2BConfig.login_api || '',
+              senha: nfseB2BConfig.token_api || '',
+              ambiente: nfseB2BConfig.ambiente,
+              provedor: nfseB2BConfig.provedor,
+              codigoMunicipio: nfseB2BConfig.codigo_municipio,
+            }
+          : null
+
+        let numeroNfse = ''
+        let codigoVerificacao = ''
+        let pdfUrl = ''
+        let status: NfseEmitidaStatus = 'pendente'
+        let erroMsg = ''
+
+        // 3) Chama a API da prefeitura quando configurada
+        if (config && config.baseUrl) {
+          status = 'enviada'
+          const nfDados: NfseDados = {
+            prestador: {
+              cnpj: '',
+              inscricaoMunicipal: nfseB2BConfig?.inscricao_municipal || '',
+              razaoSocial: clinicSettings?.nome,
+              municipio: nfseB2BConfig?.municipio,
+              uf: nfseB2BConfig?.uf,
+            },
+            tomador: {
+              cnpj: tomadorCpfCnpj,
+              razaoSocial: tomadorNome,
+              endereco: '',
+              municipio: nfseB2BConfig?.municipio || '',
+              uf: nfseB2BConfig?.uf || '',
+              cep: '',
+              email: '',
+            },
+            servico: {
+              valorBase: valorServico,
+              aliquotaIss: aliquota,
+              valorIss,
+              valorLiquido,
+              itemListaServico: nfseB2BConfig?.item_lista_servico || '10.01',
+              discriminacao,
+            },
+            numeroVendaB2B: String(saleRec.number || saleId),
+          }
+          const resp = await emitirNfseApi(config, nfDados)
+          if (resp.sucesso) {
+            status = 'autorizada'
+            numeroNfse = resp.numeroNfse || ''
+            codigoVerificacao = resp.codigoVerificacao || ''
+            pdfUrl = resp.pdfUrl || ''
+          } else {
+            status = 'erro'
+            erroMsg = resp.erro || 'Erro desconhecido na emissão.'
+          }
+        } else {
+          // Sem API configurada: registra como pendente para emissão manual/offline.
+          status = 'pendente'
+          erroMsg = 'API da prefeitura não configurada. NFS-e registrada como pendente.'
+        }
+
+        // 4) Persiste em nfse_emitidas (sempre, mesmo em erro)
+        const payload: Record<string, any> = {
+          sale: saleId,
+          tipo_venda: 'PDV',
+          numero_nfse: numeroNfse,
+          codigo_verificacao: codigoVerificacao,
+          status,
+          valor_servico: valorServico,
+          aliquota_iss: aliquota,
+          valor_iss: valorIss,
+          valor_liquido: valorLiquido,
+          discriminacao,
+          tomador_nome: tomadorNome,
+          tomador_cpf_cnpj: tomadorCpfCnpj,
+          pdf_url: pdfUrl,
+          erro_mensagem: erroMsg,
+          data_emissao: todayStr(),
+          observacao: dados.observacao || '',
+        }
+        const rec: any = await pb.collection('nfse_emitidas').create(payload)
+        const mapped = mapNfseEmitida(rec)
+        setNfseEmitidas((prev) => [mapped, ...prev])
+
+        if (status === 'autorizada') {
+          toast({
+            title: 'NFS-e emitida com sucesso',
+            description: `NFS-e ${numeroNfse} — Código de verificação: ${codigoVerificacao}`,
+          })
+        } else if (status === 'erro') {
+          toast({
+            title: 'Erro ao emitir NFS-e na prefeitura',
+            description: erroMsg,
+            variant: 'destructive',
+          })
+        } else {
+          toast({
+            title: 'NFS-e registrada como pendente',
+            description: erroMsg,
+          })
+        }
+        return mapped
+      } catch (err) {
+        console.error('Erro ao emitir NFS-e da venda:', err)
+        toast({
+          title: 'Erro ao emitir NFS-e',
+          description: describePbError(err),
+          variant: 'destructive',
+        })
+        return null
+      }
+    },
+    [nfseB2BConfig, clinicSettings],
+  )
+
   // ---------- LGPD: Consentimentos ----------
   const fetchConsentimentos = useCallback(async (pacienteId: string): Promise<Consentimento[]> => {
     if (!pacienteId) return []
@@ -5294,6 +5511,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         nfseB2BConfig,
         fetchNfseB2BConfig,
         saveNfseB2BConfig,
+        // NFS-e emitidas (Vendas PDV)
+        nfseEmitidas,
+        fetchNfseEmitidas,
+        emitirNfseVenda,
         // LGPD
         fetchConsentimentos,
         registrarConsentimento,
