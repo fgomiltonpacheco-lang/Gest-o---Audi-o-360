@@ -352,15 +352,19 @@ const emptyIprfVocalRow = (): IprfVocalRow => ({
   intensidade: '',
   monossilabos: '',
   dissilabos: '',
+  mascaramento: '',
+  palavras_faladas: '',
   niveis: '',
 })
 
 export function AudiometriaFullPrint({
   exam,
   clinicSettings,
+  professional,
 }: {
   exam: AudiometryExamFull
   clinicSettings?: ClinicSettings | null
+  professional?: { name: string; crmCrfa?: string } | null
 }) {
   // Dados da clínica: usa os valores dinâmicos de Configurações quando
   // disponíveis, mantendo os defaults hardcoded como fallback.
@@ -431,6 +435,16 @@ export function AudiometriaFullPrint({
     const dissiDb = r.intensidade ? `${r.intensidade} dB` : '- dB'
     return `${intens} — ${monoPct} Monossílabos (${monoDb}) / ${dissiPct} Dissílabos (${dissiDb})`
   }
+
+  const fmtMascPrint = (r: IprfVocalRow) => (r.mascaramento ? `${r.mascaramento} dB` : '—')
+  const fmtPalavrasPrint = (r: IprfVocalRow) => (r.palavras_faladas ? r.palavras_faladas : '—')
+
+  // Dados do profissional assinante: dinâmicos a partir do usuário logado,
+  // com fallback para os defaults hardcoded (compatibilidade).
+  const profName = (professional?.name?.trim() || SPECIALIST_PRINT).toUpperCase()
+  const profCrfaRaw = professional?.crmCrfa?.trim() || SPECIALIST_CRFA
+  const profCrfa = profCrfaRaw.replace(/^crfa\s*/i, '')
+  const profSubtitle = profCrfa ? `Fonoaudiólogo — CRFa ${profCrfa}` : 'Fonoaudiólogo'
 
   const odVocal = exam.iprf_vocal?.od ?? emptyIprfVocalRow()
   const oeVocal = exam.iprf_vocal?.oe ?? emptyIprfVocalRow()
@@ -505,7 +519,7 @@ export function AudiometriaFullPrint({
           <strong>ESTADO CIVIL:</strong> {exam.marital_status || '—'}
         </div>
         <div style={{ gridColumn: 'span 2' }}>
-          <strong>ESPECIALISTA:</strong> {SPECIALIST_PRINT}
+          <strong>ESPECIALISTA:</strong> {profName}
         </div>
         <div>
           <strong>APARELHO AUDIÔMETRO:</strong> {exam.audiometer || 'AD229b'}
@@ -686,6 +700,16 @@ export function AudiometriaFullPrint({
               <td style={{ ...tdStyle, fontSize: '6.5pt' }}>{fmtIprfPrint(odVocal)}</td>
               <td style={{ ...tdStyle, fontSize: '6.5pt' }}>{fmtIprfPrint(oeVocal)}</td>
             </tr>
+            <tr>
+              <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 600 }}>Mascaramento (dB)</td>
+              <td style={tdStyle}>{fmtMascPrint(odVocal)}</td>
+              <td style={tdStyle}>{fmtMascPrint(oeVocal)}</td>
+            </tr>
+            <tr>
+              <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 600 }}>Palavras Faladas</td>
+              <td style={tdStyle}>{fmtPalavrasPrint(odVocal)}</td>
+              <td style={tdStyle}>{fmtPalavrasPrint(oeVocal)}</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -736,8 +760,8 @@ export function AudiometriaFullPrint({
             fontStyle: 'italic',
           }}
         >
-          Laudo audiológico baseado em Silman e Silverman (1997) adaptada de Carhart (1945) e Lloyd
-          e Kaplan (1978); Jerger, Speaks e Trammell (1968).
+          Lloyd e Kaplan (1978); Silman e Silverman (1997) adaptada de Carhart (1945) e Lloyd e
+          Kaplan (1978); Jerger, Speaks, e Trammell (1968).
         </p>
       </div>
 
@@ -754,11 +778,11 @@ export function AudiometriaFullPrint({
             color: '#1e293b',
           }}
         >
-          {SPECIALIST_PRINT}
+          {profName}
         </div>
         <div style={{ fontSize: '6.5pt', color: '#475569', marginTop: '1px' }}>
-          Fonoaudiólogo — CRFa {SPECIALIST_CRFA}
-        </div>
+          {profSubtitle}
+        </div>{' '}
       </div>
 
       {/* Rodapé */}

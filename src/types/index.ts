@@ -242,6 +242,10 @@ export interface IprfVocalRow {
   intensidade: string
   monossilabos: string
   dissilabos: string
+  /** Mascaramento (dB) utilizado na pesquisa de IPRF. */
+  mascaramento: string
+  /** Quantidade de palavras faladas na pesquisa de IPRF. */
+  palavras_faladas: string
   /** Níveis adicionais de intensidade (ex.: "100% a 45 dB, 76% a 95 dB"). */
   niveis: string
 }
@@ -347,6 +351,8 @@ export function emptyIprfVocal(): IprfVocalData {
     intensidade: '',
     monossilabos: '',
     dissilabos: '',
+    mascaramento: '',
+    palavras_faladas: '',
     niveis: '',
   })
   return { od: emptyRow(), oe: emptyRow() }

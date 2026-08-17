@@ -71,7 +71,7 @@ const SPECIALIST_CRFA = '3-11981-5'
 const CLINIC_ADDRESS = 'R. Sadoc Correa, 373 - St. Central, Araguaína - TO, 77803-060'
 const CLINIC_PHONE = '(63) 3421-2611'
 const REPORT_REFERENCE =
-  'Laudo audiológico baseado em Silman e Silverman (1997) adaptada de Carhart (1945) e Lloyd e Kaplan (1978); Jerger, Speaks e Trammell (1968).'
+  'Lloyd e Kaplan (1978); Silman e Silverman (1997) adaptada de Carhart (1945) e Lloyd e Kaplan (1978); Jerger, Speaks, e Trammell (1968).'
 
 /* ---------- Mappers ---------- */
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -98,6 +98,9 @@ function normalizeIprfVocal(raw: any): IprfVocalData {
     intensidade: r?.intensidade ?? '',
     monossilabos: r?.monossilabos ?? '',
     dissilabos: r?.dissilabos ?? '',
+    // Retrocompatibilidade: registros antigos não possuem estes campos.
+    mascaramento: r?.mascaramento ?? '',
+    palavras_faladas: r?.palavras_faladas ?? '',
     niveis: r?.niveis ?? '',
   })
   return { od: norm(raw.od), oe: norm(raw.oe) }
@@ -528,7 +531,15 @@ export default function Audiometria() {
     print({
       title: 'Audiometria',
       subtitle: `${patient?.name || ''} — ${formatDate(exam.date)}`,
-      body: <AudiometriaFullPrint exam={fullExam} clinicSettings={clinicSettings} />,
+      body: (
+        <AudiometriaFullPrint
+          exam={fullExam}
+          clinicSettings={clinicSettings}
+          professional={
+            currentUser ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa } : null
+          }
+        />
+      ),
     })
   }
 
@@ -594,6 +605,9 @@ export default function Audiometria() {
           exam={exam as AudiometryExamFull}
           patientAgeDetailed={patientAgeDetailed}
           clinicSettings={clinicSettings}
+          professional={
+            currentUser ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa } : null
+          }
         />
       </div>
 
@@ -821,6 +835,38 @@ export default function Audiometria() {
                           })
                         }
                         disabled={isSecretaria}
+                        className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
+                      />
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Mascaramento (dB)">
+                      <Input
+                        type="number"
+                        value={row.mascaramento}
+                        onChange={(e) =>
+                          setField('iprf_vocal', {
+                            ...exam.iprf_vocal,
+                            [sideKey]: { ...row, mascaramento: e.target.value },
+                          })
+                        }
+                        disabled={isSecretaria}
+                        placeholder="—"
+                        className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
+                      />
+                    </Field>
+                    <Field label="Palavras Faladas">
+                      <Input
+                        type="number"
+                        value={row.palavras_faladas}
+                        onChange={(e) =>
+                          setField('iprf_vocal', {
+                            ...exam.iprf_vocal,
+                            [sideKey]: { ...row, palavras_faladas: e.target.value },
+                          })
+                        }
+                        disabled={isSecretaria}
+                        placeholder="—"
                         className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
                       />
                     </Field>
@@ -1367,11 +1413,18 @@ function ExamPreview({
   exam,
   patientAgeDetailed,
   clinicSettings,
+  professional,
 }: {
   exam: AudiometryExamFull
   patientAgeDetailed: string
   clinicSettings?: { nome: string; endereco: string; telefone: string; email: string } | null
+  professional?: { name: string; crmCrfa?: string } | null
 }) {
+  const profName = (professional?.name?.trim() || SPECIALIST_NAME).toUpperCase()
+  const profCrfaRaw = professional?.crmCrfa?.trim() || SPECIALIST_CRFA
+  const profCrfa = profCrfaRaw.replace(/^crfa\s*/i, '')
+  const profSubtitle = profCrfa ? `Fonoaudiólogo — CRFa ${profCrfa}` : 'Fonoaudiólogo'
+
   const odTrito = mediaTritonal(exam.air_od)
   const odQuadri = mediaQuadritonal(exam.air_od)
   const oeTrito = mediaTritonal(exam.air_oe)
@@ -1424,7 +1477,7 @@ function ExamPreview({
               value={exam.marital_status}
               className="sm:col-span-4"
             />
-            <IdentField label="ESPECIALISTA" value={SPECIALIST_NAME} className="sm:col-span-4" />
+            <IdentField label="ESPECIALISTA" value={profName} className="sm:col-span-4" />
             <IdentField
               label="APARELHO AUDIÔMETRO"
               value={exam.audiometer || DEFAULT_AUDIOMETER}
@@ -1505,9 +1558,9 @@ function ExamPreview({
         <div className="pt-4">
           <div className="mx-auto text-center" style={{ maxWidth: 320 }}>
             <div className="border-t border-slate-500 pt-1 text-[12px] font-bold text-slate-800">
-              {SPECIALIST_NAME}
+              {profName}
             </div>
-            <div className="text-[10px] text-slate-500">Fonoaudiólogo — CRfa {SPECIALIST_CRFA}</div>
+            <div className="text-[10px] text-slate-500">{profSubtitle}</div>
           </div>
         </div>
       </div>
@@ -1672,6 +1725,9 @@ function IprfTable({ exam }: { exam: AudiometryExamFull }) {
     const dissiPct = r.dissilabos ? `${r.dissilabos}%` : '-'
     return `${intens} — ${monoPct} Monossílabos / ${dissiPct} Dissílabos`
   }
+  const fmtMasc = (r: { mascaramento?: string }) => (r.mascaramento ? `${r.mascaramento} dB` : '—')
+  const fmtPalavras = (r: { palavras_faladas?: string }) =>
+    r.palavras_faladas ? r.palavras_faladas : '—'
   return (
     <div>
       <SectionLabel>I.P.R.F</SectionLabel>
@@ -1692,6 +1748,16 @@ function IprfTable({ exam }: { exam: AudiometryExamFull }) {
             <td className={`${td} text-left font-semibold`}>Monossílabos / Dissílabos</td>
             <td className={td}>{fmtIprf(odRow)}</td>
             <td className={td}>{fmtIprf(oeRow)}</td>
+          </tr>
+          <tr>
+            <td className={`${td} text-left font-semibold`}>Mascaramento (dB)</td>
+            <td className={td}>{fmtMasc(odRow)}</td>
+            <td className={td}>{fmtMasc(oeRow)}</td>
+          </tr>
+          <tr>
+            <td className={`${td} text-left font-semibold`}>Palavras Faladas</td>
+            <td className={td}>{fmtPalavras(odRow)}</td>
+            <td className={td}>{fmtPalavras(oeRow)}</td>
           </tr>
         </tbody>
       </table>
