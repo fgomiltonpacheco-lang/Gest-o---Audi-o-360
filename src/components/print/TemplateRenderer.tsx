@@ -3,6 +3,11 @@
 import React from 'react'
 import type { ExamReportTemplate, LayoutElement, LayoutElementStyle } from '@/types'
 import { AudiogramaSVG } from './AudiogramaSVG'
+import {
+  TimpanogramChart,
+  type TimpanogramPoint,
+  type TimpanogramTimpHint,
+} from './TimpanogramChart'
 import type { AudiogramMap } from '@/types'
 
 export interface TemplateDataContext {
@@ -471,87 +476,109 @@ function TemplateAudiogram({ el, ctx }: { el: LayoutElement; ctx: TemplateDataCo
 
 function TemplateTimpanogram({ el, ctx }: { el: LayoutElement; ctx: TemplateDataContext }) {
   const exame = (ctx.exame || {}) as Record<string, unknown>
-  // Dados de timpanometria podem vir em formats variados; desenhamos curva tipo A genérica
-  const odCurve = (exame.tipo_curva_od as string) || (exame.timpanometria_od as string) || 'A'
-  const oeCurve = (exame.tipo_curva_oe as string) || (exame.timpanometria_oe as string) || 'A'
-  const odColor = el.props?.odColor || '#DC2626'
-  const oeColor = el.props?.oeColor || '#2563EB'
   const mode = el.props?.mode || 'combined'
 
-  // Curva simples (parábola) centrada em 0 daPa para tipo A, deslocada para C
-  const curvePath = (type: string, color: string, offset: number) => {
-    const peak = type === 'C' ? -100 : 0
-    const amp = type === 'B' ? 0.2 : 1
-    const pts: string[] = []
-    for (let p = -300; p <= 200; p += 10) {
-      const x = 30 + ((p + 300) / 500) * 240 + offset
-      const y = 60 - amp * 45 * Math.exp(-Math.pow((p - peak) / 80, 2))
-      pts.push(`${pts.length === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`)
-    }
-    return <path d={pts.join(' ')} fill="none" stroke={color} strokeWidth={1.5} />
-  }
+  // Dados de timpanometria podem vir em formatos variados. Suportamos:
+  //  - exame.timpanometria.OD / .OE  (estrutura da imitanciometria)
+  //  - exame.curva_timpanometrica_od / _oe  (arrays de pontos reais)
+  const timpRoot = (exame.timpanometria as Record<string, Record<string, unknown>>) || {}
+  const odTimp = (timpRoot.OD as TimpanogramTimpHint | undefined) ?? null
+  const oeTimp = (timpRoot.OE as TimpanogramTimpHint | undefined) ?? null
 
-  const renderSide = (label: string, type: string, color: string) => (
-    <div style={{ width: '100%', height: '100%' }}>
-      {label && (
-        <div style={{ fontSize: '8pt', textAlign: 'center', marginBottom: 2 }}>{label}</div>
-      )}
-      <svg viewBox="0 0 300 90" width="100%" height="100%" style={{ display: 'block' }}>
-        <line x1={30} y1={75} x2={270} y2={75} stroke="#94a3b8" strokeWidth={1} />
-        <line
-          x1={150}
-          y1={15}
-          x2={150}
-          y2={75}
-          stroke="#94a3b8"
-          strokeWidth={0.6}
-          strokeDasharray="3 3"
-        />
-        <text x={150} y={86} textAnchor="middle" fontSize="7" fill="#475569">
-          daPa
-        </text>
-        <text
-          x={10}
-          y={45}
-          textAnchor="middle"
-          fontSize="7"
-          fill="#475569"
-          transform="rotate(-90 10 45)"
-        >
-          ml
-        </text>
-        {curvePath(type, color, 0)}
-      </svg>
-    </div>
-  )
+  // Pontos reais da curva (curva_timpanometrica_od/oe) — quando disponíveis.
+  // Também aceita pontos embutidos no objeto de timpanometria (timpanometria.OD.curva_timpanometrica).
+  const odTimpRaw = odTimp as unknown as Record<string, unknown> | null
+  const oeTimpRaw = oeTimp as unknown as Record<string, unknown> | null
+  const odPoints = Array.isArray(exame.curva_timpanometrica_od)
+    ? (exame.curva_timpanometrica_od as TimpanogramPoint[])
+    : odTimpRaw && Array.isArray(odTimpRaw.curva_timpanometrica)
+      ? (odTimpRaw.curva_timpanometrica as TimpanogramPoint[])
+      : null
+  const oePoints = Array.isArray(exame.curva_timpanometrica_oe)
+    ? (exame.curva_timpanometrica_oe as TimpanogramPoint[])
+    : oeTimpRaw && Array.isArray(oeTimpRaw.curva_timpanometrica)
+      ? (oeTimpRaw.curva_timpanometrica as TimpanogramPoint[])
+      : null
 
-  if (mode === 'side_by_side') {
+  const W = 320
+  const H = 180
+
+  // Modos OD/OE isolados: renderizam apenas uma curva (sem legenda dupla).
+  if (mode === 'od_only') {
     return (
-      <div style={{ display: 'flex', gap: 8, width: '100%', height: '100%' }}>
-        <div style={{ flex: 1 }}>{renderSide('OD', odCurve, odColor)}</div>
-        <div style={{ flex: 1 }}>{renderSide('OE', oeCurve, oeColor)}</div>
+      <div style={{ width: '100%', height: '100%' }}>
+        <TimpanogramChart
+          odPoints={odPoints}
+          odTimp={odTimp}
+          oePoints={null}
+          oeTimp={null}
+          width={W}
+          height={H}
+          showTitle
+          showLegend={false}
+        />
       </div>
     )
   }
-  if (mode === 'od_only') return renderSide('OD', odCurve, odColor)
-  if (mode === 'oe_only') return renderSide('OE', oeCurve, oeColor)
-  // combined: ambas sobrepostas
+  if (mode === 'oe_only') {
+    return (
+      <div style={{ width: '100%', height: '100%' }}>
+        <TimpanogramChart
+          odPoints={null}
+          odTimp={null}
+          oePoints={oePoints}
+          oeTimp={oeTimp}
+          width={W}
+          height={H}
+          showTitle
+          showLegend={false}
+        />
+      </div>
+    )
+  }
+  if (mode === 'side_by_side') {
+    return (
+      <div style={{ display: 'flex', gap: 8, width: '100%', height: '100%' }}>
+        <div style={{ flex: 1 }}>
+          <TimpanogramChart
+            odPoints={odPoints}
+            odTimp={odTimp}
+            oePoints={null}
+            oeTimp={null}
+            width={W}
+            height={H}
+            showTitle
+            showLegend={false}
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <TimpanogramChart
+            odPoints={null}
+            odTimp={null}
+            oePoints={oePoints}
+            oeTimp={oeTimp}
+            width={W}
+            height={H}
+            showTitle
+            showLegend={false}
+          />
+        </div>
+      </div>
+    )
+  }
+  // combined (padrão): ambas as curvas sobrepostas no mesmo gráfico.
   return (
     <div style={{ width: '100%', height: '100%' }}>
-      <svg viewBox="0 0 300 90" width="100%" height="100%" style={{ display: 'block' }}>
-        <line x1={30} y1={75} x2={270} y2={75} stroke="#94a3b8" strokeWidth={1} />
-        <line
-          x1={150}
-          y1={15}
-          x2={150}
-          y2={75}
-          stroke="#94a3b8"
-          strokeWidth={0.6}
-          strokeDasharray="3 3"
-        />
-        {curvePath(odCurve, odColor, 0)}
-        {curvePath(oeCurve, oeColor, 0)}
-      </svg>
+      <TimpanogramChart
+        odPoints={odPoints}
+        odTimp={odTimp}
+        oePoints={oePoints}
+        oeTimp={oeTimp}
+        width={W}
+        height={H}
+        showTitle
+        showLegend
+      />
     </div>
   )
 }

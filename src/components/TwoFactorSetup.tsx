@@ -84,7 +84,7 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
     setVerifying(true)
     // Pequeno delay para feedback visual.
     await new Promise((r) => setTimeout(r, 200))
-    const ok = verifyToken(secret, token.trim())
+    const ok = await verifyToken(secret, token.trim())
     setVerifying(false)
     if (!ok) {
       setError('Código inválido. Verifique o app autenticador e tente novamente.')

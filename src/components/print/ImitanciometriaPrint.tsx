@@ -1,6 +1,7 @@
 import React from 'react'
 import { formatDate, maskCPF } from '@/lib/formatters'
 import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
+import { TimpanogramChart, type TimpanogramPoint } from './TimpanogramChart'
 
 const SPECIALIST_PRINT = 'MILTON SOARES PACHECO'
 const SPECIALIST_CRFA = '3-11981-5'
@@ -30,6 +31,7 @@ export interface ImitTimpData {
   gradiente_curva?: number | null
   curva_descricao?: string
   observacoes?: string
+  curva_timpanometrica?: TimpanogramPoint[] | null
 }
 
 export interface ImitMeatoscopia {
@@ -147,221 +149,6 @@ export function ImitanciometriaPrint({
   const oeReflex = data.reflexos.OE
 
   const hasTimpData = !!(odTimp?.tipo_curva || oeTimp?.tipo_curva)
-
-  // ---------- gráfico da curva timpanométrica ----------
-  const TimpCurveGraph: React.FC<{ ear: 'OD' | 'OE' }> = ({ ear }) => {
-    const W = 150
-    const H = 78
-    const padL = 24
-    const padR = 6
-    const padT = 8
-    const padB = 16
-    const plotW = W - padL - padR
-    const plotH = H - padT - padB
-
-    const P_MIN = -400
-    const P_MAX = 200
-    const C_MIN = 0
-    const C_MAX = 5
-
-    const xOf = (p: number) =>
-      padL + ((Math.max(P_MIN, Math.min(P_MAX, p)) - P_MIN) / (P_MAX - P_MIN)) * plotW
-    const yOf = (c: number) =>
-      padT + plotH - ((Math.max(C_MIN, Math.min(C_MAX, c)) - C_MIN) / (C_MAX - C_MIN)) * plotH
-
-    const timp = ear === 'OD' ? odTimp : oeTimp
-    const color = ear === 'OD' ? '#dc2626' : '#2563eb'
-    const zeroX = xOf(0)
-
-    const ticksX = [-400, -200, 0, 200]
-    const ticksY = [0, 1, 2, 3, 4, 5]
-
-    const tipoRaw = String(timp?.tipo_curva || '')
-      .toUpperCase()
-      .trim()
-    const normTipo: 'A' | 'Ad' | 'As' | 'B' | 'C' = (() => {
-      if (tipoRaw.startsWith('AD')) return 'Ad'
-      if (tipoRaw.startsWith('AS')) return 'As'
-      if (tipoRaw.startsWith('B')) return 'B'
-      if (tipoRaw.startsWith('C')) return 'C'
-      if (tipoRaw.startsWith('A')) return 'A'
-      return 'A'
-    })()
-
-    const peakP = (() => {
-      const v = timp?.pressao_pico
-      const n = v != null && !isNaN(Number(v)) ? Number(v) : NaN
-      if (!isNaN(n)) return n
-      return normTipo === 'C' ? -180 : 0
-    })()
-    const peakC = (() => {
-      const v = timp?.complacencia
-      const n = v != null && !isNaN(Number(v)) ? Number(v) : NaN
-      if (!isNaN(n)) return n
-      switch (normTipo) {
-        case 'Ad':
-          return 2.2
-        case 'As':
-          return 0.25
-        case 'B':
-          return 0.15
-        case 'C':
-          return 0.9
-        default:
-          return 1.0
-      }
-    })()
-
-    const sigma = (() => {
-      switch (normTipo) {
-        case 'Ad':
-          return 130
-        case 'As':
-          return 38
-        case 'B':
-          return 600
-        case 'C':
-          return 75
-        default:
-          return 75
-      }
-    })()
-
-    const amp = normTipo === 'B' ? Math.min(0.25, peakC) : peakC
-
-    const N = 48
-    const pts: { x: number; y: number }[] = []
-    for (let i = 0; i <= N; i++) {
-      const p = P_MIN + ((P_MAX - P_MIN) * i) / N
-      const c = amp * Math.exp(-((p - peakP) ** 2) / (2 * sigma * sigma))
-      pts.push({ x: xOf(p), y: yOf(c) })
-    }
-    const linePath = pts
-      .map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`)
-      .join(' ')
-    const fillPath = `${linePath} L ${xOf(P_MAX).toFixed(2)} ${yOf(0).toFixed(2)} L ${xOf(
-      P_MIN,
-    ).toFixed(2)} ${yOf(0).toFixed(2)} Z`
-
-    const px = xOf(peakP)
-    const py = yOf(amp)
-
-    return (
-      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
-        {ticksY.map((c) => (
-          <g key={`y-${c}`}>
-            <line
-              x1={padL}
-              x2={W - padR}
-              y1={yOf(c)}
-              y2={yOf(c)}
-              stroke="#cbd5e1"
-              strokeWidth={0.5}
-              strokeDasharray="1.5 1.5"
-            />
-            <text
-              x={padL - 2}
-              y={yOf(c) + 2.5}
-              textAnchor="end"
-              style={{ fontSize: 6 }}
-              fill="#64748b"
-            >
-              {c}
-            </text>
-          </g>
-        ))}
-        {ticksX.map((p) => (
-          <line
-            key={`gx-${p}`}
-            x1={xOf(p)}
-            x2={xOf(p)}
-            y1={padT}
-            y2={padT + plotH}
-            stroke="#e2e8f0"
-            strokeWidth={0.4}
-            strokeDasharray="1.5 1.5"
-          />
-        ))}
-        <line
-          x1={zeroX}
-          x2={zeroX}
-          y1={padT}
-          y2={padT + plotH}
-          stroke="#94a3b8"
-          strokeWidth={0.6}
-        />
-        <line
-          x1={padL}
-          x2={W - padR}
-          y1={padT + plotH}
-          y2={padT + plotH}
-          stroke="#475569"
-          strokeWidth={0.7}
-        />
-        <line x1={padL} x2={padL} y1={padT} y2={padT + plotH} stroke="#475569" strokeWidth={0.7} />
-        {ticksX.map((p) => (
-          <text
-            key={`x-${p}`}
-            x={xOf(p)}
-            y={H - 5}
-            textAnchor="middle"
-            style={{ fontSize: 6 }}
-            fill="#64748b"
-          >
-            {p}
-          </text>
-        ))}
-        <text
-          x={padL + plotW / 2}
-          y={H - 1}
-          textAnchor="middle"
-          style={{ fontSize: 6 }}
-          fill="#475569"
-        >
-          Pressão (daPa)
-        </text>
-        <text
-          x={6}
-          y={padT + plotH / 2}
-          textAnchor="middle"
-          style={{ fontSize: 6, fill: '#475569' }}
-          transform={`rotate(-90 6 ${padT + plotH / 2})`}
-        >
-          Compl. (ml)
-        </text>
-        <path d={fillPath} fill={color} opacity={0.1} />
-        <path d={linePath} fill="none" stroke={color} strokeWidth={1.4} strokeLinejoin="round" />
-        <line
-          x1={px}
-          y1={padT + plotH}
-          x2={px}
-          y2={py}
-          stroke={color}
-          strokeWidth={0.5}
-          strokeDasharray="2 2"
-        />
-        <line
-          x1={padL}
-          y1={py}
-          x2={px}
-          y2={py}
-          stroke={color}
-          strokeWidth={0.5}
-          strokeDasharray="2 2"
-        />
-        <circle cx={px} cy={py} r={2.2} fill={color} />
-        <text
-          x={W - padR}
-          y={padT + 5}
-          textAnchor="end"
-          style={{ fontSize: 7, fontWeight: 700 }}
-          fill={color}
-        >
-          {ear} · {normTipo}
-        </text>
-      </svg>
-    )
-  }
 
   // ---------- reflexos: valor ou status textual ----------
   const fmtReflexCell = (vals: FreqVals | undefined, freq: keyof FreqVals) => {
@@ -617,22 +404,28 @@ export function ImitanciometriaPrint({
         </tbody>
       </table>
 
-      {/* Gráfico da timpanometria — apenas se houver dados */}
+      {/* Gráfico da timpanometria — curva timpanométrica (OD + OE sobrepostas) */}
       {hasTimpData && (
         <div
           style={{
             display: 'flex',
             justifyContent: 'center',
-            gap: '12px',
             marginTop: '3px',
             alignItems: 'center',
+            width: '100%',
           }}
         >
-          <div style={{ textAlign: 'center' }}>
-            <TimpCurveGraph ear="OD" />
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <TimpCurveGraph ear="OE" />
+          <div style={{ width: '100%', maxWidth: '360px' }}>
+            <TimpanogramChart
+              odPoints={odTimp?.curva_timpanometrica ?? null}
+              oePoints={oeTimp?.curva_timpanometrica ?? null}
+              odTimp={odTimp}
+              oeTimp={oeTimp}
+              width={360}
+              height={150}
+              showTitle
+              showLegend
+            />
           </div>
         </div>
       )}

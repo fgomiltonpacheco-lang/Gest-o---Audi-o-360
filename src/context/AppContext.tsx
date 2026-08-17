@@ -1493,7 +1493,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (!secret) {
             return { success: false, message: '2FA não configurado para este usuário.' }
           }
-          const ok = verifyToken(secret, token)
+          const ok = await verifyToken(secret, token)
           if (!ok) {
             return { success: false, message: 'Código de verificação inválido.' }
           }

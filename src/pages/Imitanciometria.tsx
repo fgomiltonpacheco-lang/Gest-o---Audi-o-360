@@ -61,6 +61,8 @@ interface TimpData {
   gradiente_curva: number | null
   curva_descricao: string
   observacoes: string
+  // Pontos reais da curva timpanométrica (pressão × complacência).
+  curva_timpanometrica?: { pressao: number; complacencia: number }[] | null
 }
 
 interface ReflexData {
@@ -114,6 +116,7 @@ function emptyTimp(orelha: 'OD' | 'OE'): TimpData {
     gradiente_curva: null,
     curva_descricao: '',
     observacoes: '',
+    curva_timpanometrica: null,
   }
 }
 
@@ -301,6 +304,15 @@ export default function Imitanciometria() {
         paciente_sexo: rec.paciente_sexo || '',
       })
 
+      // Pontos reais da curva timpanométrica (curva_timpanometrica_od/oe),
+      // armazenados no registro da imitanciometria (migration 0043).
+      const odCurvePts = Array.isArray(rec.curva_timpanometrica_od)
+        ? rec.curva_timpanometrica_od
+        : null
+      const oeCurvePts = Array.isArray(rec.curva_timpanometrica_oe)
+        ? rec.curva_timpanometrica_oe
+        : null
+
       // Carrega timpanometria
       try {
         const timpRecs: any[] = await pb.collection('timpanometria_dados').getFullList({
@@ -320,6 +332,7 @@ export default function Imitanciometria() {
             gradiente_curva: numOr(od.gradiente_curva),
             curva_descricao: od.curva_descricao || '',
             observacoes: od.observacoes || '',
+            curva_timpanometrica: odCurvePts,
           })
         if (oe)
           setTimpOE({
@@ -333,6 +346,7 @@ export default function Imitanciometria() {
             gradiente_curva: numOr(oe.gradiente_curva),
             curva_descricao: oe.curva_descricao || '',
             observacoes: oe.observacoes || '',
+            curva_timpanometrica: oeCurvePts,
           })
       } catch {
         /* intentionally ignored */
@@ -574,6 +588,7 @@ export default function Imitanciometria() {
         gradiente_curva: timpOD.gradiente_curva,
         curva_descricao: timpOD.curva_descricao,
         observacoes: timpOD.observacoes,
+        curva_timpanometrica: timpOD.curva_timpanometrica ?? null,
       },
       OE: {
         volume_meato: timpOE.volume_meato,
@@ -584,6 +599,7 @@ export default function Imitanciometria() {
         gradiente_curva: timpOE.gradiente_curva,
         curva_descricao: timpOE.curva_descricao,
         observacoes: timpOE.observacoes,
+        curva_timpanometrica: timpOE.curva_timpanometrica ?? null,
       },
     },
     reflexos: {
