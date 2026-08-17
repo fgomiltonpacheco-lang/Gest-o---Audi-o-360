@@ -61,6 +61,7 @@ import {
   uid,
 } from '@/lib/examReportElements'
 import { mmToPx } from '@/components/print/TemplateRenderer'
+import { RealDataPreviewModal } from '@/pages/laudos/RealDataPreviewModal'
 import type {
   ExamReportTemplate,
   LayoutElement,
@@ -70,6 +71,7 @@ import type {
   ExamReportStatus,
 } from '@/types'
 import { EXAM_REPORT_TIPO_LABELS, EXAM_REPORT_STATUS_LABELS } from '@/types'
+import { FileSearch } from 'lucide-react'
 
 const MM_PX = 3.7795275591
 
@@ -139,6 +141,7 @@ export default function ExamReportTemplateEditor() {
   const [nomeModelo, setNomeModelo] = useState('')
   const [modalPublicar, setModalPublicar] = useState(false)
   const [motivoPublicacao, setMotivoPublicacao] = useState('')
+  const [modalPreviaReal, setModalPreviaReal] = useState(false)
 
   // ---- Undo/Redo (histórico de snapshots) ----
   const [history, setHistory] = useState<LayoutElement[][]>([])
@@ -634,6 +637,14 @@ export default function ExamReportTemplateEditor() {
           </Button>
           <Button
             size="sm"
+            variant="outline"
+            onClick={() => setModalPreviaReal(true)}
+            title="Prévia com dados de um exame real"
+          >
+            <FileSearch className="mr-1 h-4 w-4" /> Prévia com dados reais
+          </Button>
+          <Button
+            size="sm"
             className="bg-[#00897B] hover:bg-[#0a8a7a]"
             onClick={() => setModalPublicar(true)}
           >
@@ -806,8 +817,6 @@ export default function ExamReportTemplateEditor() {
             <Textarea
               id="motivo"
               rows={3}
-              value={motivoPublicacao}
-              onChange={(e) => setMotivoPublicacao(e.target.value)}
               placeholder="Ex.: Ajuste de margens e adição do campo de CRM..."
             />
           </div>
@@ -821,11 +830,323 @@ export default function ExamReportTemplateEditor() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal Prévia com dados reais */}
+      {template && (
+        <RealDataPreviewModal
+          open={modalPreviaReal}
+          onOpenChange={setModalPreviaReal}
+          template={template}
+        />
+      )}
+    </div>
+  )
+}
+
+const ElementoCanvas: React.FC<{
+=======
+              placeholder="Ex.: Ajuste de margens e adição do campo de CRM..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalPublicar(false)}>
+              Cancelar
+            </Button>
+            <Button className="bg-[#00897B] hover:bg-[#0a8a7a]" onClick={confirmarPublicar}>
+              <Send className="mr-2 h-4 w-4" /> Publicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Prévia com dados reais */}
+      {template && (
+        <RealDataPreviewModal
+          open={modalPreviaReal}
+          onOpenChange={setModalPreviaReal}
+          template={template}
+        />
+      )}
     </div>
   )
 }
 
 // ===== Elemento no canvas =====
+const ElementoCanvas: React.FC<{=====
+=======
+              placeholder="Ex.: Ajuste de margens e adição do campo de CRM..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalPublicar(false)}>
+              Cancelar
+            </Button>
+            <Button className="bg-[#00897B] hover:bg-[#0a8a7a]" onClick={confirmarPublicar}>
+              <Send className="mr-2 h-4 w-4" /> Publicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Prévia com dados reais */}
+      {template && (
+        <RealDataPreviewModal
+          open={modalPreviaReal}
+          onOpenChange={setModalPreviaReal}
+          template={template}
+        />
+      )}
+    </div>
+  )
+}
+
+// ===== Elemento no canvas =====
+const ElementoCanvas: React.FC<{
+=======
+              placeholder="Ex.: Ajuste de margens e adição do campo de CRM..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalPublicar(false)}>
+              Cancelar
+            </Button>
+            <Button className="bg-[#00897B] hover:bg-[#0a8a7a]" onClick={confirmarPublicar}>
+              <Send className="mr-2 h-4 w-4" /> Publicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Prévia com dados reais */}
+      {template && (
+        <RealDataPreviewModal
+          open={modalPreviaReal}
+          onOpenChange={setModalPreviaReal}
+          template={template}
+        />
+      )}
+    </div>
+  )
+}
+
+// ===== Elemento no canvas ==========
+=======
+            <Button className="bg-[#00897B] hover:bg-[#0a8a7a]" onClick={confirmarPublicar}>
+              <Send className="mr-2 h-4 w-4" /> Publicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Prévia com dados reais */}
+      {template && (
+        <RealDataPreviewModal
+          open={modalPreviaReal}
+          onOpenChange={setModalPreviaReal}
+          template={template}
+        />
+      )}
+    </div>
+  )
+}
+
+// ===== Elemento no canvas =====
+=======
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Prévia com dados reais */}
+      {template && (
+        <RealDataPreviewModal
+          open={modalPreviaReal}
+          onOpenChange={setModalPreviaReal}
+          template={template}
+        />
+      )}
+    </div>
+  )
+}
+
+// ===== Elemento no canvas ==========
+const ElementoCanvas: React.FC<{=====
+const ElementoCanvas: React.FC<{
+=======
+              placeholder="Ex.: Ajuste de margens e adição do campo de CRM..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalPublicar(false)}>
+              Cancelar
+            </Button>
+            <Button className="bg-[#00897B] hover:bg-[#0a8a7a]" onClick={confirmarPublicar}>
+              <Send className="mr-2 h-4 w-4" /> Publicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Prévia com dados reais */}
+      {template && (
+        <RealDataPreviewModal
+          open={modalPreviaReal}
+          onOpenChange={setModalPreviaReal}
+          template={template}
+        />
+      )}
+    </div>
+  )
+}
+
+// ===== Elemento no canvas =====
+const ElementoCanvas: React.FC<{
+=======
+              placeholder="Ex.: Ajuste de margens e adição do campo de CRM..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalPublicar(false)}>
+              Cancelar
+            </Button>
+            <Button className="bg-[#00897B] hover:bg-[#0a8a7a]" onClick={confirmarPublicar}>
+              <Send className="mr-2 h-4 w-4" /> Publicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Prévia com dados reais */}
+      {template && (
+        <RealDataPreviewModal
+          open={modalPreviaReal}
+          onOpenChange={setModalPreviaReal}
+          template={template}
+        />
+      )}
+    </div>
+  )
+}
+
+// ===== Elemento no canvas =====
+const ElementoCanvas: React.FC<{=====
+=======
+              placeholder="Ex.: Ajuste de margens e adição do campo de CRM..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalPublicar(false)}>
+              Cancelar
+            </Button>
+            <Button className="bg-[#00897B] hover:bg-[#0a8a7a]" onClick={confirmarPublicar}>
+              <Send className="mr-2 h-4 w-4" /> Publicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Prévia com dados reais */}
+      {template && (
+        <RealDataPreviewModal
+          open={modalPreviaReal}
+          onOpenChange={setModalPreviaReal}
+          template={template}
+        />
+      )}
+    </div>
+  )
+}
+
+// ===== Elemento no canvas =====
+const ElementoCanvas: React.FC<{
+=======
+              placeholder="Ex.: Ajuste de margens e adição do campo de CRM..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalPublicar(false)}>
+              Cancelar
+            </Button>
+            <Button className="bg-[#00897B] hover:bg-[#0a8a7a]" onClick={confirmarPublicar}>
+              <Send className="mr-2 h-4 w-4" /> Publicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Prévia com dados reais */}
+      {template && (
+        <RealDataPreviewModal
+          open={modalPreviaReal}
+          onOpenChange={setModalPreviaReal}
+          template={template}
+        />
+      )}
+    </div>
+  )
+}
+
+// ===== Elemento no canvas =====
+const ElementoCanvas: React.FC<{
+=======
+            <Button className="bg-[#00897B] hover:bg-[#0a8a7a]" onClick={confirmarPublicar}>
+              <Send className="mr-2 h-4 w-4" /> Publicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Prévia com dados reais */}
+      {template && (
+        <RealDataPreviewModal
+          open={modalPreviaReal}
+          onOpenChange={setModalPreviaReal}
+          template={template}
+        />
+      )}
+    </div>
+  )
+}
+
+// ===== Elemento no canvas ==========
+=======
+            <Button className="bg-[#00897B] hover:bg-[#0a8a7a]" onClick={confirmarPublicar}>
+              <Send className="mr-2 h-4 w-4" /> Publicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Prévia com dados reais */}
+      {template && (
+        <RealDataPreviewModal
+          open={modalPreviaReal}
+          onOpenChange={setModalPreviaReal}
+          template={template}
+        />
+      )}
+    </div>
+  )
+}
+
+// ===== Elemento no canvas =====
+=======
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Prévia com dados reais */}
+      {template && (
+        <RealDataPreviewModal
+          open={modalPreviaReal}
+          onOpenChange={setModalPreviaReal}
+          template={template}
+        />
+      )}
+    </div>
+  )
+}
+
+// ===== Elemento no canvas ==========
 const ElementoCanvas: React.FC<{
   el: LayoutElement
   zoom: number

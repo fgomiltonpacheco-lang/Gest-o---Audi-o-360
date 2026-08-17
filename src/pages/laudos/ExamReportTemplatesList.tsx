@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Plus,
@@ -15,6 +15,8 @@ import {
   FileEdit,
   Archive as ArchiveIcon,
   History,
+  Download,
+  Upload,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -43,9 +45,95 @@ import {
   duplicateTemplate,
   publishTemplate,
   archiveTemplate,
+  createTemplate,
+  updateTemplate,
 } from '@/lib/examReportTemplates'
-import type { ExamReportTemplate, ExamReportStatus, ExamReportTipoExame } from '@/types'
+import type {
+  ExamReportTemplate,
+  ExamReportStatus,
+  ExamReportTipoExame,
+  LayoutElement,
+  ExamReportOrientacao,
+} from '@/types'
 import { EXAM_REPORT_TIPO_LABELS, EXAM_REPORT_STATUS_LABELS } from '@/types'
+
+// ===== Exportar / Importar templates (JSON) =====
+type ExportedTemplate = {
+  nome_modelo: string
+  tipo_exame: ExamReportTipoExame
+  orientacao?: ExamReportOrientacao
+  largura_pagina?: number
+  altura_pagina?: number
+  margem_superior?: number
+  margem_inferior?: number
+  margem_esquerda?: number
+  margem_direita?: number
+  descricao?: string
+  estrutura_layout: LayoutElement[]
+  logo_url?: string
+  fonte_padrao?: string
+  tamanho_fonte_padrao?: number
+  cor_primaria?: string
+  cor_secundaria?: string
+  observacoes?: string
+  cabecalho_configuracao?: Record<string, unknown>
+  rodape_configuracao?: Record<string, unknown>
+}
+
+const EXPORT_BLOCKLIST = new Set([
+  'id',
+  'created',
+  'updated',
+  'criado_por',
+  'atualizado_por',
+  'publicado_por',
+  'publicado_em',
+  'versao',
+  'status',
+])
+
+function exportTemplateToJSON(t: ExamReportTemplate): string {
+  const raw: Record<string, unknown> = { ...t }
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(raw)) {
+    if (!EXPORT_BLOCKLIST.has(k)) out[k] = v
+  }
+  return JSON.stringify(out, null, 2)
+}
+
+function slugify(s: string): string {
+  return (
+    s
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60) || 'modelo'
+  )
+}
+
+function downloadJSON(filename: string, content: string) {
+  const blob = new Blob([content], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  setTimeout(() => URL.revokeObjectURL(url), 500)
+}
+
+function validateImportedTemplate(obj: unknown): obj is ExportedTemplate {
+  if (!obj || typeof obj !== 'object') return false
+  const o = obj as Record<string, unknown>
+  if (typeof o.nome_modelo !== 'string' || !o.nome_modelo.trim()) return false
+  if (typeof o.tipo_exame !== 'string') return false
+  if (!Array.isArray(o.estrutura_layout)) return false
+  return true
+}
+// ===== Fim Exportar / Importar =====
 
 const STATUS_CLASS: Record<ExamReportStatus, string> = {
   rascunho: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -132,6 +220,102 @@ export default function ExamReportTemplatesList() {
     }
   }
 
+  const handleExportar = (t: ExamReportTemplate) => {
+    try {
+      const json = exportTemplateToJSON(t)
+      const slug = slugify(t.nome_modelo)
+      const tipoSlug = slugify(EXAM_REPORT_TIPO_LABELS[t.tipo_exame] || t.tipo_exame)
+      downloadJSON(`template-${tipoSlug}-${slug}.json`, json)
+      toast({ title: 'Modelo exportado', description: `Arquivo template-${tipoSlug}-${slug}.json` })
+    } catch (err) {
+      toast({ title: 'Erro ao exportar', description: String(err), variant: 'destructive' })
+    }
+  }
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [importando, setImportando] = useState(false)
+
+  const handleImportarClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleArquivoSelecionado = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    // limpa o input para permitir re-selecionar o mesmo arquivo
+    if (e.target) e.target.value = ''
+    if (!file) return
+    if (!file.name.toLowerCase().endsWith('.json')) {
+      toast({
+        title: 'Arquivo inválido',
+        description: 'Selecione um arquivo .json exportado pelo sistema.',
+        variant: 'destructive',
+      })
+      return
+    }
+    setImportando(true)
+    try {
+      const texto = await file.text()
+      let obj: unknown
+      try {
+        obj = JSON.parse(texto)
+      } catch {
+        throw new Error('O arquivo não é um JSON válido.')
+      }
+      if (!validateImportedTemplate(obj)) {
+        throw new Error(
+          'Estrutura inválida. Campos obrigatórios: nome_modelo, tipo_exame, estrutura_layout.',
+        )
+      }
+      const dados = obj as ExportedTemplate
+      const tiposValidos: ExamReportTipoExame[] = [
+        'audiometria',
+        'imitanciometria',
+        'teste_aparelho',
+        'personalizado',
+      ]
+      if (!tiposValidos.includes(dados.tipo_exame)) {
+        throw new Error(`tipo_exame inválido: "${dados.tipo_exame}".`)
+      }
+      // Cria rascunho via serviço existente e depois aplica layout/estilos extras
+      const novo = await createTemplate({
+        nome_modelo: dados.nome_modelo,
+        tipo_exame: dados.tipo_exame,
+        descricao: dados.descricao || '',
+        orientacao: (dados.orientacao as ExamReportOrientacao) || 'retrato',
+        largura_pagina: dados.largura_pagina ?? 210,
+        altura_pagina: dados.altura_pagina ?? 297,
+        margem_superior: dados.margem_superior ?? 12,
+        margem_inferior: dados.margem_inferior ?? 12,
+        margem_esquerda: dados.margem_esquerda ?? 15,
+        margem_direita: dados.margem_direita ?? 15,
+      })
+      await updateTemplate(novo.id, {
+        estrutura_layout: dados.estrutura_layout,
+        logo_url: dados.logo_url,
+        fonte_padrao: dados.fonte_padrao,
+        tamanho_fonte_padrao: dados.tamanho_fonte_padrao,
+        cor_primaria: dados.cor_primaria,
+        cor_secundaria: dados.cor_secundaria,
+        observacoes: dados.observacoes,
+        cabecalho_configuracao: dados.cabecalho_configuracao,
+        rodape_configuracao: dados.rodape_configuracao,
+      })
+      toast({
+        title: 'Modelo importado',
+        description: `Rascunho "${novo.nome_modelo}" criado. Redirecionando para o editor...`,
+      })
+      navigate(`/configuracoes/laudos/${novo.id}/editor`)
+    } catch (err) {
+      toast({
+        title: 'Falha ao importar modelo',
+        description: String(err instanceof Error ? err.message : err),
+        variant: 'destructive',
+      })
+    } finally {
+      setImportando(false)
+    }
+  }
+
   const filtrados = useMemo(() => {
     return templates.filter((t) => {
       if (filtroTipo !== 'todos' && t.tipo_exame !== filtroTipo) return false
@@ -167,12 +351,29 @@ export default function ExamReportTemplatesList() {
               </Badge>
             </div>
           </div>
-          <Button
-            onClick={() => navigate('/configuracoes/laudos/novo')}
-            className="bg-[#1E3A8A] hover:bg-[#1e40af]"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Novo Modelo
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleImportarClick}
+              disabled={importando}
+              title="Importar modelo a partir de um arquivo JSON"
+            >
+              <Upload className="mr-2 h-4 w-4" /> Importar Modelo
+            </Button>
+            <Button
+              onClick={() => navigate('/configuracoes/laudos/novo')}
+              className="bg-[#1E3A8A] hover:bg-[#1e40af]"
+            >
+              <Plus className="mr-2 h-4 w-4" /> Novo Modelo
+            </Button>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={handleArquivoSelecionado}
+          />
         </div>
 
         {/* Card de resumo */}
@@ -369,6 +570,14 @@ export default function ExamReportTemplatesList() {
                             onClick={() => handleDuplicar(t.id)}
                           >
                             <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Exportar (JSON)"
+                            onClick={() => handleExportar(t)}
+                          >
+                            <Download className="h-4 w-4" />
                           </Button>
                           {t.status === 'rascunho' && (
                             <Button
