@@ -420,6 +420,7 @@ const mapSale = (r: any): Sale => ({
   appointmentId: r.appointmentId || undefined,
   paymentDate: r.paymentDate || undefined,
   paymentNotes: r.paymentNotes || undefined,
+  estoqueBaixado: r.estoque_baixado === true,
 })
 
 const mapInstallment = (r: any): Installment => ({
@@ -478,6 +479,8 @@ const mapStockItem = (r: any, movements: StockMovement[]): StockItem => ({
   dataValidade: r.data_validade ? toDateStr(r.data_validade) : undefined,
   lote: r.lote || undefined,
   fabricante: r.fabricante || undefined,
+  code: r.code || undefined,
+  sku: r.sku || undefined,
   diasAlertaValidade: Number(r.dias_alerta_validade) || 30,
   categoria: (r.categoria as StockItem['categoria']) || undefined,
   unidadeMedida: r.unidade_medida || undefined,
@@ -493,6 +496,7 @@ const mapStockMovement = (r: any): StockMovement => ({
   reason: r.reason || '',
   supplier: r.supplier || '',
   patientName: r.patientName || '',
+  saleId: r.saleId || undefined,
   createdAt: toDateStr(r.created),
 })
 
@@ -858,6 +862,17 @@ interface AppContextType {
   updateSale: (id: string, data: Partial<Sale>) => void
   /** Cancela/estorna uma venda, devolvendo itens de estoque ao saldo. */
   cancelSale: (id: string, reason: string, mode: 'Cancelado' | 'Estornado') => void
+  /**
+   * Baixa o estoque dos itens de inventário de uma venda (saída).
+   * Idempotente: só baixa uma vez (controlado por `estoqueBaixado`).
+   * Permite estoque negativo com aviso.
+   */
+  baixarEstoqueVenda: (sale: Sale) => void
+  /**
+   * Devolve ao estoque os itens baixados de uma venda (entrada).
+   * Só devolve se a venda teve baixa (`estoqueBaixado === true`).
+   */
+  devolverEstoqueVenda: (sale: Sale) => void
   installments: Installment[]
   payInstallment: (installmentId: string, paidDate?: string) => void
   commissions: Commission[]
@@ -2913,31 +2928,214 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .catch((err) => console.error('Erro ao atualizar venda:', err))
   }
 
+  // ============================================================
+  // Baixa de estoque ao finalizar venda como Paga.
+  //
+  // Percorre os itens da venda e, para cada item de inventário
+  // (type === 'inventory' com stockItemId), subtrai `quantity` do
+  // currentQuantity do item e registra uma movimentação de saída.
+  //
+  // Idempotente: a flag `estoqueBaixado` garante que a baixa só
+  // ocorra UMA vez por venda (mesmo se a venda for reaberta e
+  // finalizada novamente). Permite estoque negativo (com aviso).
+  // ============================================================
+  const baixarEstoqueVenda = (sale: Sale): void => {
+    if (!sale.items || sale.items.length === 0) return
+    if (sale.estoqueBaixado) return // já baixado — não repetir
+
+    const saleNum = sale.number
+    let baixados = 0
+    let avisos: string[] = []
+
+    for (const it of sale.items) {
+      if (it.type !== 'inventory' || !it.stockItemId) continue
+      try {
+        const target = stockRaw.find((s) => s.id === it.stockItemId)
+        if (!target) {
+          console.warn(`baixarEstoqueVenda: item ${it.stockItemId} não encontrado no estoque`)
+          continue
+        }
+        // Subtrai do currentQuantity local (permite negativo)
+        const newQty = Number(target.currentQuantity) - it.quantity
+        setStockRaw((prev) =>
+          prev.map((s) => (s.id === it.stockItemId ? { ...s, currentQuantity: newQty } : s)),
+        )
+
+        // Movimentação de saída vinculada à venda
+        const movDate = sale.paymentDate || sale.date || todayStr()
+        const tempId = `temp-mov-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+        const newMov: StockMovement = {
+          id: tempId,
+          stockItemId: it.stockItemId,
+          date: movDate,
+          type: 'Saída',
+          quantity: it.quantity,
+          reason: `Venda #${saleNum} finalizada`,
+          responsible: currentUser?.name || 'Sistema',
+          saleId: sale.id,
+          createdAt: nowIso(),
+        }
+        setStockMovements((prev) => [newMov, ...prev])
+
+        pb.collection('inventory_movements')
+          .create({
+            itemId: it.stockItemId,
+            item_name: target.name,
+            date: movDate,
+            type: 'Saída',
+            quantity: it.quantity,
+            reason: `Venda #${saleNum} finalizada`,
+            supplier: '',
+            patientName: sale.patientName || '',
+            responsible: currentUser?.name || 'Sistema',
+            saleId: sale.id,
+          })
+          .then((rec: any) => {
+            const mapped = mapStockMovement(rec)
+            setStockMovements((prev) => prev.map((m) => (m.id === tempId ? mapped : m)))
+          })
+          .catch((err) => {
+            console.error('Erro ao registrar baixa de estoque da venda:', err)
+            setStockMovements((prev) => prev.filter((m) => m.id !== tempId))
+          })
+
+        baixados += 1
+
+        // Avisos: abaixo do mínimo ou negativo
+        const isServico = (target as any).categoria === 'servico'
+        if (!isServico) {
+          const min = Number((target as any).estoque_minimo) || Number(target.minQuantity) || 0
+          if (newQty < 0) {
+            avisos.push(`⚠ ${target.name} ficou com estoque negativo (${newQty}).`)
+          } else if (min > 0 && newQty < min) {
+            avisos.push(`${target.name} abaixo do mínimo (${newQty}/${min}).`)
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao baixar estoque do item da venda:', err)
+      }
+    }
+
+    // Marca a venda como tendo o estoque baixado (idempotência)
+    if (baixados > 0) {
+      updateSale(sale.id, { estoqueBaixado: true })
+    }
+
+    // Notificação/log de alertas
+    if (avisos.length > 0) {
+      toast({
+        title: `Baixa de estoque — Venda #${saleNum}`,
+        description: `${baixados} item(ns) baixado(s). ${avisos.join(' ')}`,
+        variant: avisos.some((a) => a.includes('negativo')) ? 'destructive' : 'default',
+      })
+    }
+  }
+
+  // ============================================================
+  // Devolução de estoque ao cancelar/estornar venda Paga.
+  //
+  // Só devolve se a venda teve baixa de estoque (estoqueBaixado).
+  // Soma `quantity` de volta ao currentQuantity e registra uma
+  // movimentação de entrada. O registro no audit_trail é feito
+  // automaticamente pelo hook server-side (auditTrail.js).
+  // ============================================================
+  const devolverEstoqueVenda = (sale: Sale): void => {
+    if (!sale.estoqueBaixado) return // não teve baixa — nada a devolver
+    if (!sale.items || sale.items.length === 0) {
+      // Mesmo sem itens, reseta a flag
+      updateSale(sale.id, { estoqueBaixado: false })
+      return
+    }
+
+    const saleNum = sale.number
+    let devolvidos = 0
+
+    for (const it of sale.items) {
+      if (it.type !== 'inventory' || !it.stockItemId) continue
+      try {
+        const target = stockRaw.find((s) => s.id === it.stockItemId)
+        if (!target) {
+          console.warn(`devolverEstoqueVenda: item ${it.stockItemId} não encontrado`)
+          continue
+        }
+        const newQty = Number(target.currentQuantity) + it.quantity
+        setStockRaw((prev) =>
+          prev.map((s) => (s.id === it.stockItemId ? { ...s, currentQuantity: newQty } : s)),
+        )
+
+        const movDate = todayStr()
+        const tempId = `temp-mov-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+        const newMov: StockMovement = {
+          id: tempId,
+          stockItemId: it.stockItemId,
+          date: movDate,
+          type: 'Entrada',
+          quantity: it.quantity,
+          reason: `Devolução — Venda #${saleNum} cancelada/estornada`,
+          responsible: currentUser?.name || 'Sistema',
+          saleId: sale.id,
+          createdAt: nowIso(),
+        }
+        setStockMovements((prev) => [newMov, ...prev])
+
+        pb.collection('inventory_movements')
+          .create({
+            itemId: it.stockItemId,
+            item_name: target.name,
+            date: movDate,
+            type: 'Entrada',
+            quantity: it.quantity,
+            reason: `Devolução — Venda #${saleNum} cancelada/estornada`,
+            supplier: '',
+            responsible: currentUser?.name || 'Sistema',
+            saleId: sale.id,
+          })
+          .then((rec: any) => {
+            const mapped = mapStockMovement(rec)
+            setStockMovements((prev) => prev.map((m) => (m.id === tempId ? mapped : m)))
+          })
+          .catch((err) => {
+            console.error('Erro ao registrar devolução de estoque:', err)
+            setStockMovements((prev) => prev.filter((m) => m.id !== tempId))
+          })
+
+        devolvidos += 1
+      } catch (err) {
+        console.error('Erro ao devolver estoque do item da venda:', err)
+      }
+    }
+
+    // Reseta a flag — estoque devolvido
+    updateSale(sale.id, { estoqueBaixado: false })
+
+    if (devolvidos > 0) {
+      toast({
+        title: `Devolução de estoque — Venda #${saleNum}`,
+        description: `${devolvidos} item(ns) devolvido(s) ao estoque.`,
+      })
+    }
+  }
+
   const cancelSale = (id: string, reason: string, mode: 'Cancelado' | 'Estornado') => {
     const sale = sales.find((s) => s.id === id)
     if (!sale) return
 
-    // 1. Atualiza status + justificativa
-    updateSale(id, { status: mode as SaleStatus, cancelReason: reason })
-
-    // 2. Devolve itens de estoque ao saldo (apenas itens de inventário)
-    if (Array.isArray(sale.items) && sale.items.length > 0) {
-      sale.items.forEach((it: SaleItem) => {
-        if (it.type === 'inventory' && it.stockItemId) {
-          addStockEntry(
-            it.stockItemId,
-            it.quantity,
-            `Estorno da venda #${sale.number}`,
-            currentUser?.name || 'Sistema',
-            undefined,
-          )
-        }
-      })
+    // 1. Devolve itens de estoque ao saldo (apenas se houve baixa).
+    //    O registro no audit_trail é feito pelo hook server-side.
+    try {
+      devolverEstoqueVenda(sale)
+    } catch (err) {
+      console.error('Erro ao devolver estoque na venda:', err)
     }
+
+    // 2. Atualiza status + justificativa
+    updateSale(id, { status: mode as SaleStatus, cancelReason: reason })
 
     toast({
       title: mode === 'Estornado' ? 'Venda estornada' : 'Venda cancelada',
-      description: `Venda #${sale.number} foi ${mode === 'Estornado' ? 'estornada' : 'cancelada'} e os itens foram devolvidos ao estoque.`,
+      description: sale.estoqueBaixado
+        ? `Venda #${sale.number} foi ${mode === 'Estornado' ? 'estornada' : 'cancelada'} e os itens foram devolvidos ao estoque.`
+        : `Venda #${sale.number} foi ${mode === 'Estornado' ? 'estornada' : 'cancelada'}.`,
       variant: 'destructive',
     })
   }
@@ -3088,6 +3286,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         data_validade: itemData.dataValidade || '',
         lote: itemData.lote || '',
         fabricante: itemData.fabricante || '',
+        code: itemData.code || '',
+        sku: itemData.sku || '',
         dias_alerta_validade: itemData.diasAlertaValidade ?? 30,
         categoria: itemData.categoria || '',
         unidade_medida: itemData.unidadeMedida || '',
@@ -3118,6 +3318,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         data_validade: itemData.dataValidade || null,
         lote: itemData.lote || '',
         fabricante: itemData.fabricante || '',
+        code: itemData.code || '',
+        sku: itemData.sku || '',
         dias_alerta_validade: itemData.diasAlertaValidade ?? 30,
         categoria: itemData.categoria || '',
         unidade_medida: itemData.unidadeMedida || '',
@@ -5011,6 +5213,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addSale,
         updateSale,
         cancelSale,
+        baixarEstoqueVenda,
+        devolverEstoqueVenda,
         installments,
         payInstallment,
         commissions,

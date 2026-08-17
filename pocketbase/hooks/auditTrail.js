@@ -907,12 +907,59 @@ onRecordUpdateRequest(
                 ''
               if (mv) contexto = { motivo: mv }
             } catch (_) {}
+            // Vendas: registra os itens de inventário devolvidos ao estoque.
+            if (collectionName === 'sales') {
+              try {
+                var itensDev = []
+                var itsC = e.record.get('items')
+                if (itsC && Array.isArray(itsC)) {
+                  for (var ic = 0; ic < itsC.length; ic++) {
+                    var itc = itsC[ic]
+                    if (itc && itc.type === 'inventory' && itc.stockItemId) {
+                      itensDev.push({
+                        stockItemId: itc.stockItemId,
+                        name: itc.name || '',
+                        quantity: itc.quantity || 0,
+                      })
+                    }
+                  }
+                }
+                if (itensDev.length > 0) {
+                  contexto = contexto || {}
+                  contexto.itens_devolvidos = itensDev
+                }
+              } catch (_) {}
+            }
           } else if (
             meta.estornoValue &&
             newStatus === meta.estornoValue &&
             oldStatus !== meta.estornoValue
           ) {
             acao = 'estornar'
+            // Vendas: registra os itens de inventário devolvidos ao estoque.
+            if (collectionName === 'sales') {
+              try {
+                var itensDevolvidos = []
+                var its = e.record.get('items')
+                if (its && Array.isArray(its)) {
+                  for (var ii = 0; ii < its.length; ii++) {
+                    var iit = its[ii]
+                    if (iit && iit.type === 'inventory' && iit.stockItemId) {
+                      itensDevolvidos.push({
+                        stockItemId: iit.stockItemId,
+                        name: iit.name || '',
+                        quantity: iit.quantity || 0,
+                      })
+                    }
+                  }
+                }
+                if (itensDevolvidos.length > 0) {
+                  contexto = {
+                    itens_devolvidos: itensDevolvidos,
+                  }
+                }
+              } catch (_) {}
+            }
           }
         }
       }

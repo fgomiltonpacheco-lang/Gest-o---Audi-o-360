@@ -81,7 +81,16 @@ const paymentIcon = (m: string) => {
 
 export default function Vendas() {
   const navigate = useNavigate()
-  const { sales, currentUser, cancelSale, addSale, updateSale, patients, stockItems } = useApp()
+  const {
+    sales,
+    currentUser,
+    cancelSale,
+    addSale,
+    updateSale,
+    patients,
+    stockItems,
+    baixarEstoqueVenda,
+  } = useApp()
   const { toast } = useToast()
   const { print } = usePrint()
 
@@ -300,10 +309,19 @@ export default function Vendas() {
   }, [patients, nvPatientQuery])
 
   // ---- Autocomplete de itens do estoque (Nova Venda) ----
+  // Busca case-insensitive por correspondência parcial no nome,
+  // no código (code) e no SKU do item de estoque.
   const itemSuggestions = useMemo(() => {
     const q = nvItemQuery.trim().toLowerCase()
     if (!q) return []
-    return stockItems.filter((it) => it.name.toLowerCase().includes(q)).slice(0, 8)
+    return stockItems
+      .filter((it) => {
+        const name = (it.name || '').toLowerCase()
+        const code = (it.code || '').toLowerCase()
+        const sku = (it.sku || '').toLowerCase()
+        return name.includes(q) || code.includes(q) || sku.includes(q)
+      })
+      .slice(0, 8)
   }, [stockItems, nvItemQuery])
 
   const nvTotal = useMemo(
@@ -441,22 +459,35 @@ export default function Vendas() {
       const notes = payNotes
         ? `Forma de recebimento: ${payForma}. ${payNotes}`
         : `Forma de recebimento: ${payForma}.`
+      // Atualiza status para Pago e dispara a baixa de estoque
+      // (idempotente: só baixa uma vez, controlado por estoqueBaixado).
+      const updatedSale: Sale = {
+        ...detailSale,
+        status: 'Pago',
+        paymentDate: payDate,
+        paymentNotes: notes,
+      }
       updateSale(detailSale.id, {
         status: 'Pago',
         paymentDate: payDate,
         paymentNotes: notes,
       })
+      try {
+        baixarEstoqueVenda(updatedSale)
+      } catch (err) {
+        console.error('Erro ao baixar estoque da venda:', err)
+        toast({
+          title: 'Aviso',
+          description: 'Venda finalizada, mas houve erro na baixa de estoque. Verifique o estoque.',
+          variant: 'destructive',
+        })
+      }
       toast({
         title: `Venda #${detailSale.number} finalizada como Paga!`,
         description: `Recebimento: ${payForma} em ${formatDate(payDate)}.`,
       })
       // atualiza o detailSale em tela
-      setDetailSale({
-        ...detailSale,
-        status: 'Pago',
-        paymentDate: payDate,
-        paymentNotes: notes,
-      })
+      setDetailSale(updatedSale)
       setPaySaving(false)
       setPayOpen(false)
     } catch (err) {
@@ -984,8 +1015,7 @@ export default function Vendas() {
             {isAdmin &&
               detailSale &&
               detailSale.status !== 'Cancelado' &&
-              detailSale.status !== 'Estornado' &&
-              detailSale.status !== 'Pago' && (
+              detailSale.status !== 'Estornado' && (
                 <Button
                   onClick={() => {
                     setCancelTarget(detailSale)
@@ -1085,7 +1115,7 @@ export default function Vendas() {
                   }}
                   onFocus={() => setNvItemSearchOpen(true)}
                   onBlur={() => setTimeout(() => setNvItemSearchOpen(false), 150)}
-                  placeholder="Buscar item no estoque (produto ou serviço)..."
+                  placeholder="Buscar item por nome, código ou SKU..."
                   className="h-9 rounded-lg text-sm pl-8"
                 />
                 {nvItemSearchOpen && itemSuggestions.length > 0 && (
@@ -1106,7 +1136,14 @@ export default function Vendas() {
                           className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-teal-50 border-b border-slate-50 last:border-0 flex items-center justify-between gap-2"
                         >
                           <div className="min-w-0">
-                            <div className="font-medium truncate">{it.name}</div>
+                            <div className="font-medium truncate">
+                              {it.name}
+                              {(it.code || it.sku) && (
+                                <span className="ml-1.5 text-[10px] font-normal text-slate-400">
+                                  [{it.code || it.sku}]
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <Badge
                                 variant="outline"

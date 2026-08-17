@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T01:51:18.302Z",
+  "generatedAt": "2026-08-17T02:17:31.559Z",
   "collections": [
     {
       "name": "users",
@@ -1300,6 +1300,12 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "estoque_baixado",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
@@ -1675,6 +1681,18 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "code",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sku",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -1755,6 +1773,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "saleId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "sales"
         }
       ],
       "indexes": []

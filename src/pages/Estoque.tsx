@@ -140,6 +140,9 @@ export default function Estoque() {
   const [diasAlertaValidade, setDiasAlertaValidade] = useState<number>(30)
   const [categoria, setCategoria] = useState<InventoryCategoria | ''>('')
   const [unidadeMedida, setUnidadeMedida] = useState('un')
+  // Código interno e SKU do item (busca no autocomplete de vendas)
+  const [code, setCode] = useState('')
+  const [sku, setSku] = useState('')
 
   // Confirmação de Exclusão
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -197,7 +200,9 @@ export default function Estoque() {
         (it.brand || '').toLowerCase().includes(q) ||
         (it.supplier || '').toLowerCase().includes(q) ||
         (it.fabricante || '').toLowerCase().includes(q) ||
-        (it.lote || '').toLowerCase().includes(q)
+        (it.lote || '').toLowerCase().includes(q) ||
+        (it.code || '').toLowerCase().includes(q) ||
+        (it.sku || '').toLowerCase().includes(q)
 
       const matchesCat = categoryFilter === 'todos' || it.category === categoryFilter
       const min = it.estoqueMinimo ?? it.minQuantity ?? 0
@@ -238,6 +243,8 @@ export default function Estoque() {
     setDiasAlertaValidade(30)
     setCategoria('')
     setUnidadeMedida('un')
+    setCode('')
+    setSku('')
     setItemModalOpen(true)
   }
 
@@ -263,6 +270,8 @@ export default function Estoque() {
     setDiasAlertaValidade(item.diasAlertaValidade ?? 30)
     setCategoria(item.categoria || '')
     setUnidadeMedida(item.unidadeMedida || 'un')
+    setCode(item.code || '')
+    setSku(item.sku || '')
     setItemModalOpen(true)
   }
 
@@ -302,6 +311,8 @@ export default function Estoque() {
       diasAlertaValidade: Number(diasAlertaValidade) || 30,
       categoria: categoria || undefined,
       unidadeMedida: unidadeMedida.trim() || undefined,
+      code: code.trim() || undefined,
+      sku: sku.trim() || undefined,
     }
 
     if (itemToEdit) {
@@ -852,6 +863,28 @@ export default function Estoque() {
                   value={fabricante}
                   onChange={(e) => setFabricante(e.target.value)}
                   placeholder="Ex: Phonak, Widex"
+                  className="h-10 rounded-xl mt-1 text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Código interno + SKU (busca no autocomplete de vendas) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Código Interno</Label>
+                <Input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="Ex: PIL-312, AC-FLT-01"
+                  className="h-10 rounded-xl mt-1 text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">SKU</Label>
+                <Input
+                  value={sku}
+                  onChange={(e) => setSku(e.target.value)}
+                  placeholder="Ex: 7891234567890"
                   className="h-10 rounded-xl mt-1 text-xs"
                 />
               </div>

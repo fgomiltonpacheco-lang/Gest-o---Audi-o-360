@@ -582,6 +582,13 @@ export interface Sale {
   paymentDate?: string
   /** Observações do recebimento (forma de recebimento, etc.). */
   paymentNotes?: string
+  /**
+   * Flag que indica se o estoque já foi baixado para esta venda.
+   * Garante idempotência: a baixa ocorre UMA vez (ao finalizar como
+   * Paga). Ao cancelar/estornar uma venda com estoque_baixado=true,
+   * os itens são devolvidos e a flag volta para false.
+   */
+  estoqueBaixado?: boolean
 }
 
 export type InstallmentStatus = 'Pendente' | 'Pago' | 'Atrasado'
@@ -690,6 +697,8 @@ export interface StockMovement {
   reason?: string
   supplier?: string
   patientName?: string
+  /** ID da venda que originou a baixa/devolução (quando aplicável). */
+  saleId?: string
   createdAt: string
 }
 
@@ -725,6 +734,10 @@ export interface StockItem {
   categoria?: InventoryCategoria
   /** Unidade de medida (ex.: 'un', 'cx', 'par'). */
   unidadeMedida?: string
+  /** Código interno do item (busca no autocomplete de vendas). */
+  code?: string
+  /** SKU do item (busca no autocomplete de vendas). */
+  sku?: string
 }
 
 // ===== Módulo de Configurações da Clínica =====
