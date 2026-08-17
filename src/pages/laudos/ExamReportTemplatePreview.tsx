@@ -5,12 +5,13 @@ import { ArrowLeft, Printer, FileDown, Eye, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
@@ -18,6 +19,7 @@ import { getTemplate } from '@/lib/examReportTemplates'
 import { TemplateRenderer, type TemplateDataContext } from '@/components/print/TemplateRenderer'
 import pb from '@/lib/pocketbase/client'
 import type { ExamReportTemplate } from '@/types'
+import { EXAM_REPORT_TIPO_LABELS, EXAM_REPORT_STATUS_LABELS } from '@/types'
 
 const DADOS_EXEMPLO: TemplateDataContext = {
   paciente: {
@@ -34,8 +36,9 @@ const DADOS_EXEMPLO: TemplateDataContext = {
   exame: {
     data: '20/01/2025',
     hora: '14:30',
-    report: 'Audiometria tonal e vocal indicando perda neurossensorial leve bilateral.',
-    observations: 'Paciente relativa zumbido bilateral.',
+    report:
+      'Audiometria tonal e vocal indicando perda neurossensorial leve bilateral. Limiares de via aérea entre 25 e 45 dB NA nas frequências de 500 a 8000 Hz, bilateralmente.',
+    observations: 'Paciente relata zumbido bilateral.',
     air_od: {
       '500': { db: 20, symbol: 'normal' },
       '1000': { db: 25, symbol: 'normal' },
@@ -83,6 +86,7 @@ export default function ExamReportTemplatePreview() {
   const { toast } = useToast()
   const [template, setTemplate] = useState<ExamReportTemplate | null>(null)
   const [loading, setLoading] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
   const [dados, setDados] = useState<TemplateDataContext>(DADOS_EXEMPLO)
   const [modalExame, setModalExame] = useState(false)
   const [buscaPaciente, setBuscaPaciente] = useState('')
@@ -90,14 +94,17 @@ export default function ExamReportTemplatePreview() {
   const [exames, setExames] = useState<{ id: string; date: string; patientName: string }[]>([])
   const [pacienteSel, setPacienteSel] = useState<string>('')
   const [exameSel, setExameSel] = useState<string>('')
+  const [carregandoExame, setCarregandoExame] = useState(false)
   const printRef = useRef<HTMLDivElement>(null)
 
   const carregar = useCallback(async () => {
     setLoading(true)
+    setErro(null)
     try {
       const tpl = await getTemplate(id)
       setTemplate(tpl)
     } catch (err) {
+      setErro(String(err))
       toast({ title: 'Erro ao carregar modelo', description: String(err), variant: 'destructive' })
     } finally {
       setLoading(false)
@@ -131,6 +138,8 @@ export default function ExamReportTemplatePreview() {
 
   const carregarExames = async (pacienteId: string) => {
     setPacienteSel(pacienteId)
+    setExames([])
+    setExameSel('')
     try {
       const res = await pb.collection('audiometry_exams').getList(1, 50, {
         filter: `patientId="${pacienteId}"`,
@@ -152,6 +161,7 @@ export default function ExamReportTemplatePreview() {
       toast({ title: 'Selecione um exame', variant: 'destructive' })
       return
     }
+    setCarregandoExame(true)
     try {
       const rec = (await pb.collection('audiometry_exams').getOne(exameSel)) as Record<
         string,
@@ -187,6 +197,8 @@ export default function ExamReportTemplatePreview() {
       toast({ title: 'Exame real carregado' })
     } catch (err) {
       toast({ title: 'Erro ao carregar exame', description: String(err), variant: 'destructive' })
+    } finally {
+      setCarregandoExame(false)
     }
   }
 
@@ -195,7 +207,6 @@ export default function ExamReportTemplatePreview() {
   }
 
   const handleBaixarPDF = () => {
-    // Usa window.print() — o usuário escolhe "Salvar como PDF" no diálogo.
     toast({
       title: 'Gerando PDF',
       description: 'No diálogo de impressão, escolha "Salvar como PDF".',
@@ -210,10 +221,13 @@ export default function ExamReportTemplatePreview() {
       </div>
     )
   }
-  if (!template) {
+  if (erro || !template) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-red-500">
-        Modelo não encontrado.
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 text-slate-500">
+        <p className="text-red-500">{erro || 'Modelo não encontrado.'}</p>
+        <Link to="/configuracoes/laudos">
+          <Button variant="outline">Voltar para a lista</Button>
+        </Link>
       </div>
     )
   }
@@ -224,7 +238,7 @@ export default function ExamReportTemplatePreview() {
       <div className="no-print flex flex-wrap items-center justify-between gap-2 border-b bg-white px-4 py-2 shadow-sm">
         <div className="flex items-center gap-3">
           <Link to={`/configuracoes/laudos/${template.id}/editor`}>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" title="Voltar ao editor">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
@@ -232,17 +246,21 @@ export default function ExamReportTemplatePreview() {
             <h1 className="text-base font-semibold text-slate-800">
               Prévia — {template.nome_modelo}
             </h1>
-            <p className="text-xs text-slate-500">
-              v{template.versao} • {template.status}
+            <p className="flex items-center gap-2 text-xs text-slate-500">
+              <span>v{template.versao}</span>
+              <Badge variant="outline" className="text-[10px]">
+                {EXAM_REPORT_STATUS_LABELS[template.status]}
+              </Badge>
+              <span>• {EXAM_REPORT_TIPO_LABELS[template.tipo_exame]}</span>
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant="outline" onClick={() => setDados(DADOS_EXEMPLO)}>
-            <Eye className="mr-1 h-4 w-4" /> Dados de exemplo
+            <Eye className="mr-1 h-4 w-4" /> Dados de Exemplo
           </Button>
           <Button size="sm" variant="outline" onClick={() => setModalExame(true)}>
-            <User className="mr-1 h-4 w-4" /> Exame real
+            <User className="mr-1 h-4 w-4" /> Selecionar Exame Real
           </Button>
           <Button size="sm" variant="outline" onClick={handleImprimir}>
             <Printer className="mr-1 h-4 w-4" /> Imprimir
@@ -265,6 +283,10 @@ export default function ExamReportTemplatePreview() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Visualizar com exame real</DialogTitle>
+            <DialogDescription>
+              Busque um paciente e selecione um exame de audiometria para preencher a prévia com
+              dados reais.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
@@ -272,7 +294,8 @@ export default function ExamReportTemplatePreview() {
               <Input
                 value={buscaPaciente}
                 onChange={(e) => buscarPacientes(e.target.value)}
-                placeholder="Digite o nome..."
+                placeholder="Digite o nome do paciente..."
+                autoFocus
               />
               {pacientes.length > 0 && (
                 <div className="mt-2 max-h-40 overflow-y-auto rounded border">
@@ -304,13 +327,20 @@ export default function ExamReportTemplatePreview() {
                 </div>
               </div>
             )}
+            {pacienteSel && exames.length === 0 && (
+              <p className="text-sm text-slate-500">Nenhum exame encontrado para este paciente.</p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalExame(false)}>
               Cancelar
             </Button>
-            <Button onClick={carregarExameReal} className="bg-[#1E3A8A] hover:bg-[#1e40af]">
-              Carregar
+            <Button
+              onClick={carregarExameReal}
+              disabled={!exameSel || carregandoExame}
+              className="bg-[#1E3A8A] hover:bg-[#1e40af]"
+            >
+              {carregandoExame ? 'Carregando...' : 'Carregar'}
             </Button>
           </DialogFooter>
         </DialogContent>

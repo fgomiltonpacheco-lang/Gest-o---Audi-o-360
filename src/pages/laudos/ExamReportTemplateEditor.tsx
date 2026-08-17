@@ -18,13 +18,21 @@ import {
   ZoomIn,
   ZoomOut,
   MousePointer2,
+  Type,
+  Image as ImageIcon,
+  Square,
+  Table as TableIcon,
+  Activity,
+  PenLine,
+  Layers,
+  Sticker,
+  Minus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Card } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -39,23 +47,82 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
-import { getTemplate, saveDraft, publishTemplate } from '@/lib/examReportTemplates'
+import { getTemplate, saveDraft, publishTemplate, updateTemplate } from '@/lib/examReportTemplates'
 import {
   ELEMENT_DEFS,
   PACIENTE_FIELDS,
   EXAME_FIELDS,
   createElement,
   createElementByType,
+  uid,
 } from '@/lib/examReportElements'
 import { mmToPx } from '@/components/print/TemplateRenderer'
-import type { ExamReportTemplate, LayoutElement, LayoutElementType } from '@/types'
+import type {
+  ExamReportTemplate,
+  LayoutElement,
+  LayoutElementType,
+  LayoutElementStyle,
+  LayoutElementProps,
+  ExamReportStatus,
+} from '@/types'
+import { EXAM_REPORT_TIPO_LABELS, EXAM_REPORT_STATUS_LABELS } from '@/types'
 
 const MM_PX = 3.7795275591
 
 type Handle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
+
+const STATUS_CLASS: Record<ExamReportStatus, string> = {
+  rascunho: 'bg-amber-100 text-amber-700 border-amber-200',
+  publicado: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  arquivado: 'bg-slate-200 text-slate-600 border-slate-300',
+}
+
+// Agrupamento dos ELEMENT_DEFS para a sidebar
+const CATEGORIAS: {
+  nome: string
+  icon: React.ReactNode
+  indices: number[]
+}[] = [
+  {
+    nome: 'Texto',
+    icon: <Type className="h-3.5 w-3.5" />,
+    indices: [0, 1, 2, 3],
+  },
+  {
+    nome: 'Imagens',
+    icon: <ImageIcon className="h-3.5 w-3.5" />,
+    indices: [4],
+  },
+  {
+    nome: 'Formas',
+    icon: <Square className="h-3.5 w-3.5" />,
+    indices: [5, 6, 7, 14],
+  },
+  {
+    nome: 'Dados',
+    icon: <TableIcon className="h-3.5 w-3.5" />,
+    indices: [8],
+  },
+  {
+    nome: 'Exames',
+    icon: <Activity className="h-3.5 w-3.5" />,
+    indices: [9, 10],
+  },
+  {
+    nome: 'Finalização',
+    icon: <PenLine className="h-3.5 w-3.5" />,
+    indices: [11, 13],
+  },
+  {
+    nome: 'Estrutura',
+    icon: <Layers className="h-3.5 w-3.5" />,
+    indices: [12],
+  },
+]
 
 export default function ExamReportTemplateEditor() {
   const { id = '' } = useParams()
@@ -66,8 +133,12 @@ export default function ExamReportTemplateEditor() {
   const [loading, setLoading] = useState(true)
   const [elementos, setElementos] = useState<LayoutElement[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [zoom, setZoom] = useState(0.38)
+  const [zoom, setZoom] = useState(0.5)
   const [salvando, setSalvando] = useState(false)
+  const [editandoNome, setEditandoNome] = useState(false)
+  const [nomeModelo, setNomeModelo] = useState('')
+  const [modalPublicar, setModalPublicar] = useState(false)
+  const [motivoPublicacao, setMotivoPublicacao] = useState('')
 
   // ---- Undo/Redo (histórico de snapshots) ----
   const [history, setHistory] = useState<LayoutElement[][]>([])
@@ -75,13 +146,11 @@ export default function ExamReportTemplateEditor() {
   const [dirty, setDirty] = useState(false)
   const skipHistory = useRef(false)
 
-  // Empurra o estado atual para o histórico (quando há mudança real)
   const pushHistory = useCallback(
     (next: LayoutElement[]) => {
       setHistory((prev) => {
         const trimmed = prev.slice(0, histIdx + 1)
         trimmed.push(next)
-        // Limita a 50 estados
         if (trimmed.length > 50) trimmed.shift()
         return trimmed
       })
@@ -107,6 +176,7 @@ export default function ExamReportTemplateEditor() {
     try {
       const tpl = await getTemplate(id)
       setTemplate(tpl)
+      setNomeModelo(tpl.nome_modelo)
       const els = tpl.estrutura_layout || []
       setElementos(els)
       setHistory([els])
@@ -145,6 +215,14 @@ export default function ExamReportTemplateEditor() {
   }, [histIdx, history])
 
   // ---- Atalhos de teclado ----
+  const excluirElemento = useCallback(
+    (elId: string) => {
+      setElementosTracked((prev) => prev.filter((e) => e.id !== elId))
+      setSelectedId((cur) => (cur === elId ? null : cur))
+    },
+    [setElementosTracked],
+  )
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
@@ -165,18 +243,18 @@ export default function ExamReportTemplateEditor() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [undo, redo, selectedId])
+  }, [undo, redo, selectedId, excluirElemento])
 
   // ---- Adicionar elemento ----
   const adicionarElemento = (defIdx: number) => {
     const def = ELEMENT_DEFS[defIdx]
-    const el = createElement(def, 60, 60)
+    const el = createElement(def, 10, 10)
     setElementosTracked((prev) => [...prev, el])
     setSelectedId(el.id)
   }
 
   const adicionarCampoPaciente = (token: string, label: string) => {
-    const el = createElementByType('text', 'Campo automático', 60, 60)
+    const el = createElementByType('text', 'Campo automático', 10, 10)
     el.label = label
     el.props = {
       content: `{{${token}}}`,
@@ -189,7 +267,7 @@ export default function ExamReportTemplateEditor() {
   }
 
   const adicionarCampoExame = (field: string, label: string) => {
-    const el = createElementByType('field', 'Campo do exame', 60, 60)
+    const el = createElementByType('field', 'Campo do exame', 10, 10)
     el.label = label
     el.props = { fieldPath: field, label, showLabel: true, fallback: '—' }
     setElementosTracked((prev) => [...prev, el])
@@ -202,51 +280,64 @@ export default function ExamReportTemplateEditor() {
     [elementos, selectedId],
   )
 
-  const updateElemento = (elId: string, patch: Partial<LayoutElement>) => {
-    setElementosTracked((prev) => prev.map((e) => (e.id === elId ? { ...e, ...patch } : e)))
-  }
+  const updateElemento = useCallback(
+    (elId: string, patch: Partial<LayoutElement>) => {
+      setElementosTracked((prev) => prev.map((e) => (e.id === elId ? { ...e, ...patch } : e)))
+    },
+    [setElementosTracked],
+  )
 
-  const updateElementoStyle = (elId: string, stylePatch: Partial<LayoutElement['style']>) => {
-    setElementosTracked((prev) =>
-      prev.map((e) => (e.id === elId ? { ...e, style: { ...e.style, ...stylePatch } } : e)),
-    )
-  }
+  const updateElementoStyle = useCallback(
+    (elId: string, stylePatch: Partial<LayoutElementStyle>) => {
+      setElementosTracked((prev) =>
+        prev.map((e) => (e.id === elId ? { ...e, style: { ...e.style, ...stylePatch } } : e)),
+      )
+    },
+    [setElementosTracked],
+  )
 
-  const updateElementoProps = (elId: string, propsPatch: Partial<LayoutElement['props']>) => {
-    setElementosTracked((prev) =>
-      prev.map((e) => (e.id === elId ? { ...e, props: { ...e.props, ...propsPatch } } : e)),
-    )
-  }
+  const updateElementoProps = useCallback(
+    (elId: string, propsPatch: Partial<LayoutElementProps>) => {
+      setElementosTracked((prev) =>
+        prev.map((e) => (e.id === elId ? { ...e, props: { ...e.props, ...propsPatch } } : e)),
+      )
+    },
+    [setElementosTracked],
+  )
 
-  const excluirElemento = (elId: string) => {
-    setElementosTracked((prev) => prev.filter((e) => e.id !== elId))
-    if (selectedId === elId) setSelectedId(null)
-  }
+  const duplicarElemento = useCallback(
+    (elId: string) => {
+      const el = elementos.find((e) => e.id === elId)
+      if (!el) return
+      const copia: LayoutElement = {
+        ...JSON.parse(JSON.stringify(el)),
+        id: uid(),
+        x: el.x + 10,
+        y: el.y + 10,
+        zIndex: (el.zIndex || 1) + 1,
+      }
+      setElementosTracked((prev) => [...prev, copia])
+      setSelectedId(copia.id)
+    },
+    [elementos, setElementosTracked],
+  )
 
-  const duplicarElemento = (elId: string) => {
-    const el = elementos.find((e) => e.id === elId)
-    if (!el) return
-    const copia: LayoutElement = {
-      ...JSON.parse(JSON.stringify(el)),
-      id: `el_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-      x: el.x + 10,
-      y: el.y + 10,
-      zIndex: (el.zIndex || 1) + 1,
-    }
-    setElementosTracked((prev) => [...prev, copia])
-    setSelectedId(copia.id)
-  }
-
-  const trazerFrente = (elId: string) => {
-    setElementosTracked((prev) =>
-      prev.map((e) => (e.id === elId ? { ...e, zIndex: (e.zIndex || 1) + 1 } : e)),
-    )
-  }
-  const enviarTras = (elId: string) => {
-    setElementosTracked((prev) =>
-      prev.map((e) => (e.id === elId ? { ...e, zIndex: Math.max(0, (e.zIndex || 1) - 1) } : e)),
-    )
-  }
+  const trazerFrente = useCallback(
+    (elId: string) => {
+      setElementosTracked((prev) =>
+        prev.map((e) => (e.id === elId ? { ...e, zIndex: (e.zIndex || 1) + 1 } : e)),
+      )
+    },
+    [setElementosTracked],
+  )
+  const enviarTras = useCallback(
+    (elId: string) => {
+      setElementosTracked((prev) =>
+        prev.map((e) => (e.id === elId ? { ...e, zIndex: Math.max(0, (e.zIndex || 1) - 1) } : e)),
+      )
+    },
+    [setElementosTracked],
+  )
 
   // ---- Drag & resize no canvas ----
   const dragState = useRef<{
@@ -259,6 +350,7 @@ export default function ExamReportTemplateEditor() {
     origW: number
     origH: number
     elId: string
+    moved: boolean
   } | null>(null)
 
   const onElementMouseDown = (e: React.MouseEvent, el: LayoutElement) => {
@@ -274,6 +366,7 @@ export default function ExamReportTemplateEditor() {
       origW: el.width,
       origH: el.height,
       elId: el.id,
+      moved: false,
     }
   }
 
@@ -290,6 +383,7 @@ export default function ExamReportTemplateEditor() {
       origW: el.width,
       origH: el.height,
       elId: el.id,
+      moved: false,
     }
   }
 
@@ -301,22 +395,34 @@ export default function ExamReportTemplateEditor() {
       const dyPx = e.clientY - ds.startY
       const dxMm = dxPx / (MM_PX * zoom)
       const dyMm = dyPx / (MM_PX * zoom)
+      if (Math.abs(dxPx) > 2 || Math.abs(dyPx) > 2) ds.moved = true
 
       if (ds.mode === 'move') {
-        const nx = Math.round(ds.origX + dxMm)
-        const ny = Math.round(ds.origY + dyMm)
-        setElementos((prev) => prev.map((el) => (el.id === ds.elId ? { ...el, x: nx, y: ny } : el)))
+        let nx = ds.origX + dxMm
+        let ny = ds.origY + dyMm
+        // Limita à área útil
+        if (template) {
+          const areaW = template.largura_pagina - template.margem_esquerda - template.margem_direita
+          const areaH = template.altura_pagina - template.margem_superior - template.margem_inferior
+          nx = Math.max(0, Math.min(nx, areaW))
+          ny = Math.max(0, Math.min(ny, areaH))
+        }
+        setElementos((prev) =>
+          prev.map((el) =>
+            el.id === ds.elId ? { ...el, x: Math.round(nx), y: Math.round(ny) } : el,
+          ),
+        )
       } else if (ds.mode === 'resize') {
         let { origX: nx, origY: ny, origW: nw, origH: nh } = ds
         const h = ds.handle!
-        if (h.includes('e')) nw = Math.max(5, ds.origW + dxMm)
-        if (h.includes('s')) nh = Math.max(5, ds.origH + dyMm)
+        if (h.includes('e')) nw = Math.max(20, ds.origW + dxMm)
+        if (h.includes('s')) nh = Math.max(10, ds.origH + dyMm)
         if (h.includes('w')) {
-          nw = Math.max(5, ds.origW - dxMm)
+          nw = Math.max(20, ds.origW - dxMm)
           nx = ds.origX + dxMm
         }
         if (h.includes('n')) {
-          nh = Math.max(5, ds.origH - dyMm)
+          nh = Math.max(10, ds.origH - dyMm)
           ny = ds.origY + dyMm
         }
         setElementos((prev) =>
@@ -335,11 +441,12 @@ export default function ExamReportTemplateEditor() {
       }
     }
     const onUp = () => {
-      if (dragState.current) {
-        // commit histórico no fim do drag
-        const finalState = elementos
-        // Como setElementos durante o drag não foi tracked, empurramos agora
-        pushHistory(finalState)
+      if (dragState.current?.moved) {
+        // commit histórico no fim do drag usando o estado final
+        setElementos((cur) => {
+          pushHistory(cur)
+          return cur
+        })
       }
       dragState.current = null
     }
@@ -349,28 +456,32 @@ export default function ExamReportTemplateEditor() {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
     }
-  }, [zoom, elementos, pushHistory])
+  }, [zoom, template, pushHistory])
 
-  // ---- Context menu (botão direito) ----
-  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; elId: string } | null>(null)
-  const onContextMenu = (e: React.MouseEvent, el: LayoutElement) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setSelectedId(el.id)
-    setCtxMenu({ x: e.clientX, y: e.clientY, elId: el.id })
+  // ---- Salvar nome inline ----
+  const salvarNome = async () => {
+    if (!template) return
+    if (nomeModelo.trim() && nomeModelo !== template.nome_modelo) {
+      try {
+        const updated = await updateTemplate(template.id, { nome_modelo: nomeModelo.trim() })
+        setTemplate(updated)
+        toast({ title: 'Nome atualizado' })
+      } catch (err) {
+        toast({ title: 'Erro ao atualizar nome', description: String(err), variant: 'destructive' })
+      }
+    }
+    setEditandoNome(false)
   }
-  useEffect(() => {
-    const close = () => setCtxMenu(null)
-    window.addEventListener('click', close)
-    return () => window.removeEventListener('click', close)
-  }, [])
 
   // ---- Salvar / Publicar ----
   const handleSalvarRascunho = async () => {
     if (!template) return
     setSalvando(true)
     try {
-      await saveDraft(template.id, elementos)
+      const updated = await saveDraft(template.id, elementos, {
+        nome_modelo: nomeModelo.trim() || template.nome_modelo,
+      })
+      setTemplate(updated)
       setDirty(false)
       toast({ title: 'Rascunho salvo' })
     } catch (err) {
@@ -380,23 +491,21 @@ export default function ExamReportTemplateEditor() {
     }
   }
 
-  const handlePublicar = async () => {
+  const confirmarPublicar = async () => {
     if (!template) return
     if (dirty) {
-      if (!confirm('Você tem alterações não salvas. Salvar e publicar agora?')) return
       await handleSalvarRascunho()
     }
-    if (
-      !confirm(
-        `Publicar o modelo "${template.nome_modelo}"? Ele se tornará o padrão para ${template.tipo_exame}.`,
-      )
-    )
-      return
     try {
-      await publishTemplate(template.id)
-      toast({ title: 'Modelo publicado', description: 'Nova versão criada.' })
+      const updated = await publishTemplate(template.id, motivoPublicacao.trim() || undefined)
+      setTemplate(updated)
       setDirty(false)
-      carregar()
+      setModalPublicar(false)
+      setMotivoPublicacao('')
+      toast({
+        title: 'Modelo publicado',
+        description: `Versão ${updated.versao} criada com sucesso.`,
+      })
     } catch (err) {
       toast({ title: 'Erro ao publicar', description: String(err), variant: 'destructive' })
     }
@@ -411,8 +520,11 @@ export default function ExamReportTemplateEditor() {
   }
   if (!template) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-red-500">
-        Modelo não encontrado.
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 text-slate-500">
+        <p className="text-red-500">Modelo não encontrado.</p>
+        <Link to="/configuracoes/laudos">
+          <Button variant="outline">Voltar para a lista</Button>
+        </Link>
       </div>
     )
   }
@@ -429,20 +541,47 @@ export default function ExamReportTemplateEditor() {
 
   return (
     <div className="flex h-screen flex-col bg-slate-100">
-      {/* ===== Header ===== */}
+      {/* ===== Toolbar ===== */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-white px-4 py-2 shadow-sm">
         <div className="flex items-center gap-3">
           <Link to="/configuracoes/laudos">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" title="Voltar">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <div>
-            <h1 className="text-base font-semibold text-slate-800">{template.nome_modelo}</h1>
-            <p className="text-xs text-slate-500">
-              {template.tipo_exame} • v{template.versao} • {template.status}
-              {dirty && <span className="ml-2 text-amber-600">● não salvo</span>}
-            </p>
+          <div className="flex items-center gap-2">
+            {editandoNome ? (
+              <div className="flex items-center gap-1">
+                <Input
+                  value={nomeModelo}
+                  onChange={(e) => setNomeModelo(e.target.value)}
+                  className="h-8 w-56"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') salvarNome()
+                    if (e.key === 'Escape') {
+                      setNomeModelo(template.nome_modelo)
+                      setEditandoNome(false)
+                    }
+                  }}
+                />
+                <Button size="sm" onClick={salvarNome}>
+                  OK
+                </Button>
+              </div>
+            ) : (
+              <button
+                className="text-base font-semibold text-slate-800 hover:text-[#1E3A8A]"
+                onClick={() => setEditandoNome(true)}
+                title="Clique para editar o nome"
+              >
+                {nomeModelo}
+              </button>
+            )}
+            <Badge className={STATUS_CLASS[template.status]} variant="outline">
+              {EXAM_REPORT_STATUS_LABELS[template.status]}
+            </Badge>
+            {dirty && <span className="text-xs text-amber-600">● não salvo</span>}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -468,7 +607,7 @@ export default function ExamReportTemplateEditor() {
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => setZoom((z) => Math.max(0.2, z - 0.05))}
+            onClick={() => setZoom((z) => Math.max(0.5, z - 0.05))}
             title="Diminuir zoom"
           >
             <ZoomOut className="h-4 w-4" />
@@ -477,7 +616,7 @@ export default function ExamReportTemplateEditor() {
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => setZoom((z) => Math.min(1, z + 0.05))}
+            onClick={() => setZoom((z) => Math.min(1.5, z + 0.05))}
             title="Aumentar zoom"
           >
             <ZoomIn className="h-4 w-4" />
@@ -493,7 +632,11 @@ export default function ExamReportTemplateEditor() {
           >
             <Eye className="mr-1 h-4 w-4" /> Visualizar
           </Button>
-          <Button size="sm" className="bg-[#00897B] hover:bg-[#0a8a7a]" onClick={handlePublicar}>
+          <Button
+            size="sm"
+            className="bg-[#00897B] hover:bg-[#0a8a7a]"
+            onClick={() => setModalPublicar(true)}
+          >
             <Send className="mr-1 h-4 w-4" /> Publicar
           </Button>
         </div>
@@ -502,71 +645,71 @@ export default function ExamReportTemplateEditor() {
       {/* ===== Corpo: 3 painéis ===== */}
       <div className="flex flex-1 overflow-hidden">
         {/* Painel esquerdo — Elementos */}
-        <div className="w-64 shrink-0 overflow-y-auto border-r bg-white">
-          <Tabs defaultValue="elementos" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="elementos" className="text-xs">
-                Elementos
-              </TabsTrigger>
-              <TabsTrigger value="paciente" className="text-xs">
-                Paciente
-              </TabsTrigger>
-              <TabsTrigger value="exame" className="text-xs">
-                Exame
-              </TabsTrigger>
-            </TabsList>
+        <div className="w-56 shrink-0 overflow-y-auto border-r bg-white">
+          <div className="border-b px-3 py-2">
+            <h2 className="text-xs font-semibold uppercase text-slate-500">Elementos</h2>
+          </div>
+          <div className="p-3">
+            <p className="mb-2 text-[11px] text-slate-400">Clique para adicionar ao canvas:</p>
+            <div className="space-y-3">
+              {CATEGORIAS.map((cat) => (
+                <div key={cat.nome}>
+                  <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase text-slate-400">
+                    {cat.icon}
+                    {cat.nome}
+                  </div>
+                  <div className="space-y-0.5">
+                    {cat.indices.map((i) => (
+                      <button
+                        key={`${ELEMENT_DEFS[i].type}-${i}`}
+                        onClick={() => adicionarElemento(i)}
+                        className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100"
+                      >
+                        <Plus className="h-3 w-3 shrink-0 text-[#1E3A8A]" />
+                        <span className="truncate">{ELEMENT_DEFS[i].label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
 
-            <TabsContent value="elementos" className="p-3">
-              <p className="mb-2 text-xs text-slate-500">Clique para adicionar ao canvas:</p>
-              <div className="space-y-1">
-                {ELEMENT_DEFS.map((def, i) => (
-                  <button
-                    key={`${def.type}-${i}`}
-                    onClick={() => adicionarElemento(i)}
-                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100"
-                  >
-                    <Plus className="h-3 w-3 text-[#1E3A8A]" />
-                    {def.label}
-                  </button>
-                ))}
-              </div>
-            </TabsContent>
+            <Separator className="my-3" />
+            <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase text-slate-400">
+              <PenLine className="h-3.5 w-3.5" />
+              Campos do Paciente
+            </div>
+            <div className="space-y-0.5">
+              {PACIENTE_FIELDS.map((f) => (
+                <button
+                  key={f.token}
+                  onClick={() => adicionarCampoPaciente(f.token, f.label)}
+                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-100"
+                >
+                  <Plus className="h-3 w-3 shrink-0 text-[#1E3A8A]" />
+                  <span className="truncate">{f.label}</span>
+                </button>
+              ))}
+            </div>
 
-            <TabsContent value="paciente" className="p-3">
-              <p className="mb-2 text-xs text-slate-500">Campos dinâmicos do paciente:</p>
-              <div className="space-y-1">
-                {PACIENTE_FIELDS.map((f) => (
-                  <button
-                    key={f.token}
-                    onClick={() => adicionarCampoPaciente(f.token, f.label)}
-                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100"
-                  >
-                    <Plus className="h-3 w-3 text-[#1E3A8A]" />
-                    {f.label}
-                    <code className="ml-auto text-[10px] text-slate-400">{`{{${f.token}}}`}</code>
-                  </button>
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="exame" className="p-3">
-              <p className="mb-2 text-xs text-slate-500">
-                Campos do exame ({template.tipo_exame}):
-              </p>
-              <div className="space-y-1">
-                {exameFields.map((f) => (
-                  <button
-                    key={f.field}
-                    onClick={() => adicionarCampoExame(f.field, f.label)}
-                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100"
-                  >
-                    <Plus className="h-3 w-3 text-[#00897B]" />
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
+            <Separator className="my-3" />
+            <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase text-slate-400">
+              <Activity className="h-3.5 w-3.5" />
+              Campos do Exame ({EXAM_REPORT_TIPO_LABELS[template.tipo_exame]})
+            </div>
+            <div className="space-y-0.5">
+              {exameFields.map((f) => (
+                <button
+                  key={f.field}
+                  onClick={() => adicionarCampoExame(f.field, f.label)}
+                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-100"
+                >
+                  <Plus className="h-3 w-3 shrink-0 text-[#00897B]" />
+                  <span className="truncate">{f.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Canvas central */}
@@ -600,73 +743,10 @@ export default function ExamReportTemplateEditor() {
                   onSelect={() => setSelectedId(el.id)}
                   onMouseDown={(e) => onElementMouseDown(e, el)}
                   onHandleMouseDown={(e, h) => onHandleMouseDown(e, el, h)}
-                  onContextMenu={(e) => onContextMenu(e, el)}
                 />
               ))}
             </div>
           </div>
-
-          {/* Menu de contexto */}
-          {ctxMenu && (
-            <div
-              className="fixed z-50 min-w-[160px] rounded-md border bg-white py-1 text-sm shadow-lg"
-              style={{ left: ctxMenu.x, top: ctxMenu.y }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-slate-100"
-                onClick={() => {
-                  duplicarElemento(ctxMenu.elId)
-                  setCtxMenu(null)
-                }}
-              >
-                <Copy className="h-3 w-3" /> Duplicar
-              </button>
-              <button
-                className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-slate-100"
-                onClick={() => {
-                  trazerFrente(ctxMenu.elId)
-                  setCtxMenu(null)
-                }}
-              >
-                <BringToFront className="h-3 w-3" /> Trazer frente
-              </button>
-              <button
-                className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-slate-100"
-                onClick={() => {
-                  enviarTras(ctxMenu.elId)
-                  setCtxMenu(null)
-                }}
-              >
-                <SendToBack className="h-3 w-3" /> Enviar trás
-              </button>
-              <button
-                className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-slate-100"
-                onClick={() => {
-                  const el = elementos.find((e) => e.id === ctxMenu.elId)
-                  if (el) updateElemento(ctxMenu.elId, { locked: !el.locked })
-                  setCtxMenu(null)
-                }}
-              >
-                {elementos.find((e) => e.id === ctxMenu.elId)?.locked ? (
-                  <Unlock className="h-3 w-3" />
-                ) : (
-                  <Lock className="h-3 w-3" />
-                )}
-                {elementos.find((e) => e.id === ctxMenu.elId)?.locked ? 'Desbloquear' : 'Bloquear'}
-              </button>
-              <Separator className="my-1" />
-              <button
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-red-600 hover:bg-red-50"
-                onClick={() => {
-                  excluirElemento(ctxMenu.elId)
-                  setCtxMenu(null)
-                }}
-              >
-                <Trash2 className="h-3 w-3" /> Excluir
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Painel direito — Propriedades */}
@@ -700,9 +780,47 @@ export default function ExamReportTemplateEditor() {
           {template.margem_direita} mm (S/I/E/D)
         </span>
         <span>
-          Tamanho: {template.largura_pagina}×{template.altura_pagina} mm • {template.orientacao}
+          Tamanho: {template.largura_pagina}×{template.altura_pagina} mm • {template.orientacao} •{' '}
+          {elementos.length} elemento(s)
         </span>
       </div>
+
+      {/* Modal Publicar */}
+      <Dialog open={modalPublicar} onOpenChange={setModalPublicar}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Publicar modelo</DialogTitle>
+            <DialogDescription>
+              Ao publicar, o modelo se tornará o padrão para{' '}
+              {EXAM_REPORT_TIPO_LABELS[template.tipo_exame]}. Se já existir outro modelo publicado
+              do mesmo tipo, ele será arquivado automaticamente.
+              {dirty && (
+                <span className="mt-2 block text-amber-600">
+                  Suas alterações não salvas serão salvas antes da publicação.
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="motivo">Motivo da publicação (opcional)</Label>
+            <Textarea
+              id="motivo"
+              rows={3}
+              value={motivoPublicacao}
+              onChange={(e) => setMotivoPublicacao(e.target.value)}
+              placeholder="Ex.: Ajuste de margens e adição do campo de CRM..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalPublicar(false)}>
+              Cancelar
+            </Button>
+            <Button className="bg-[#00897B] hover:bg-[#0a8a7a]" onClick={confirmarPublicar}>
+              <Send className="mr-2 h-4 w-4" /> Publicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -715,8 +833,7 @@ const ElementoCanvas: React.FC<{
   onSelect: () => void
   onMouseDown: (e: React.MouseEvent) => void
   onHandleMouseDown: (e: React.MouseEvent, h: Handle) => void
-  onContextMenu: (e: React.MouseEvent) => void
-}> = ({ el, zoom, selected, onSelect, onMouseDown, onHandleMouseDown, onContextMenu }) => {
+}> = ({ el, zoom, selected, onSelect, onMouseDown, onHandleMouseDown }) => {
   if (el.visible === false) return null
   const w = mmToPx(el.width) * zoom
   const h = mmToPx(el.height) * zoom
@@ -744,7 +861,6 @@ const ElementoCanvas: React.FC<{
         e.stopPropagation()
         onSelect()
       }}
-      onContextMenu={onContextMenu}
     >
       <PreviewConteudo el={el} />
       {el.locked && (
@@ -833,7 +949,7 @@ const PreviewConteudo: React.FC<{ el: LayoutElement }> = ({ el }) => {
     case 'image':
       return (
         <div style={style} className="flex items-center justify-center text-[8px] text-slate-400">
-          [imagem]
+          <ImageIcon className="h-4 w-4" />
         </div>
       )
     case 'line': {
@@ -870,7 +986,7 @@ const PreviewConteudo: React.FC<{ el: LayoutElement }> = ({ el }) => {
     case 'audiogram':
       return (
         <div style={style} className="flex items-center justify-center text-[7pt] text-slate-500">
-          [audiograma]
+          <Activity className="h-4 w-4" /> [audiograma]
         </div>
       )
     case 'timpanogram':
@@ -905,7 +1021,7 @@ const PreviewConteudo: React.FC<{ el: LayoutElement }> = ({ el }) => {
           >
             {el.props?.title || 'SEÇÃO'}
           </div>
-          <div className="text-[6pt] text-slate-400 p-1">[agrupador]</div>
+          <div className="p-1 text-[6pt] text-slate-400">[agrupador]</div>
         </div>
       )
     case 'watermark':
@@ -945,8 +1061,8 @@ const PreviewConteudo: React.FC<{ el: LayoutElement }> = ({ el }) => {
 const PainelPropriedades: React.FC<{
   el: LayoutElement
   onUpdate: (patch: Partial<LayoutElement>) => void
-  onUpdateStyle: (patch: Partial<LayoutElement['style']>) => void
-  onUpdateProps: (patch: Partial<LayoutElement['props']>) => void
+  onUpdateStyle: (patch: Partial<LayoutElementStyle>) => void
+  onUpdateProps: (patch: Partial<LayoutElementProps>) => void
   onExcluir: () => void
   onDuplicar: () => void
   onFrente: () => void
@@ -958,57 +1074,60 @@ const PainelPropriedades: React.FC<{
     <div className="space-y-4 p-4">
       <div>
         <div className="mb-1 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-800">Propriedades</h3>
+          <h3 className="text-sm font-semibold text-slate-800">{el.label}</h3>
           <BadgeTipo tipo={el.type} />
         </div>
-        <p className="text-[10px] text-slate-400">ID: {el.id}</p>
+        <p className="truncate text-[10px] text-slate-400">ID: {el.id}</p>
       </div>
 
       <Separator />
 
       {/* Posição e tamanho */}
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label className="text-xs">X (mm)</Label>
-          <Input
-            type="number"
-            value={el.x}
-            onChange={(e) => onUpdate({ x: Number(e.target.value) })}
-          />
-        </div>
-        <div>
-          <Label className="text-xs">Y (mm)</Label>
-          <Input
-            type="number"
-            value={el.y}
-            onChange={(e) => onUpdate({ y: Number(e.target.value) })}
-          />
-        </div>
-        <div>
-          <Label className="text-xs">Largura (mm)</Label>
-          <Input
-            type="number"
-            value={el.width}
-            onChange={(e) => onUpdate({ width: Number(e.target.value) })}
-          />
-        </div>
-        <div>
-          <Label className="text-xs">Altura (mm)</Label>
-          <Input
-            type="number"
-            value={el.height}
-            onChange={(e) => onUpdate({ height: Number(e.target.value) })}
-          />
+      <div>
+        <h4 className="mb-2 text-xs font-semibold uppercase text-slate-500">Posição & Tamanho</h4>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <Label className="text-xs">X (mm)</Label>
+            <Input
+              type="number"
+              value={el.x}
+              onChange={(e) => onUpdate({ x: Number(e.target.value) })}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Y (mm)</Label>
+            <Input
+              type="number"
+              value={el.y}
+              onChange={(e) => onUpdate({ y: Number(e.target.value) })}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Largura (mm)</Label>
+            <Input
+              type="number"
+              value={el.width}
+              onChange={(e) => onUpdate({ width: Number(e.target.value) })}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Altura (mm)</Label>
+            <Input
+              type="number"
+              value={el.height}
+              onChange={(e) => onUpdate({ height: Number(e.target.value) })}
+            />
+          </div>
         </div>
       </div>
 
       <div className="flex items-center justify-between">
-        <Label className="text-xs">Bloqueado</Label>
-        <Switch checked={!!el.locked} onCheckedChange={(v) => onUpdate({ locked: v })} />
-      </div>
-      <div className="flex items-center justify-between">
         <Label className="text-xs">Visível</Label>
         <Switch checked={el.visible !== false} onCheckedChange={(v) => onUpdate({ visible: v })} />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">Bloqueado</Label>
+        <Switch checked={!!el.locked} onCheckedChange={(v) => onUpdate({ locked: v })} />
       </div>
 
       <Separator />
@@ -1022,6 +1141,7 @@ const PainelPropriedades: React.FC<{
             <Input
               value={s.fontFamily || ''}
               onChange={(e) => onUpdateStyle({ fontFamily: e.target.value })}
+              placeholder="Arial"
             />
           </div>
           <div>
@@ -1038,6 +1158,7 @@ const PainelPropriedades: React.FC<{
             size="sm"
             variant={s.bold ? 'default' : 'outline'}
             onClick={() => onUpdateStyle({ bold: !s.bold })}
+            className="font-bold"
           >
             N
           </Button>
@@ -1045,6 +1166,7 @@ const PainelPropriedades: React.FC<{
             size="sm"
             variant={s.italic ? 'default' : 'outline'}
             onClick={() => onUpdateStyle({ italic: !s.italic })}
+            className="italic"
           >
             I
           </Button>
@@ -1052,6 +1174,7 @@ const PainelPropriedades: React.FC<{
             size="sm"
             variant={s.underline ? 'default' : 'outline'}
             onClick={() => onUpdateStyle({ underline: !s.underline })}
+            className="underline"
           >
             S
           </Button>
@@ -1062,9 +1185,7 @@ const PainelPropriedades: React.FC<{
             <Select
               value={s.align || 'left'}
               onValueChange={(v) =>
-                onUpdateStyle({
-                  align: v as LayoutElement['style'] extends { align?: infer A } ? A : never,
-                })
+                onUpdateStyle({ align: v as 'left' | 'center' | 'right' | 'justify' })
               }
             >
               <SelectTrigger>
@@ -1079,7 +1200,7 @@ const PainelPropriedades: React.FC<{
             </Select>
           </div>
           <div>
-            <Label className="text-xs">Cor</Label>
+            <Label className="text-xs">Cor do texto</Label>
             <Input
               type="color"
               value={s.color || '#000000'}
@@ -1097,7 +1218,7 @@ const PainelPropriedades: React.FC<{
             />
           </div>
           <div>
-            <Label className="text-xs">Borda cor</Label>
+            <Label className="text-xs">Cor borda</Label>
             <Input
               type="color"
               value={s.borderColor || '#1E3A8A'}
@@ -1119,15 +1240,6 @@ const PainelPropriedades: React.FC<{
               type="number"
               value={s.padding || 0}
               onChange={(e) => onUpdateStyle({ padding: Number(e.target.value) })}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Linha altura</Label>
-            <Input
-              type="number"
-              step="0.1"
-              value={s.lineHeight || 1.2}
-              onChange={(e) => onUpdateStyle({ lineHeight: Number(e.target.value) })}
             />
           </div>
         </div>
@@ -1167,7 +1279,7 @@ const BadgeTipo: React.FC<{ tipo: LayoutElementType }> = ({ tipo }) => (
 
 const PropsEspecificas: React.FC<{
   el: LayoutElement
-  onUpdateProps: (patch: Partial<LayoutElement['props']>) => void
+  onUpdateProps: (patch: Partial<LayoutElementProps>) => void
 }> = ({ el, onUpdateProps }) => {
   const p = el.props || {}
   switch (el.type) {
@@ -1268,19 +1380,21 @@ const PropsEspecificas: React.FC<{
           <h4 className="mb-2 text-xs font-semibold uppercase text-slate-500">Imagem</h4>
           <div className="space-y-2">
             <div>
-              <Label className="text-xs">URL (ou logo_clinica, assinatura, carimbo)</Label>
+              <Label className="text-xs">URL (ou logo_clinica)</Label>
               <Input value={p.src || ''} onChange={(e) => onUpdateProps({ src: e.target.value })} />
             </div>
             <div>
-              <Label className="text-xs">Opacidade</Label>
-              <Input
-                type="number"
-                step="0.1"
-                min="0"
-                max="1"
+              <Label className="text-xs">Opacidade (0 a 1)</Label>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.1}
                 value={p.opacity ?? 1}
                 onChange={(e) => onUpdateProps({ opacity: Number(e.target.value) })}
+                className="w-full accent-[#1E3A8A]"
               />
+              <span className="text-[10px] text-slate-400">{p.opacity ?? 1}</span>
             </div>
             <div>
               <Label className="text-xs">Ajuste</Label>
@@ -1356,9 +1470,12 @@ const PropsEspecificas: React.FC<{
                     dynamicSource:
                       v === 'none'
                         ? null
-                        : (v as LayoutElement['props'] extends { dynamicSource?: infer D }
-                            ? D
-                            : never),
+                        : (v as
+                            | 'iprf_od'
+                            | 'iprf_oe'
+                            | 'timpanometria'
+                            | 'reflexos'
+                            | 'identificacao'),
                   })
                 }
               >
@@ -1375,6 +1492,86 @@ const PropsEspecificas: React.FC<{
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs shrink-0">Colunas: {p.columns?.length || 0}</Label>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const cols = [...(p.columns || [])]
+                  cols.push({
+                    label: `Coluna ${cols.length + 1}`,
+                    field: `c${cols.length + 1}`,
+                    width: 50,
+                  })
+                  onUpdateProps({ columns: cols })
+                }}
+              >
+                + Coluna
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const cols = [...(p.columns || [])]
+                  cols.pop()
+                  onUpdateProps({ columns: cols })
+                }}
+              >
+                − Coluna
+              </Button>
+            </div>
+            {(p.columns || []).map((c, i) => (
+              <div key={i} className="flex gap-1">
+                <Input
+                  value={c.label}
+                  onChange={(e) => {
+                    const cols = [...(p.columns || [])]
+                    cols[i] = { ...cols[i], label: e.target.value }
+                    onUpdateProps({ columns: cols })
+                  }}
+                  className="h-8"
+                />
+                <Input
+                  type="number"
+                  value={c.width || 50}
+                  onChange={(e) => {
+                    const cols = [...(p.columns || [])]
+                    cols[i] = { ...cols[i], width: Number(e.target.value) }
+                    onUpdateProps({ columns: cols })
+                  }}
+                  className="h-8 w-16"
+                />
+              </div>
+            ))}
+            <div className="flex items-center gap-2">
+              <Label className="text-xs shrink-0">Linhas: {p.rows?.length || 0}</Label>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const rows = [...(p.rows || [])]
+                  const cols = p.columns || []
+                  const row: Record<string, string> = {}
+                  cols.forEach((c) => (row[c.field] = '—'))
+                  rows.push(row)
+                  onUpdateProps({ rows })
+                }}
+              >
+                + Linha
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const rows = [...(p.rows || [])]
+                  rows.pop()
+                  onUpdateProps({ rows })
+                }}
+              >
+                − Linha
+              </Button>
+            </div>
             <div>
               <Label className="text-xs">Tamanho fonte</Label>
               <Input
@@ -1383,36 +1580,35 @@ const PropsEspecificas: React.FC<{
                 onChange={(e) => onUpdateProps({ fontSize: Number(e.target.value) })}
               />
             </div>
-            <div>
-              <Label className="text-xs">Cor cabeçalho</Label>
-              <Input
-                type="color"
-                value={p.headerBgColor || '#F2F4F7'}
-                onChange={(e) => onUpdateProps({ headerBgColor: e.target.value })}
-                className="h-9 p-1"
-              />
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label className="text-xs">Cabeçalho</Label>
+                <Input
+                  type="color"
+                  value={p.headerBgColor || '#F2F4F7'}
+                  onChange={(e) => onUpdateProps({ headerBgColor: e.target.value })}
+                  className="h-9 p-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Alt. linha</Label>
+                <Input
+                  type="color"
+                  value={p.alternateRowColor || '#FAFBFC'}
+                  onChange={(e) => onUpdateProps({ alternateRowColor: e.target.value })}
+                  className="h-9 p-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Borda</Label>
+                <Input
+                  type="color"
+                  value={p.borderColor || '#E2E8F0'}
+                  onChange={(e) => onUpdateProps({ borderColor: e.target.value })}
+                  className="h-9 p-1"
+                />
+              </div>
             </div>
-            <div>
-              <Label className="text-xs">Cor linha alternada</Label>
-              <Input
-                type="color"
-                value={p.alternateRowColor || '#FAFBFC'}
-                onChange={(e) => onUpdateProps({ alternateRowColor: e.target.value })}
-                className="h-9 p-1"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Cor borda</Label>
-              <Input
-                type="color"
-                value={p.borderColor || '#E2E8F0'}
-                onChange={(e) => onUpdateProps({ borderColor: e.target.value })}
-                className="h-9 p-1"
-              />
-            </div>
-            <p className="text-[10px] text-slate-400">
-              Colunas e linhas editáveis via JSON no banco.
-            </p>
           </div>
         </div>
       )
@@ -1461,30 +1657,25 @@ const PropsEspecificas: React.FC<{
                 onCheckedChange={(v) => onUpdateProps({ showLegend: v })}
               />
             </div>
-            <div className="flex items-center justify-between">
-              <Label className="text-xs">Pontos ausentes</Label>
-              <Switch
-                checked={p.showAbsentPoints !== false}
-                onCheckedChange={(v) => onUpdateProps({ showAbsentPoints: v })}
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Cor OD</Label>
-              <Input
-                type="color"
-                value={p.odColor || '#DC2626'}
-                onChange={(e) => onUpdateProps({ odColor: e.target.value })}
-                className="h-9 p-1"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Cor OE</Label>
-              <Input
-                type="color"
-                value={p.oeColor || '#2563EB'}
-                onChange={(e) => onUpdateProps({ oeColor: e.target.value })}
-                className="h-9 p-1"
-              />
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Cor OD</Label>
+                <Input
+                  type="color"
+                  value={p.odColor || '#DC2626'}
+                  onChange={(e) => onUpdateProps({ odColor: e.target.value })}
+                  className="h-9 p-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Cor OE</Label>
+                <Input
+                  type="color"
+                  value={p.oeColor || '#2563EB'}
+                  onChange={(e) => onUpdateProps({ oeColor: e.target.value })}
+                  className="h-9 p-1"
+                />
+              </div>
             </div>
             <div>
               <Label className="text-xs">Espessura linha</Label>
@@ -1522,23 +1713,25 @@ const PropsEspecificas: React.FC<{
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label className="text-xs">Cor OD</Label>
-              <Input
-                type="color"
-                value={p.odColor || '#DC2626'}
-                onChange={(e) => onUpdateProps({ odColor: e.target.value })}
-                className="h-9 p-1"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Cor OE</Label>
-              <Input
-                type="color"
-                value={p.oeColor || '#2563EB'}
-                onChange={(e) => onUpdateProps({ oeColor: e.target.value })}
-                className="h-9 p-1"
-              />
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Cor OD</Label>
+                <Input
+                  type="color"
+                  value={p.odColor || '#DC2626'}
+                  onChange={(e) => onUpdateProps({ odColor: e.target.value })}
+                  className="h-9 p-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Cor OE</Label>
+                <Input
+                  type="color"
+                  value={p.oeColor || '#2563EB'}
+                  onChange={(e) => onUpdateProps({ oeColor: e.target.value })}
+                  className="h-9 p-1"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -1610,23 +1803,25 @@ const PropsEspecificas: React.FC<{
                 onChange={(e) => onUpdateProps({ title: e.target.value })}
               />
             </div>
-            <div>
-              <Label className="text-xs">Cor borda</Label>
-              <Input
-                type="color"
-                value={p.borderColor || '#1E3A8A'}
-                onChange={(e) => onUpdateProps({ borderColor: e.target.value })}
-                className="h-9 p-1"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Cor fundo título</Label>
-              <Input
-                type="color"
-                value={p.titleBgColor || '#F2F4F7'}
-                onChange={(e) => onUpdateProps({ titleBgColor: e.target.value })}
-                className="h-9 p-1"
-              />
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Cor borda</Label>
+                <Input
+                  type="color"
+                  value={p.borderColor || '#1E3A8A'}
+                  onChange={(e) => onUpdateProps({ borderColor: e.target.value })}
+                  className="h-9 p-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Fundo título</Label>
+                <Input
+                  type="color"
+                  value={p.titleBgColor || '#F2F4F7'}
+                  onChange={(e) => onUpdateProps({ titleBgColor: e.target.value })}
+                  className="h-9 p-1"
+                />
+              </div>
             </div>
             <div className="flex items-center justify-between">
               <Label className="text-xs">Recolhível</Label>

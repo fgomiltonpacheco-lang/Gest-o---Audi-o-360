@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -85,134 +85,155 @@ export default function ExamReportTemplateNovo() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Novo Modelo de Laudo</h1>
+            <h1 className="text-2xl font-bold text-slate-800">Novo Modelo de Impressão</h1>
             <p className="text-sm text-slate-500">
-              Configure as propriedades básicas antes de abrir o editor
+              Configure as propriedades básicas antes de abrir o editor visual
             </p>
           </div>
         </div>
 
-        <Card className="space-y-5 p-6">
-          <div className="space-y-2">
-            <Label htmlFor="nome">Nome do modelo *</Label>
-            <Input
-              id="nome"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Ex.: Laudo de Audiometria Padrão"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tipo">Tipo de exame *</Label>
-            <Select value={tipoExame} onValueChange={(v) => setTipoExame(v as ExamReportTipoExame)}>
-              <SelectTrigger id="tipo">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(EXAM_REPORT_TIPO_LABELS) as ExamReportTipoExame[]).map((k) => (
-                  <SelectItem key={k} value={k}>
-                    {EXAM_REPORT_TIPO_LABELS[k]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="desc">Descrição</Label>
-            <Textarea
-              id="desc"
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              placeholder="Descreva o objetivo deste modelo..."
-              rows={3}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="space-y-5 p-6">
             <div className="space-y-2">
-              <Label htmlFor="orient">Orientação</Label>
-              <Select
-                value={orientacao}
-                onValueChange={(v) => setOrientacao(v as ExamReportOrientacao)}
-              >
-                <SelectTrigger id="orient">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="retrato">Retrato</SelectItem>
-                  <SelectItem value="paisagem">Paisagem</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="nome">
+                Nome do Modelo <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="nome"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder="Ex.: Laudo de Audiometria Padrão"
+              />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="folha">Tamanho da folha</Label>
-              <Select value={tamanhoFolha} onValueChange={setTamanhoFolha}>
-                <SelectTrigger id="folha">
+              <Label htmlFor="tipo">
+                Tipo de Exame <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={tipoExame}
+                onValueChange={(v) => setTipoExame(v as ExamReportTipoExame)}
+              >
+                <SelectTrigger id="tipo">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.keys(PAGE_SIZES).map((k) => (
+                  {(Object.keys(EXAM_REPORT_TIPO_LABELS) as ExamReportTipoExame[]).map((k) => (
                     <SelectItem key={k} value={k}>
-                      {PAGE_SIZES[k].label}
+                      {EXAM_REPORT_TIPO_LABELS[k]}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          <div>
-            <Label className="mb-2 block">Margens (mm)</Label>
-            <div className="grid grid-cols-4 gap-3">
-              <div>
-                <Label className="text-xs text-slate-500">Superior</Label>
-                <Input
-                  type="number"
-                  value={margemSup}
-                  onChange={(e) => setMargemSup(Number(e.target.value))}
-                />
+            <div className="space-y-2">
+              <Label htmlFor="desc">Descrição</Label>
+              <Textarea
+                id="desc"
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                placeholder="Descreva o objetivo deste modelo (opcional)..."
+                rows={3}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Orientação</Label>
+                <div className="flex gap-4 pt-1">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="orientacao"
+                      value="retrato"
+                      checked={orientacao === 'retrato'}
+                      onChange={() => setOrientacao('retrato')}
+                      className="h-4 w-4 accent-[#1E3A8A]"
+                    />
+                    Retrato
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="orientacao"
+                      value="paisagem"
+                      checked={orientacao === 'paisagem'}
+                      onChange={() => setOrientacao('paisagem')}
+                      className="h-4 w-4 accent-[#1E3A8A]"
+                    />
+                    Paisagem
+                  </label>
+                </div>
               </div>
-              <div>
-                <Label className="text-xs text-slate-500">Inferior</Label>
-                <Input
-                  type="number"
-                  value={margemInf}
-                  onChange={(e) => setMargemInf(Number(e.target.value))}
-                />
-              </div>
-              <div>
-                <Label className="text-xs text-slate-500">Esquerda</Label>
-                <Input
-                  type="number"
-                  value={margemEsq}
-                  onChange={(e) => setMargemEsq(Number(e.target.value))}
-                />
-              </div>
-              <div>
-                <Label className="text-xs text-slate-500">Direita</Label>
-                <Input
-                  type="number"
-                  value={margemDir}
-                  onChange={(e) => setMargemDir(Number(e.target.value))}
-                />
+              <div className="space-y-2">
+                <Label htmlFor="folha">Tamanho da folha</Label>
+                <Select value={tamanhoFolha} onValueChange={setTamanhoFolha}>
+                  <SelectTrigger id="folha">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(PAGE_SIZES).map((k) => (
+                      <SelectItem key={k} value={k}>
+                        {PAGE_SIZES[k].label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Link to="/configuracoes/laudos">
-              <Button variant="outline">Cancelar</Button>
-            </Link>
-            <Button
-              onClick={handleSalvar}
-              disabled={salvando}
-              className="bg-[#1E3A8A] hover:bg-[#1e40af]"
-            >
-              <Save className="mr-2 h-4 w-4" /> {salvando ? 'Criando...' : 'Criar e Editar'}
-            </Button>
-          </div>
+            <div>
+              <Label className="mb-2 block">Margens (mm)</Label>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <div>
+                  <Label className="text-xs text-slate-500">Superior</Label>
+                  <Input
+                    type="number"
+                    value={margemSup}
+                    onChange={(e) => setMargemSup(Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500">Inferior</Label>
+                  <Input
+                    type="number"
+                    value={margemInf}
+                    onChange={(e) => setMargemInf(Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500">Esquerda</Label>
+                  <Input
+                    type="number"
+                    value={margemEsq}
+                    onChange={(e) => setMargemEsq(Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500">Direita</Label>
+                  <Input
+                    type="number"
+                    value={margemDir}
+                    onChange={(e) => setMargemDir(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Link to="/configuracoes/laudos">
+                <Button variant="outline">Cancelar</Button>
+              </Link>
+              <Button
+                onClick={handleSalvar}
+                disabled={salvando}
+                className="bg-[#1E3A8A] hover:bg-[#1e40af]"
+              >
+                <Save className="mr-2 h-4 w-4" /> {salvando ? 'Criando...' : 'Criar Modelo'}
+              </Button>
+            </div>
+          </CardContent>
         </Card>
       </div>
     </div>

@@ -3,7 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import { useToast } from '@/hooks/use-toast'
 import { usePrint } from '@/components/print/PrintProvider'
-import { AudiometriaFullPrint, renderExamReport, buildAudiometryContext } from '@/components/print/PrintDocuments'
+import {
+  AudiometriaFullPrint,
+  renderExamReport,
+  buildAudiometryContext,
+} from '@/components/print/PrintDocuments'
 import { AudiogramChart } from '@/components/AudiogramChart'
 import pb from '@/lib/pocketbase/client'
 import { ClientResponseError } from 'pocketbase'
@@ -533,9 +537,7 @@ export default function Audiometria() {
       <AudiometriaFullPrint
         exam={fullExam}
         clinicSettings={clinicSettings}
-        professional={
-          currentUser ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa } : null
-        }
+        professional={currentUser ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa } : null}
       />
     )
     const ctx = buildAudiometryContext({
