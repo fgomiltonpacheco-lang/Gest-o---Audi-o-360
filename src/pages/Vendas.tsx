@@ -499,16 +499,51 @@ export default function Vendas() {
     }
   }
 
-  // Mapa de NFS-e emitidas por saleId (autorizadas/enviadas) para exibir badge.
-  const nfPorSaleId = useMemo(() => {
-    const m: Record<string, boolean> = {}
+  // Mapa de status da NFS-e por saleId para exibir badge na tabela.
+  // Prioridade: autorizada/enviada > cancelada > pendente/erro.
+  const nfStatusPorSaleId = useMemo(() => {
+    const m: Record<string, 'emitida' | 'pendente' | 'cancelada'> = {}
+    const rank: Record<string, number> = {
+      autorizada: 4,
+      enviada: 3,
+      pendente: 2,
+      erro: 1,
+      cancelada: 0,
+    }
     nfseEmitidas.forEach((n) => {
-      if (n.sale && (n.status === 'autorizada' || n.status === 'enviada')) {
-        m[n.sale] = true
+      if (!n.sale) return
+      const cur = m[n.sale]
+      const novoStatus: 'emitida' | 'pendente' | 'cancelada' =
+        n.status === 'autorizada' || n.status === 'enviada'
+          ? 'emitida'
+          : n.status === 'cancelada'
+            ? 'cancelada'
+            : 'pendente'
+      const novoRank = rank[n.status] ?? 0
+      const curRank = cur
+        ? rank[cur === 'emitida' ? 'autorizada' : cur === 'cancelada' ? 'cancelada' : 'pendente']
+        : -1
+      if (curRank < novoRank) {
+        m[n.sale] = novoStatus
       }
     })
     return m
   }, [nfseEmitidas])
+
+  const nfBadgeConfig: Record<string, { label: string; className: string }> = {
+    emitida: {
+      label: 'NF Emitida',
+      className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    },
+    pendente: {
+      label: 'NF Pendente',
+      className: 'bg-slate-100 text-slate-600 border-slate-200',
+    },
+    cancelada: {
+      label: 'NF Cancelada',
+      className: 'bg-red-50 text-red-700 border-red-200',
+    },
+  }
 
   return (
     <div className="space-y-5 animate-in fade-in-50 duration-200">
@@ -793,15 +828,19 @@ export default function Vendas() {
                         >
                           {s.status}
                         </Badge>
-                        {nfPorSaleId[s.id] && (
-                          <Badge
-                            className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px]"
-                            variant="outline"
-                            title="NFS-e emitida"
-                          >
-                            NF-e
-                          </Badge>
-                        )}
+                        {nfStatusPorSaleId[s.id] &&
+                          (() => {
+                            const cfg = nfBadgeConfig[nfStatusPorSaleId[s.id]]
+                            return (
+                              <Badge
+                                className={`${cfg.className} text-[10px]`}
+                                variant="outline"
+                                title={`NFS-e ${cfg.label}`}
+                              >
+                                {cfg.label}
+                              </Badge>
+                            )
+                          })()}
                       </div>
                     </td>
                     <td className="px-4 py-3">

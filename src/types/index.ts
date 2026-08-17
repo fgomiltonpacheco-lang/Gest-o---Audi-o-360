@@ -789,3 +789,10 @@ export const INVENTORY_CATEGORIAS: InventoryCategoria[] = [
 
 export const INVENTORY_CATEGORIA_LABELS: Record<InventoryCategoria, string> = {
   aparelho: 'Aparelho',
+  consumivel: 'Consumível',
+  servico: 'Serviço',
+  acessorio: 'Acessório',
+  bateria: 'Bateria',
+  molde: 'Molde',
+  filtro: 'Filtro',
+}
