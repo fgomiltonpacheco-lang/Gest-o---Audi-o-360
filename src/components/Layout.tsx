@@ -32,6 +32,7 @@ import {
   UserPlus,
   Shield,
   KeyRound,
+  ArrowDownCircle,
   type LucideIcon,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
@@ -221,6 +222,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           name: 'Contas a Receber',
           path: '/financeiro/contas-receber',
           icon: DollarSign,
+          adminOnly: true,
+        },
+        {
+          name: 'Despesas',
+          path: '/financeiro/despesas',
+          icon: ArrowDownCircle,
           adminOnly: true,
         },
         {

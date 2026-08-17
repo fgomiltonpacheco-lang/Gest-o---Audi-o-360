@@ -1010,6 +1010,84 @@ export const FORMA_RECEBIMENTO_LABELS: Record<FormaRecebimento, string> = {
   cheque: 'Cheque',
 }
 
+// ===== Módulo de Despesas =====
+
+/** Categoria de uma despesa. */
+export type DespesaCategoria =
+  | 'aluguel'
+  | 'salario'
+  | 'fornecedor'
+  | 'imposto'
+  | 'marketing'
+  | 'manutencao'
+  | 'utilidades'
+  | 'software'
+  | 'comissao'
+  | 'outros'
+
+/** Forma de pagamento de uma despesa. */
+export type DespesaFormaPagamento =
+  | 'dinheiro'
+  | 'cartao'
+  | 'pix'
+  | 'transferencia'
+  | 'boleto'
+  | 'cheque'
+
+/** Status de uma despesa. */
+export type DespesaStatus = 'a_pagar' | 'pago' | 'vencido' | 'cancelado'
+
+export interface Despesa {
+  id: string
+  descricao: string
+  valor: number
+  data_vencimento: string // YYYY-MM-DD
+  data_pagamento?: string // YYYY-MM-DD
+  categoria: DespesaCategoria
+  forma_pagamento?: DespesaFormaPagamento
+  status: DespesaStatus
+  /** Valor efetivamente pago (suporta pagamento parcial). */
+  valor_pago: number
+  /** Nome do arquivo do comprovante (upload). */
+  comprovante?: string
+  observacoes?: string
+  motivo_cancelamento?: string
+  usuario_id?: string
+  /** ID da movimentação de caixa (saída) gerada ao pagar a despesa. */
+  movimentacao_caixa_id?: string
+  created: string
+  updated: string
+}
+
+export const DESPESA_CATEGORIA_LABELS: Record<DespesaCategoria, string> = {
+  aluguel: 'Aluguel',
+  salario: 'Salário',
+  fornecedor: 'Fornecedor',
+  imposto: 'Imposto',
+  marketing: 'Marketing',
+  manutencao: 'Manutenção',
+  utilidades: 'Utilidades',
+  software: 'Software',
+  comissao: 'Comissão',
+  outros: 'Outros',
+}
+
+export const DESPESA_FORMA_PAGAMENTO_LABELS: Record<DespesaFormaPagamento, string> = {
+  dinheiro: 'Dinheiro',
+  cartao: 'Cartão',
+  pix: 'PIX',
+  transferencia: 'Transferência',
+  boleto: 'Boleto',
+  cheque: 'Cheque',
+}
+
+export const DESPESA_STATUS_LABELS: Record<DespesaStatus, string> = {
+  a_pagar: 'A Pagar',
+  pago: 'Pago',
+  vencido: 'Vencido',
+  cancelado: 'Cancelado',
+}
+
 // Alertas do Sistema
 export interface SystemAlert {
   id: string

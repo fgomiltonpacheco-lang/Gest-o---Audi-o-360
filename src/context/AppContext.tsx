@@ -46,6 +46,10 @@ import {
   ContaReceberStatus,
   ContaReceberOrigem,
   FormaRecebimento,
+  Despesa,
+  DespesaCategoria,
+  DespesaFormaPagamento,
+  DespesaStatus,
 } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
@@ -663,6 +667,25 @@ const mapRecebimento = (r: any): Recebimento => ({
   created: toDateStr(r.created),
 })
 
+const mapDespesa = (r: any): Despesa => ({
+  id: r.id,
+  descricao: r.descricao || '',
+  valor: Number(r.valor) || 0,
+  data_vencimento: toDateStr(r.data_vencimento),
+  data_pagamento: r.data_pagamento ? toDateStr(r.data_pagamento) : undefined,
+  categoria: (r.categoria || 'outros') as DespesaCategoria,
+  forma_pagamento: (r.forma_pagamento || undefined) as DespesaFormaPagamento | undefined,
+  status: (r.status || 'a_pagar') as DespesaStatus,
+  valor_pago: Number(r.valor_pago) || 0,
+  comprovante: r.comprovante || undefined,
+  observacoes: r.observacoes || undefined,
+  motivo_cancelamento: r.motivo_cancelamento || undefined,
+  usuario_id: r.usuario_id || r.usuario || '',
+  movimentacao_caixa_id: r.movimentacao_caixa_id || undefined,
+  created: toDateStr(r.created),
+  updated: toDateStr(r.updated),
+})
+
 const mapVendaB2B = (r: any): VendaB2B => {
   const itens = Array.isArray(r.expand?.itens_venda_b2b_venda_b2b_id)
     ? r.expand.itens_venda_b2b_venda_b2b_id.map(mapItemVendaB2B)
@@ -968,6 +991,27 @@ interface AppContextType {
   ) => Promise<{ success: boolean; message?: string }>
   fetchRecebimentos: (contaId: string) => Promise<Recebimento[]>
 
+  // Despesas
+  despesas: Despesa[]
+  fetchDespesas: () => Promise<void>
+  createDespesa: (
+    data: Omit<Despesa, 'id' | 'created' | 'updated'> & { comprovanteFile?: File | null },
+  ) => Promise<{ success: boolean; message?: string }>
+  updateDespesa: (
+    id: string,
+    data: Partial<Despesa> & { comprovanteFile?: File | null },
+  ) => Promise<{ success: boolean; message?: string }>
+  pagarDespesa: (
+    id: string,
+    data: {
+      data_pagamento: string
+      forma_pagamento: DespesaFormaPagamento
+      valor: number
+      observacoes?: string
+    },
+  ) => Promise<{ success: boolean; message?: string }>
+  cancelarDespesa: (id: string, motivo: string) => Promise<{ success: boolean; message?: string }>
+
   // Utilitário para recarregar dados do banco
   resetToSeedData: () => void
 }
@@ -1019,6 +1063,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Contas a Receber (Controle de Inadimplência)
   const [contasReceber, setContasReceber] = useState<ContaReceber[]>([])
+
+  // Despesas
+  const [despesas, setDespesas] = useState<Despesa[]>([])
 
   // Segurança — configurações globais + estado 2FA + timeout
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings | null>(null)
@@ -1140,6 +1187,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // ---- Contas a Receber ----
       setContasReceber(contasRec.map(mapContaReceber))
+
+      // ---- Despesas ----
+      try {
+        const despesasList = await pb
+          .collection('despesas')
+          .getFullList({ sort: '-data_vencimento' })
+        setDespesas(despesasList.map(mapDespesa))
+      } catch (e) {
+        console.warn('Erro ao carregar despesas:', e)
+      }
     } catch (err) {
       console.error('Erro ao carregar dados do PocketBase:', err)
     } finally {
@@ -1560,6 +1617,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNfServicoComissao([])
     setNfseB2BConfig(null)
     setContasReceber([])
+    setDespesas([])
     toast({
       title: 'Sessão encerrada',
       description: 'Você saiu do sistema com segurança.',
@@ -4644,6 +4702,246 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [contasReceber],
   )
 
+  // ============================================================
+  // ---------- Despesas Handlers ----------
+  // ============================================================
+  const fetchDespesas = useCallback(async () => {
+    try {
+      const list = await pb.collection('despesas').getFullList({ sort: '-data_vencimento' })
+      setDespesas(list.map(mapDespesa))
+    } catch (err) {
+      console.error('Erro ao carregar despesas:', err)
+    }
+  }, [])
+
+  /** Converte forma de pagamento de despesa para a forma usada em movimentacoes_caixa. */
+  const formaDespesaToCaixa = (forma?: DespesaFormaPagamento): FormaPagamentoCaixa => {
+    switch (forma) {
+      case 'cartao':
+        return 'credito'
+      case 'pix':
+        return 'pix'
+      case 'transferencia':
+        return 'pix'
+      case 'boleto':
+        return 'boleto'
+      case 'cheque':
+        return 'dinheiro'
+      default:
+        return 'dinheiro'
+    }
+  }
+
+  const createDespesa = useCallback(
+    async (
+      data: Omit<Despesa, 'id' | 'created' | 'updated'> & { comprovanteFile?: File | null },
+    ): Promise<{ success: boolean; message?: string }> => {
+      try {
+        if (!data.descricao?.trim()) {
+          return { success: false, message: 'Informe a descrição.' }
+        }
+        if (!data.valor || data.valor <= 0) {
+          return { success: false, message: 'Informe um valor válido.' }
+        }
+        if (!data.data_vencimento) {
+          return { success: false, message: 'Informe a data de vencimento.' }
+        }
+        const payload: Record<string, any> = {
+          descricao: data.descricao.trim(),
+          valor: Number(data.valor),
+          data_vencimento: data.data_vencimento,
+          categoria: data.categoria || 'outros',
+          forma_pagamento: data.forma_pagamento || '',
+          status: data.status || 'a_pagar',
+          valor_pago: Number(data.valor_pago) || 0,
+          observacoes: data.observacoes || '',
+          motivo_cancelamento: '',
+          usuario_id: currentUser?.id || '',
+          movimentacao_caixa_id: '',
+        }
+        if (data.data_pagamento) payload.data_pagamento = data.data_pagamento
+
+        let rec: any
+        if (data.comprovanteFile) {
+          const fd = new FormData()
+          for (const [k, v] of Object.entries(payload)) fd.append(k, String(v))
+          fd.append('comprovante', data.comprovanteFile)
+          rec = await pb.collection('despesas').create(fd)
+        } else {
+          rec = await pb.collection('despesas').create(payload)
+        }
+        setDespesas((prev) => [mapDespesa(rec), ...prev])
+        toast({ title: 'Despesa cadastrada', description: data.descricao.trim() })
+        return { success: true }
+      } catch (err) {
+        console.error('Erro ao criar despesa:', err)
+        return { success: false, message: describePbError(err) }
+      }
+    },
+    [currentUser?.id],
+  )
+
+  const updateDespesa = useCallback(
+    async (
+      id: string,
+      data: Partial<Despesa> & { comprovanteFile?: File | null },
+    ): Promise<{ success: boolean; message?: string }> => {
+      try {
+        const patch: Record<string, any> = {}
+        if (data.descricao !== undefined) patch.descricao = data.descricao.trim()
+        if (data.valor !== undefined) patch.valor = Number(data.valor)
+        if (data.data_vencimento !== undefined) patch.data_vencimento = data.data_vencimento
+        if (data.data_pagamento !== undefined) patch.data_pagamento = data.data_pagamento || ''
+        if (data.categoria !== undefined) patch.categoria = data.categoria
+        if (data.forma_pagamento !== undefined) patch.forma_pagamento = data.forma_pagamento || ''
+        if (data.status !== undefined) patch.status = data.status
+        if (data.valor_pago !== undefined) patch.valor_pago = Number(data.valor_pago) || 0
+        if (data.observacoes !== undefined) patch.observacoes = data.observacoes || ''
+        if (data.motivo_cancelamento !== undefined)
+          patch.motivo_cancelamento = data.motivo_cancelamento || ''
+
+        let rec: any
+        if (data.comprovanteFile) {
+          const fd = new FormData()
+          for (const [k, v] of Object.entries(patch)) fd.append(k, String(v))
+          fd.append('comprovante', data.comprovanteFile)
+          rec = await pb.collection('despesas').update(id, fd)
+        } else {
+          rec = await pb.collection('despesas').update(id, patch)
+        }
+        setDespesas((prev) => prev.map((d) => (d.id === id ? mapDespesa(rec) : d)))
+        toast({ title: 'Despesa atualizada' })
+        return { success: true }
+      } catch (err) {
+        console.error('Erro ao atualizar despesa:', err)
+        return { success: false, message: describePbError(err) }
+      }
+    },
+    [],
+  )
+
+  const pagarDespesa = useCallback(
+    async (
+      id: string,
+      data: {
+        data_pagamento: string
+        forma_pagamento: DespesaFormaPagamento
+        valor: number
+        observacoes?: string
+      },
+    ): Promise<{ success: boolean; message?: string }> => {
+      try {
+        const despesa = despesas.find((d) => d.id === id)
+        if (!despesa) return { success: false, message: 'Despesa não encontrada.' }
+        const valor = Number(data.valor) || 0
+        if (valor <= 0) return { success: false, message: 'Informe um valor válido.' }
+        if (!data.data_pagamento) return { success: false, message: 'Informe a data de pagamento.' }
+
+        const valorPagoAnterior = Number(despesa.valor_pago) || 0
+        const novoValorPago = valorPagoAnterior + valor
+        const total = Number(despesa.valor) || 0
+        // Quitação total considera tolerância de 1 centavo.
+        const quitada = novoValorPago >= total - 0.01
+        const novoStatus: DespesaStatus = quitada ? 'pago' : 'a_pagar'
+
+        // Cria movimentação de caixa (saída) e guarda o id para estorno futuro.
+        let movId = ''
+        try {
+          const movRec: any = await pb.collection('movimentacoes_caixa').create({
+            fechamento: '',
+            tipo: 'saida',
+            valor,
+            descricao: `Despesa: ${despesa.descricao}`,
+            forma_pagamento: formaDespesaToCaixa(data.forma_pagamento),
+            data: data.data_pagamento,
+            sale: '',
+            usuario: currentUser?.id || '',
+          })
+          movId = movRec?.id || ''
+          const mappedMov = mapMovimentacaoCaixa(movRec)
+          setMovimentacoesCaixa((prev) => [...prev, mappedMov])
+        } catch (eMov) {
+          console.error('Erro ao criar movimentação de caixa (saída despesa):', eMov)
+        }
+
+        const obsConcat = data.observacoes?.trim()
+          ? `${despesa.observacoes ? despesa.observacoes + '\n' : ''}Pgto ${data.data_pagamento}: ${data.observacoes.trim()}`
+          : despesa.observacoes
+
+        const updated: any = await pb.collection('despesas').update(id, {
+          status: novoStatus,
+          valor_pago: novoValorPago,
+          data_pagamento: quitada
+            ? data.data_pagamento
+            : despesa.data_pagamento || data.data_pagamento,
+          forma_pagamento: data.forma_pagamento,
+          observacoes: obsConcat,
+          movimentacao_caixa_id: movId || despesa.movimentacao_caixa_id || '',
+        })
+        setDespesas((prev) => prev.map((d) => (d.id === id ? mapDespesa(updated) : d)))
+        toast({
+          title: quitada ? 'Despesa quitada' : 'Pagamento parcial registrado',
+          description: `R$ ${valor.toFixed(2)} • ${despesa.descricao}`,
+        })
+        return { success: true }
+      } catch (err) {
+        console.error('Erro ao pagar despesa:', err)
+        return { success: false, message: describePbError(err) }
+      }
+    },
+    [despesas, currentUser?.id],
+  )
+
+  const cancelarDespesa = useCallback(
+    async (id: string, motivo: string): Promise<{ success: boolean; message?: string }> => {
+      try {
+        if (!motivo?.trim()) {
+          return { success: false, message: 'Informe o motivo do cancelamento.' }
+        }
+        const despesa = despesas.find((d) => d.id === id)
+        if (!despesa) return { success: false, message: 'Despesa não encontrada.' }
+
+        // Estorno de caixa: se a despesa havia gerado movimentação de saída,
+        // cria uma movimentação de entrada equivalente ao valor pago.
+        const valorPago = Number(despesa.valor_pago) || 0
+        if (valorPago > 0 && despesa.movimentacao_caixa_id) {
+          try {
+            const estornoRec: any = await pb.collection('movimentacoes_caixa').create({
+              fechamento: '',
+              tipo: 'entrada',
+              valor: valorPago,
+              descricao: `Estorno — Cancelamento despesa: ${despesa.descricao}`,
+              forma_pagamento: formaDespesaToCaixa(despesa.forma_pagamento),
+              data: todayStr(),
+              sale: '',
+              usuario: currentUser?.id || '',
+            })
+            const mappedMov = mapMovimentacaoCaixa(estornoRec)
+            setMovimentacoesCaixa((prev) => [...prev, mappedMov])
+          } catch (eEst) {
+            console.error('Erro ao criar estorno de caixa (despesa):', eEst)
+          }
+        }
+
+        const updated: any = await pb.collection('despesas').update(id, {
+          status: 'cancelado',
+          motivo_cancelamento: motivo.trim(),
+        })
+        setDespesas((prev) => prev.map((d) => (d.id === id ? mapDespesa(updated) : d)))
+        toast({
+          title: 'Despesa cancelada',
+          description: `${despesa.descricao}. Registro salvo na auditoria.`,
+          variant: 'destructive',
+        })
+        return { success: true }
+      } catch (err) {
+        console.error('Erro ao cancelar despesa:', err)
+        return { success: false, message: describePbError(err) }
+      }
+    },
+    [despesas, currentUser?.id],
+  )
+
   return (
     <AppContext.Provider
       value={{
@@ -4761,6 +5059,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         renegociarConta,
         cancelarConta,
         fetchRecebimentos,
+        // Despesas
+        despesas,
+        fetchDespesas,
+        createDespesa,
+        updateDespesa,
+        pagarDespesa,
+        cancelarDespesa,
         alerts,
         unreadAlertsCount,
         resetToSeedData,

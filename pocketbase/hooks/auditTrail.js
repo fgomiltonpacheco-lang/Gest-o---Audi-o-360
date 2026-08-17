@@ -5,8 +5,8 @@
 // Registra, de forma imutável, TODAS as ações críticas realizadas por
 // todos os usuários em todos os módulos (pacientes, agenda, prontuário,
 // audiometria, vendas PDV/B2B, caixa, estoque, configurações, exames,
-// aparelhos, parceiros, NF, contas a receber/recebimentos) na coleção
-// `audit_trail`.
+// aparelhos, parceiros, NF, contas a receber/recebimentos, despesas) na
+// coleção `audit_trail`.
 //
 // Princípios:
 //  1. BEST-EFFORT: se o log falhar, a operação original NÃO é bloqueada
@@ -281,6 +281,18 @@ onRecordCreateRequest(
             )
           },
         },
+        despesas: {
+          modulo: 'despesas',
+          entidade_tipo: 'despesas',
+          descricao: function (r) {
+            return (
+              'Despesa: ' +
+              (r.getString('descricao') || r.getId()) +
+              ' — R$ ' +
+              (r.get('valor') || 0)
+            )
+          },
+        },
       }
 
       var meta = META[collectionName]
@@ -389,6 +401,7 @@ onRecordCreateRequest(
   'nf_servico_comissao',
   'contas_receber',
   'recebimentos',
+  'despesas',
 )
 
 // ============================================================
@@ -734,6 +747,22 @@ onRecordUpdateRequest(
             )
           },
         },
+        despesas: {
+          modulo: 'despesas',
+          entidade_tipo: 'despesas',
+          statusField: 'status',
+          cancelValue: 'cancelado',
+          estornoValue: '',
+          acaoEspecial: '',
+          descricao: function (r) {
+            return (
+              'Despesa: ' +
+              (r.getString('descricao') || r.getId()) +
+              ' — R$ ' +
+              (r.get('valor') || 0)
+            )
+          },
+        },
       }
 
       var meta = META[collectionName]
@@ -943,6 +972,7 @@ onRecordUpdateRequest(
   'nf_servico_comissao',
   'contas_receber',
   'recebimentos',
+  'despesas',
 )
 
 // ============================================================
@@ -1175,6 +1205,18 @@ onRecordDeleteRequest(
             )
           },
         },
+        despesas: {
+          modulo: 'despesas',
+          entidade_tipo: 'despesas',
+          descricao: function (r) {
+            return (
+              'Despesa: ' +
+              (r.getString('descricao') || r.getId()) +
+              ' — R$ ' +
+              (r.get('valor') || 0)
+            )
+          },
+        },
       }
 
       var meta = META[collectionName]
@@ -1282,4 +1324,5 @@ onRecordDeleteRequest(
   'nf_servico_comissao',
   'contas_receber',
   'recebimentos',
+  'despesas',
 )

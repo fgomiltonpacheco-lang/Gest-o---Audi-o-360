@@ -7,9 +7,12 @@ import {
   ShoppingBag,
   Building2,
   BarChart3,
+  ArrowDownCircle,
+  PiggyBank,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { formatCurrency, formatDate } from '@/lib/formatters'
+import { DESPESA_CATEGORIA_LABELS, type Despesa } from '@/types'
 import {
   ReportHeader,
   SummaryCard,
@@ -60,7 +63,13 @@ type Row = {
 }
 
 export default function RelatorioFaturamento() {
-  const { sales, vendasB2B, appointments, currentUser, dataLoading } = useApp()
+  const { sales, vendasB2B, appointments, currentUser, dataLoading, despesas, fetchDespesas } =
+    useApp()
+
+  // Carrega despesas para a seção de Lucro Líquido.
+  React.useEffect(() => {
+    fetchDespesas()
+  }, [fetchDespesas])
 
   const [period, setPeriod] = useState<Period>(() => shortcutPeriod('this_month'))
   const [pmFilter, setPmFilter] = useState<string>('all')
@@ -132,6 +141,34 @@ export default function RelatorioFaturamento() {
     forma: g,
     valor: rows.filter((r) => r.forma === g).reduce((a, r) => a + r.valor, 0),
   }))
+
+  // ---- Despesas no período (pelo vencimento) e Lucro Líquido ----
+  const despesasPeriodo = useMemo<Despesa[]>(
+    () =>
+      despesas.filter(
+        (d) => d.status !== 'cancelado' && inDateRange(d.data_vencimento, period.from, period.to),
+      ),
+    [despesas, period],
+  )
+  const totalDespesas = despesasPeriodo.reduce(
+    (acc, d) => acc + (Number(d.valor) || 0) - (Number(d.valor_pago) || 0),
+    0,
+  )
+  const despesasPagas = despesasPeriodo
+    .filter((d) => d.status === 'pago')
+    .reduce((acc, d) => acc + (Number(d.valor_pago) || Number(d.valor) || 0), 0)
+  const lucroLiquido = receitaTotal - totalDespesas
+  // Despesas por categoria
+  const despesasPorCategoria = useMemo(() => {
+    const map: Record<string, number> = {}
+    despesasPeriodo.forEach((d) => {
+      const cat = DESPESA_CATEGORIA_LABELS[d.categoria] || d.categoria
+      map[cat] = (map[cat] || 0) + ((Number(d.valor) || 0) - (Number(d.valor_pago) || 0))
+    })
+    return Object.entries(map)
+      .map(([categoria, valor]) => ({ categoria, valor }))
+      .sort((a, b) => b.valor - a.valor)
+  }, [despesasPeriodo])
 
   // Faturamento diário
   const dailyMap: Record<string, number> = {}
@@ -436,6 +473,116 @@ export default function RelatorioFaturamento() {
           },
         ]}
       />
+
+      {/* ===== Seção de Despesas e Lucro Líquido ===== */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 pt-2">
+          <ArrowDownCircle className="w-5 h-5 text-rose-600" />
+          <h2 className="text-base font-bold text-slate-900">Despesas e Lucro Líquido</h2>
+          <span className="text-xs text-slate-500">
+            (despesas com vencimento no período: {formatDate(period.from)} a {formatDate(period.to)}
+            )
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <SummaryCard
+            label="Receita Total"
+            value={formatCurrency(receitaTotal)}
+            hint="Vendas no período"
+            icon={DollarSign}
+            tone="blue"
+          />
+          <SummaryCard
+            label="Total de Despesas"
+            value={formatCurrency(totalDespesas)}
+            hint={`${despesasPeriodo.length} despesa(s)`}
+            icon={ArrowDownCircle}
+            tone="amber"
+          />
+          <SummaryCard
+            label="Despesas Pagas"
+            value={formatCurrency(despesasPagas)}
+            hint="Quitadas no período"
+            icon={Receipt}
+            tone="purple"
+          />
+          <SummaryCard
+            label="Lucro Líquido"
+            value={formatCurrency(lucroLiquido)}
+            hint="Receitas − Despesas"
+            icon={PiggyBank}
+            tone={lucroLiquido >= 0 ? 'green' : 'amber'}
+          />
+        </div>
+
+        {/* Despesas por categoria */}
+        {despesasPorCategoria.length > 0 && (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-slate-800">Despesas por Categoria</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                  <tr>
+                    <th className="text-left px-4 py-2 font-semibold">Categoria</th>
+                    <th className="text-right px-4 py-2 font-semibold">Valor Pendente</th>
+                    <th className="text-right px-4 py-2 font-semibold">% do Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {despesasPorCategoria.map((c) => (
+                    <tr key={c.categoria} className="border-t border-slate-100">
+                      <td className="px-4 py-2 text-slate-700 font-medium">{c.categoria}</td>
+                      <td className="px-4 py-2 text-right text-rose-700 font-semibold">
+                        {formatCurrency(c.valor)}
+                      </td>
+                      <td className="px-4 py-2 text-right text-slate-500">
+                        {totalDespesas > 0 ? ((c.valor / totalDespesas) * 100).toFixed(1) : '0'}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-slate-50">
+                  <tr>
+                    <td className="px-4 py-2 font-bold text-slate-900">Total</td>
+                    <td className="px-4 py-2 text-right font-extrabold text-rose-700">
+                      {formatCurrency(totalDespesas)}
+                    </td>
+                    <td className="px-4 py-2 text-right text-slate-500">100%</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Resumo do Lucro Líquido */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-11 h-11 rounded-xl flex items-center justify-center ${lucroLiquido >= 0 ? 'bg-emerald-50' : 'bg-red-50'}`}
+            >
+              <PiggyBank
+                className={`w-6 h-6 ${lucroLiquido >= 0 ? 'text-emerald-600' : 'text-red-600'}`}
+              />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 font-medium">Lucro Líquido do período</p>
+              <p className="text-sm text-slate-500">
+                {formatCurrency(receitaTotal)} (receita) − {formatCurrency(totalDespesas)}{' '}
+                (despesas)
+              </p>
+            </div>
+          </div>
+          <p
+            className={`text-2xl font-extrabold ${lucroLiquido >= 0 ? 'text-emerald-700' : 'text-red-600'}`}
+          >
+            {formatCurrency(lucroLiquido)}
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

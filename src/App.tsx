@@ -38,6 +38,7 @@ import Auditoria from '@/pages/Auditoria'
 import ContasReceberPage from '@/pages/ContasReceber'
 import Inadimplentes from '@/pages/Inadimplentes'
 import FluxoProjetado from '@/pages/FluxoProjetado'
+import Despesas from '@/pages/Despesas'
 import Lembretes from '@/pages/Lembretes'
 import NotFound from '@/pages/NotFound'
 import { Toaster } from '@/components/ui/toaster'
@@ -212,6 +213,14 @@ export function App() {
               element={
                 <AdminRoute>
                   <FluxoProjetado />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/financeiro/despesas"
+              element={
+                <AdminRoute>
+                  <Despesas />
                 </AdminRoute>
               }
             />
