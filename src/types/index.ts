@@ -1514,7 +1514,17 @@ export interface LayoutElementProps {
   alternateRowColor?: string
   borderColor?: string
   fontSize?: number
-  dynamicSource?: 'iprf_od' | 'iprf_oe' | 'timpanometria' | 'reflexos' | 'identificacao' | null
+  dynamicSource?:
+    | 'iprf'
+    | 'iprf_od'
+    | 'iprf_oe'
+    | 'srt_ldv'
+    | 'medias_tonais'
+    | 'timpanometria'
+    | 'reflexos'
+    | 'meatoscopia'
+    | 'identificacao'
+    | null
   // audiogram
   mode?: 'combined' | 'od_only' | 'oe_only' | 'side_by_side'
   showBone?: boolean

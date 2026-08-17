@@ -885,6 +885,51 @@ export async function renderExamReport(args: {
   return args.fallback
 }
 
+/**
+ * Constrói um TemplateDataContext a partir de dados de imitanciometria.
+ * Permite usar o TemplateRenderer com exames reais do banco, mantendo
+ * compatibilidade com a estrutura de dados usada pelo ImitanciometriaPrint.
+ */
+export function buildImitanciometriaContext(args: {
+  patientName?: string
+  patientCpf?: string
+  patientBirthDate?: string
+  patientAge?: string
+  patientSex?: string
+  examDate?: string
+  professionalName?: string
+  professionalCrfa?: string
+  exam: Record<string, unknown>
+  clinicName?: string
+  clinicAddress?: string
+  clinicPhone?: string
+  clinicEmail?: string
+}): TemplateDataContext {
+  return {
+    paciente: {
+      nome: args.patientName,
+      cpf: args.patientCpf,
+      data_nascimento: args.patientBirthDate,
+      idade: args.patientAge,
+      sexo: args.patientSex,
+    },
+    exame: {
+      ...args.exam,
+      data: args.examDate,
+    },
+    profissional: {
+      nome: args.professionalName,
+      crfa: args.professionalCrfa,
+    },
+    clinica: {
+      nome: args.clinicName,
+      endereco: args.clinicAddress,
+      telefone: args.clinicPhone,
+      email: args.clinicEmail,
+    },
+  }
+}
+
 /* ============ IMITANCIOMETRIA ============ */
 export function TympanometryPrint({ exam }: { exam: TympanometryExam }) {
   return (

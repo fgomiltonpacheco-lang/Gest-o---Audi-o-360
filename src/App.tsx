@@ -45,6 +45,7 @@ import ExamReportTemplatesList from '@/pages/laudos/ExamReportTemplatesList'
 import ExamReportTemplateNovo from '@/pages/laudos/ExamReportTemplateNovo'
 import ExamReportTemplateEditor from '@/pages/laudos/ExamReportTemplateEditor'
 import ExamReportTemplatePreview from '@/pages/laudos/ExamReportTemplatePreview'
+import ExamReportTemplateVersions from '@/pages/laudos/ExamReportTemplateVersions'
 import { Toaster } from '@/components/ui/toaster'
 import { useToast } from '@/hooks/use-toast'
 
@@ -468,6 +469,14 @@ export function App() {
               element={
                 <AdminRoute>
                   <ExamReportTemplatePreview />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/configuracoes/laudos/:id/versoes"
+              element={
+                <AdminRoute>
+                  <ExamReportTemplateVersions />
                 </AdminRoute>
               }
             />

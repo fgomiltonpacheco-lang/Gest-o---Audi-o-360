@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   FileEdit,
   Archive as ArchiveIcon,
+  History,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -308,7 +309,14 @@ export default function ExamReportTemplatesList() {
                   {filtrados.map((t) => (
                     <TableRow key={t.id} className="hover:bg-slate-50">
                       <TableCell>
-                        <div className="font-medium text-slate-800">{t.nome_modelo}</div>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/configuracoes/laudos/${t.id}/versoes`)}
+                          className="font-medium text-slate-800 hover:text-[#1E3A8A] hover:underline text-left"
+                          title="Ver histórico de versões"
+                        >
+                          {t.nome_modelo}
+                        </button>
                         {t.descricao && <div className="text-xs text-slate-400">{t.descricao}</div>}
                       </TableCell>
                       <TableCell>
@@ -338,6 +346,14 @@ export default function ExamReportTemplatesList() {
                               <Edit className="h-4 w-4" />
                             </Button>
                           )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Histórico de versões"
+                            onClick={() => navigate(`/configuracoes/laudos/${t.id}/versoes`)}
+                          >
+                            <History className="h-4 w-4" />
+                          </Button>
                           <Button
                             size="icon"
                             variant="ghost"

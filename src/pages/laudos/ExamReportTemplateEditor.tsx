@@ -1471,10 +1471,14 @@ const PropsEspecificas: React.FC<{
                       v === 'none'
                         ? null
                         : (v as
+                            | 'iprf'
                             | 'iprf_od'
                             | 'iprf_oe'
+                            | 'srt_ldv'
+                            | 'medias_tonais'
                             | 'timpanometria'
                             | 'reflexos'
+                            | 'meatoscopia'
                             | 'identificacao'),
                   })
                 }
@@ -1484,11 +1488,15 @@ const PropsEspecificas: React.FC<{
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhuma (manual)</SelectItem>
+                  <SelectItem value="identificacao">Identificação (paciente/exame)</SelectItem>
+                  <SelectItem value="iprf">IPRF (completa OD/OE)</SelectItem>
                   <SelectItem value="iprf_od">IPRF OD</SelectItem>
                   <SelectItem value="iprf_oe">IPRF OE</SelectItem>
+                  <SelectItem value="srt_ldv">SRT / LDV</SelectItem>
+                  <SelectItem value="medias_tonais">Médias tonais</SelectItem>
                   <SelectItem value="timpanometria">Timpanometria</SelectItem>
-                  <SelectItem value="reflexos">Reflexos</SelectItem>
-                  <SelectItem value="identificacao">Identificação</SelectItem>
+                  <SelectItem value="reflexos">Reflexos acústicos</SelectItem>
+                  <SelectItem value="meatoscopia">Meatoscopia</SelectItem>
                 </SelectContent>
               </Select>
             </div>

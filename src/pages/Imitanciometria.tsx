@@ -4,6 +4,7 @@ import { useApp } from '@/context/AppContext'
 import { useToast } from '@/hooks/use-toast'
 import { usePrint } from '@/components/print/PrintProvider'
 import { ImitanciometriaPrint, type ImitPrintData } from '@/components/print/ImitanciometriaPrint'
+import { renderExamReport, buildImitanciometriaContext } from '@/components/print/PrintDocuments'
 import pb from '@/lib/pocketbase/client'
 import { ClientResponseError } from 'pocketbase'
 import { Button } from '@/components/ui/button'
@@ -597,17 +598,52 @@ export default function Imitanciometria() {
 
   const [previewOpen, setPreviewOpen] = useState(false)
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    const fallbackNode = (
+      <ImitanciometriaPrint
+        data={buildPrintData()}
+        clinicSettings={clinicSettings}
+        professional={professionalData}
+      />
+    )
+    const printData = buildPrintData()
+    const ctx = buildImitanciometriaContext({
+      patientName: printData.paciente_nome,
+      patientCpf: printData.paciente_cpf,
+      patientBirthDate: printData.paciente_nascimento,
+      patientAge: printData.paciente_idade,
+      patientSex: printData.paciente_sexo,
+      examDate: printData.data_exame,
+      professionalName: professionalData?.name,
+      professionalCrfa: professionalData?.crmCrfa,
+      exam: {
+        tipo_curva_od: printData.tipo_curva_od,
+        tipo_curva_oe: printData.tipo_curva_oe,
+        reflexos_status: printData.reflexos_status,
+        laudo: printData.laudo,
+        observacoes: printData.observacoes,
+        encaminhado_por: printData.encaminhado_por,
+        equipment_nome: printData.equipment_nome,
+        equipment_calibracao: printData.equipment_calibracao,
+        referencias: printData.referencias,
+        meatoscopia: printData.meatoscopia,
+        timpanometria: printData.timpanometria,
+        reflexos: printData.reflexos,
+      },
+      clinicName: clinicSettings?.nome,
+      clinicAddress: clinicSettings?.endereco,
+      clinicPhone: clinicSettings?.telefone,
+      clinicEmail: clinicSettings?.email,
+    })
+    const bodyNode = await renderExamReport({
+      tipoExame: 'imitanciometria',
+      context: ctx,
+      fallback: fallbackNode,
+    })
     print({
       title: 'Imitanciometria',
       subtitle: `${patient?.name || ''} — ${formatDate(exam.data_exame)}`,
-      body: (
-        <ImitanciometriaPrint
-          data={buildPrintData()}
-          clinicSettings={clinicSettings}
-          professional={professionalData}
-        />
-      ),
+      body: bodyNode,
     })
   }
 
@@ -615,18 +651,8 @@ export default function Imitanciometria() {
     setPreviewOpen(true)
   }
 
-  const handleDownload = () => {
-    print({
-      title: 'Imitanciometria',
-      subtitle: `${patient?.name || ''} — ${formatDate(exam.data_exame)}`,
-      body: (
-        <ImitanciometriaPrint
-          data={buildPrintData()}
-          clinicSettings={clinicSettings}
-          professional={professionalData}
-        />
-      ),
-    })
+  const handleDownload = async () => {
+    await handlePrint()
   }
 
   if (!patient) {

@@ -167,9 +167,220 @@ function TemplateRectangle({ el }: { el: LayoutElement }) {
   )
 }
 
+// ===== Tabelas dinâmicas vinculadas ao exame =====
+type DynCol = { label: string; field: string; width?: number }
+type DynRow = Record<string, string>
+
+function safeStr(v: unknown): string {
+  if (v === undefined || v === null || v === '') return '—'
+  if (typeof v === 'object') return JSON.stringify(v)
+  return String(v)
+}
+function fmtNum(v: unknown): string {
+  if (v === undefined || v === null || v === '') return '—'
+  const n = Number(v)
+  return isNaN(n) ? safeStr(v) : String(n)
+}
+function avgOfFreqs(map: unknown, freqs: string[]): string {
+  if (!map || typeof map !== 'object') return '—'
+  const m = map as Record<string, { db?: number | null }>
+  const vals = freqs
+    .map((f) => m[f]?.db)
+    .filter((v): v is number => v !== null && v !== undefined && !isNaN(Number(v)))
+  if (vals.length === 0) return '—'
+  return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)
+}
+
+function buildDynamicTable(
+  source: NonNullable<LayoutElement['props']>['dynamicSource'],
+  ctx: TemplateDataContext,
+): { columns: DynCol[]; rows: DynRow[] } | null {
+  if (!source) return null
+  const exame = (ctx.exame || {}) as Record<string, unknown>
+  const p = ctx.paciente || {}
+  const prof = ctx.profissional || {}
+  const cli = ctx.clinica || {}
+
+  if (source === 'identificacao') {
+    const rows: DynRow[] = [
+      { c1: 'Nome do paciente', c2: safeStr(p.nome) },
+      { c1: 'CPF', c2: safeStr(p.cpf) },
+      { c1: 'Data de nascimento', c2: safeStr(p.data_nascimento) },
+      { c1: 'Idade', c2: safeStr(p.idade) },
+      { c1: 'Sexo', c2: safeStr(p.sexo) },
+      { c1: 'Data do exame', c2: safeStr(exame.data) },
+      { c1: 'Profissional', c2: safeStr(prof.nome) },
+      { c1: 'CRFa', c2: safeStr(prof.crfa) },
+      { c1: 'Clínica', c2: safeStr(cli.nome) },
+    ]
+    return {
+      columns: [
+        { label: 'Campo', field: 'c1', width: 40 },
+        { label: 'Valor', field: 'c2', width: 110 },
+      ],
+      rows,
+    }
+  }
+
+  if (source === 'iprf' || source === 'iprf_od' || source === 'iprf_oe') {
+    const iprf = (exame.iprf_vocal as Record<string, Record<string, unknown>>) || {}
+    const od = iprf.od || {}
+    const oe = iprf.oe || {}
+    const showOD = source === 'iprf' || source === 'iprf_od'
+    const showOE = source === 'iprf' || source === 'iprf_oe'
+    const columns: DynCol[] = [{ label: 'Parâmetro', field: 'param', width: 60 }]
+    if (showOD) columns.push({ label: 'OD', field: 'od', width: 45 })
+    if (showOE) columns.push({ label: 'OE', field: 'oe', width: 45 })
+    const mk = (label: string, key: string): DynRow => {
+      const r: DynRow = { param: label }
+      if (showOD) r.od = safeStr(od[key])
+      if (showOE) r.oe = safeStr(oe[key])
+      return r
+    }
+    return {
+      columns,
+      rows: [
+        mk('Intensidade (dB)', 'intensidade'),
+        mk('Monossílabos (%)', 'monossilabos'),
+        mk('Dissílabos (%)', 'dissilabos'),
+        mk('Mascaramento (dB)', 'mascaramento'),
+        mk('Palavras faladas', 'palavras_faladas'),
+      ],
+    }
+  }
+
+  if (source === 'srt_ldv') {
+    return {
+      columns: [
+        { label: 'Parâmetro', field: 'param', width: 60 },
+        { label: 'OD', field: 'od', width: 45 },
+        { label: 'OE', field: 'oe', width: 45 },
+      ],
+      rows: [
+        { param: 'SRT (dB)', od: fmtNum(exame.srt_od), oe: fmtNum(exame.srt_oe) },
+        { param: 'LDV (dB)', od: fmtNum(exame.ldv_od), oe: fmtNum(exame.ldv_oe) },
+      ],
+    }
+  }
+
+  if (source === 'medias_tonais') {
+    return {
+      columns: [
+        { label: 'Parâmetro', field: 'param', width: 60 },
+        { label: 'OD', field: 'od', width: 45 },
+        { label: 'OE', field: 'oe', width: 45 },
+      ],
+      rows: [
+        { param: 'Média tritonal (dB)', od: fmtNum(exame.mt_od), oe: fmtNum(exame.mt_oe) },
+        {
+          param: 'Média quadratonal (dB)',
+          od: avgOfFreqs(exame.air_od, ['500', '1000', '2000', '4000']),
+          oe: avgOfFreqs(exame.air_oe, ['500', '1000', '2000', '4000']),
+        },
+      ],
+    }
+  }
+
+  if (source === 'timpanometria') {
+    const timp = (exame.timpanometria as Record<string, Record<string, unknown>>) || {}
+    const od = timp.OD || {}
+    const oe = timp.OE || {}
+    const mk = (label: string, key: string): DynRow => ({
+      param: label,
+      od: safeStr(od[key]),
+      oe: safeStr(oe[key]),
+    })
+    return {
+      columns: [
+        { label: 'Parâmetro', field: 'param', width: 60 },
+        { label: 'OD', field: 'od', width: 45 },
+        { label: 'OE', field: 'oe', width: 45 },
+      ],
+      rows: [
+        mk('Tipo de curva', 'tipo_curva'),
+        mk('Volume do meato (ml)', 'volume_meato'),
+        mk('Complacência (ml)', 'complacencia'),
+        mk('Pressão de pico (daPa)', 'pressao_pico'),
+        mk('Gradiente da curva', 'gradiente_curva'),
+        mk('Descrição da curva', 'curva_descricao'),
+        mk('Observações', 'observacoes'),
+      ],
+    }
+  }
+
+  if (source === 'reflexos') {
+    const reflexos = (exame.reflexos as Record<string, Record<string, unknown>>) || {}
+    const od = reflexos.OD || {}
+    const oe = reflexos.OE || {}
+    const cell = (vals: unknown, freq: string): string => {
+      if (!vals || typeof vals !== 'object') return '—'
+      const v = vals as Record<string, unknown>
+      const anyVal = [
+        'frequencia_500',
+        'frequencia_1000',
+        'frequencia_2000',
+        'frequencia_4000',
+      ].some((f) => v[f] !== null && v[f] !== undefined && v[f] !== '')
+      if (!anyVal) {
+        const st = String(v.status || '')
+        if (st === 'ausente') return 'Ausente'
+        if (st === 'elevado' || st === 'Reduzido') return 'Elevado'
+        if (st === 'presente' || st === 'Normal') return '—'
+        return '—'
+      }
+      return fmtNum(v[freq])
+    }
+    const mk = (orelha: string, via: string, vals: unknown): DynRow => ({
+      orelha,
+      via,
+      f500: cell(vals, 'frequencia_500'),
+      f1000: cell(vals, 'frequencia_1000'),
+      f2000: cell(vals, 'frequencia_2000'),
+      f4000: cell(vals, 'frequencia_4000'),
+    })
+    return {
+      columns: [
+        { label: 'Orelha', field: 'orelha', width: 25 },
+        { label: 'Via', field: 'via', width: 45 },
+        { label: '500 Hz', field: 'f500', width: 30 },
+        { label: '1.000 Hz', field: 'f1000', width: 30 },
+        { label: '2.000 Hz', field: 'f2000', width: 30 },
+        { label: '4.000 Hz', field: 'f4000', width: 30 },
+      ],
+      rows: [
+        mk('OD', 'Ipsilateral', od.ipsi_lateral),
+        mk('OD', 'Contralateral', od.contra_lateral),
+        mk('OE', 'Ipsilateral', oe.ipsi_lateral),
+        mk('OE', 'Contralateral', oe.contra_lateral),
+      ],
+    }
+  }
+
+  if (source === 'meatoscopia') {
+    const m = (exame.meatoscopia as Record<string, unknown>) || {}
+    const yn = (v: unknown) => (v ? 'Sim' : 'Não')
+    return {
+      columns: [
+        { label: 'Parâmetro', field: 'param', width: 60 },
+        { label: 'OD', field: 'od', width: 45 },
+        { label: 'OE', field: 'oe', width: 45 },
+      ],
+      rows: [
+        { param: 'Normal', od: yn(m.od_normal), oe: yn(m.oe_normal) },
+        { param: 'Alterada', od: yn(m.od_alterada), oe: yn(m.oe_alterada) },
+        { param: 'Observação', od: safeStr(m.od_obs), oe: safeStr(m.oe_obs) },
+      ],
+    }
+  }
+
+  return null
+}
+
 function TemplateTable({ el, ctx }: { el: LayoutElement; ctx: TemplateDataContext }) {
-  const columns = el.props?.columns || []
-  const rows = el.props?.rows || []
+  const dynSource = el.props?.dynamicSource
+  const dyn = dynSource ? buildDynamicTable(dynSource, ctx) : null
+  const columns = dyn?.columns || el.props?.columns || []
+  const rows = dyn?.rows || el.props?.rows || []
   const fontSize = el.props?.fontSize || 8
   const headerBg = el.props?.headerBgColor || '#F2F4F7'
   const altRow = el.props?.alternateRowColor || '#FAFBFC'
@@ -400,17 +611,28 @@ function TemplateWatermark({ el }: { el: LayoutElement }) {
 
 // ===== Renderizador principal =====
 
+export type ElementHighlight = 'added' | 'removed' | 'changed'
+
 export interface TemplateRendererProps {
   template: ExamReportTemplate
   data: TemplateDataContext
   /** Escala visual (1 = tamanho real em px). Padrão 1. */
   scale?: number
+  /** Mapa de destaque visual por id do elemento (usado na comparação de versões). */
+  highlightMap?: Record<string, ElementHighlight>
+}
+
+const HIGHLIGHT_OUTLINE: Record<ElementHighlight, string> = {
+  added: '2px solid #16a34a',
+  removed: '2px solid #dc2626',
+  changed: '2px solid #ca8a04',
 }
 
 export const TemplateRenderer: React.FC<TemplateRendererProps> = ({
   template,
   data,
   scale = 1,
+  highlightMap,
 }) => {
   const larguraPx = mmToPx(template.largura_pagina) * scale
   const alturaPx = mmToPx(template.altura_pagina) * scale
@@ -522,6 +744,7 @@ export const TemplateRenderer: React.FC<TemplateRendererProps> = ({
         content = null
     }
 
+    const highlight = highlightMap?.[el.id]
     return (
       <div
         key={el.id}
@@ -533,6 +756,8 @@ export const TemplateRenderer: React.FC<TemplateRendererProps> = ({
           height: ph,
           zIndex: el.zIndex || 1,
           overflow: 'hidden',
+          outline: highlight ? HIGHLIGHT_OUTLINE[highlight] : undefined,
+          outlineOffset: highlight ? '1px' : undefined,
         }}
       >
         {content}
