@@ -817,3 +817,561 @@ export function getEquipmentStatus(
   if (days <= 30) return 'expiring'
   return 'valid'
 }
+
+// ===== Módulo de Estoque (tipos usados por AppContext e Estoque.tsx) =====
+
+export interface StockItem {
+  id: string
+  name: string
+  brand?: string
+  model?: string
+  color?: string
+  category: StockCategory
+  batterySize?: BatterySize
+  accessorySubcategory?: AccessorySubcategory
+  minQuantity: number
+  currentQuantity: number
+  supplier?: string
+  costPrice: number
+  salePrice: number
+  notes?: string
+  // Novos campos de controle
+  estoqueMinimo?: number
+  dataValidade?: string
+  lote?: string
+  fabricante?: string
+  diasAlertaValidade?: number
+  categoria?: InventoryCategoria
+  unidadeMedida?: string
+  code?: string
+  sku?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface StockMovement {
+  id: string
+  stockItemId: string
+  type: 'entrada' | 'saida'
+  quantity: number
+  reason: string
+  responsible: string
+  patient?: string
+  supplier?: string
+  date: string
+  createdAt: string
+}
+
+// ===== Módulo de Caixa =====
+
+export type MovimentacaoCaixaTipo = 'entrada' | 'saida'
+
+export type FormaPagamentoCaixa = 'dinheiro' | 'debito' | 'credito' | 'pix' | 'convenio' | 'boleto'
+
+export interface MovimentacaoCaixa {
+  id: string
+  fechamentoId: string
+  tipo: MovimentacaoCaixaTipo
+  valor: number
+  descricao: string
+  formaPagamento: FormaPagamentoCaixa
+  data: string
+  created?: string
+}
+
+export interface FechamentoCaixa {
+  id: string
+  data: string
+  saldoInicial: number
+  saldoFinal: number
+  totalDinheiro: number
+  totalDebito: number
+  totalCredito: number
+  totalPix: number
+  totalConvenio: number
+  totalBoleto: number
+  totalEntradas: number
+  totalSaidas: number
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  created?: string
+  updated?: string
+}
+
+// ===== Módulo de Contas a Receber =====
+
+export type ContaReceberStatus =
+  | 'pendente'
+  | 'recebido_parcial'
+  | 'recebido_total'
+  | 'vencido'
+  | 'cancelado'
+  | 'renegociado'
+
+export type FormaRecebimento =
+  | 'dinheiro'
+  | 'debito'
+  | 'credito'
+  | 'pix'
+  | 'convenio'
+  | 'boleto'
+  | 'promissoria'
+  | 'deposito'
+  | 'transferencia'
+
+export interface Recebimento {
+  id: string
+  conta_id: string
+  valor: number
+  data_recebimento: string
+  forma_recebimento: FormaRecebimento
+  observacoes?: string
+  created?: string
+}
+
+export interface ContaReceber {
+  id: string
+  venda_id: string
+  venda_origem: string
+  cliente_id: string
+  cliente_nome: string
+  descricao: string
+  valor_original: number
+  valor_recebido: number
+  valor_restante: number
+  data_vencimento: string
+  data_recebimento?: string
+  status: ContaReceberStatus
+  forma_pagamento: string
+  numero_parcelas: number
+  parcela_atual: number
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+
+export const CONTA_RECEBER_STATUS_LABELS: Record<ContaReceberStatus, string> = {
+  pendente: 'Pendente',
+  recebido_parcial: 'Recebido Parcial',
+  recebido_total: 'Recebido Total',
+  vencido: 'Vencido',
+  cancelado: 'Cancelado',
+  renegociado: 'Renegociado',
+}
+
+export const CONTA_RECEBER_FORMA_LABELS: Record<string, string> = {
+  dinheiro: 'Dinheiro',
+  debito: 'Débito',
+  credito: 'Crédito',
+  pix: 'PIX',
+  convenio: 'Convênio',
+  boleto: 'Boleto',
+  promissoria: 'Promissória',
+  deposito: 'Depósito',
+  transferencia: 'Transferência',
+}
+
+export const FORMA_RECEBIMENTO_LABELS: Record<FormaRecebimento, string> = {
+  dinheiro: 'Dinheiro',
+  debito: 'Débito',
+  credito: 'Crédito',
+  pix: 'PIX',
+  convenio: 'Convênio',
+  boleto: 'Boleto',
+  promissoria: 'Promissória',
+  deposito: 'Depósito',
+  transferencia: 'Transferência',
+}
+
+// ===== Módulo de Despesas =====
+
+export type DespesaCategoria =
+  | 'aluguel'
+  | 'salarios'
+  | 'comissoes'
+  | 'fornecedores'
+  | 'utilidades'
+  | 'marketing'
+  | 'manutencao'
+  | 'impostos'
+  | 'material_consumo'
+  | 'outros'
+
+export type DespesaFormaPagamento =
+  | 'dinheiro'
+  | 'debito'
+  | 'credito'
+  | 'pix'
+  | 'boleto'
+  | 'transferencia'
+
+export type DespesaStatus = 'a_pagar' | 'pago' | 'vencido' | 'cancelado'
+
+export const DESPESA_CATEGORIAS: DespesaCategoria[] = [
+  'aluguel',
+  'salarios',
+  'comissoes',
+  'fornecedores',
+  'utilidades',
+  'marketing',
+  'manutencao',
+  'impostos',
+  'material_consumo',
+  'outros',
+]
+
+export const DESPESA_CATEGORIA_LABELS: Record<DespesaCategoria, string> = {
+  aluguel: 'Aluguel',
+  salarios: 'Salários',
+  comissoes: 'Comissões',
+  fornecedores: 'Fornecedores',
+  utilidades: 'Utilidades (Água/Luz/Internet)',
+  marketing: 'Marketing',
+  manutencao: 'Manutenção',
+  impostos: 'Impostos',
+  material_consumo: 'Material de Consumo',
+  outros: 'Outros',
+}
+
+export const DESPESA_FORMA_PAGAMENTO_LABELS: Record<DespesaFormaPagamento, string> = {
+  dinheiro: 'Dinheiro',
+  debito: 'Débito',
+  credito: 'Crédito',
+  pix: 'PIX',
+  boleto: 'Boleto',
+  transferencia: 'Transferência',
+}
+
+export const DESPESA_STATUS_LABELS: Record<DespesaStatus, string> = {
+  a_pagar: 'A Pagar',
+  pago: 'Pago',
+  vencido: 'Vencido',
+  cancelado: 'Cancelado',
+}
+
+export interface Despesa {
+  id: string
+  descricao: string
+  valor: number
+  data_vencimento: string
+  data_pagamento?: string
+  categoria: DespesaCategoria
+  forma_pagamento?: DespesaFormaPagamento
+  status: DespesaStatus
+  valor_pago: number
+  observacoes?: string
+  comprovante?: string
+  created?: string
+  updated?: string
+}
+
+// ===== Módulo LGPD / Consentimentos =====
+
+export type TipoConsentimento = 'dados_cadastrais' | 'dados_saude' | 'marketing' | 'pesquisa'
+
+export const TIPOS_CONSENTIMENTO: TipoConsentimento[] = [
+  'dados_cadastrais',
+  'dados_saude',
+  'marketing',
+  'pesquisa',
+]
+
+export const ROTULO_CONSENTIMENTO: Record<TipoConsentimento, string> = {
+  dados_cadastrais: 'Dados Cadastrais',
+  dados_saude: 'Dados de Saúde',
+  marketing: 'Marketing',
+  pesquisa: 'Pesquisa',
+}
+
+export const TEXTO_PADRAO_CONSENTIMENTO: Record<TipoConsentimento, string> = {
+  dados_cadastrais:
+    'Autorizo a Audição360 a armazenar e processar meus dados cadastrais (nome, CPF, endereço, telefone, e-mail) para fins de identificação, contato e faturamento, conforme a Lei Geral de Proteção de Dados (LGPD — Lei 13.709/2018).',
+  dados_saude:
+    'Autorizo a Audição360 a coletar, armazenar e processar meus dados de saúde auditiva (exames, diagnósticos, prontuários clínicos) para fins de acompanhamento clínico e emissão de laudos, conforme a LGPD.',
+  marketing:
+    'Autorizo a Audição360 a utilizar meus dados de contato para envio de comunicações de marketing, promoções, lembretes de consulta e novidades sobre saúde auditiva.',
+  pesquisa:
+    'Autorizo a Audição360 a utilizar meus dados anonimizados para fins de pesquisa, estatística e melhoria dos serviços clínicos prestados.',
+}
+
+export interface Consentimento {
+  id: string
+  paciente_id: string
+  tipo: TipoConsentimento
+  texto: string
+  arquivo_url?: string
+  data_consentimento: string
+  revogado_em?: string
+  revogado_motivo?: string
+  created?: string
+  updated?: string
+}
+
+// ===== Módulo de Equipamentos =====
+
+export interface Equipment {
+  id: string
+  nome: string
+  modelo: string
+  marca: string
+  tipo: string
+  numero_serie: string
+  data_aquisicao: string
+  data_ultima_calibracao: string
+  data_proxima_calibracao: string
+  status: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+
+// ===== Módulo B2B / Empresas Parceiras =====
+
+export interface EmpresaParceira {
+  id: string
+  nome: string
+  cnpj?: string
+  telefone?: string
+  email?: string
+  contato?: string
+  comissao_padrao: number
+  ativo: boolean
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+
+export type VendaB2BStatus = 'pendente' | 'confirmada' | 'entregue' | 'cancelada'
+
+export type NFServicoStatus = 'pendente' | 'emitida' | 'cancelada' | 'erro'
+
+export interface NFServicoComissao {
+  id: string
+  venda_id: string
+  parceiro_id: string
+  numero_nf?: string
+  valor_servico: number
+  aliquota_iss: number
+  valor_iss: number
+  valor_liquido: number
+  status: NFServicoStatus
+  data_emissao?: string
+  created?: string
+  updated?: string
+}
+
+export interface VendaB2B {
+  id: string
+  parceiro_id: string
+  parceiro_nome: string
+  paciente_nome: string
+  data_venda: string
+  valor_total: number
+  comissao_percentual: number
+  comissao_valor: number
+  status: VendaB2BStatus
+  nf_servico?: NFServicoComissao
+  itens?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+
+export interface ClinicSettings {
+  id: string
+  nome_clinica: string
+  cnpj?: string
+  endereco?: string
+  telefone?: string
+  email?: string
+  site?: string
+  logo_url?: string
+  created?: string
+  updated?: string
+}
+
+// ===== Módulo NFS-e Config =====
+
+export type NfseB2BProvedor = 'betta' | 'giss' | 'eiss' | 'simples_nacional'
+
+export type NfseB2BAmbiente = 'homologacao' | 'producao'
+
+export interface PolicyTexts {
+  dados_cadastrais: { texto: string }
+  dados_saude: { texto: string }
+  marketing: { texto: string }
+  pesquisa: { texto: string }
+}
+
+// ===== Módulo de Templates de Laudos =====
+
+export type ExamReportTipoExame = 'audiometria' | 'imitanciometria' | 'teste_aparelho' | 'outro'
+
+export const EXAM_REPORT_TIPO_LABELS: Record<ExamReportTipoExame, string> = {
+  audiometria: 'Audiometria Tonal e Vocal',
+  imitanciometria: 'Imitanciometria',
+  teste_aparelho: 'Teste com Aparelho',
+  outro: 'Outro Exame',
+}
+
+export type ExamReportStatus = 'rascunho' | 'publicado' | 'arquivado'
+
+export const EXAM_REPORT_STATUS_LABELS: Record<ExamReportStatus, string> = {
+  rascunho: 'Rascunho',
+  publicado: 'Publicado',
+  arquivado: 'Arquivado',
+}
+
+export interface LayoutElementStyle {
+  fontFamily?: string
+  fontSize?: number
+  fontWeight?: 'normal' | 'bold'
+  fontStyle?: 'normal' | 'italic'
+  textDecoration?: 'none' | 'underline'
+  textAlign?: 'left' | 'center' | 'right'
+  color?: string
+  backgroundColor?: string
+  borderColor?: string
+  borderWidth?: number
+  marginTop?: number
+  marginBottom?: number
+  marginLeft?: number
+  marginRight?: number
+  paddingTop?: number
+  paddingBottom?: number
+  paddingLeft?: number
+  paddingRight?: number
+  lineHeight?: number
+  opacity?: number
+}
+
+export interface LayoutElement {
+  id: string
+  type: string
+  x: number
+  y: number
+  width: number
+  height: number
+  content?: string
+  style?: LayoutElementStyle
+  locked?: boolean
+  zIndex?: number
+  fieldKey?: string
+  imageUrl?: string
+  tableData?: { rows: number; cols: number; headers?: string[]; cells?: string[][] }
+  config?: Record<string, any>
+}
+
+export interface ExamReportTemplate {
+  id: string
+  nome_modelo: string
+  tipo_exame: ExamReportTipoExame
+  descricao?: string
+  versao: number
+  status: ExamReportStatus
+  largura_pagina: number
+  altura_pagina: number
+  orientacao: 'retrato' | 'paisagem'
+  margem_superior: number
+  margem_inferior: number
+  margem_esquerda: number
+  margem_direita: number
+  estrutura_layout: LayoutElement[]
+  logo_id?: string
+  logo_url?: string
+  cabecalho_configuracao?: Record<string, any>
+  rodape_configuracao?: Record<string, any>
+  fonte_padrao?: string
+  tamanho_fonte_padrao?: number
+  cor_primaria?: string
+  cor_secundaria?: string
+  observacoes?: string
+  criado_por?: string
+  atualizado_por?: string
+  publicado_por?: string
+  publicado_em?: string
+  created?: string
+  updated?: string
+}
+
+export interface ExamReportTemplateVersion {
+  id: string
+  template_id: string
+  numero_versao: number
+  estrutura_layout: LayoutElement[]
+  alterado_por?: string
+  motivo_alteracao?: string
+  created?: string
+}
+
+// ===== Módulo de Ordens de Serviço =====
+
+export type OrdemServicoStatus =
+  | 'aberta'
+  | 'em_andamento'
+  | 'aguardando_pecas'
+  | 'concluida'
+  | 'entregue'
+  | 'cancelada'
+
+export const ORDEM_SERVICO_STATUS_LABELS: Record<OrdemServicoStatus, string> = {
+  aberta: 'Aberta',
+  em_andamento: 'Em Andamento',
+  aguardando_pecas: 'Aguardando Peças',
+  concluida: 'Concluída',
+  entregue: 'Entregue',
+  cancelada: 'Cancelada',
+}
+
+export interface OrdemServico {
+  id: string
+  paciente_id: string
+  paciente_nome: string
+  aparelho_id?: string
+  tipo_servico: string
+  status: OrdemServicoStatus
+  descricao: string
+  valor: number
+  data_entrada: string
+  data_previsao?: string
+  data_saida?: string
+  tecnico?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+
+// ===== Constantes de Status diversos =====
+
+export const VENDA_STATUS_LABELS: Record<SaleStatus, string> = {
+  Pendente: 'Pendente',
+  Pago: 'Pago',
+  Cancelado: 'Cancelado',
+  Estornado: 'Estornado',
+  Concluída: 'Concluída',
+}
+
+export const APARELHO_STATUS_LABELS: Record<HearingAidStatus, string> = {
+  'Em uso': 'Em uso',
+  Estoque: 'Estoque',
+  Vendido: 'Vendido',
+  'Em manutenção': 'Em manutenção',
+}
+
+export const PACIENTE_STATUS_LABELS: Record<string, string> = {
+  Ativo: 'Ativo',
+  'Em tratamento': 'Em tratamento',
+  Inativo: 'Inativo',
+}
+
+export const AGENDAMENTO_STATUS_LABELS: Record<string, string> = {
+  Agendado: 'Agendado',
+  Confirmado: 'Confirmado',
+  Realizado: 'Realizado',
+  Faltou: 'Faltou',
+  Cancelado: 'Cancelado',
+}
