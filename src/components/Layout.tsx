@@ -33,6 +33,7 @@ import {
   Shield,
   KeyRound,
   ArrowDownCircle,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
@@ -188,6 +189,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           path: '/aparelhos',
           icon: Ear,
           roles: ['admin', 'profissional'],
+        },
+        {
+          name: 'Ordens de Serviço',
+          path: '/ordens-servico',
+          icon: Wrench,
+          roles: ALL_ROLES,
         },
       ],
     },

@@ -40,6 +40,7 @@ import Inadimplentes from '@/pages/Inadimplentes'
 import FluxoProjetado from '@/pages/FluxoProjetado'
 import Despesas from '@/pages/Despesas'
 import Lembretes from '@/pages/Lembretes'
+import OrdensServico from '@/pages/OrdensServico'
 import NotFound from '@/pages/NotFound'
 import ExamReportTemplatesList from '@/pages/laudos/ExamReportTemplatesList'
 import ExamReportTemplateNovo from '@/pages/laudos/ExamReportTemplateNovo'
@@ -273,6 +274,16 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <Vendas />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ===== Ordens de Serviço ===== */}
+            <Route
+              path="/ordens-servico"
+              element={
+                <ProtectedRoute>
+                  <OrdensServico />
                 </ProtectedRoute>
               }
             />
