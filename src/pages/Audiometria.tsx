@@ -596,11 +596,7 @@ export default function Audiometria() {
       clinicAddress: clinicSettings?.endereco,
       clinicPhone: clinicSettings?.telefone,
     })
-    const bodyNode = await renderExamReport({
-      tipoExame: 'audiometria',
-      context: ctx,
-      fallback: fallbackNode,
-    })
+    const bodyNode = fallbackNode
     print({
       title: 'Audiometria',
       subtitle: `${patient?.name || ''} — ${formatDate(exam.date)}`,
