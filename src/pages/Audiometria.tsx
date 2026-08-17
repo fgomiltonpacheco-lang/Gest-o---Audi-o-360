@@ -32,7 +32,10 @@ import {
   Loader2,
   RotateCcw,
   AlertTriangle,
+  Copy,
+  Info,
 } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { getEquipmentStatus } from '@/types'
 import {
   AIR_FREQS,
@@ -415,16 +418,55 @@ export default function Audiometria() {
       const cur = map[freq] || { db: null, symbol: 'normal' }
       let nextSymbol = cur.symbol
 
-      // Se o usuário está digitando um valor de dB, o símbolo PADRÃO é aplicado automaticamente
-      if ('db' in patch) {
-        nextSymbol = 'normal'
-      }
+      // Se o usuário está digitando um valor de dB, se symbol não foi explicitamente alterado e ainda for normal, mantém normal.
+      // Se symbol foi passado, atualiza.
       if ('symbol' in patch && patch.symbol) {
         nextSymbol = patch.symbol
+      } else if ('db' in patch && !cur.symbol) {
+        nextSymbol = 'normal'
       }
 
       map[freq] = { ...cur, ...patch, symbol: nextSymbol }
       return { ...prev, [target]: map }
+    })
+  }
+
+  const copyValuesToOtherEar = (fromEar: 'OD' | 'OE') => {
+    const toEar = fromEar === 'OD' ? 'OE' : 'OD'
+    setExam((prev) => {
+      if (fromEar === 'OD') {
+        return {
+          ...prev,
+          air_oe: JSON.parse(JSON.stringify(prev.air_od)),
+          bone_oe: JSON.parse(JSON.stringify(prev.bone_od)),
+          ldl_oe: JSON.parse(JSON.stringify(prev.ldl_od)),
+          srt_oe: prev.srt_od,
+          ldv_oe: prev.ldv_od,
+          iprf_vocal: {
+            ...prev.iprf_vocal,
+            oe: JSON.parse(JSON.stringify(prev.iprf_vocal.od)),
+          },
+        }
+      } else {
+        return {
+          ...prev,
+          air_od: JSON.parse(JSON.stringify(prev.air_oe)),
+          bone_od: JSON.parse(JSON.stringify(prev.bone_oe)),
+          ldl_od: JSON.parse(JSON.stringify(prev.ldl_oe)),
+          srt_od: prev.srt_oe,
+          ldv_od: prev.ldv_oe,
+          iprf_vocal: {
+            ...prev.iprf_vocal,
+            od: JSON.parse(JSON.stringify(prev.iprf_vocal.oe)),
+          },
+        }
+      }
+    })
+    toast({
+      title: `Valores replicados`,
+      description: `Valores copiados de Orelha ${fromEar === 'OD' ? 'Direita' : 'Esquerda'} para Orelha ${
+        toEar === 'OD' ? 'Direita' : 'Esquerda'
+      }.`,
     })
   }
 
@@ -634,8 +676,55 @@ export default function Audiometria() {
         />
       </div>
 
-      {/* ===================== Entrada de Dados por Orelha ===================== */}
-      <div className="no-print space-y-3">
+      {/* ===================== Entrada de Dados e Visualização ===================== */}
+      <div className="no-print space-y-4">
+        {/* 1. Visualização em Tempo Real (Gráficos dos audiogramas no topo) */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <Activity className="w-4 h-4 text-teal-600" />
+              Visualização em Tempo Real
+            </h2>
+            <span className="text-[11px] text-slate-500 font-medium">
+              Atualiza conforme a digitação
+            </span>
+          </div>
+
+          <AudiogramChart
+            airOD={exam.air_od}
+            airOE={exam.air_oe}
+            boneOD={exam.bone_od}
+            boneOE={exam.bone_oe}
+            ldlOD={exam.ldl_od}
+            ldlOE={exam.ldl_oe}
+            srtOD={exam.srt_od}
+            srtOE={exam.srt_oe}
+            ldvOD={exam.ldv_od}
+            ldvOE={exam.ldv_oe}
+            hideLegend
+          />
+
+          {/* Resumo de Médias Aérea no Topo (como na imagem 1) */}
+          <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100 text-xs">
+            <div className="text-slate-700">
+              <span className="font-extrabold text-red-600 block">Orelha Direita</span>
+              <span className="text-[10px] text-slate-400 block font-semibold">REF.:</span>
+              <span className="text-slate-600 font-medium">Média Aérea: </span>
+              <strong className="text-slate-900 font-bold">
+                {mediaTritonal(exam.air_od) !== null ? mediaTritonal(exam.air_od)?.toFixed(2) : '—'}
+              </strong>
+            </div>
+            <div className="text-slate-700">
+              <span className="font-extrabold text-blue-600 block">Orelha Esquerda</span>
+              <span className="text-[10px] text-slate-400 block font-semibold">REF.:</span>
+              <span className="text-slate-600 font-medium">Média Aérea: </span>
+              <strong className="text-slate-900 font-bold">
+                {mediaTritonal(exam.air_oe) !== null ? mediaTritonal(exam.air_oe)?.toFixed(2) : '—'}
+              </strong>
+            </div>
+          </div>
+        </div>
+
         {/* Seletor de equipamento (audiômetro) */}
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-end gap-3">
@@ -709,196 +798,124 @@ export default function Audiometria() {
             </div>
           )}
         </div>
-        {/* Audiometria Orelha Direita (VERMELHO) */}
-        <EarAudiometrySection
-          side="OD"
-          airMap={exam.air_od}
-          boneMap={exam.bone_od}
-          ldlMap={exam.ldl_od}
-          onAirDb={(f, raw) => setPoint('air_od', f, { db: handleDbInput(raw) })}
-          onAirSym={(f, sym) => setPoint('air_od', f, { symbol: sym })}
-          onBoneDb={(f, raw) => setPoint('bone_od', f, { db: handleDbInput(raw) })}
-          onBoneSym={(f, sym) => setPoint('bone_od', f, { symbol: sym })}
-          onLdlDb={(f, raw) => setPoint('ldl_od', f, { db: handleDbInput(raw) })}
-          onLdlSym={(f, sym) => setPoint('ldl_od', f, { symbol: sym })}
-          disabled={isSecretaria}
-        />
 
-        {/* Audiometria Orelha Esquerda (AZUL) */}
-        <EarAudiometrySection
-          side="OE"
-          airMap={exam.air_oe}
-          boneMap={exam.bone_oe}
-          ldlMap={exam.ldl_oe}
-          onAirDb={(f, raw) => setPoint('air_oe', f, { db: handleDbInput(raw) })}
-          onAirSym={(f, sym) => setPoint('air_oe', f, { symbol: sym })}
-          onBoneDb={(f, raw) => setPoint('bone_oe', f, { db: handleDbInput(raw) })}
-          onBoneSym={(f, sym) => setPoint('bone_oe', f, { symbol: sym })}
-          onLdlDb={(f, raw) => setPoint('ldl_oe', f, { db: handleDbInput(raw) })}
-          onLdlSym={(f, sym) => setPoint('ldl_oe', f, { symbol: sym })}
-          disabled={isSecretaria}
-        />
+        {/* 2. Interface por Abas: Orelha Direita / Orelha Esquerda */}
+        <Tabs defaultValue="od" className="w-full">
+          <TabsList className="bg-slate-100 p-1 rounded-xl border border-slate-200 h-auto">
+            <TabsTrigger
+              value="od"
+              className="data-[state=active]:bg-white data-[state=active]:text-red-600 font-extrabold text-xs px-5 py-2 rounded-lg transition-all"
+            >
+              Orelha Direita
+            </TabsTrigger>
+            <TabsTrigger
+              value="oe"
+              className="data-[state=active]:bg-white data-[state=active]:text-blue-600 font-extrabold text-xs px-5 py-2 rounded-lg transition-all"
+            >
+              Orelha Esquerda
+            </TabsTrigger>
+          </TabsList>
 
-        {/* SRT, LDV */}
-        <Section title="SRT e LDV" icon={<Activity className="w-4 h-4 text-teal-600" />}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {(['OD', 'OE'] as const).map((side) => {
-              const color = side === 'OD' ? 'text-red-600' : 'text-blue-600'
-              const borderCard =
-                side === 'OD'
-                  ? 'border-slate-200 hover:border-red-200'
-                  : 'border-slate-200 hover:border-blue-200'
-              const srtKey = side === 'OD' ? 'srt_od' : 'srt_oe'
-              const ldvKey = side === 'OD' ? 'ldv_od' : 'ldv_oe'
-              return (
-                <div
-                  key={side}
-                  className={`p-4 rounded-2xl border bg-slate-50/50 shadow-sm transition-colors space-y-3 ${borderCard}`}
-                >
-                  <h4 className={`text-xs font-extrabold uppercase tracking-wider ${color}`}>
-                    Orelha {side === 'OD' ? 'Direita (OD)' : 'Esquerda (OE)'}
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label="SRT — Limiar de Reconhecimento de Fala (dB)">
-                      <Input
-                        type="number"
-                        value={exam[srtKey] ?? ''}
-                        onChange={(e) =>
-                          setField(
-                            srtKey as any,
-                            e.target.value === '' ? null : Number(e.target.value),
-                          )
-                        }
-                        disabled={isSecretaria}
-                        className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
-                      />
-                    </Field>
-                    <Field label="LDV — Limiar de Detecção de Voz (dB)">
-                      <Input
-                        type="number"
-                        value={exam[ldvKey] ?? ''}
-                        onChange={(e) =>
-                          setField(
-                            ldvKey as any,
-                            e.target.value === '' ? null : Number(e.target.value),
-                          )
-                        }
-                        disabled={isSecretaria}
-                        className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
-                      />
-                    </Field>
+          {/* ABA ORELHA DIREITA */}
+          <TabsContent value="od" className="space-y-4 mt-3">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              {/* Botão de Replicação de Valores + Indicador OD */}
+              <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-red-50 border border-red-200 text-red-600 font-extrabold text-sm flex items-center justify-center">
+                    D
                   </div>
+                  <h3 className="text-sm font-bold text-slate-800">Audiometria Orelha Direita</h3>
                 </div>
-              )
-            })}
-          </div>
-        </Section>
+                {!isSecretaria && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyValuesToOtherEar('OD')}
+                    className="bg-slate-700 hover:bg-slate-800 text-white border-slate-700 rounded-xl text-xs font-semibold h-8"
+                  >
+                    <Copy className="w-3.5 h-3.5 mr-1.5" />
+                    Replicar Valores para outra Orelha
+                  </Button>
+                )}
+              </div>
 
-        {/* IPRF */}
-        <Section
-          title="I.P.R.F. (Índice de Reconhecimento Percentual de Fala)"
-          icon={<Activity className="w-4 h-4 text-teal-600" />}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {(['OD', 'OE'] as const).map((side) => {
-              const color = side === 'OD' ? 'text-red-600' : 'text-blue-600'
-              const borderCard =
-                side === 'OD'
-                  ? 'border-slate-200 hover:border-red-200'
-                  : 'border-slate-200 hover:border-blue-200'
-              const sideKey = side === 'OD' ? 'od' : 'oe'
-              const row = exam.iprf_vocal[sideKey]
-              return (
-                <div
-                  key={side}
-                  className={`p-4 rounded-2xl border bg-slate-50/50 shadow-sm space-y-3 ${borderCard}`}
-                >
-                  <h4 className={`text-xs font-extrabold uppercase tracking-wider ${color}`}>
-                    Orelha {side === 'OD' ? 'Direita (OD)' : 'Esquerda (OE)'}
-                  </h4>
-                  <div>
-                    <Field label="Intensidade (dB)">
-                      <Input
-                        type="number"
-                        value={row.intensidade}
-                        onChange={(e) =>
-                          setField('iprf_vocal', {
-                            ...exam.iprf_vocal,
-                            [sideKey]: { ...row, intensidade: e.target.value },
-                          })
-                        }
-                        disabled={isSecretaria}
-                        className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
-                      />
-                    </Field>
+              {/* Grade tonal OD */}
+              <EarAudiometrySection
+                side="OD"
+                airMap={exam.air_od}
+                boneMap={exam.bone_od}
+                ldlMap={exam.ldl_od}
+                onAirDb={(f, raw) => setPoint('air_od', f, { db: handleDbInput(raw) })}
+                onAirSym={(f, sym) => setPoint('air_od', f, { symbol: sym })}
+                onBoneDb={(f, raw) => setPoint('bone_od', f, { db: handleDbInput(raw) })}
+                onBoneSym={(f, sym) => setPoint('bone_od', f, { symbol: sym })}
+                onLdlDb={(f, raw) => setPoint('ldl_od', f, { db: handleDbInput(raw) })}
+                onLdlSym={(f, sym) => setPoint('ldl_od', f, { symbol: sym })}
+                disabled={isSecretaria}
+              />
+
+              {/* Seção Audiometria Vocal & IPRF OD (conforme imagem 3) */}
+              <EarVocalAndIprfSection
+                side="OD"
+                exam={exam}
+                setField={setField}
+                isSecretaria={isSecretaria}
+              />
+            </div>
+          </TabsContent>
+
+          {/* ABA ORELHA ESQUERDA */}
+          <TabsContent value="oe" className="space-y-4 mt-3">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              {/* Botão de Replicação de Valores + Indicador OE */}
+              <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 font-extrabold text-sm flex items-center justify-center">
+                    E
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label="Monossílabos (%)">
-                      <Input
-                        type="number"
-                        value={row.monossilabos}
-                        onChange={(e) =>
-                          setField('iprf_vocal', {
-                            ...exam.iprf_vocal,
-                            [sideKey]: { ...row, monossilabos: e.target.value },
-                          })
-                        }
-                        disabled={isSecretaria}
-                        className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
-                      />
-                    </Field>
-                    <Field label="Dissílabos (%)">
-                      <Input
-                        type="number"
-                        value={row.dissilabos}
-                        onChange={(e) =>
-                          setField('iprf_vocal', {
-                            ...exam.iprf_vocal,
-                            [sideKey]: { ...row, dissilabos: e.target.value },
-                          })
-                        }
-                        disabled={isSecretaria}
-                        className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
-                      />
-                    </Field>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label="Mascaramento (dB)">
-                      <Input
-                        type="number"
-                        value={row.mascaramento}
-                        onChange={(e) =>
-                          setField('iprf_vocal', {
-                            ...exam.iprf_vocal,
-                            [sideKey]: { ...row, mascaramento: e.target.value },
-                          })
-                        }
-                        disabled={isSecretaria}
-                        placeholder="—"
-                        className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
-                      />
-                    </Field>
-                    <Field label="Palavras Faladas">
-                      <Input
-                        type="number"
-                        value={row.palavras_faladas}
-                        onChange={(e) =>
-                          setField('iprf_vocal', {
-                            ...exam.iprf_vocal,
-                            [sideKey]: { ...row, palavras_faladas: e.target.value },
-                          })
-                        }
-                        disabled={isSecretaria}
-                        placeholder="—"
-                        className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white"
-                      />
-                    </Field>
-                  </div>
+                  <h3 className="text-sm font-bold text-slate-800">Audiometria Orelha Esquerda</h3>
                 </div>
-              )
-            })}
-          </div>
-        </Section>
+                {!isSecretaria && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyValuesToOtherEar('OE')}
+                    className="bg-slate-700 hover:bg-slate-800 text-white border-slate-700 rounded-xl text-xs font-semibold h-8"
+                  >
+                    <Copy className="w-3.5 h-3.5 mr-1.5" />
+                    Replicar Valores para outra Orelha
+                  </Button>
+                )}
+              </div>
+
+              {/* Grade tonal OE */}
+              <EarAudiometrySection
+                side="OE"
+                airMap={exam.air_oe}
+                boneMap={exam.bone_oe}
+                ldlMap={exam.ldl_oe}
+                onAirDb={(f, raw) => setPoint('air_oe', f, { db: handleDbInput(raw) })}
+                onAirSym={(f, sym) => setPoint('air_oe', f, { symbol: sym })}
+                onBoneDb={(f, raw) => setPoint('bone_oe', f, { db: handleDbInput(raw) })}
+                onBoneSym={(f, sym) => setPoint('bone_oe', f, { symbol: sym })}
+                onLdlDb={(f, raw) => setPoint('ldl_oe', f, { db: handleDbInput(raw) })}
+                onLdlSym={(f, sym) => setPoint('ldl_oe', f, { symbol: sym })}
+                disabled={isSecretaria}
+              />
+
+              {/* Seção Audiometria Vocal & IPRF OE */}
+              <EarVocalAndIprfSection
+                side="OE"
+                exam={exam}
+                setField={setField}
+                isSecretaria={isSecretaria}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Grau / Tipo / Configuração / Parecer */}
         <Section title="Parecer Audiológico" icon={<FileText className="w-4 h-4 text-teal-600" />}>
@@ -1784,6 +1801,525 @@ function IprfTable({ exam }: { exam: AudiometryExamFull }) {
           </tr>
         </tbody>
       </table>
+    </div>
+  )
+}
+
+/* =========================================================================
+   COMPONENTE: Seção Audiometria Vocal & Tabela IPRF por Orelha (Imagem 3)
+   ========================================================================= */
+
+interface EarVocalAndIprfSectionProps {
+  side: 'OD' | 'OE'
+  exam: ExamState
+  setField: <K extends keyof ExamState>(key: K, value: ExamState[K]) => void
+  isSecretaria?: boolean
+}
+
+function EarVocalAndIprfSection({
+  side,
+  exam,
+  setField,
+  isSecretaria,
+}: EarVocalAndIprfSectionProps) {
+  const isOd = side === 'OD'
+  const sideKey = isOd ? 'od' : 'oe'
+  const vocalRow = exam.iprf_vocal[sideKey]
+  const airMap = isOd ? exam.air_od : exam.air_oe
+
+  const trito = mediaTritonal(airMap)
+  const quadri = mediaQuadritonal(airMap)
+
+  const srtKey = isOd ? 'srt_od' : 'srt_oe'
+  const ldvKey = isOd ? 'ldv_od' : 'ldv_oe'
+
+  const updateVocalField = (field: string, val: string) => {
+    setField('iprf_vocal', {
+      ...exam.iprf_vocal,
+      [sideKey]: {
+        ...vocalRow,
+        [field]: val,
+      },
+    })
+  }
+
+  // Se o usuário digitar nº de erros em Monossílabos/Dissílabos ou vice-versa, podemos calcular ou permitir digitação direta
+  // Na imagem 3: Monossílabos, Dissílabos, Trissílabos, Polissílabos com Erros (#), Acertos (%), Intensidade (dB), Mascaramento e Valor do Mascaramento.
+  // Para manter compatibilidade total e extensibilidade, mapeamos monossílabos e dissílabos nos campos existentes.
+
+  return (
+    <div className="space-y-4 pt-2">
+      {/* Tabela IPRF */}
+      <div className="border border-slate-200 rounded-xl bg-white p-3 space-y-3">
+        <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">Tabela IPRF</h4>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs border-collapse border border-slate-200">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 text-[11px] font-bold">
+                <th className="py-2 px-3 text-left border-r border-slate-200">Sílabas</th>
+                <th className="py-2 px-3 text-center border-r border-slate-200">
+                  <span className="inline-flex items-center gap-1">
+                    Erros <Info className="w-3 h-3 text-slate-400" />
+                  </span>
+                </th>
+                <th className="py-2 px-3 text-center border-r border-slate-200">Acertos</th>
+                <th className="py-2 px-3 text-center border-r border-slate-200">Intensidade</th>
+                <th className="py-2 px-3 text-center border-r border-slate-200">Mascaramento</th>
+                <th className="py-2 px-3 text-center">Valor do Mascaramento</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {/* Monossílabos */}
+              <tr>
+                <td className="py-2 px-3 font-semibold text-slate-800 border-r border-slate-200">
+                  Monossílabos
+                </td>
+                <td className="p-1 border-r border-slate-200 text-center">
+                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
+                    <Input
+                      type="number"
+                      value={vocalRow.monossilabos_erros ?? ''}
+                      onChange={(e) => {
+                        const err = e.target.value
+                        const acerto =
+                          err !== ''
+                            ? String(Math.max(0, 100 - Number(err) * 4))
+                            : vocalRow.monossilabos
+                        updateVocalField('monossilabos_erros', err)
+                        updateVocalField('monossilabos', acerto)
+                      }}
+                      disabled={isSecretaria}
+                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-bold">#</span>
+                  </div>
+                </td>
+                <td className="p-1 border-r border-slate-200 text-center">
+                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
+                    <Input
+                      type="number"
+                      value={vocalRow.monossilabos}
+                      onChange={(e) => updateVocalField('monossilabos', e.target.value)}
+                      disabled={isSecretaria}
+                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-bold">%</span>
+                  </div>
+                </td>
+                <td className="p-1 border-r border-slate-200 text-center">
+                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
+                    <Input
+                      type="number"
+                      value={vocalRow.intensidade}
+                      onChange={(e) => updateVocalField('intensidade', e.target.value)}
+                      disabled={isSecretaria}
+                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-bold">dB</span>
+                  </div>
+                </td>
+                <td className="p-1 border-r border-slate-200 text-center">
+                  <Select
+                    value={vocalRow.tipo_mascaramento || '__none'}
+                    onValueChange={(v) =>
+                      updateVocalField('tipo_mascaramento', v === '__none' ? '' : v)
+                    }
+                    disabled={isSecretaria}
+                  >
+                    <SelectTrigger className="h-7 text-xs font-semibold border-slate-300 bg-white mx-auto max-w-[120px]">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">Selecione...</SelectItem>
+                      <SelectItem value="SN">SN</SelectItem>
+                      <SelectItem value="WN">WN</SelectItem>
+                      <SelectItem value="NB">NB</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </td>
+                <td className="p-1 text-center">
+                  <div className="flex items-center justify-center max-w-[100px] mx-auto">
+                    <Input
+                      type="number"
+                      value={vocalRow.mascaramento}
+                      onChange={(e) => updateVocalField('mascaramento', e.target.value)}
+                      disabled={isSecretaria}
+                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
+                    />
+                  </div>
+                </td>
+              </tr>
+
+              {/* Dissílabos */}
+              <tr>
+                <td className="py-2 px-3 font-semibold text-slate-800 border-r border-slate-200">
+                  Dissílabos
+                </td>
+                <td className="p-1 border-r border-slate-200 text-center">
+                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
+                    <Input
+                      type="number"
+                      value={vocalRow.dissilabos_erros ?? ''}
+                      onChange={(e) => {
+                        const err = e.target.value
+                        const acerto =
+                          err !== ''
+                            ? String(Math.max(0, 100 - Number(err) * 4))
+                            : vocalRow.dissilabos
+                        updateVocalField('dissilabos_erros', err)
+                        updateVocalField('dissilabos', acerto)
+                      }}
+                      disabled={isSecretaria}
+                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-bold">#</span>
+                  </div>
+                </td>
+                <td className="p-1 border-r border-slate-200 text-center">
+                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
+                    <Input
+                      type="number"
+                      value={vocalRow.dissilabos}
+                      onChange={(e) => updateVocalField('dissilabos', e.target.value)}
+                      disabled={isSecretaria}
+                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-bold">%</span>
+                  </div>
+                </td>
+                <td className="p-1 border-r border-slate-200 text-center">
+                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
+                    <Input
+                      type="number"
+                      value={vocalRow.intensidade_dissilabos ?? vocalRow.intensidade}
+                      onChange={(e) => updateVocalField('intensidade_dissilabos', e.target.value)}
+                      disabled={isSecretaria}
+                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-bold">dB</span>
+                  </div>
+                </td>
+                <td className="p-1 border-r border-slate-200 text-center">
+                  <Select
+                    value={
+                      vocalRow.tipo_mascaramento_dissilabos ||
+                      vocalRow.tipo_mascaramento ||
+                      '__none'
+                    }
+                    onValueChange={(v) =>
+                      updateVocalField('tipo_mascaramento_dissilabos', v === '__none' ? '' : v)
+                    }
+                    disabled={isSecretaria}
+                  >
+                    <SelectTrigger className="h-7 text-xs font-semibold border-slate-300 bg-white mx-auto max-w-[120px]">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">Selecione...</SelectItem>
+                      <SelectItem value="SN">SN</SelectItem>
+                      <SelectItem value="WN">WN</SelectItem>
+                      <SelectItem value="NB">NB</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </td>
+                <td className="p-1 text-center">
+                  <div className="flex items-center justify-center max-w-[100px] mx-auto">
+                    <Input
+                      type="number"
+                      value={vocalRow.mascaramento_dissilabos ?? vocalRow.mascaramento}
+                      onChange={(e) => updateVocalField('mascaramento_dissilabos', e.target.value)}
+                      disabled={isSecretaria}
+                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
+                    />
+                  </div>
+                </td>
+              </tr>
+
+              {/* Trissílabos */}
+              <tr>
+                <td className="py-2 px-3 font-semibold text-slate-800 border-r border-slate-200">
+                  Trissílabos
+                </td>
+                <td className="p-1 border-r border-slate-200 text-center">
+                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
+                    <Input
+                      type="number"
+                      value={vocalRow.trissilabos_erros ?? ''}
+                      onChange={(e) => updateVocalField('trissilabos_erros', e.target.value)}
+                      disabled={isSecretaria}
+                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-bold">#</span>
+                  </div>
+                </td>
+                <td className="p-1 border-r border-slate-200 text-center">
+                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
+                    <Input
+                      type="number"
+                      value={vocalRow.trissilabos ?? ''}
+                      onChange={(e) => updateVocalField('trissilabos', e.target.value)}
+                      disabled={isSecretaria}
+                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-bold">%</span>
+                  </div>
+                </td>
+                <td className="p-1 border-r border-slate-200 text-center">
+                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
+                    <Input
+                      type="number"
+                      value={vocalRow.intensidade_trissilabos ?? ''}
+                      onChange={(e) => updateVocalField('intensidade_trissilabos', e.target.value)}
+                      disabled={isSecretaria}
+                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-bold">dB</span>
+                  </div>
+                </td>
+                <td className="p-1 border-r border-slate-200 text-center">
+                  <Select
+                    value={vocalRow.tipo_mascaramento_trissilabos || '__none'}
+                    onValueChange={(v) =>
+                      updateVocalField('tipo_mascaramento_trissilabos', v === '__none' ? '' : v)
+                    }
+                    disabled={isSecretaria}
+                  >
+                    <SelectTrigger className="h-7 text-xs font-semibold border-slate-300 bg-white mx-auto max-w-[120px]">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">Selecione...</SelectItem>
+                      <SelectItem value="SN">SN</SelectItem>
+                      <SelectItem value="WN">WN</SelectItem>
+                      <SelectItem value="NB">NB</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </td>
+                <td className="p-1 text-center">
+                  <div className="flex items-center justify-center max-w-[100px] mx-auto">
+                    <Input
+                      type="number"
+                      value={vocalRow.mascaramento_trissilabos ?? ''}
+                      onChange={(e) => updateVocalField('mascaramento_trissilabos', e.target.value)}
+                      disabled={isSecretaria}
+                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
+                    />
+                  </div>
+                </td>
+              </tr>
+
+              {/* Polissílabos */}
+              <tr>
+                <td className="py-2 px-3 font-semibold text-slate-800 border-r border-slate-200">
+                  Polissílabos
+                </td>
+                <td className="p-1 border-r border-slate-200 text-center">
+                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
+                    <Input
+                      type="number"
+                      value={vocalRow.polissilabos_erros ?? ''}
+                      onChange={(e) => updateVocalField('polissilabos_erros', e.target.value)}
+                      disabled={isSecretaria}
+                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-bold">#</span>
+                  </div>
+                </td>
+                <td className="p-1 border-r border-slate-200 text-center">
+                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
+                    <Input
+                      type="number"
+                      value={vocalRow.polissilabos ?? ''}
+                      onChange={(e) => updateVocalField('polissilabos', e.target.value)}
+                      disabled={isSecretaria}
+                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-bold">%</span>
+                  </div>
+                </td>
+                <td className="p-1 border-r border-slate-200 text-center">
+                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
+                    <Input
+                      type="number"
+                      value={vocalRow.intensidade_polissilabos ?? ''}
+                      onChange={(e) => updateVocalField('intensidade_polissilabos', e.target.value)}
+                      disabled={isSecretaria}
+                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-bold">dB</span>
+                  </div>
+                </td>
+                <td className="p-1 border-r border-slate-200 text-center">
+                  <Select
+                    value={vocalRow.tipo_mascaramento_polissilabos || '__none'}
+                    onValueChange={(v) =>
+                      updateVocalField('tipo_mascaramento_polissilabos', v === '__none' ? '' : v)
+                    }
+                    disabled={isSecretaria}
+                  >
+                    <SelectTrigger className="h-7 text-xs font-semibold border-slate-300 bg-white mx-auto max-w-[120px]">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">Selecione...</SelectItem>
+                      <SelectItem value="SN">SN</SelectItem>
+                      <SelectItem value="WN">WN</SelectItem>
+                      <SelectItem value="NB">NB</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </td>
+                <td className="p-1 text-center">
+                  <div className="flex items-center justify-center max-w-[100px] mx-auto">
+                    <Input
+                      type="number"
+                      value={vocalRow.mascaramento_polissilabos ?? ''}
+                      onChange={(e) =>
+                        updateVocalField('mascaramento_polissilabos', e.target.value)
+                      }
+                      disabled={isSecretaria}
+                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
+                    />
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Cartões LRF (SRT) e LDV com Média Tritonal e Quadritonal (Imagem 3) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* LRF / SRT */}
+        <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-extrabold text-red-600">LRF</span>
+              <button
+                type="button"
+                onClick={() => setField(srtKey as any, exam[srtKey] === -1 ? null : -1)}
+                disabled={isSecretaria}
+                className={`text-[10px] font-bold px-2 py-0.5 rounded transition-all ${
+                  exam[srtKey] === -1
+                    ? 'bg-slate-700 text-white'
+                    : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                }`}
+              >
+                AUS
+              </button>
+            </div>
+            <div className="text-right text-[10px] text-slate-500 font-medium">
+              <div>Média Tritonal: {trito !== null ? `${trito.toFixed(2)} dB` : '—'}</div>
+              <div>Média Quadritonal: {quadri !== null ? `${quadri.toFixed(2)} dB` : '—'}</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <div>
+              <Label className="text-[10px] font-bold text-slate-600 block mb-1">Intensidade</Label>
+              <div className="flex items-center gap-1">
+                <Input
+                  type="number"
+                  value={exam[srtKey] === -1 ? '' : (exam[srtKey] ?? '')}
+                  onChange={(e) =>
+                    setField(srtKey as any, e.target.value === '' ? null : Number(e.target.value))
+                  }
+                  disabled={isSecretaria || exam[srtKey] === -1}
+                  className="h-8 text-xs font-semibold border-slate-300 bg-white"
+                />
+                <span className="text-xs font-bold text-slate-500">dB</span>
+              </div>
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold text-slate-600 block mb-1">
+                Mascaramento
+              </Label>
+              <Select
+                value={vocalRow.mascaramento_srt_tipo || '__none'}
+                onValueChange={(v) =>
+                  updateVocalField('mascaramento_srt_tipo', v === '__none' ? '' : v)
+                }
+                disabled={isSecretaria}
+              >
+                <SelectTrigger className="h-8 text-xs border-slate-300 bg-white">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Selecione...</SelectItem>
+                  <SelectItem value="SN">SN</SelectItem>
+                  <SelectItem value="WN">WN</SelectItem>
+                  <SelectItem value="NB">NB</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        {/* LDV */}
+        <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-extrabold text-red-600">LDV</span>
+              <button
+                type="button"
+                onClick={() => setField(ldvKey as any, exam[ldvKey] === -1 ? null : -1)}
+                disabled={isSecretaria}
+                className={`text-[10px] font-bold px-2 py-0.5 rounded transition-all ${
+                  exam[ldvKey] === -1
+                    ? 'bg-slate-700 text-white'
+                    : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                }`}
+              >
+                AUS
+              </button>
+            </div>
+            <div className="text-right text-[10px] text-slate-500 font-medium">
+              <div>Média Tritonal: {trito !== null ? `${trito.toFixed(2)} dB` : '—'}</div>
+              <div>Média Quadritonal: {quadri !== null ? `${quadri.toFixed(2)} dB` : '—'}</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <div>
+              <Label className="text-[10px] font-bold text-slate-600 block mb-1">Intensidade</Label>
+              <div className="flex items-center gap-1">
+                <Input
+                  type="number"
+                  value={exam[ldvKey] === -1 ? '' : (exam[ldvKey] ?? '')}
+                  onChange={(e) =>
+                    setField(ldvKey as any, e.target.value === '' ? null : Number(e.target.value))
+                  }
+                  disabled={isSecretaria || exam[ldvKey] === -1}
+                  className="h-8 text-xs font-semibold border-slate-300 bg-white"
+                />
+                <span className="text-xs font-bold text-slate-500">dB</span>
+              </div>
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold text-slate-600 block mb-1">
+                Mascaramento
+              </Label>
+              <Select
+                value={vocalRow.mascaramento_ldv_tipo || '__none'}
+                onValueChange={(v) =>
+                  updateVocalField('mascaramento_ldv_tipo', v === '__none' ? '' : v)
+                }
+                disabled={isSecretaria}
+              >
+                <SelectTrigger className="h-8 text-xs border-slate-300 bg-white">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Selecione...</SelectItem>
+                  <SelectItem value="SN">SN</SelectItem>
+                  <SelectItem value="WN">WN</SelectItem>
+                  <SelectItem value="NB">NB</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

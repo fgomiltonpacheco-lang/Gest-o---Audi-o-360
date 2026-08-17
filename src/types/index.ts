@@ -241,7 +241,25 @@ export interface IprfData {
 export interface IprfVocalRow {
   intensidade: string
   monossilabos: string
+  monossilabos_erros?: string
   dissilabos: string
+  dissilabos_erros?: string
+  intensidade_dissilabos?: string
+  tipo_mascaramento?: string
+  tipo_mascaramento_dissilabos?: string
+  mascaramento_dissilabos?: string
+  trissilabos?: string
+  trissilabos_erros?: string
+  intensidade_trissilabos?: string
+  tipo_mascaramento_trissilabos?: string
+  mascaramento_trissilabos?: string
+  polissilabos?: string
+  polissilabos_erros?: string
+  intensidade_polissilabos?: string
+  tipo_mascaramento_polissilabos?: string
+  mascaramento_polissilabos?: string
+  mascaramento_srt_tipo?: string
+  mascaramento_ldv_tipo?: string
   /** Mascaramento (dB) utilizado na pesquisa de IPRF. */
   mascaramento: string
   /** Quantidade de palavras faladas na pesquisa de IPRF. */
