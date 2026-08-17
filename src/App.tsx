@@ -79,6 +79,35 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <Layout>{children}</Layout>
 }
 
+// Rota proibida para a secretária: se o usuário for 'secretaria', exibe toast
+// de acesso restrito e redireciona para o Painel. Demais perfis (admin,
+// profissional) acessam normalmente. Usada para /aparelhos e
+// /relatorios/producao, que são ProtectedRoute na origem mas não devem ser
+// acessíveis à secretária via URL direta.
+const NonSecretariaRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentUser } = useApp()
+  const { toast } = useToast()
+
+  React.useEffect(() => {
+    if (currentUser && currentUser.role === 'secretaria') {
+      toast({
+        title: 'Acesso restrito',
+        description: 'Você não tem permissão para acessar esta área.',
+        variant: 'destructive',
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id, currentUser?.role])
+
+  if (!currentUser) {
+    return <Navigate to="/login" replace />
+  }
+  if (currentUser.role === 'secretaria') {
+    return <Navigate to="/" replace />
+  }
+  return <Layout>{children}</Layout>
+}
+
 // Rota pública de login: se já autenticado, redireciona para o Painel /
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useApp()
@@ -288,9 +317,9 @@ export function App() {
             <Route
               path="/relatorios/producao"
               element={
-                <ProtectedRoute>
+                <NonSecretariaRoute>
                   <RelatorioProducao />
-                </ProtectedRoute>
+                </NonSecretariaRoute>
               }
             />
             <Route

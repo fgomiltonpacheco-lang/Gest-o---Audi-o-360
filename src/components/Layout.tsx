@@ -125,9 +125,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     path: string
     icon: LucideIcon
     exact?: boolean
-    adminOnly?: boolean
+    // Perfis que podem ver este item. Ausente = visível para todos.
+    roles?: string[]
     children?: NavItem[]
   }
+
+  // Perfis disponíveis no sistema
+  const ALL_ROLES = ['admin', 'profissional', 'secretaria']
+  const ADMIN_ONLY: string[] = ['admin']
 
   // Menu agrupado institucional
   const allNavigationGroups: { groupTitle: string; items: NavItem[] }[] = [
@@ -139,6 +144,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           path: '/',
           icon: LayoutDashboard,
           exact: true,
+          roles: ALL_ROLES,
         },
       ],
     },
@@ -149,22 +155,26 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           name: 'Pacientes',
           path: '/pacientes',
           icon: Users,
+          roles: ALL_ROLES,
         },
         {
           name: 'Agenda',
           path: '/agenda',
           icon: Calendar,
+          roles: ALL_ROLES,
           children: [
             {
               name: 'Agenda',
               path: '/agenda',
               icon: Calendar,
               exact: true,
+              roles: ALL_ROLES,
             },
             {
               name: 'Lembretes',
               path: '/agenda/lembretes',
               icon: MessageCircle,
+              roles: ALL_ROLES,
             },
           ],
         },
@@ -177,6 +187,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           name: 'Aparelhos Auditivos',
           path: '/aparelhos',
           icon: Ear,
+          roles: ['admin', 'profissional'],
         },
       ],
     },
@@ -187,120 +198,121 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           name: 'Vendas',
           path: '/vendas',
           icon: ShoppingCart,
+          roles: ALL_ROLES,
         },
         {
           name: 'Vendas B2B',
           path: '/vendas-b2b',
           icon: Building2,
-          adminOnly: true,
+          roles: ADMIN_ONLY,
         },
         {
           name: 'Comissões B2B',
           path: '/relatorios/comissoes-b2b',
           icon: PieChart,
-          adminOnly: true,
+          roles: ADMIN_ONLY,
         },
         {
           name: 'Parceiros',
           path: '/empresas-parceiras',
           icon: Handshake,
-          adminOnly: true,
+          roles: ADMIN_ONLY,
         },
         {
           name: 'Financeiro',
           path: '/financeiro',
           icon: DollarSign,
-          adminOnly: true,
+          roles: ADMIN_ONLY,
         },
         {
           name: 'Caixa',
           path: '/financeiro/caixa',
           icon: Wallet,
-          adminOnly: true,
+          roles: ADMIN_ONLY,
         },
         {
           name: 'Contas a Receber',
           path: '/financeiro/contas-receber',
           icon: DollarSign,
-          adminOnly: true,
+          roles: ADMIN_ONLY,
         },
         {
           name: 'Despesas',
           path: '/financeiro/despesas',
           icon: ArrowDownCircle,
-          adminOnly: true,
+          roles: ADMIN_ONLY,
         },
         {
           name: 'Inadimplentes',
           path: '/financeiro/inadimplentes',
           icon: TrendingDown,
-          adminOnly: true,
+          roles: ADMIN_ONLY,
         },
         {
           name: 'Fluxo Projetado',
           path: '/financeiro/fluxo-projetado',
           icon: CalendarRange,
-          adminOnly: true,
+          roles: ADMIN_ONLY,
         },
         {
           name: 'Estoque',
           path: '/estoque',
           icon: Package,
-          adminOnly: true,
+          roles: ADMIN_ONLY,
         },
         {
           name: 'Relatórios',
           path: '/relatorios',
           icon: BarChart3,
-          adminOnly: true,
+          roles: ['admin', 'profissional'],
           children: [
             {
               name: 'Comissões B2B',
               path: '/relatorios/comissoes-b2b',
               icon: PieChart,
-              adminOnly: true,
+              roles: ADMIN_ONLY,
             },
             {
               name: 'Faturamento',
               path: '/relatorios/faturamento',
               icon: DollarSign,
-              adminOnly: true,
+              roles: ADMIN_ONLY,
             },
             {
               name: 'Produção por Profissional',
               path: '/relatorios/producao',
               icon: BarChart3,
-              adminOnly: false,
+              roles: ['admin', 'profissional'],
             },
             {
               name: 'Taxa de Conversão',
               path: '/relatorios/conversao',
               icon: Target,
-              adminOnly: true,
+              roles: ADMIN_ONLY,
             },
             {
               name: 'No-Show / Faltas',
               path: '/relatorios/no-show',
               icon: CalendarX,
-              adminOnly: true,
+              roles: ADMIN_ONLY,
             },
             {
               name: 'Pacientes Novos vs. Retornos',
               path: '/relatorios/pacientes-fluxo',
               icon: UserPlus,
-              adminOnly: true,
+              roles: ADMIN_ONLY,
             },
             {
               name: 'Estoque Baixo',
               path: '/relatorios/estoque-baixo',
               icon: Package,
-              adminOnly: true,
+              roles: ADMIN_ONLY,
             },
             {
               name: 'Garantias Vencendo',
               path: '/relatorios/garantias',
               icon: Shield,
-              adminOnly: true,
+              roles: ADMIN_ONLY,
             },
           ],
         },
@@ -308,13 +320,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           name: 'Configurações',
           path: '/configuracoes',
           icon: SlidersHorizontal,
-          adminOnly: true,
+          roles: ADMIN_ONLY,
         },
         {
           name: 'Auditoria',
           path: '/admin/auditoria',
           icon: ShieldCheck,
-          adminOnly: true,
+          roles: ADMIN_ONLY,
         },
       ],
     },
@@ -325,43 +337,46 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           name: 'Perfil',
           path: '/perfil',
           icon: Settings,
+          roles: ALL_ROLES,
         },
         {
           name: 'Alterar Senha',
           path: '/alterar-senha',
           icon: KeyRound,
+          roles: ALL_ROLES,
         },
         {
           name: 'Usuários',
           path: '/usuarios',
           icon: UserCog,
-          adminOnly: true,
+          roles: ADMIN_ONLY,
         },
         {
           name: 'Procedimentos',
           path: '/procedimentos',
           icon: ListChecks,
-          adminOnly: true,
+          roles: ADMIN_ONLY,
         },
       ],
     },
   ]
 
+  // Item visível quando não define `roles` (todos) ou quando o role do
+  // usuário atual está listado em `roles`.
+  const itemAllowed = (item: NavItem) =>
+    !item.roles || (currentUser?.role ? item.roles.includes(currentUser.role) : false)
+
   const navigationGroups = allNavigationGroups
     .map((group) => ({
       ...group,
-      items: group.items
-        .filter((item) => !item.adminOnly || currentUser?.role === 'admin')
-        .map((item) =>
-          item.children
-            ? {
-                ...item,
-                children: item.children.filter(
-                  (c) => !c.adminOnly || currentUser?.role === 'admin',
-                ),
-              }
-            : item,
-        ),
+      items: group.items.filter(itemAllowed).map((item) =>
+        item.children
+          ? {
+              ...item,
+              children: item.children.filter(itemAllowed),
+            }
+          : item,
+      ),
     }))
     .filter((group) => group.items.length > 0)
 

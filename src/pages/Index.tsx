@@ -19,6 +19,8 @@ import {
   Building2,
   TrendingUp,
   Receipt,
+  Search,
+  ShoppingCart,
 } from 'lucide-react'
 import {
   formatCurrency,
@@ -44,10 +46,13 @@ export default function Index() {
   } = useApp()
   const navigate = useNavigate()
 
-  // Carrega vendas B2B para o card de resumo
+  // Perfil da secretária: vê um Painel simplificado (sem dados financeiros/estoque)
+  const isSecretaria = currentUser?.role === 'secretaria'
+
+  // Carrega vendas B2B para o card de resumo (apenas para perfis que vêem B2B)
   useEffect(() => {
-    fetchVendasB2B()
-  }, [fetchVendasB2B])
+    if (!isSecretaria) fetchVendasB2B()
+  }, [fetchVendasB2B, isSecretaria])
 
   // Data atual
   const today = new Date()
@@ -146,6 +151,7 @@ export default function Index() {
       trendUp: true,
       iconBg: 'bg-teal-100 text-navy-700',
       link: '/pacientes',
+      hideForSecretaria: false,
     },
     {
       title: 'Consultas de Hoje',
@@ -156,6 +162,7 @@ export default function Index() {
       trendUp: true,
       iconBg: 'bg-emerald-100 text-emerald-700',
       link: '/agenda',
+      hideForSecretaria: false,
     },
     {
       title: 'Consultas no Mês',
@@ -166,6 +173,7 @@ export default function Index() {
       trendUp: true,
       iconBg: 'bg-purple-100 text-purple-700',
       link: '/agenda',
+      hideForSecretaria: false,
     },
     {
       title: 'Aparelhos no Mês',
@@ -176,6 +184,7 @@ export default function Index() {
       trendUp: true,
       iconBg: 'bg-orange-100 text-orange-700',
       link: '/aparelhos',
+      hideForSecretaria: true,
     },
     {
       title: 'Receita do Mês',
@@ -186,6 +195,7 @@ export default function Index() {
       trendUp: true,
       iconBg: 'bg-emerald-100 text-emerald-700',
       link: '/financeiro',
+      hideForSecretaria: true,
     },
     {
       title: 'Parcelas em Atraso',
@@ -196,8 +206,9 @@ export default function Index() {
       trendUp: false,
       iconBg: 'bg-red-100 text-red-700',
       link: '/financeiro',
+      hideForSecretaria: true,
     },
-  ]
+  ].filter((c) => !(isSecretaria && c.hideForSecretaria))
 
   const getAlertIcon = (type: string) => {
     switch (type) {
@@ -223,24 +234,100 @@ export default function Index() {
           <p className="text-sm text-slate-500 capitalize mt-1">{formatDateFullExtensive(today)}</p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <Button
-            onClick={() => navigate('/agenda')}
-            variant="outline"
-            className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10"
-          >
-            <Calendar className="w-4 h-4 mr-1.5 text-teal-600" />
-            Ver Agenda
-          </Button>
-          <Button
-            onClick={() => navigate('/pacientes')}
-            className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            Novo Atendimento
-          </Button>
-        </div>
+        {isSecretaria ? (
+          <div className="flex items-center gap-2.5">
+            <Button
+              onClick={() => navigate('/vendas')}
+              className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              Nova Venda
+            </Button>
+            <Button
+              onClick={() => navigate('/pacientes')}
+              variant="outline"
+              className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10"
+            >
+              <Search className="w-4 h-4 mr-1.5 text-teal-600" />
+              Buscar Paciente
+            </Button>
+            <Button
+              onClick={() => navigate('/agenda')}
+              variant="outline"
+              className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10"
+            >
+              <Calendar className="w-4 h-4 mr-1.5 text-teal-600" />
+              Agenda do Dia
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2.5">
+            <Button
+              onClick={() => navigate('/agenda')}
+              variant="outline"
+              className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10"
+            >
+              <Calendar className="w-4 h-4 mr-1.5 text-teal-600" />
+              Ver Agenda
+            </Button>
+            <Button
+              onClick={() => navigate('/pacientes')}
+              className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold h-10 shadow-sm flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              Novo Atendimento
+            </Button>
+          </div>
+        )}
       </div>
+
+      {/* Atalhos rápidos para a secretária */}
+      {isSecretaria && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <button
+            onClick={() => navigate('/vendas')}
+            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group text-left flex items-center gap-4"
+          >
+            <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
+              <ShoppingCart className="w-6 h-6 text-teal-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-teal-600 transition-colors">
+                Nova Venda
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">Registrar venda e comprovante</p>
+            </div>
+          </button>
+          <button
+            onClick={() => navigate('/pacientes')}
+            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group text-left flex items-center gap-4"
+          >
+            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+              <Search className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors">
+                Buscar Paciente
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">Localizar e abrir prontuário</p>
+            </div>
+          </button>
+          <button
+            onClick={() => navigate('/agenda')}
+            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group text-left flex items-center gap-4"
+          >
+            <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+              <Calendar className="w-6 h-6 text-amber-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-amber-600 transition-colors">
+                Agenda do Dia
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">Consultas de hoje</p>
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* Grid de 6 Cards de Métricas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -285,71 +372,73 @@ export default function Index() {
       </div>
 
       {/* Card de Vendas B2B */}
-      <div
-        onClick={() => navigate('/vendas-b2b')}
-        className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group"
-      >
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shadow-inner text-2xl">
-              🏢
+      {!isSecretaria && (
+        <div
+          onClick={() => navigate('/vendas-b2b')}
+          className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shadow-inner text-2xl">
+                🏢
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 group-hover:text-blue-700 transition-colors">
+                  Vendas B2B
+                </h3>
+                <p className="text-[11px] text-slate-400 capitalize">{mesAtualLabel}</p>
+              </div>
+            </div>
+            <Building2 className="w-5 h-5 text-slate-300 group-hover:text-blue-600 transition-colors" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <div>
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                Vendas B2B do Mês
+              </p>
+              <p className="text-lg font-extrabold text-slate-900 mt-0.5">
+                {formatCurrency(b2bResumo.vendasMes)}
+              </p>
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-slate-900 group-hover:text-blue-700 transition-colors">
-                Vendas B2B
-              </h3>
-              <p className="text-[11px] text-slate-400 capitalize">{mesAtualLabel}</p>
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                Comissões do Mês
+              </p>
+              <p className="text-lg font-extrabold text-emerald-600 mt-0.5">
+                {formatCurrency(b2bResumo.comissaoMes)}
+              </p>
             </div>
-          </div>
-          <Building2 className="w-5 h-5 text-slate-300 group-hover:text-blue-600 transition-colors" />
-        </div>
-
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-          <div>
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-              Vendas B2B do Mês
-            </p>
-            <p className="text-lg font-extrabold text-slate-900 mt-0.5">
-              {formatCurrency(b2bResumo.vendasMes)}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-              Comissões do Mês
-            </p>
-            <p className="text-lg font-extrabold text-emerald-600 mt-0.5">
-              {formatCurrency(b2bResumo.comissaoMes)}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider">
-              Comissões a Receber
-            </p>
-            <p className="text-lg font-extrabold text-amber-600 mt-0.5">
-              {formatCurrency(b2bResumo.comissaoReceber)}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold text-green-700 uppercase tracking-wider">
-              Comissões Recebidas
-            </p>
-            <p className="text-lg font-extrabold text-green-600 mt-0.5">
-              {formatCurrency(b2bResumo.comissaoRecebida)}
-            </p>
-          </div>
-          <div className="col-span-2 sm:col-span-1">
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-              Repasses Pendentes
-            </p>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-lg font-extrabold text-amber-600">
-                {b2bResumo.nfsPendentes}
-              </span>
-              <Receipt className="w-4 h-4 text-amber-500" />
+            <div>
+              <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider">
+                Comissões a Receber
+              </p>
+              <p className="text-lg font-extrabold text-amber-600 mt-0.5">
+                {formatCurrency(b2bResumo.comissaoReceber)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-green-700 uppercase tracking-wider">
+                Comissões Recebidas
+              </p>
+              <p className="text-lg font-extrabold text-green-600 mt-0.5">
+                {formatCurrency(b2bResumo.comissaoRecebida)}
+              </p>
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                Repasses Pendentes
+              </p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-lg font-extrabold text-amber-600">
+                  {b2bResumo.nfsPendentes}
+                </span>
+                <Receipt className="w-4 h-4 text-amber-500" />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Seção Principal: Próximos Agendamentos (60%) e Central de Alertas (40%) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -497,73 +586,139 @@ export default function Index() {
         </div>
 
         {/* Lado Direito: Central de Alertas e Notificações (40%) */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <span>Central de Alertas</span>
-                  <Badge variant="destructive" className="px-2 py-0.5 text-xs font-semibold">
-                    {alerts.length} pendentes
-                  </Badge>
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Garantias, parcelas e estoque crítico
-                </p>
+        {!isSecretaria && (
+          <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span>Central de Alertas</span>
+                    <Badge variant="destructive" className="px-2 py-0.5 text-xs font-semibold">
+                      {alerts.length} pendentes
+                    </Badge>
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Garantias, parcelas e estoque crítico
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {alerts.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400 bg-slate-50 rounded-xl">
+                    Nenhum alerta crítico ativo no momento.
+                  </div>
+                ) : (
+                  alerts.slice(0, 5).map((alert) => (
+                    <div
+                      key={alert.id}
+                      onClick={() => navigate(alert.linkUrl)}
+                      className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-white hover:border-teal-300 hover:shadow-sm transition-all cursor-pointer group flex items-start gap-3"
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                          alert.severity === 'danger'
+                            ? 'bg-red-50 text-red-600'
+                            : alert.severity === 'warning'
+                              ? 'bg-amber-50 text-amber-600'
+                              : 'bg-teal-50 text-teal-600'
+                        }`}
+                      >
+                        {getAlertIcon(alert.type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <h4 className="text-xs font-bold text-slate-900 group-hover:text-teal-600 truncate">
+                            {alert.title}
+                          </h4>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-600 shrink-0" />
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">
+                          {alert.description}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
-            <div className="space-y-3">
-              {alerts.length === 0 ? (
-                <div className="p-8 text-center text-xs text-slate-400 bg-slate-50 rounded-xl">
-                  Nenhum alerta crítico ativo no momento.
-                </div>
-              ) : (
-                alerts.slice(0, 5).map((alert) => (
-                  <div
-                    key={alert.id}
-                    onClick={() => navigate(alert.linkUrl)}
-                    className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-white hover:border-teal-300 hover:shadow-sm transition-all cursor-pointer group flex items-start gap-3"
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                        alert.severity === 'danger'
-                          ? 'bg-red-50 text-red-600'
-                          : alert.severity === 'warning'
-                            ? 'bg-amber-50 text-amber-600'
-                            : 'bg-teal-50 text-teal-600'
-                      }`}
-                    >
-                      {getAlertIcon(alert.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <h4 className="text-xs font-bold text-slate-900 group-hover:text-teal-600 truncate">
-                          {alert.title}
-                        </h4>
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-600 shrink-0" />
-                      </div>
-                      <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">
-                        {alert.description}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div className="mt-6 pt-4 border-t border-slate-100">
+              <Button
+                variant="outline"
+                onClick={() => navigate('/relatorios')}
+                className="w-full text-xs font-semibold text-teal-600 border-teal-200 hover:bg-teal-50 rounded-xl h-10"
+              >
+                Ver Todos os Relatórios e Auditoria
+              </Button>
             </div>
           </div>
+        )}
+      </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-100">
+      {/* Resumo de pacientes atendidos hoje — exclusivo da secretária */}
+      {isSecretaria && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <span>Pacientes Atendidos Hoje</span>
+                <Badge
+                  variant="secondary"
+                  className="bg-emerald-50 text-emerald-700 font-semibold text-xs"
+                >
+                  {todayAppointments.filter((a) => a.status === 'Realizado').length} realizados
+                </Badge>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Acompanhamento dos atendimentos do dia
+              </p>
+            </div>
             <Button
-              variant="outline"
-              onClick={() => navigate('/relatorios')}
-              className="w-full text-xs font-semibold text-teal-600 border-teal-200 hover:bg-teal-50 rounded-xl h-10"
+              variant="ghost"
+              onClick={() => navigate('/agenda')}
+              className="text-xs text-teal-600 hover:text-teal-700 hover:bg-teal-50 font-semibold p-2 h-auto"
             >
-              Ver Todos os Relatórios e Auditoria
+              Ver agenda
+              <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                Agendados
+              </p>
+              <p className="text-2xl font-extrabold text-slate-900 mt-1">
+                {todayAppointments.length}
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+              <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">
+                Realizados
+              </p>
+              <p className="text-2xl font-extrabold text-emerald-700 mt-1">
+                {todayAppointments.filter((a) => a.status === 'Realizado').length}
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-100">
+              <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider">
+                Pendentes
+              </p>
+              <p className="text-2xl font-extrabold text-amber-700 mt-1">
+                {todayAppointments.filter((a) => a.status !== 'Realizado').length}
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-red-50 border border-red-100">
+              <p className="text-[11px] font-semibold text-red-700 uppercase tracking-wider">
+                Cancelados
+              </p>
+              <p className="text-2xl font-extrabold text-red-700 mt-1">
+                {appointments.filter((a) => a.date === todayStr && a.status === 'Cancelado').length}
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
