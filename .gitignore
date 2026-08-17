@@ -43,8 +43,11 @@ screenshot.png
 .oxlintcache
 
 # Environment variables
+.env
+.env.local
+.env.production
 .env*
-!.env
+!.env.example
 
 # Linux kernel core dumps (e.g. when oxfmt or pnpm crash)
 core.[0-9]*
