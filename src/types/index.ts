@@ -1375,3 +1375,63 @@ export const AGENDAMENTO_STATUS_LABELS: Record<string, string> = {
   Faltou: 'Faltou',
   Cancelado: 'Cancelado',
 }
+
+// ===== Tipos auxiliares (mantidos para compatibilidade com módulos existentes) =====
+
+export type FechamentoCaixaStatus = 'aberto' | 'fechado'
+
+export type ContaReceberForma =
+  | 'dinheiro'
+  | 'debito'
+  | 'credito'
+  | 'pix'
+  | 'convenio'
+  | 'boleto'
+  | 'promissoria'
+  | 'deposito'
+  | 'transferencia'
+  | 'cartao'
+
+export type ContaReceberOrigem = 'pdv' | 'b2b'
+
+export interface SystemAlert {
+  id: string
+  type: 'warranty' | 'installment' | 'stock' | 'followup' | 'calibration'
+  subtype?: 'baixo' | 'zerado' | 'vencido' | 'vencendo'
+  severity: 'info' | 'warning' | 'danger'
+  title: string
+  description: string
+  linkUrl: string
+  targetId?: string
+  date?: string
+}
+
+export interface ItemVendaB2B {
+  id: string
+  venda_b2b_id: string
+  produto_id: string
+  produto_nome: string
+  quantidade: number
+  valor_unitario: number
+  valor_subtotal: number
+  created?: string
+}
+
+export interface NfseB2BConfig {
+  id: string
+  municipio: string
+  uf: string
+  codigo_municipio: string
+  provedor: 'BETHA' | 'giss' | 'eiss' | 'simples_nacional'
+  url_api: string
+  login_api: string
+  token_api: string
+  inscricao_municipal: string
+  aliquota_iss_padrao: number
+  item_lista_servico: string
+  discriminacao_padrao: string
+  ambiente: 'homologacao' | 'producao'
+  ativo: boolean
+  created?: string
+  updated?: string
+}
