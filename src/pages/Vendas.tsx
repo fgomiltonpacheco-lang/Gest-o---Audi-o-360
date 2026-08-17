@@ -43,7 +43,16 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import type { Sale, SaleStatus, PDVPaymentMethod, SaleItem, Patient } from '@/types'
+import type {
+  Sale,
+  SaleStatus,
+  PDVPaymentMethod,
+  SaleItem,
+  Patient,
+  StockItem,
+  InventoryCategoria,
+} from '@/types'
+import { INVENTORY_CATEGORIA_LABELS } from '@/types'
 
 const PAGE_SIZE = 10
 
@@ -72,7 +81,7 @@ const paymentIcon = (m: string) => {
 
 export default function Vendas() {
   const navigate = useNavigate()
-  const { sales, currentUser, cancelSale, addSale, updateSale, patients } = useApp()
+  const { sales, currentUser, cancelSale, addSale, updateSale, patients, stockItems } = useApp()
   const { toast } = useToast()
   const { print } = usePrint()
 
@@ -91,12 +100,24 @@ export default function Vendas() {
   const isAdmin = currentUser?.role === 'admin'
 
   // ---- Nova Venda (modal simplificado) ----
+  interface NvSelectedItem {
+    key: string
+    stockItemId: string
+    name: string
+    categoria?: InventoryCategoria
+    quantity: number
+    unitPrice: number
+    currentQuantity: number
+    isService: boolean
+  }
+
   const [newSaleOpen, setNewSaleOpen] = useState(false)
   const [savingNewSale, setSavingNewSale] = useState(false)
   const [nvPatientQuery, setNvPatientQuery] = useState('')
   const [nvPatient, setNvPatient] = useState<Patient | null>(null)
-  const [nvItems, setNvItems] = useState('')
-  const [nvTotal, setNvTotal] = useState('')
+  const [nvSelectedItems, setNvSelectedItems] = useState<NvSelectedItem[]>([])
+  const [nvItemQuery, setNvItemQuery] = useState('')
+  const [nvItemSearchOpen, setNvItemSearchOpen] = useState(false)
   const [nvPayment, setNvPayment] = useState<PDVPaymentMethod>('Dinheiro')
   const [nvInstallments, setNvInstallments] = useState('1')
   const [nvNotes, setNvNotes] = useState('')
@@ -278,11 +299,58 @@ export default function Vendas() {
     return patients.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 6)
   }, [patients, nvPatientQuery])
 
+  // ---- Autocomplete de itens do estoque (Nova Venda) ----
+  const itemSuggestions = useMemo(() => {
+    const q = nvItemQuery.trim().toLowerCase()
+    if (!q) return []
+    return stockItems.filter((it) => it.name.toLowerCase().includes(q)).slice(0, 8)
+  }, [stockItems, nvItemQuery])
+
+  const nvTotal = useMemo(
+    () => nvSelectedItems.reduce((acc, it) => acc + (it.quantity || 0) * (it.unitPrice || 0), 0),
+    [nvSelectedItems],
+  )
+
+  const addNvItem = (item: StockItem) => {
+    const isService = item.categoria === 'servico'
+    // se já existe, soma 1 à quantidade
+    setNvSelectedItems((prev) => {
+      const existing = prev.find((p) => p.stockItemId === item.id)
+      if (existing) {
+        return prev.map((p) => (p.stockItemId === item.id ? { ...p, quantity: p.quantity + 1 } : p))
+      }
+      return [
+        ...prev,
+        {
+          key: crypto.randomUUID(),
+          stockItemId: item.id,
+          name: item.name,
+          categoria: item.categoria,
+          quantity: 1,
+          unitPrice: item.salePrice,
+          currentQuantity: item.currentQuantity,
+          isService,
+        },
+      ]
+    })
+    setNvItemQuery('')
+    setNvItemSearchOpen(false)
+  }
+
+  const updateNvItem = (key: string, patch: Partial<NvSelectedItem>) => {
+    setNvSelectedItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...patch } : it)))
+  }
+
+  const removeNvItem = (key: string) => {
+    setNvSelectedItems((prev) => prev.filter((it) => it.key !== key))
+  }
+
   const resetNewSaleForm = () => {
     setNvPatientQuery('')
     setNvPatient(null)
-    setNvItems('')
-    setNvTotal('')
+    setNvSelectedItems([])
+    setNvItemQuery('')
+    setNvItemSearchOpen(false)
     setNvPayment('Dinheiro')
     setNvInstallments('1')
     setNvNotes('')
@@ -295,15 +363,25 @@ export default function Vendas() {
   }
 
   const handleSaveNewSale = () => {
-    const total = Number(String(nvTotal).replace(',', '.'))
-    if (!nvItems.trim()) {
-      toast({ title: 'Descreva os itens da venda.', variant: 'destructive' })
+    if (nvSelectedItems.length === 0) {
+      toast({ title: 'Adicione ao menos um item do estoque.', variant: 'destructive' })
       return
     }
-    if (!total || total <= 0) {
-      toast({ title: 'Informe um valor total válido.', variant: 'destructive' })
+    if (!nvTotal || nvTotal <= 0) {
+      toast({ title: 'Valor total inválido. Verifique os itens.', variant: 'destructive' })
       return
     }
+    const items: SaleItem[] = nvSelectedItems.map((it) => ({
+      id: it.key,
+      name: it.name,
+      type: it.isService ? 'procedure' : 'inventory',
+      quantity: it.quantity,
+      unitPrice: it.unitPrice,
+      subtotal: it.quantity * it.unitPrice,
+      stockItemId: it.stockItemId,
+    }))
+    const itemsDescription = nvSelectedItems.map((it) => `${it.quantity}x ${it.name}`).join(', ')
+    const total = nvTotal
     const installments = nvPayment === 'Parcelado' ? Math.max(1, Number(nvInstallments) || 1) : 1
     setSavingNewSale(true)
     try {
@@ -311,7 +389,8 @@ export default function Vendas() {
         type: 'PDV',
         patientId: nvPatient?.id || '',
         patientName: nvPatient?.name || 'Venda avulsa',
-        itemsDescription: nvItems.trim(),
+        items,
+        itemsDescription,
         totalValue: total,
         paymentMethod: nvPayment,
         installmentsCount: installments,
@@ -991,35 +1070,183 @@ export default function Vendas() {
               )}
             </div>
 
-            {/* Itens */}
+            {/* Itens — busca no estoque */}
             <div>
               <Label className="text-xs font-semibold text-slate-600 mb-1 block">
                 Itens <span className="text-red-500">*</span>
               </Label>
-              <Textarea
-                value={nvItems}
-                onChange={(e) => setNvItems(e.target.value)}
-                placeholder="Descrição livre dos produtos/serviços vendidos (ex.: 1x Aparelho auditivo OD, 1x Molde OE...)"
-                className="rounded-xl text-sm min-h-[70px]"
-              />
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
+                <Input
+                  value={nvItemQuery}
+                  onChange={(e) => {
+                    setNvItemQuery(e.target.value)
+                    setNvItemSearchOpen(true)
+                  }}
+                  onFocus={() => setNvItemSearchOpen(true)}
+                  onBlur={() => setTimeout(() => setNvItemSearchOpen(false), 150)}
+                  placeholder="Buscar item no estoque (produto ou serviço)..."
+                  className="h-9 rounded-lg text-sm pl-8"
+                />
+                {nvItemSearchOpen && itemSuggestions.length > 0 && (
+                  <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {itemSuggestions.map((it) => {
+                      const isService = it.categoria === 'servico'
+                      const catLabel = it.categoria
+                        ? INVENTORY_CATEGORIA_LABELS[it.categoria]
+                        : it.category
+                      return (
+                        <button
+                          key={it.id}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            addNvItem(it)
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-teal-50 border-b border-slate-50 last:border-0 flex items-center justify-between gap-2"
+                        >
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">{it.name}</div>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] px-1.5 py-0 ${
+                                  isService
+                                    ? 'bg-violet-50 text-violet-700 border-violet-200'
+                                    : 'bg-slate-50 text-slate-600 border-slate-200'
+                                }`}
+                              >
+                                {catLabel}
+                              </Badge>
+                              {!isService && (
+                                <span className="text-[11px] text-slate-400">
+                                  Estoque: {it.currentQuantity}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span className="font-semibold text-teal-700 whitespace-nowrap">
+                            {formatCurrency(it.salePrice)}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+                {nvItemSearchOpen && nvItemQuery.trim() && itemSuggestions.length === 0 && (
+                  <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg px-3 py-2 text-xs text-slate-400">
+                    Nenhum item encontrado no estoque.
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Tabela de itens selecionados */}
+            {nvSelectedItems.length > 0 && (
+              <div className="rounded-xl border border-slate-200 overflow-hidden">
+                <div className="bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 uppercase tracking-wider">
+                  Itens da Venda
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="text-slate-500 bg-white">
+                      <tr className="border-b border-slate-100">
+                        <th className="px-2 py-1.5 text-left font-medium">Item</th>
+                        <th className="px-2 py-1.5 text-center font-medium w-16">Qtd</th>
+                        <th className="px-2 py-1.5 text-right font-medium w-24">Unitário</th>
+                        <th className="px-2 py-1.5 text-right font-medium w-24">Subtotal</th>
+                        <th className="px-2 py-1.5 w-8"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {nvSelectedItems.map((it) => {
+                        const insufficient = !it.isService && it.quantity > it.currentQuantity
+                        return (
+                          <tr
+                            key={it.key}
+                            className="border-b border-slate-50 last:border-0 align-middle"
+                          >
+                            <td className="px-2 py-1.5 text-slate-700">
+                              <div className="font-medium leading-tight">{it.name}</div>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <Badge
+                                  variant="outline"
+                                  className={`text-[9px] px-1 py-0 ${
+                                    it.isService
+                                      ? 'bg-violet-50 text-violet-700 border-violet-200'
+                                      : 'bg-slate-50 text-slate-600 border-slate-200'
+                                  }`}
+                                >
+                                  {it.categoria
+                                    ? INVENTORY_CATEGORIA_LABELS[it.categoria]
+                                    : it.name}
+                                </Badge>
+                                {insufficient && (
+                                  <span className="text-[10px] text-red-600 font-medium">
+                                    Estoque insuficiente ({it.currentQuantity})
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-2 py-1.5 text-center">
+                              <Input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={it.quantity}
+                                onChange={(e) =>
+                                  updateNvItem(it.key, {
+                                    quantity: Math.max(1, Number(e.target.value) || 1),
+                                  })
+                                }
+                                className="h-7 rounded-md text-xs text-center px-1 w-14"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5 text-right">
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={it.unitPrice}
+                                onChange={(e) =>
+                                  updateNvItem(it.key, {
+                                    unitPrice: Math.max(0, Number(e.target.value) || 0),
+                                  })
+                                }
+                                className="h-7 rounded-md text-xs text-right px-1 w-22"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5 text-right font-semibold text-slate-800 whitespace-nowrap">
+                              {formatCurrency(it.quantity * it.unitPrice)}
+                            </td>
+                            <td className="px-2 py-1.5 text-center">
+                              <button
+                                type="button"
+                                onClick={() => removeNvItem(it.key)}
+                                className="p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50"
+                                title="Remover item"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* Valor Total + Forma de Pagamento */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs font-semibold text-slate-600 mb-1 block">
-                  Valor Total (R$) <span className="text-red-500">*</span>
+                  Valor Total (R$)
                 </Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.01"
-                  min="0"
-                  value={nvTotal}
-                  onChange={(e) => setNvTotal(e.target.value)}
-                  placeholder="0,00"
-                  className="h-9 rounded-lg text-sm"
-                />
+                <div className="h-9 rounded-lg text-sm border border-slate-200 bg-slate-50 flex items-center px-3 font-extrabold text-teal-700">
+                  {formatCurrency(nvTotal)}
+                </div>
               </div>
               <div>
                 <Label className="text-xs font-semibold text-slate-600 mb-1 block">
