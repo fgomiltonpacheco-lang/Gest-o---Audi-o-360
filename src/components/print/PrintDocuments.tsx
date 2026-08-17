@@ -392,6 +392,9 @@ export function AudiometriaFullPrint({
   const oeVocal = exam.iprf_vocal?.oe ?? emptyIprfVocalRow()
 
   const formatDbVal = (val: number | null | undefined, fallbackStr?: string) => {
+    if (val === -1) {
+      return 'AUS'
+    }
     if (val !== null && val !== undefined && val !== ('' as any)) {
       return `${val} dB`
     }
@@ -401,11 +404,16 @@ export function AudiometriaFullPrint({
     return '___ dB'
   }
 
-  const mtODStr = formatDbVal(exam.mt_od)
+  // MT (Média Tritonal) é calculada automaticamente a partir do mapa aéreo
+  // quando não estiver explicitamente preenchida no exame.
+  const mtOD = exam.mt_od ?? mediaTritonal(exam.air_od)
+  const mtOE = exam.mt_oe ?? mediaTritonal(exam.air_oe)
+
+  const mtODStr = formatDbVal(mtOD)
   const lrfODStr = formatDbVal(exam.lrf_od ?? exam.srt_od)
   const ldvODStr = formatDbVal(exam.ldv_od)
 
-  const mtOEStr = formatDbVal(exam.mt_oe)
+  const mtOEStr = formatDbVal(mtOE)
   const lrfOEStr = formatDbVal(exam.lrf_oe ?? exam.srt_oe)
   const ldvOEStr = formatDbVal(exam.ldv_oe)
 
