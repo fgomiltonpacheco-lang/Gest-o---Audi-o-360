@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T02:17:31.559Z",
+  "generatedAt": "2026-08-17T02:35:56.677Z",
   "collections": [
     {
       "name": "users",
@@ -3626,7 +3626,10 @@
             "fechar_caixa",
             "acessar",
             "exportar",
-            "imprimir"
+            "imprimir",
+            "baixar_estoque_venda",
+            "devolver_estoque_venda",
+            "cancelar_venda_paga"
           ]
         },
         {

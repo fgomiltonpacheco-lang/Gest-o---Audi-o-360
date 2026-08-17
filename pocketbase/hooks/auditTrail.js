@@ -909,6 +909,10 @@ onRecordUpdateRequest(
             } catch (_) {}
             // Vendas: registra os itens de inventário devolvidos ao estoque.
             if (collectionName === 'sales') {
+              // Cancelar uma venda PAGA gera ação específica de auditoria.
+              if (oldStatus === 'Pago') {
+                acao = 'cancelar_venda_paga'
+              }
               try {
                 var itensDev = []
                 var itsC = e.record.get('items')
@@ -938,6 +942,10 @@ onRecordUpdateRequest(
             acao = 'estornar'
             // Vendas: registra os itens de inventário devolvidos ao estoque.
             if (collectionName === 'sales') {
+              // Estornar uma venda PAGA gera ação específica de auditoria.
+              if (oldStatus === 'Pago') {
+                acao = 'cancelar_venda_paga'
+              }
               try {
                 var itensDevolvidos = []
                 var its = e.record.get('items')
@@ -961,6 +969,60 @@ onRecordUpdateRequest(
               } catch (_) {}
             }
           }
+        }
+      }
+
+      // ---- Detecção de baixa/devolução de estoque por venda ----
+      // A flag `estoque_baixado` em sales muda quando o estoque é baixado
+      // (false -> true, ao confirmar pagamento) ou devolvido (true -> false,
+      // ao cancelar/estornar uma venda paga).
+      if (collectionName === 'sales' && alteracoes['estoque_baixado']) {
+        var ebBefore = alteracoes['estoque_baixado'].before
+        var ebAfter = alteracoes['estoque_baixado'].after
+        if (ebBefore !== true && ebAfter === true) {
+          acao = 'baixar_estoque_venda'
+          try {
+            var itensBaixados = []
+            var itsB = e.record.get('items')
+            if (itsB && Array.isArray(itsB)) {
+              for (var ib = 0; ib < itsB.length; ib++) {
+                var itb = itsB[ib]
+                if (itb && itb.type === 'inventory' && itb.stockItemId) {
+                  itensBaixados.push({
+                    stockItemId: itb.stockItemId,
+                    name: itb.name || '',
+                    quantity: itb.quantity || 0,
+                  })
+                }
+              }
+            }
+            if (itensBaixados.length > 0) {
+              contexto = contexto || {}
+              contexto.itens_baixados = itensBaixados
+            }
+          } catch (_) {}
+        } else if (ebBefore === true && ebAfter !== true) {
+          acao = 'devolver_estoque_venda'
+          try {
+            var itensDevolvidosMov = []
+            var itsD = e.record.get('items')
+            if (itsD && Array.isArray(itsD)) {
+              for (var idv = 0; idv < itsD.length; idv++) {
+                var itdv = itsD[idv]
+                if (itdv && itdv.type === 'inventory' && itdv.stockItemId) {
+                  itensDevolvidosMov.push({
+                    stockItemId: itdv.stockItemId,
+                    name: itdv.name || '',
+                    quantity: itdv.quantity || 0,
+                  })
+                }
+              }
+            }
+            if (itensDevolvidosMov.length > 0) {
+              contexto = contexto || {}
+              contexto.itens_devolvidos = itensDevolvidosMov
+            }
+          } catch (_) {}
         }
       }
 

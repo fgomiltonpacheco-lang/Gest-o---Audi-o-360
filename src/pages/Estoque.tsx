@@ -488,6 +488,7 @@ export default function Estoque() {
               <tr>
                 <th className="py-3.5 px-4">Item & Especificação</th>
                 <th className="py-3.5 px-4">Categoria</th>
+                <th className="py-3.5 px-2 text-center">SKU</th>
                 <th className="py-3.5 px-4 text-center">Qtd Atual</th>
                 <th className="py-3.5 px-4 text-center">Estoque Mínimo</th>
                 <th className="py-3.5 px-4 text-center">Status Estoque</th>
@@ -501,7 +502,7 @@ export default function Estoque() {
             <tbody className="divide-y divide-slate-100">
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400 text-xs">
+                  <td colSpan={11} className="py-12 text-center text-slate-400 text-xs">
                     Nenhum item localizado no estoque com os filtros selecionados.
                   </td>
                 </tr>
@@ -534,6 +535,12 @@ export default function Estoque() {
                       <td className="py-3.5 px-4">
                         <span className="px-2.5 py-1 rounded-full bg-slate-100 font-semibold text-slate-700 text-xs">
                           {item.category}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-2 text-center">
+                        <span className="text-[11px] font-mono text-slate-600">
+                          {item.code || item.sku || '—'}
                         </span>
                       </td>
 

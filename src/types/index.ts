@@ -1245,6 +1245,9 @@ export type AuditAcaoTrail =
   | 'acessar'
   | 'exportar'
   | 'imprimir'
+  | 'baixar_estoque_venda'
+  | 'devolver_estoque_venda'
+  | 'cancelar_venda_paga'
 
 export interface AuditTrailAlteracao {
   before: unknown
@@ -1296,6 +1299,9 @@ export const AUDIT_ACAO_LABELS: Record<AuditAcaoTrail, string> = {
   acessar: 'Acessar',
   exportar: 'Exportar',
   imprimir: 'Imprimir',
+  baixar_estoque_venda: 'Baixar Estoque (Venda)',
+  devolver_estoque_venda: 'Devolver Estoque (Venda)',
+  cancelar_venda_paga: 'Cancelar Venda Paga',
 }
 
 // ===== Módulo de Lembretes de WhatsApp =====

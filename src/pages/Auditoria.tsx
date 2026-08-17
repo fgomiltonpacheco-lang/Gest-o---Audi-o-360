@@ -46,6 +46,9 @@ const ACAO_BADGE: Record<AuditAcaoTrail, string> = {
   acessar: 'bg-slate-100 text-slate-700 border-slate-200',
   exportar: 'bg-indigo-100 text-indigo-700 border-indigo-200',
   imprimir: 'bg-amber-100 text-amber-700 border-amber-200',
+  baixar_estoque_venda: 'bg-teal-100 text-teal-700 border-teal-200',
+  devolver_estoque_venda: 'bg-orange-100 text-orange-700 border-orange-200',
+  cancelar_venda_paga: 'bg-red-100 text-red-700 border-red-200',
 }
 
 const PERFIL_LABELS: Record<string, string> = {
