@@ -26,9 +26,13 @@ import {
   Loader2,
   CheckCircle2,
   FileEdit,
+  Eye,
+  Download,
 } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { calculateAge, formatDate, maskCPF } from '@/lib/formatters'
 import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
+import { Equipment } from '@/types'
 
 const SPECIALIST_NAME = 'MILTON SOARES PACHECO'
 const SPECIALIST_CRFA = '3-11981-5'
@@ -53,6 +57,9 @@ interface TimpData {
   pressao_maxima: number | null
   tipo_curva: string
   pressao_pico: number | null
+  gradiente_curva: number | null
+  curva_descricao: string
+  observacoes: string
 }
 
 interface ReflexData {
@@ -80,6 +87,13 @@ interface ExamState {
   reflexos_status: string
   laudo: string
   referencias: string
+  encaminhado_por: string
+  meatoscopia_od_normal: boolean
+  meatoscopia_od_alterada: boolean
+  meatoscopia_od_obs: string
+  meatoscopia_oe_normal: boolean
+  meatoscopia_oe_alterada: boolean
+  meatoscopia_oe_obs: string
   // denormalizados paciente
   paciente_nome: string
   paciente_cpf: string
@@ -96,6 +110,9 @@ function emptyTimp(orelha: 'OD' | 'OE'): TimpData {
     pressao_maxima: null,
     tipo_curva: '',
     pressao_pico: null,
+    gradiente_curva: null,
+    curva_descricao: '',
+    observacoes: '',
   }
 }
 
@@ -201,6 +218,13 @@ export default function Imitanciometria() {
     reflexos_status: '',
     laudo: '',
     referencias: DEFAULT_REFERENCIAS,
+    encaminhado_por: '',
+    meatoscopia_od_normal: false,
+    meatoscopia_od_alterada: false,
+    meatoscopia_od_obs: '',
+    meatoscopia_oe_normal: false,
+    meatoscopia_oe_alterada: false,
+    meatoscopia_oe_obs: '',
     paciente_nome: patient?.name || '',
     paciente_cpf: patient?.cpf || '',
     paciente_nascimento: patient?.birthDate || '',
@@ -262,6 +286,13 @@ export default function Imitanciometria() {
         reflexos_status: rec.reflexos_status || '',
         laudo: rec.laudo || '',
         referencias: rec.referencias || DEFAULT_REFERENCIAS,
+        encaminhado_por: rec.encaminhado_por || '',
+        meatoscopia_od_normal: !!rec.meatoscopia_od_normal,
+        meatoscopia_od_alterada: !!rec.meatoscopia_od_alterada,
+        meatoscopia_od_obs: rec.meatoscopia_od_obs || '',
+        meatoscopia_oe_normal: !!rec.meatoscopia_oe_normal,
+        meatoscopia_oe_alterada: !!rec.meatoscopia_oe_alterada,
+        meatoscopia_oe_obs: rec.meatoscopia_oe_obs || '',
         paciente_nome: rec.paciente_nome || '',
         paciente_cpf: rec.paciente_cpf || '',
         paciente_nascimento: rec.paciente_nascimento || '',
@@ -285,6 +316,9 @@ export default function Imitanciometria() {
             pressao_maxima: numOr(od.pressao_maxima),
             tipo_curva: od.tipo_curva || '',
             pressao_pico: numOr(od.pressao_pico),
+            gradiente_curva: numOr(od.gradiente_curva),
+            curva_descricao: od.curva_descricao || '',
+            observacoes: od.observacoes || '',
           })
         if (oe)
           setTimpOE({
@@ -295,6 +329,9 @@ export default function Imitanciometria() {
             pressao_maxima: numOr(oe.pressao_maxima),
             tipo_curva: oe.tipo_curva || '',
             pressao_pico: numOr(oe.pressao_pico),
+            gradiente_curva: numOr(oe.gradiente_curva),
+            curva_descricao: oe.curva_descricao || '',
+            observacoes: oe.observacoes || '',
           })
       } catch {
         /* intentionally ignored */
@@ -394,6 +431,9 @@ export default function Imitanciometria() {
         pressao_maxima: t.pressao_maxima,
         tipo_curva: t.tipo_curva,
         pressao_pico: t.pressao_pico,
+        gradiente_curva: t.gradiente_curva,
+        curva_descricao: t.curva_descricao,
+        observacoes: t.observacoes,
       }
       if (t.id) {
         await pb.collection('timpanometria_dados').update(t.id, payload)
@@ -451,6 +491,13 @@ export default function Imitanciometria() {
       reflexos_status: exam.reflexos_status,
       laudo: exam.laudo,
       referencias: exam.referencias,
+      encaminhado_por: exam.encaminhado_por,
+      meatoscopia_od_normal: exam.meatoscopia_od_normal,
+      meatoscopia_od_alterada: exam.meatoscopia_od_alterada,
+      meatoscopia_od_obs: exam.meatoscopia_od_obs,
+      meatoscopia_oe_normal: exam.meatoscopia_oe_normal,
+      meatoscopia_oe_alterada: exam.meatoscopia_oe_alterada,
+      meatoscopia_oe_obs: exam.meatoscopia_oe_obs,
       paciente_nome: patient.name,
       paciente_cpf: patient.cpf || '',
       paciente_nascimento: patient.birthDate || '',
@@ -485,47 +532,100 @@ export default function Imitanciometria() {
     }
   }
 
+  const selectedEquipment: Equipment | undefined = useMemo(
+    () => equipments.find((e) => e.id === exam.equipment_id),
+    [equipments, exam.equipment_id],
+  )
+
+  const buildPrintData = (): ImitPrintData => ({
+    paciente_nome: exam.paciente_nome,
+    paciente_cpf: exam.paciente_cpf,
+    paciente_nascimento: exam.paciente_nascimento,
+    paciente_idade: exam.paciente_idade,
+    paciente_sexo: exam.paciente_sexo,
+    data_exame: exam.data_exame,
+    especialista_nome: exam.especialista_nome,
+    especialista_crm: currentUser?.crmCrfa || '',
+    equipment_nome: exam.equipment_nome,
+    equipment_calibracao: selectedEquipment?.data_calibracao || '',
+    encaminhado_por: exam.encaminhado_por,
+    observacoes: exam.observacoes,
+    meatoscopia: {
+      od_normal: exam.meatoscopia_od_normal,
+      od_alterada: exam.meatoscopia_od_alterada,
+      od_obs: exam.meatoscopia_od_obs,
+      oe_normal: exam.meatoscopia_oe_normal,
+      oe_alterada: exam.meatoscopia_oe_alterada,
+      oe_obs: exam.meatoscopia_oe_obs,
+    },
+    tipo_curva_od: exam.tipo_curva_od || timpOD.tipo_curva,
+    tipo_curva_oe: exam.tipo_curva_oe || timpOE.tipo_curva,
+    reflexos_status: exam.reflexos_status,
+    laudo: exam.laudo,
+    referencias: exam.referencias,
+    timpanometria: {
+      OD: {
+        volume_meato: timpOD.volume_meato,
+        complacencia: timpOD.complacencia,
+        pressao_maxima: timpOD.pressao_maxima,
+        tipo_curva: timpOD.tipo_curva,
+        pressao_pico: timpOD.pressao_pico,
+        gradiente_curva: timpOD.gradiente_curva,
+        curva_descricao: timpOD.curva_descricao,
+        observacoes: timpOD.observacoes,
+      },
+      OE: {
+        volume_meato: timpOE.volume_meato,
+        complacencia: timpOE.complacencia,
+        pressao_maxima: timpOE.pressao_maxima,
+        tipo_curva: timpOE.tipo_curva,
+        pressao_pico: timpOE.pressao_pico,
+        gradiente_curva: timpOE.gradiente_curva,
+        curva_descricao: timpOE.curva_descricao,
+        observacoes: timpOE.observacoes,
+      },
+    },
+    reflexos: {
+      OD: { contra_lateral: reflexODContra, ipsi_lateral: reflexODIpsi },
+      OE: { contra_lateral: reflexOEContra, ipsi_lateral: reflexOEIpsi },
+    },
+  })
+
+  const professionalData = currentUser
+    ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa }
+    : null
+
+  const [previewOpen, setPreviewOpen] = useState(false)
+
   const handlePrint = () => {
-    const data: ImitPrintData = {
-      paciente_nome: exam.paciente_nome,
-      paciente_cpf: exam.paciente_cpf,
-      paciente_nascimento: exam.paciente_nascimento,
-      paciente_idade: exam.paciente_idade,
-      paciente_sexo: exam.paciente_sexo,
-      data_exame: exam.data_exame,
-      especialista_nome: exam.especialista_nome,
-      equipment_nome: exam.equipment_nome,
-      observacoes: exam.observacoes,
-      tipo_curva_od: exam.tipo_curva_od || timpOD.tipo_curva,
-      tipo_curva_oe: exam.tipo_curva_oe || timpOE.tipo_curva,
-      reflexos_status: exam.reflexos_status,
-      laudo: exam.laudo,
-      referencias: exam.referencias,
-      timpanometria: {
-        OD: {
-          volume_meato: timpOD.volume_meato,
-          complacencia: timpOD.complacencia,
-          pressao_maxima: timpOD.pressao_maxima,
-          tipo_curva: timpOD.tipo_curva,
-          pressao_pico: timpOD.pressao_pico,
-        },
-        OE: {
-          volume_meato: timpOE.volume_meato,
-          complacencia: timpOE.complacencia,
-          pressao_maxima: timpOE.pressao_maxima,
-          tipo_curva: timpOE.tipo_curva,
-          pressao_pico: timpOE.pressao_pico,
-        },
-      },
-      reflexos: {
-        OD: { contra_lateral: reflexODContra, ipsi_lateral: reflexODIpsi },
-        OE: { contra_lateral: reflexOEContra, ipsi_lateral: reflexOEIpsi },
-      },
-    }
     print({
       title: 'Imitanciometria',
       subtitle: `${patient?.name || ''} — ${formatDate(exam.data_exame)}`,
-      body: <ImitanciometriaPrint data={data} clinicSettings={clinicSettings} />,
+      body: (
+        <ImitanciometriaPrint
+          data={buildPrintData()}
+          clinicSettings={clinicSettings}
+          professional={professionalData}
+        />
+      ),
+    })
+  }
+
+  const handlePreview = () => {
+    setPreviewOpen(true)
+  }
+
+  const handleDownload = () => {
+    print({
+      title: 'Imitanciometria',
+      subtitle: `${patient?.name || ''} — ${formatDate(exam.data_exame)}`,
+      body: (
+        <ImitanciometriaPrint
+          data={buildPrintData()}
+          clinicSettings={clinicSettings}
+          professional={professionalData}
+        />
+      ),
     })
   }
 
@@ -587,48 +687,14 @@ export default function Imitanciometria() {
       {/* Prévia para impressão */}
       <div className="hidden print:block">
         <ImitanciometriaPrint
-          data={{
-            paciente_nome: exam.paciente_nome,
-            paciente_cpf: exam.paciente_cpf,
-            paciente_nascimento: exam.paciente_nascimento,
-            paciente_idade: exam.paciente_idade,
-            paciente_sexo: exam.paciente_sexo,
-            data_exame: exam.data_exame,
-            especialista_nome: exam.especialista_nome,
-            equipment_nome: exam.equipment_nome,
-            observacoes: exam.observacoes,
-            tipo_curva_od: exam.tipo_curva_od || timpOD.tipo_curva,
-            tipo_curva_oe: exam.tipo_curva_oe || timpOE.tipo_curva,
-            reflexos_status: exam.reflexos_status,
-            laudo: exam.laudo,
-            referencias: exam.referencias,
-            timpanometria: {
-              OD: {
-                volume_meato: timpOD.volume_meato,
-                complacencia: timpOD.complacencia,
-                pressao_maxima: timpOD.pressao_maxima,
-                tipo_curva: timpOD.tipo_curva,
-                pressao_pico: timpOD.pressao_pico,
-              },
-              OE: {
-                volume_meato: timpOE.volume_meato,
-                complacencia: timpOE.complacencia,
-                pressao_maxima: timpOE.pressao_maxima,
-                tipo_curva: timpOE.tipo_curva,
-                pressao_pico: timpOE.pressao_pico,
-              },
-            },
-            reflexos: {
-              OD: { contra_lateral: reflexODContra, ipsi_lateral: reflexODIpsi },
-              OE: { contra_lateral: reflexOEContra, ipsi_lateral: reflexOEIpsi },
-            },
-          }}
+          data={buildPrintData()}
           clinicSettings={clinicSettings}
+          professional={professionalData}
         />
       </div>
 
       <div className="no-print space-y-3">
-        {/* Dados gerais */}
+        {/* Dados gerais / Identificação */}
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <Field label="Data do Exame">
@@ -674,6 +740,49 @@ export default function Imitanciometria() {
                 </SelectContent>
               </Select>
             </Field>
+          </div>
+          <div className="mt-3">
+            <Field label="Encaminhado por">
+              <Input
+                value={exam.encaminhado_por}
+                onChange={(e) => setField('encaminhado_por', e.target.value)}
+                disabled={readOnly}
+                placeholder="Profissional/entidade que encaminhou o paciente (opcional)"
+                className="h-9 rounded-xl text-xs font-medium border-slate-300 bg-white"
+              />
+            </Field>
+          </div>
+        </div>
+
+        {/* Seção: Meatoscopia */}
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 pb-2 border-b border-slate-100 mb-3">
+            <Activity className="w-4 h-4 text-emerald-600" />
+            Meatoscopia
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <MeatoscopiaCard
+              label="Orelha Direita (OD)"
+              color="red"
+              normal={exam.meatoscopia_od_normal}
+              alterada={exam.meatoscopia_od_alterada}
+              obs={exam.meatoscopia_od_obs}
+              onNormal={(v) => setField('meatoscopia_od_normal', v)}
+              onAlterada={(v) => setField('meatoscopia_od_alterada', v)}
+              onObs={(v) => setField('meatoscopia_od_obs', v)}
+              disabled={readOnly}
+            />
+            <MeatoscopiaCard
+              label="Orelha Esquerda (OE)"
+              color="blue"
+              normal={exam.meatoscopia_oe_normal}
+              alterada={exam.meatoscopia_oe_alterada}
+              obs={exam.meatoscopia_oe_obs}
+              onNormal={(v) => setField('meatoscopia_oe_normal', v)}
+              onAlterada={(v) => setField('meatoscopia_oe_alterada', v)}
+              onObs={(v) => setField('meatoscopia_oe_obs', v)}
+              disabled={readOnly}
+            />
           </div>
         </div>
 
@@ -857,10 +966,11 @@ export default function Imitanciometria() {
           <div className="text-center py-2">
             <div className="mx-auto" style={{ maxWidth: 320 }}>
               <div className="border-t border-slate-400 pt-1 text-sm font-bold text-slate-800">
-                {SPECIALIST_NAME}
+                {(currentUser?.name || SPECIALIST_NAME).toUpperCase()}
               </div>
               <div className="text-[11px] text-slate-500">
-                Fonoaudiólogo — CRFa {SPECIALIST_CRFA}
+                Fonoaudiólogo — CRFa{' '}
+                {(currentUser?.crmCrfa || SPECIALIST_CRFA).replace(/^crfa\s*/i, '')}
               </div>
             </div>
           </div>
@@ -871,11 +981,27 @@ export default function Imitanciometria() {
       <div className="no-print flex flex-col sm:flex-row items-center justify-end gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
         <Button
           variant="outline"
+          onClick={handlePreview}
+          className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10 w-full sm:w-auto"
+        >
+          <Eye className="w-4 h-4 mr-1.5" />
+          Visualizar PDF
+        </Button>
+        <Button
+          variant="outline"
           onClick={handlePrint}
           className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10 w-full sm:w-auto"
         >
           <Printer className="w-4 h-4 mr-1.5" />
           Imprimir
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleDownload}
+          className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10 w-full sm:w-auto"
+        >
+          <Download className="w-4 h-4 mr-1.5" />
+          Baixar PDF
         </Button>
         {!isSecretaria && (
           <>
@@ -906,6 +1032,41 @@ export default function Imitanciometria() {
           </>
         )}
       </div>
+
+      {/* Modal de pré-visualização do PDF */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Pré-visualização — Imitanciometria</DialogTitle>
+          </DialogHeader>
+          <div className="border border-slate-200 rounded-lg p-4 bg-white">
+            <ImitanciometriaPrint
+              data={buildPrintData()}
+              clinicSettings={clinicSettings}
+              professional={professionalData}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setPreviewOpen(false)}
+              className="rounded-xl text-xs"
+            >
+              Fechar
+            </Button>
+            <Button
+              onClick={() => {
+                setPreviewOpen(false)
+                handlePrint()
+              }}
+              className="rounded-xl text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              <Printer className="w-4 h-4 mr-1.5" />
+              Imprimir
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -1009,6 +1170,98 @@ function TimpCard({
             ))}
           </SelectContent>
         </Select>
+      </Field>
+      <Field label="Gradiente da curva">
+        <Input
+          type="number"
+          step="0.01"
+          value={data.gradiente_curva ?? ''}
+          onChange={(e) =>
+            patch({ gradiente_curva: e.target.value === '' ? null : Number(e.target.value) })
+          }
+          disabled={disabled}
+          className={inputCls}
+        />
+      </Field>
+      <Field label="Descrição da curva timpanométrica">
+        <Input
+          value={data.curva_descricao}
+          onChange={(e) => patch({ curva_descricao: e.target.value })}
+          disabled={disabled}
+          placeholder="Ex.: Curva tipo A com pico em 0 daPa"
+          className={inputCls}
+        />
+      </Field>
+      <Field label="Observações (timpanometria)">
+        <Textarea
+          value={data.observacoes}
+          onChange={(e) => patch({ observacoes: e.target.value })}
+          disabled={disabled}
+          rows={2}
+          placeholder="Observações específicas desta orelha (opcional)"
+          className="rounded-xl text-[11px] border-slate-300 resize-y"
+        />
+      </Field>
+    </div>
+  )
+}
+
+function MeatoscopiaCard({
+  label,
+  color,
+  normal,
+  alterada,
+  obs,
+  onNormal,
+  onAlterada,
+  onObs,
+  disabled,
+}: {
+  label: string
+  color: 'red' | 'blue'
+  normal: boolean
+  alterada: boolean
+  obs: string
+  onNormal: (v: boolean) => void
+  onAlterada: (v: boolean) => void
+  onObs: (v: string) => void
+  disabled?: boolean
+}) {
+  const titleColor = color === 'red' ? 'text-red-600' : 'text-blue-600'
+  return (
+    <div className="p-3 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-2">
+      <h4 className={`text-xs font-extrabold uppercase tracking-wider ${titleColor}`}>{label}</h4>
+      <div className="flex flex-wrap gap-4">
+        <label className="flex items-center gap-2 text-[11px] font-medium text-slate-700 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={normal}
+            onChange={(e) => onNormal(e.target.checked)}
+            disabled={disabled}
+            className="w-4 h-4 rounded border-slate-300"
+          />
+          Normal
+        </label>
+        <label className="flex items-center gap-2 text-[11px] font-medium text-slate-700 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={alterada}
+            onChange={(e) => onAlterada(e.target.checked)}
+            disabled={disabled}
+            className="w-4 h-4 rounded border-slate-300"
+          />
+          Alterada
+        </label>
+      </div>
+      <Field label="Observação">
+        <Textarea
+          value={obs}
+          onChange={(e) => onObs(e.target.value)}
+          disabled={disabled}
+          rows={2}
+          placeholder="Descreva achados da meatoscopia (opcional)"
+          className="rounded-xl text-[11px] border-slate-300 resize-y"
+        />
       </Field>
     </div>
   )

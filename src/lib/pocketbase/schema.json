@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T03:07:34.504Z",
+  "generatedAt": "2026-08-17T03:28:25.651Z",
   "collections": [
     {
       "name": "users",
@@ -3839,6 +3839,48 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "encaminhado_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "meatoscopia_od_normal",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "meatoscopia_od_alterada",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "meatoscopia_od_obs",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "meatoscopia_oe_normal",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "meatoscopia_oe_alterada",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "meatoscopia_oe_obs",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -3916,6 +3958,24 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "gradiente_curva",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "curva_descricao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

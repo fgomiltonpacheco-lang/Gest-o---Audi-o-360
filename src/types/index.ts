@@ -413,6 +413,64 @@ export function emptyAudiometryExamFull(
   }
 }
 
+// ===== Módulo de Imitanciometria (imitanciometrias) =====
+export interface ImitanciometriaMeatoscopia {
+  od_normal: boolean
+  od_alterada: boolean
+  od_obs: string
+  oe_normal: boolean
+  oe_alterada: boolean
+  oe_obs: string
+}
+
+export interface ImitanciometriaTimpanometria {
+  orelha: 'OD' | 'OE'
+  volume_meato: number | null
+  complacencia: number | null
+  pressao_maxima: number | null
+  tipo_curva: string
+  pressao_pico: number | null
+  gradiente_curva: number | null
+  curva_descricao: string
+  observacoes: string
+}
+
+export interface ImitanciometriaReflexo {
+  orelha: 'OD' | 'OE'
+  via: 'contra_lateral' | 'ipsi_lateral'
+  frequencia_500: number | null
+  frequencia_1000: number | null
+  frequencia_2000: number | null
+  frequencia_4000: number | null
+  status: string
+}
+
+export interface Imitanciometria {
+  id: string
+  paciente_id: string
+  data_exame: string
+  especialista_id: string
+  especialista_nome: string
+  equipment_id: string
+  equipment_nome: string
+  observacoes: string
+  status: 'rascunho' | 'finalizado'
+  tipo_curva_od: string
+  tipo_curva_oe: string
+  reflexos_status: string
+  laudo: string
+  referencias: string
+  encaminhado_por: string
+  meatoscopia: ImitanciometriaMeatoscopia
+  paciente_nome: string
+  paciente_cpf: string
+  paciente_nascimento: string
+  paciente_idade: string
+  paciente_sexo: string
+  created: string
+  updated: string
+}
+
 export type ReflexStatus = 'Presente' | 'Ausente' | 'Não testado'
 
 export interface TympanometryData {
