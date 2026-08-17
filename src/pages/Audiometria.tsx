@@ -487,8 +487,8 @@ export default function Audiometria() {
     setSaving(true)
     // MT (Média Tritonal) calculada automaticamente a partir do mapa aéreo
     // quando não estiver explicitamente preenchida. LRF usa srt como fallback.
-    const mtOD = exam.mt_od ?? mediaTritonal(exam.air_od)
-    const mtOE = exam.mt_oe ?? mediaTritonal(exam.air_oe)
+    const mtOD = exam.mt_od || mediaTritonal(exam.air_od)
+    const mtOE = exam.mt_oe || mediaTritonal(exam.air_oe)
     const lrfOD = exam.lrf_od ?? exam.srt_od
     const lrfOE = exam.lrf_oe ?? exam.srt_oe
     const payload: Record<string, any> = {
