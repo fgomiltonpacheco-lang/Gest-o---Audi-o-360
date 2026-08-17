@@ -796,3 +796,24 @@ export const INVENTORY_CATEGORIA_LABELS: Record<InventoryCategoria, string> = {
   molde: 'Molde',
   filtro: 'Filtro',
 }
+
+/**
+ * Retorna o status da calibração de um equipamento.
+ * - 'expired': a data de calibração já passou
+ * - 'expiring': a calibração vence em até 30 dias
+ * - 'valid': calibração em dia
+ */
+export function getEquipmentStatus(
+  proximaCalibracao?: string,
+  today?: string,
+): 'expired' | 'expiring' | 'valid' {
+  if (!proximaCalibracao) return 'valid'
+  const calib = new Date(proximaCalibracao + 'T00:00:00')
+  const hoje = today ? new Date(today + 'T00:00:00') : new Date()
+  hoje.setHours(0, 0, 0, 0)
+  const diff = calib.getTime() - hoje.getTime()
+  const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
+  if (days < 0) return 'expired'
+  if (days <= 30) return 'expiring'
+  return 'valid'
+}
