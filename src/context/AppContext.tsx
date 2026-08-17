@@ -418,6 +418,8 @@ const mapSale = (r: any): Sale => ({
   discountPercent: r.discountPercent != null ? Number(r.discountPercent) : undefined,
   cancelReason: r.cancelReason || undefined,
   appointmentId: r.appointmentId || undefined,
+  paymentDate: r.paymentDate || undefined,
+  paymentNotes: r.paymentNotes || undefined,
 })
 
 const mapInstallment = (r: any): Installment => ({
@@ -2821,6 +2823,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         discountPercent: newSale.discountPercent ?? 0,
         cancelReason: newSale.cancelReason || '',
         appointmentId: newSale.appointmentId || '',
+        paymentDate: newSale.paymentDate || '',
+        paymentNotes: newSale.paymentNotes || '',
       })
       .then(async (rec: any) => {
         const mappedSale = mapSale(rec)

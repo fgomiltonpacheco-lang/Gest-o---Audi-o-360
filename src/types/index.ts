@@ -577,6 +577,11 @@ export interface Sale {
   discountPercent?: number
   cancelReason?: string
   appointmentId?: string
+  // ---- Recebimento (Finalizar como Paga) ----
+  /** Data (YYYY-MM-DD) em que a venda foi paga/finalizada. */
+  paymentDate?: string
+  /** Observações do recebimento (forma de recebimento, etc.). */
+  paymentNotes?: string
 }
 
 export type InstallmentStatus = 'Pendente' | 'Pago' | 'Atrasado'

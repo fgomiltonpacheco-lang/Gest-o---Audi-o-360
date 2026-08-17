@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T00:52:47.720Z",
+  "generatedAt": "2026-08-17T01:45:27.085Z",
   "collections": [
     {
       "name": "users",
@@ -1288,6 +1288,18 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "paymentDate",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "paymentNotes",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []

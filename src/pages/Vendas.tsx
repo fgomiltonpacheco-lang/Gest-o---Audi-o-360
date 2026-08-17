@@ -16,6 +16,9 @@ import {
   Wallet,
   Filter,
   X,
+  CheckCircle,
+  FileText,
+  Loader2,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { useToast } from '@/hooks/use-toast'
@@ -40,7 +43,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import type { Sale, SaleStatus, PDVPaymentMethod, SaleItem } from '@/types'
+import type { Sale, SaleStatus, PDVPaymentMethod, SaleItem, Patient } from '@/types'
 
 const PAGE_SIZE = 10
 
@@ -69,7 +72,7 @@ const paymentIcon = (m: string) => {
 
 export default function Vendas() {
   const navigate = useNavigate()
-  const { sales, currentUser, cancelSale } = useApp()
+  const { sales, currentUser, cancelSale, addSale, updateSale, patients } = useApp()
   const { toast } = useToast()
   const { print } = usePrint()
 
@@ -86,6 +89,25 @@ export default function Vendas() {
   const [cancelMode, setCancelMode] = useState<'Cancelado' | 'Estornado'>('Cancelado')
 
   const isAdmin = currentUser?.role === 'admin'
+
+  // ---- Nova Venda (modal simplificado) ----
+  const [newSaleOpen, setNewSaleOpen] = useState(false)
+  const [savingNewSale, setSavingNewSale] = useState(false)
+  const [nvPatientQuery, setNvPatientQuery] = useState('')
+  const [nvPatient, setNvPatient] = useState<Patient | null>(null)
+  const [nvItems, setNvItems] = useState('')
+  const [nvTotal, setNvTotal] = useState('')
+  const [nvPayment, setNvPayment] = useState<PDVPaymentMethod>('Dinheiro')
+  const [nvInstallments, setNvInstallments] = useState('1')
+  const [nvNotes, setNvNotes] = useState('')
+  const [nvShowSuggestions, setNvShowSuggestions] = useState(false)
+
+  // ---- Finalizar como Paga (sub-modal) ----
+  const [payOpen, setPayOpen] = useState(false)
+  const [paySaving, setPaySaving] = useState(false)
+  const [payForma, setPayForma] = useState('Dinheiro')
+  const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0])
+  const [payNotes, setPayNotes] = useState('')
 
   // ---- Resumo do dia ----
   const todayStr = new Date().toISOString().split('T')[0]
@@ -249,6 +271,129 @@ export default function Vendas() {
     setDetailSale(null)
   }
 
+  // ---- Autocomplete de paciente (Nova Venda) ----
+  const patientSuggestions = useMemo(() => {
+    const q = nvPatientQuery.trim().toLowerCase()
+    if (!q) return []
+    return patients.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 6)
+  }, [patients, nvPatientQuery])
+
+  const resetNewSaleForm = () => {
+    setNvPatientQuery('')
+    setNvPatient(null)
+    setNvItems('')
+    setNvTotal('')
+    setNvPayment('Dinheiro')
+    setNvInstallments('1')
+    setNvNotes('')
+    setNvShowSuggestions(false)
+  }
+
+  const openNewSale = () => {
+    resetNewSaleForm()
+    setNewSaleOpen(true)
+  }
+
+  const handleSaveNewSale = () => {
+    const total = Number(String(nvTotal).replace(',', '.'))
+    if (!nvItems.trim()) {
+      toast({ title: 'Descreva os itens da venda.', variant: 'destructive' })
+      return
+    }
+    if (!total || total <= 0) {
+      toast({ title: 'Informe um valor total válido.', variant: 'destructive' })
+      return
+    }
+    const installments = nvPayment === 'Parcelado' ? Math.max(1, Number(nvInstallments) || 1) : 1
+    setSavingNewSale(true)
+    try {
+      addSale({
+        type: 'PDV',
+        patientId: nvPatient?.id || '',
+        patientName: nvPatient?.name || 'Venda avulsa',
+        itemsDescription: nvItems.trim(),
+        totalValue: total,
+        paymentMethod: nvPayment,
+        installmentsCount: installments,
+        interestPercent: 0,
+        firstDueDate: new Date().toISOString().split('T')[0],
+        status: 'Pendente',
+        date: new Date().toISOString(),
+        subtotal: total,
+        discountValue: 0,
+        discountPercent: 0,
+        cancelReason: '',
+      })
+      toast({
+        title: 'Venda registrada com sucesso!',
+        description: nvPatient ? `Cliente: ${nvPatient.name}` : 'Venda avulsa.',
+      })
+      setSavingNewSale(false)
+      setNewSaleOpen(false)
+      resetNewSaleForm()
+    } catch (err) {
+      setSavingNewSale(false)
+      toast({ title: 'Erro ao registrar venda.', variant: 'destructive' })
+    }
+  }
+
+  // ---- Finalizar como Paga ----
+  const openPayModal = (sale: Sale) => {
+    // Default: mapeia a forma de pagamento da venda para uma forma de recebimento
+    const mapDefault: Record<string, string> = {
+      Dinheiro: 'Dinheiro',
+      PIX: 'PIX',
+      'Cartão de Crédito': 'Cartão',
+      'Cartão de Débito': 'Cartão',
+      Cartão: 'Cartão',
+      Convênio: 'Transferência',
+      Boleto: 'Transferência',
+    }
+    setPayForma(mapDefault[sale.paymentMethod] || 'Dinheiro')
+    setPayDate(new Date().toISOString().split('T')[0])
+    setPayNotes('')
+    setPayOpen(true)
+  }
+
+  const handleConfirmPayment = () => {
+    if (!detailSale) return
+    setPaySaving(true)
+    try {
+      const notes = payNotes
+        ? `Forma de recebimento: ${payForma}. ${payNotes}`
+        : `Forma de recebimento: ${payForma}.`
+      updateSale(detailSale.id, {
+        status: 'Pago',
+        paymentDate: payDate,
+        paymentNotes: notes,
+      })
+      toast({
+        title: `Venda #${detailSale.number} finalizada como Paga!`,
+        description: `Recebimento: ${payForma} em ${formatDate(payDate)}.`,
+      })
+      // atualiza o detailSale em tela
+      setDetailSale({
+        ...detailSale,
+        status: 'Pago',
+        paymentDate: payDate,
+        paymentNotes: notes,
+      })
+      setPaySaving(false)
+      setPayOpen(false)
+    } catch (err) {
+      setPaySaving(false)
+      toast({ title: 'Erro ao finalizar venda.', variant: 'destructive' })
+    }
+  }
+
+  // ---- Emitir NF (placeholder) ----
+  const handleEmitirNF = (sale: Sale) => {
+    toast({
+      title: 'Emissão de NF em configuração.',
+      description: 'Disponível em breve.',
+    })
+  }
+
   return (
     <div className="space-y-5 animate-in fade-in-50 duration-200">
       {/* Cabeçalho */}
@@ -265,6 +410,13 @@ export default function Vendas() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            onClick={openNewSale}
+            variant="outline"
+            className="rounded-xl text-sm border-teal-200 text-teal-700 hover:bg-teal-50"
+          >
+            <Plus className="w-4 h-4 mr-1.5" /> Nova Venda
+          </Button>
           {isAdmin && (
             <Button
               onClick={() => navigate('/vendas/pdv')}
@@ -705,6 +857,14 @@ export default function Vendas() {
                 </div>
               </div>
 
+              {detailSale.paymentDate && detailSale.status === 'Pago' && (
+                <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-100 text-xs text-emerald-700">
+                  <strong>Recebimento:</strong> {formatDate(detailSale.paymentDate)}
+                  {detailSale.paymentNotes && (
+                    <div className="mt-0.5 text-emerald-600">{detailSale.paymentNotes}</div>
+                  )}
+                </div>
+              )}
               {detailSale.cancelReason && (
                 <div className="p-2.5 rounded-lg bg-red-50 border border-red-100 text-xs text-red-700">
                   <strong>{detailSale.status}:</strong> {detailSale.cancelReason}
@@ -712,7 +872,7 @@ export default function Vendas() {
               )}
             </div>
           )}
-          <DialogFooter className="pt-2 border-t border-slate-100">
+          <DialogFooter className="pt-2 border-t border-slate-100 flex-wrap gap-2">
             <Button
               variant="outline"
               onClick={() => handlePrint(detailSale!)}
@@ -720,10 +880,33 @@ export default function Vendas() {
             >
               <Printer className="w-3.5 h-3.5 mr-1.5" /> Imprimir
             </Button>
+
+            {/* Finalizar como Paga — visível para todos quando Pendente */}
+            {detailSale && detailSale.status === 'Pendente' && (
+              <Button
+                onClick={() => openPayModal(detailSale)}
+                className="rounded-xl text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> Finalizar como Paga
+              </Button>
+            )}
+
+            {/* Emitir NF — visível para todos quando Pago ou Concluída */}
+            {detailSale && (detailSale.status === 'Pago' || detailSale.status === 'Concluída') && (
+              <Button
+                onClick={() => handleEmitirNF(detailSale)}
+                className="rounded-xl text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <FileText className="w-3.5 h-3.5 mr-1.5" /> Emitir NF
+              </Button>
+            )}
+
+            {/* Cancelar / Estornar — apenas Admin */}
             {isAdmin &&
               detailSale &&
               detailSale.status !== 'Cancelado' &&
-              detailSale.status !== 'Estornado' && (
+              detailSale.status !== 'Estornado' &&
+              detailSale.status !== 'Pago' && (
                 <Button
                   onClick={() => {
                     setCancelTarget(detailSale)
@@ -735,6 +918,274 @@ export default function Vendas() {
                   <Ban className="w-3.5 h-3.5 mr-1.5" /> Cancelar / Estornar
                 </Button>
               )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Nova Venda (modal simplificado) */}
+      <Dialog open={newSaleOpen} onOpenChange={(o) => !o && setNewSaleOpen(false)}>
+        <DialogContent className="max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+          <DialogHeader className="border-b border-slate-100 pb-3">
+            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-teal-600" />
+              Nova Venda
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            {/* Paciente (autocomplete) */}
+            <div className="relative">
+              <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                Paciente <span className="text-slate-400 font-normal">(opcional)</span>
+              </Label>
+              <Input
+                value={nvPatient ? nvPatient.name : nvPatientQuery}
+                onChange={(e) => {
+                  setNvPatientQuery(e.target.value)
+                  setNvPatient(null)
+                  setNvShowSuggestions(true)
+                }}
+                onFocus={() => setNvShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setNvShowSuggestions(false), 150)}
+                placeholder="Buscar paciente pelo nome..."
+                className="h-9 rounded-lg text-sm"
+              />
+              {nvShowSuggestions && patientSuggestions.length > 0 && (
+                <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+                  {patientSuggestions.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        setNvPatient(p)
+                        setNvPatientQuery(p.name)
+                        setNvShowSuggestions(false)
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-teal-50 border-b border-slate-50 last:border-0"
+                    >
+                      <div className="font-medium">{p.name}</div>
+                      <div className="text-[11px] text-slate-400">
+                        {p.cpf ? `CPF: ${p.cpf}` : ''} {p.mobile ? `· ${p.mobile}` : ''}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {nvPatient && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNvPatient(null)
+                    setNvPatientQuery('')
+                  }}
+                  className="absolute right-2 top-7 text-slate-400 hover:text-red-500"
+                  title="Limpar paciente"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {!nvPatient && (
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Deixe em branco para registrar como “Venda avulsa”.
+                </p>
+              )}
+            </div>
+
+            {/* Itens */}
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                Itens <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                value={nvItems}
+                onChange={(e) => setNvItems(e.target.value)}
+                placeholder="Descrição livre dos produtos/serviços vendidos (ex.: 1x Aparelho auditivo OD, 1x Molde OE...)"
+                className="rounded-xl text-sm min-h-[70px]"
+              />
+            </div>
+
+            {/* Valor Total + Forma de Pagamento */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                  Valor Total (R$) <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0"
+                  value={nvTotal}
+                  onChange={(e) => setNvTotal(e.target.value)}
+                  placeholder="0,00"
+                  className="h-9 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                  Forma de Pagamento
+                </Label>
+                <Select
+                  value={nvPayment}
+                  onValueChange={(v) => setNvPayment(v as PDVPaymentMethod)}
+                >
+                  <SelectTrigger className="h-9 rounded-lg text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                    <SelectItem value="Cartão de Débito">Cartão de Débito</SelectItem>
+                    <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
+                    <SelectItem value="PIX">PIX</SelectItem>
+                    <SelectItem value="Convênio">Convênio</SelectItem>
+                    <SelectItem value="Boleto">Boleto</SelectItem>
+                    <SelectItem value="À vista">À vista</SelectItem>
+                    <SelectItem value="Parcelado">Parcelado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Número de Parcelas — só se Parcelado */}
+            {nvPayment === 'Parcelado' && (
+              <div>
+                <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                  Número de Parcelas
+                </Label>
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={nvInstallments}
+                  onChange={(e) => setNvInstallments(e.target.value)}
+                  className="h-9 rounded-lg text-sm"
+                />
+              </div>
+            )}
+
+            {/* Observações */}
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                Observações <span className="text-slate-400 font-normal">(opcional)</span>
+              </Label>
+              <Textarea
+                value={nvNotes}
+                onChange={(e) => setNvNotes(e.target.value)}
+                placeholder="Observações sobre a venda..."
+                className="rounded-xl text-sm min-h-[60px]"
+              />
+            </div>
+          </div>
+          <DialogFooter className="pt-2 border-t border-slate-100">
+            <Button
+              variant="outline"
+              onClick={() => setNewSaleOpen(false)}
+              disabled={savingNewSale}
+              className="rounded-xl text-xs"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveNewSale}
+              disabled={savingNewSale}
+              className="rounded-xl text-xs bg-teal-500 hover:bg-teal-600 text-white"
+            >
+              {savingNewSale ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Salvando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> Registrar Venda
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmar Pagamento (Finalizar como Paga) */}
+      <Dialog open={payOpen} onOpenChange={(o) => !o && setPayOpen(false)}>
+        <DialogContent className="max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+          <DialogHeader className="border-b border-slate-100 pb-3">
+            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-emerald-600" />
+              Confirmar Pagamento
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                Valor Total
+              </div>
+              <div className="text-xl font-extrabold text-emerald-700">
+                {detailSale ? formatCurrency(detailSale.totalValue) : '-'}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                Forma de Recebimento
+              </Label>
+              <Select value={payForma} onValueChange={setPayForma}>
+                <SelectTrigger className="h-9 rounded-lg text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                  <SelectItem value="Cartão">Cartão</SelectItem>
+                  <SelectItem value="PIX">PIX</SelectItem>
+                  <SelectItem value="Transferência">Transferência</SelectItem>
+                  <SelectItem value="Cheque">Cheque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                Data do Recebimento
+              </Label>
+              <Input
+                type="date"
+                value={payDate}
+                onChange={(e) => setPayDate(e.target.value)}
+                className="h-9 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                Observações <span className="text-slate-400 font-normal">(opcional)</span>
+              </Label>
+              <Textarea
+                value={payNotes}
+                onChange={(e) => setPayNotes(e.target.value)}
+                placeholder="Observações sobre o recebimento..."
+                className="rounded-xl text-sm min-h-[60px]"
+              />
+            </div>
+          </div>
+          <DialogFooter className="pt-2 border-t border-slate-100">
+            <Button
+              variant="outline"
+              onClick={() => setPayOpen(false)}
+              disabled={paySaving}
+              className="rounded-xl text-xs"
+            >
+              Voltar
+            </Button>
+            <Button
+              onClick={handleConfirmPayment}
+              disabled={paySaving}
+              className="rounded-xl text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {paySaving ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Confirmando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> Confirmar Pagamento
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
