@@ -1249,6 +1249,23 @@ export default function Estoque() {
                             {mov.reason || mov.supplier || 'Movimentação padrão'} • Resp:{' '}
                             {mov.responsible}
                           </div>
+                          {(mov.saleId || mov.patientName) && (
+                            <div className="flex items-center gap-2 mt-1">
+                              {mov.saleId && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[9px] px-1 py-0 bg-teal-50 text-teal-700 border-teal-200"
+                                >
+                                  Vinculado à venda
+                                </Badge>
+                              )}
+                              {mov.patientName && (
+                                <span className="text-[10px] text-slate-400">
+                                  Paciente: {mov.patientName}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
 

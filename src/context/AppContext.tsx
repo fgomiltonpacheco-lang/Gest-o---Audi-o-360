@@ -2923,6 +2923,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     delete patch.id
     delete patch.createdAt
     delete patch.number
+    // O campo no PocketBase é `estoque_baixado` (snake_case). A flag camelCase
+    // `estoqueBaixado` existe apenas no tipo TS — traduzimos antes de enviar,
+    // caso contrário a flag não persiste e o hook de auditoria (que observa
+    // `estoque_baixado`) não dispara baixar_estoque_venda/devolver_estoque_venda.
+    if ('estoqueBaixado' in patch) {
+      patch.estoque_baixado = !!patch.estoqueBaixado
+      delete patch.estoqueBaixado
+    }
     pb.collection('sales')
       .update(id, patch)
       .catch((err) => console.error('Erro ao atualizar venda:', err))
@@ -2993,6 +3001,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           .then((rec: any) => {
             const mapped = mapStockMovement(rec)
             setStockMovements((prev) => prev.map((m) => (m.id === tempId ? mapped : m)))
+            // Atualiza o currentQuantity do item no PocketBase para refletir a
+            // baixa local (a movimentação por si só não altera o saldo — é
+            // apenas o registro histórico; o saldo fica no campo
+            // currentQuantity do inventory).
+            pb.collection('inventory')
+              .update(it.stockItemId, { currentQuantity: newQty })
+              .catch((err) =>
+                console.error('Erro ao persistir currentQuantity (baixa venda):', err),
+              )
           })
           .catch((err) => {
             console.error('Erro ao registrar baixa de estoque da venda:', err)
@@ -3093,6 +3110,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           .then((rec: any) => {
             const mapped = mapStockMovement(rec)
             setStockMovements((prev) => prev.map((m) => (m.id === tempId ? mapped : m)))
+            // Atualiza o currentQuantity do item no PocketBase para refletir a
+            // devolução (a movimentação é apenas o histórico; o saldo fica no
+            // campo currentQuantity do inventory).
+            pb.collection('inventory')
+              .update(it.stockItemId, { currentQuantity: newQty })
+              .catch((err) =>
+                console.error('Erro ao persistir currentQuantity (devolução venda):', err),
+              )
           })
           .catch((err) => {
             console.error('Erro ao registrar devolução de estoque:', err)
@@ -3120,8 +3145,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const sale = sales.find((s) => s.id === id)
     if (!sale) return
 
+    const tinhaBaixa = !!sale.estoqueBaixado
+
     // 1. Devolve itens de estoque ao saldo (apenas se houve baixa).
-    //    O registro no audit_trail é feito pelo hook server-side.
+    //    O registro no audit_trail (ação devolver_estoque_venda e/ou
+    //    cancelar_venda_paga) é feito pelo hook server-side ao detectar a
+    //    mudança da flag `estoque_baixado` (true -> false) e do `status`.
     try {
       devolverEstoqueVenda(sale)
     } catch (err) {
@@ -3133,7 +3162,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     toast({
       title: mode === 'Estornado' ? 'Venda estornada' : 'Venda cancelada',
-      description: sale.estoqueBaixado
+      description: tinhaBaixa
         ? `Venda #${sale.number} foi ${mode === 'Estornado' ? 'estornada' : 'cancelada'} e os itens foram devolvidos ao estoque.`
         : `Venda #${sale.number} foi ${mode === 'Estornado' ? 'estornada' : 'cancelada'}.`,
       variant: 'destructive',
@@ -3443,6 +3472,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       description: `+${quantity} unidades adicionadas ao saldo.`,
     })
 
+    // Persiste o novo currentQuantity no registro do item no PocketBase,
+    // além de criar a movimentação de histórico.
+    const newQty = target ? Number(target.currentQuantity) + quantity : quantity
     pb.collection('inventory_movements')
       .create({
         itemId,
@@ -3457,6 +3489,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .then((rec: any) => {
         const mapped = mapStockMovement(rec)
         setStockMovements((prev) => prev.map((m) => (m.id === tempId ? mapped : m)))
+        pb.collection('inventory')
+          .update(itemId, { currentQuantity: newQty })
+          .catch((err) => console.error('Erro ao persistir currentQuantity (entrada manual):', err))
       })
       .catch((err) => {
         console.error('Erro ao registrar entrada:', err)
@@ -3548,6 +3583,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
+    // Persiste o novo currentQuantity no registro do item no PocketBase,
+    // além de criar a movimentação de histórico.
     pb.collection('inventory_movements')
       .create({
         itemId,
@@ -3563,6 +3600,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .then((rec: any) => {
         const mapped = mapStockMovement(rec)
         setStockMovements((prev) => prev.map((m) => (m.id === tempId ? mapped : m)))
+        pb.collection('inventory')
+          .update(itemId, { currentQuantity: newQty })
+          .catch((err) => console.error('Erro ao persistir currentQuantity (saída manual):', err))
       })
       .catch((err) => {
         console.error('Erro ao registrar saída:', err)
