@@ -993,17 +993,10 @@ export default function Prontuario() {
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => setTympModalOpen(true)}
-                      className="bg-slate-600 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl h-8"
-                    >
-                      + Imitanciometria (rápida)
-                    </Button>
-                    <Button
-                      size="sm"
                       onClick={() => navigate(`/pacientes/${patient.id}/imitanciometria/novo`)}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl h-8"
                     >
-                      + Nova Imitanciometria
+                      + Imitanciometria
                     </Button>
                     <Button
                       size="sm"

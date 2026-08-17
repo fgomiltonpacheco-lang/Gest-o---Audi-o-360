@@ -29,21 +29,20 @@ import {
   FileEdit,
   Eye,
   Download,
+  Calculator,
+  ChevronLeft,
+  ChevronRight,
+  Info,
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { calculateAge, formatDate, maskCPF } from '@/lib/formatters'
-import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
+import { calculateAge, formatDate } from '@/lib/formatters'
 import { Equipment } from '@/types'
+import TimpanogramChart from '@/components/print/TimpanogramChart'
 
 const SPECIALIST_NAME = 'MILTON SOARES PACHECO'
 const SPECIALIST_CRFA = '3-11981-5'
-const CLINIC_ADDRESS = 'R. Sadoc Correa, 373 - St. Central, Araguaína - TO, 77803-060'
-const CLINIC_PHONE = '(63) 3421-2611'
 
 const TIPOS_CURVA = ['A', 'Ad', 'As', 'B', 'C', 'Ad/As'] as const
-type TipoCurva = (typeof TIPOS_CURVA)[number]
-
-const REFLEXOS_STATUS_OPTS = ['Normal', 'Reduzido', 'Ausente'] as const
 
 const DEFAULT_REFERENCIAS =
   'Avaliação imitanciométrica baseada em Jerger (1970); Margolis e Heller (1987) para valores de normalidade; ' +
@@ -61,8 +60,45 @@ interface TimpData {
   gradiente_curva: number | null
   curva_descricao: string
   observacoes: string
-  // Pontos reais da curva timpanométrica (pressão × complacência).
   curva_timpanometrica?: { pressao: number; complacencia: number }[] | null
+}
+
+interface RawDataStore {
+  od_pressao_inicial: string
+  od_pressao_media: string
+  od_pressao_final: string
+  od_volume_inicial: string
+  od_volume_media: string
+  od_volume_final: string
+  oe_pressao_inicial: string
+  oe_pressao_media: string
+  oe_pressao_final: string
+  oe_volume_inicial: string
+  oe_volume_media: string
+  oe_volume_final: string
+}
+
+interface SummaryDataStore {
+  pressao_om_od: string
+  pressao_om_oe: string
+  max_relax_od: string
+  max_relax_oe: string
+  compl_200_od: string
+  compl_200_oe: string
+  compl_estatica_od: string
+  compl_estatica_oe: string
+}
+
+interface ReflexGridRow {
+  limiar: string
+  refl_contra: string
+  diferenca: string
+  ipsi: string
+}
+
+interface ReflexGridStore {
+  od: Record<number, ReflexGridRow> // freq: 500, 1000, 2000, 4000
+  oe: Record<number, ReflexGridRow>
 }
 
 interface ReflexData {
@@ -97,7 +133,6 @@ interface ExamState {
   meatoscopia_oe_normal: boolean
   meatoscopia_oe_alterada: boolean
   meatoscopia_oe_obs: string
-  // denormalizados paciente
   paciente_nome: string
   paciente_cpf: string
   paciente_nascimento: string
@@ -120,15 +155,24 @@ function emptyTimp(orelha: 'OD' | 'OE'): TimpData {
   }
 }
 
-function emptyReflex(orelha: 'OD' | 'OE', via: 'contra_lateral' | 'ipsi_lateral'): ReflexData {
+function emptyReflexGridRow(): ReflexGridRow {
+  return { limiar: '', refl_contra: '', diferenca: '', ipsi: '' }
+}
+
+function emptyReflexGrid(): ReflexGridStore {
   return {
-    orelha,
-    via,
-    frequencia_500: null,
-    frequencia_1000: null,
-    frequencia_2000: null,
-    frequencia_4000: null,
-    status: '',
+    od: {
+      500: emptyReflexGridRow(),
+      1000: emptyReflexGridRow(),
+      2000: emptyReflexGridRow(),
+      4000: emptyReflexGridRow(),
+    },
+    oe: {
+      500: emptyReflexGridRow(),
+      1000: emptyReflexGridRow(),
+      2000: emptyReflexGridRow(),
+      4000: emptyReflexGridRow(),
+    },
   }
 }
 
@@ -138,61 +182,6 @@ function numOr(v: unknown): number | null {
   return isNaN(n) ? null : n
 }
 
-/* ---------- Laudo automático ---------- */
-function describeCurva(tipo: string, lado: string): string {
-  const t = (tipo || '').trim()
-  const base = `Curva timpanométrica à ${lado}: `
-  switch (t) {
-    case 'A':
-      return base + 'Tipo A — mobilidade do sistema tympano-ossicular dentro da normalidade.'
-    case 'Ad':
-      return (
-        base +
-        'Tipo Ad — hipermobilidade do sistema tympano-ossicular, sugestiva de desarticulação ou flacidez da cadeia ossicular.'
-      )
-    case 'As':
-      return (
-        base +
-        'Tipo As — redução da mobilidade do sistema tympano-ossicular, sugestiva de otoesclerose ou fixação ossicular.'
-      )
-    case 'B':
-      return (
-        base +
-        'Tipo B — curva plana, sugestiva de presença de líquido na orelha média (otite média secretora) ou perfuração timpânica.'
-      )
-    case 'C':
-      return base + 'Tipo C — pressão negativa na orelha média, sugestiva de disfunção tubária.'
-    case 'Ad/As':
-      return base + 'Tipo Ad/As — variabilidade de complacência, avaliar em conjunto com a clínica.'
-    default:
-      return ''
-  }
-}
-
-function describeReflexos(status: string): string {
-  switch (status) {
-    case 'Normal':
-      return 'Reflexos acústicos presentes em níveis normais bilateralmente.'
-    case 'Reduzido':
-      return 'Reflexos acústicos reduzidos/elevados bilateralmente, sugestivos de alteração funcional.'
-    case 'Ausente':
-      return 'Reflexos acústicos ausentes bilateralmente, a serem correlacionados com os achados timpanométricos e audiológicos.'
-    default:
-      return 'Reflexos acústicos a serem avaliados conforme registro nas frequências estudadas.'
-  }
-}
-
-function buildSuggestedLaudo(tipoOD: string, tipoOE: string, reflexos: string): string {
-  const parts: string[] = []
-  const d = describeCurva(tipoOD, 'direita')
-  if (d) parts.push(d)
-  const e = describeCurva(tipoOE, 'esquerda')
-  if (e) parts.push(e)
-  parts.push(describeReflexos(reflexos))
-  return parts.filter(Boolean).join(' ')
-}
-
-/* ---------- Componente ---------- */
 export default function Imitanciometria() {
   const { id, examId } = useParams<{ id: string; examId?: string }>()
   const navigate = useNavigate()
@@ -238,39 +227,38 @@ export default function Imitanciometria() {
 
   const [timpOD, setTimpOD] = useState<TimpData>(emptyTimp('OD'))
   const [timpOE, setTimpOE] = useState<TimpData>(emptyTimp('OE'))
-  const [reflexODContra, setReflexODContra] = useState<ReflexData>(
-    emptyReflex('OD', 'contra_lateral'),
-  )
-  const [reflexODIpsi, setReflexODIpsi] = useState<ReflexData>(emptyReflex('OD', 'ipsi_lateral'))
-  const [reflexOEContra, setReflexOEContra] = useState<ReflexData>(
-    emptyReflex('OE', 'contra_lateral'),
-  )
-  const [reflexOEIpsi, setReflexOEIpsi] = useState<ReflexData>(emptyReflex('OE', 'ipsi_lateral'))
 
-  // Pré-preenche dados do paciente ao criar novo
-  useEffect(() => {
-    if (isNew && patient) {
-      const age = calculateAge(patient.birthDate)
-      setExam((prev) => ({
-        ...prev,
-        paciente_nome: patient.name,
-        paciente_cpf: patient.cpf || '',
-        paciente_nascimento: patient.birthDate || '',
-        paciente_idade: age !== null ? String(age) : '',
-        paciente_sexo: patient.gender || '',
-      }))
-    }
-  }, [patient?.id, isNew])
+  // Tabelas Numéricas
+  const [rawData, setRawData] = useState<RawDataStore>({
+    od_pressao_inicial: '',
+    od_pressao_media: '',
+    od_pressao_final: '',
+    od_volume_inicial: '',
+    od_volume_media: '',
+    od_volume_final: '',
+    oe_pressao_inicial: '',
+    oe_pressao_media: '',
+    oe_pressao_final: '',
+    oe_volume_inicial: '',
+    oe_volume_media: '',
+    oe_volume_final: '',
+  })
 
-  // Pré-seleciona equipamento único
-  useEffect(() => {
-    if (equipments.length === 1 && !exam.equipment_id) {
-      const eq = equipments[0]
-      setExam((prev) => ({ ...prev, equipment_id: eq.id, equipment_nome: eq.nome }))
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [equipments])
+  const [summaryData, setSummaryData] = useState<SummaryDataStore>({
+    pressao_om_od: '',
+    pressao_om_oe: '',
+    max_relax_od: '',
+    max_relax_oe: '',
+    compl_200_od: '',
+    compl_200_oe: '',
+    compl_estatica_od: '',
+    compl_estatica_oe: '',
+  })
 
+  // Grade de reflexos acústicos
+  const [reflexGrid, setReflexGrid] = useState<ReflexGridStore>(emptyReflexGrid())
+
+  // Carregar dados de um exame existente
   const loadExam = useCallback(async () => {
     if (!examId || examId === 'novo') return
     setLoading(true)
@@ -304,8 +292,6 @@ export default function Imitanciometria() {
         paciente_sexo: rec.paciente_sexo || '',
       })
 
-      // Pontos reais da curva timpanométrica (curva_timpanometrica_od/oe),
-      // armazenados no registro da imitanciometria (migration 0043).
       const odCurvePts = Array.isArray(rec.curva_timpanometrica_od)
         ? rec.curva_timpanometrica_od
         : null
@@ -313,14 +299,15 @@ export default function Imitanciometria() {
         ? rec.curva_timpanometrica_oe
         : null
 
-      // Carrega timpanometria
+      // Carrega timpanometria do PocketBase
       try {
         const timpRecs: any[] = await pb.collection('timpanometria_dados').getFullList({
           filter: `imitanciometria_id = "${examId}"`,
         })
         const od = timpRecs.find((r) => r.orelha === 'OD')
         const oe = timpRecs.find((r) => r.orelha === 'OE')
-        if (od)
+
+        if (od) {
           setTimpOD({
             id: od.id,
             orelha: 'OD',
@@ -334,7 +321,22 @@ export default function Imitanciometria() {
             observacoes: od.observacoes || '',
             curva_timpanometrica: odCurvePts,
           })
-        if (oe)
+          setRawData((prev) => ({
+            ...prev,
+            od_pressao_media:
+              od.pressao_pico != null ? String(od.pressao_pico) : prev.od_pressao_media,
+            od_volume_media:
+              od.volume_meato != null ? String(od.volume_meato) : prev.od_volume_media,
+          }))
+          setSummaryData((prev) => ({
+            ...prev,
+            pressao_om_od: od.pressao_pico != null ? String(od.pressao_pico) : prev.pressao_om_od,
+            compl_estatica_od:
+              od.complacencia != null ? String(od.complacencia) : prev.compl_estatica_od,
+          }))
+        }
+
+        if (oe) {
           setTimpOE({
             id: oe.id,
             orelha: 'OE',
@@ -348,39 +350,50 @@ export default function Imitanciometria() {
             observacoes: oe.observacoes || '',
             curva_timpanometrica: oeCurvePts,
           })
+          setRawData((prev) => ({
+            ...prev,
+            oe_pressao_media:
+              oe.pressao_pico != null ? String(oe.pressao_pico) : prev.oe_pressao_media,
+            oe_volume_media:
+              oe.volume_meato != null ? String(oe.volume_meato) : prev.oe_volume_media,
+          }))
+          setSummaryData((prev) => ({
+            ...prev,
+            pressao_om_oe: oe.pressao_pico != null ? String(oe.pressao_pico) : prev.pressao_om_oe,
+            compl_estatica_oe:
+              oe.complacencia != null ? String(oe.complacencia) : prev.compl_estatica_oe,
+          }))
+        }
       } catch {
-        /* intentionally ignored */
+        /* ignore */
       }
 
-      // Carrega reflexos
+      // Carrega reflexos do PocketBase
       try {
         const reflexRecs: any[] = await pb.collection('reflexo_acustico_dados').getFullList({
           filter: `imitanciometria_id = "${examId}"`,
         })
-        const find = (o: string, v: string) => reflexRecs.find((r) => r.orelha === o && r.via === v)
-        const mapReflex = (
-          r: any,
-          o: 'OD' | 'OE',
-          v: 'contra_lateral' | 'ipsi_lateral',
-        ): ReflexData =>
-          r
-            ? {
-                id: r.id,
-                orelha: o,
-                via: v,
-                frequencia_500: numOr(r.frequencia_500),
-                frequencia_1000: numOr(r.frequencia_1000),
-                frequencia_2000: numOr(r.frequencia_2000),
-                frequencia_4000: numOr(r.frequencia_4000),
-                status: r.status || '',
+        const newGrid = emptyReflexGrid()
+        const freqs = [500, 1000, 2000, 4000] as const
+
+        reflexRecs.forEach((r) => {
+          const side = r.orelha === 'OD' ? 'od' : r.orelha === 'OE' ? 'oe' : null
+          if (!side) return
+          freqs.forEach((f) => {
+            const val = r[`frequencia_${f}`]
+            if (val != null) {
+              const valStr = String(val)
+              if (r.via === 'contra_lateral') {
+                newGrid[side][f].refl_contra = valStr
+              } else if (r.via === 'ipsi_lateral') {
+                newGrid[side][f].ipsi = valStr
               }
-            : emptyReflex(o, v)
-        setReflexODContra(mapReflex(find('OD', 'contra_lateral'), 'OD', 'contra_lateral'))
-        setReflexODIpsi(mapReflex(find('OD', 'ipsi_lateral'), 'OD', 'ipsi_lateral'))
-        setReflexOEContra(mapReflex(find('OE', 'contra_lateral'), 'OE', 'contra_lateral'))
-        setReflexOEIpsi(mapReflex(find('OE', 'ipsi_lateral'), 'OE', 'ipsi_lateral'))
+            }
+          })
+        })
+        setReflexGrid(newGrid)
       } catch {
-        /* intentionally ignored */
+        /* ignore */
       }
     } catch (err) {
       console.error('Erro ao carregar imitanciometria:', err)
@@ -392,105 +405,178 @@ export default function Imitanciometria() {
     } finally {
       setLoading(false)
     }
-  }, [examId, toast])
+  }, [examId, today, toast])
 
   useEffect(() => {
     loadExam()
   }, [loadExam])
 
+  // Pré-preenche dados do paciente ao criar novo
+  useEffect(() => {
+    if (isNew && patient) {
+      const age = calculateAge(patient.birthDate)
+      setExam((prev) => ({
+        ...prev,
+        paciente_nome: patient.name,
+        paciente_cpf: patient.cpf || '',
+        paciente_nascimento: patient.birthDate || '',
+        paciente_idade: age !== null ? String(age) : '',
+        paciente_sexo: patient.gender || '',
+      }))
+    }
+  }, [patient, isNew])
+
+  // Pré-seleciona equipamento único
+  useEffect(() => {
+    if (equipments.length === 1 && !exam.equipment_id) {
+      const eq = equipments[0]
+      setExam((prev) => ({ ...prev, equipment_id: eq.id, equipment_nome: eq.nome }))
+    }
+  }, [equipments, exam.equipment_id])
+
   const setField = <K extends keyof ExamState>(key: K, value: ExamState[K]) => {
     setExam((prev) => ({ ...prev, [key]: value }))
   }
 
-  // Sincroniza tipo_curva das orelhas nos campos do parecer
-  useEffect(() => {
-    setExam((prev) => ({
+  // Função para o botão "Calcular"
+  const handleCalculate = () => {
+    // Se o usuário preencheu inicial/final ou valores de pressão e volume, calcula as médias
+    const calcAvg = (v1: string, v2: string) => {
+      const n1 = parseFloat(v1)
+      const n2 = parseFloat(v2)
+      if (!isNaN(n1) && !isNaN(n2)) return ((n1 + n2) / 2).toFixed(1)
+      if (!isNaN(n1)) return n1.toFixed(1)
+      if (!isNaN(n2)) return n2.toFixed(1)
+      return ''
+    }
+
+    const odPressaoMedia =
+      rawData.od_pressao_media || calcAvg(rawData.od_pressao_inicial, rawData.od_pressao_final)
+    const odVolumeMedia =
+      rawData.od_volume_media || calcAvg(rawData.od_volume_inicial, rawData.od_volume_final)
+    const oePressaoMedia =
+      rawData.oe_pressao_media || calcAvg(rawData.oe_pressao_inicial, rawData.oe_pressao_final)
+    const oeVolumeMedia =
+      rawData.oe_volume_media || calcAvg(rawData.oe_volume_inicial, rawData.oe_volume_final)
+
+    setRawData((prev) => ({
       ...prev,
-      tipo_curva_od: timpOD.tipo_curva || prev.tipo_curva_od,
-      tipo_curva_oe: timpOE.tipo_curva || prev.tipo_curva_oe,
+      od_pressao_media: odPressaoMedia,
+      od_volume_media: odVolumeMedia,
+      oe_pressao_media: oePressaoMedia,
+      oe_volume_media: oeVolumeMedia,
     }))
-  }, [timpOD.tipo_curva, timpOE.tipo_curva])
 
-  const handleSuggestedLaudo = () => {
-    const text = buildSuggestedLaudo(exam.tipo_curva_od, exam.tipo_curva_oe, exam.reflexos_status)
-    if (text) setField('laudo', text)
-    toast({ title: 'Laudo sugerido gerado', description: 'Revise e edite conforme necessário.' })
-  }
+    // Sincroniza com summary e com timpOD/OE
+    const pOD = odPressaoMedia ? parseFloat(odPressaoMedia) : timpOD.pressao_pico
+    const vOD = odVolumeMedia ? parseFloat(odVolumeMedia) : timpOD.volume_meato
+    const pOE = oePressaoMedia ? parseFloat(oePressaoMedia) : timpOE.pressao_pico
+    const vOE = oeVolumeMedia ? parseFloat(oeVolumeMedia) : timpOE.volume_meato
 
-  // Estatísticas de reflexos (para exibição)
-  const reflexesPresentes = useMemo(() => {
-    const rows = [reflexODContra, reflexODIpsi, reflexOEContra, reflexOEIpsi]
-    let present = 0
-    let total = 0
-    rows.forEach((r) => {
-      ;(
-        ['frequencia_500', 'frequencia_1000', 'frequencia_2000', 'frequencia_4000'] as const
-      ).forEach((f) => {
-        if (r[f] !== null) {
-          total++
-          if (r[f]! <= 100) present++
-        }
+    setSummaryData((prev) => ({
+      ...prev,
+      pressao_om_od:
+        odPressaoMedia ||
+        prev.pressao_om_od ||
+        (timpOD.pressao_pico != null ? String(timpOD.pressao_pico) : ''),
+      pressao_om_oe:
+        oePressaoMedia ||
+        prev.pressao_om_oe ||
+        (timpOE.pressao_pico != null ? String(timpOE.pressao_pico) : ''),
+      compl_estatica_od:
+        prev.compl_estatica_od || (timpOD.complacencia != null ? String(timpOD.complacencia) : ''),
+      compl_estatica_oe:
+        prev.compl_estatica_oe || (timpOE.complacencia != null ? String(timpOE.complacencia) : ''),
+    }))
+
+    setTimpOD((prev) => ({
+      ...prev,
+      pressao_pico: pOD,
+      volume_meato: vOD,
+    }))
+
+    setTimpOE((prev) => ({
+      ...prev,
+      pressao_pico: pOE,
+      volume_meato: vOE,
+    }))
+
+    // Atualiza diferença nos reflexos se limiar e refl. contra estiverem preenchidos
+    const freqs = [500, 1000, 2000, 4000] as const
+    setReflexGrid((prev) => {
+      const next = { ...prev }
+      ;(['od', 'oe'] as const).forEach((side) => {
+        freqs.forEach((f) => {
+          const row = next[side][f]
+          const lim = parseFloat(row.limiar)
+          const contra = parseFloat(row.refl_contra)
+          if (!isNaN(lim) && !isNaN(contra)) {
+            row.diferenca = String(contra - lim)
+          }
+        })
       })
+      return next
     })
-    return { present, total }
-  }, [reflexODContra, reflexODIpsi, reflexOEContra, reflexOEIpsi])
 
-  const persistSubcollections = async (imitId: string) => {
-    // Timpanometria
-    const timpUpsert = async (t: TimpData) => {
-      const payload = {
-        imitanciometria_id: imitId,
-        orelha: t.orelha,
-        volume_meato: t.volume_meato,
-        complacencia: t.complacencia,
-        pressao_maxima: t.pressao_maxima,
-        tipo_curva: t.tipo_curva,
-        pressao_pico: t.pressao_pico,
-        gradiente_curva: t.gradiente_curva,
-        curva_descricao: t.curva_descricao,
-        observacoes: t.observacoes,
-      }
-      if (t.id) {
-        await pb.collection('timpanometria_dados').update(t.id, payload)
-      } else {
-        const rec: any = await pb.collection('timpanometria_dados').create(payload)
-        t.id = rec.id
-      }
-    }
-    await timpUpsert(timpOD)
-    await timpUpsert(timpOE)
-
-    // Reflexos
-    const reflexUpsert = async (r: ReflexData) => {
-      const payload = {
-        imitanciometria_id: imitId,
-        orelha: r.orelha,
-        via: r.via,
-        frequencia_500: r.frequencia_500,
-        frequencia_1000: r.frequencia_1000,
-        frequencia_2000: r.frequencia_2000,
-        frequencia_4000: r.frequencia_4000,
-        status: r.status,
-      }
-      if (r.id) {
-        await pb.collection('reflexo_acustico_dados').update(r.id, payload)
-      } else {
-        const rec: any = await pb.collection('reflexo_acustico_dados').create(payload)
-        r.id = rec.id
-      }
-    }
-    await reflexUpsert(reflexODContra)
-    await reflexUpsert(reflexODIpsi)
-    await reflexUpsert(reflexOEContra)
-    await reflexUpsert(reflexOEIpsi)
+    toast({
+      title: 'Valores calculados',
+      description: 'Valores médios, pressões e diferenças calculados com sucesso.',
+    })
   }
 
+  // Preenche "AUS" no campo de reflexo acústico
+  const handleSetAus = (side: 'od' | 'oe', freq: number, field: 'refl_contra' | 'ipsi') => {
+    setReflexGrid((prev) => {
+      const row = { ...prev[side][freq], [field]: 'AUS' }
+      return {
+        ...prev,
+        [side]: {
+          ...prev[side],
+          [freq]: row,
+        },
+      }
+    })
+  }
+
+  // Salvar rascunho / finalizar
   const handleSave = async (finalizar = false) => {
     if (!patient) {
       toast({ title: 'Paciente não encontrado', variant: 'destructive' })
       return
     }
     setSaving(true)
+
+    // Ajusta timpOD e timpOE com valores das tabelas
+    const finalTimpOD: TimpData = {
+      ...timpOD,
+      tipo_curva: exam.tipo_curva_od || timpOD.tipo_curva,
+      pressao_pico:
+        rawData.od_pressao_media !== ''
+          ? parseFloat(rawData.od_pressao_media)
+          : timpOD.pressao_pico,
+      volume_meato:
+        rawData.od_volume_media !== '' ? parseFloat(rawData.od_volume_media) : timpOD.volume_meato,
+      complacencia:
+        summaryData.compl_estatica_od !== ''
+          ? parseFloat(summaryData.compl_estatica_od)
+          : timpOD.complacencia,
+    }
+
+    const finalTimpOE: TimpData = {
+      ...timpOE,
+      tipo_curva: exam.tipo_curva_oe || timpOE.tipo_curva,
+      pressao_pico:
+        rawData.oe_pressao_media !== ''
+          ? parseFloat(rawData.oe_pressao_media)
+          : timpOE.pressao_pico,
+      volume_meato:
+        rawData.oe_volume_media !== '' ? parseFloat(rawData.oe_volume_media) : timpOE.volume_meato,
+      complacencia:
+        summaryData.compl_estatica_oe !== ''
+          ? parseFloat(summaryData.compl_estatica_oe)
+          : timpOE.complacencia,
+    }
+
     const payload: Record<string, any> = {
       paciente_id: patient.id,
       medical_record_id: '',
@@ -501,8 +587,8 @@ export default function Imitanciometria() {
       equipment_nome: exam.equipment_nome || '',
       observacoes: exam.observacoes,
       status: finalizar ? 'finalizado' : exam.status,
-      tipo_curva_od: exam.tipo_curva_od || timpOD.tipo_curva,
-      tipo_curva_oe: exam.tipo_curva_oe || timpOE.tipo_curva,
+      tipo_curva_od: exam.tipo_curva_od,
+      tipo_curva_oe: exam.tipo_curva_oe,
       reflexos_status: exam.reflexos_status,
       laudo: exam.laudo,
       referencias: exam.referencias,
@@ -519,24 +605,110 @@ export default function Imitanciometria() {
       paciente_idade: String(calculateAge(patient.birthDate) ?? ''),
       paciente_sexo: patient.gender || '',
     }
+
     try {
       let imitId: string
       if (exam.id) {
         const rec: any = await pb.collection('imitanciometrias').update(exam.id, payload)
         imitId = rec.id
-        toast({
-          title: finalizar ? 'Exame finalizado' : 'Exame atualizado',
-          description: 'Imitanciometria salva com sucesso.',
-        })
       } else {
         const rec: any = await pb.collection('imitanciometrias').create(payload)
         imitId = rec.id
         setExam((prev) => ({ ...prev, id: imitId }))
-        toast({ title: 'Exame criado', description: 'Imitanciometria salva com sucesso.' })
         navigate(`/pacientes/${patient.id}/imitanciometria/${imitId}`, { replace: true })
       }
-      await persistSubcollections(imitId)
+
+      // Persistir Timpanometria Subcollections
+      const timpUpsert = async (t: TimpData) => {
+        const p = {
+          imitanciometria_id: imitId,
+          orelha: t.orelha,
+          volume_meato: t.volume_meato,
+          complacencia: t.complacencia,
+          pressao_maxima: t.pressao_maxima,
+          tipo_curva: t.tipo_curva,
+          pressao_pico: t.pressao_pico,
+          gradiente_curva: t.gradiente_curva,
+          curva_descricao: t.curva_descricao,
+          observacoes: t.observacoes,
+        }
+        if (t.id) {
+          await pb.collection('timpanometria_dados').update(t.id, p)
+        } else {
+          const rec: any = await pb.collection('timpanometria_dados').create(p)
+          t.id = rec.id
+        }
+      }
+      await timpUpsert(finalTimpOD)
+      await timpUpsert(finalTimpOE)
+
+      // Persistir Reflexo Subcollections
+      const freqs = [500, 1000, 2000, 4000] as const
+      const buildReflexPayload = (
+        orelha: 'OD' | 'OE',
+        via: 'contra_lateral' | 'ipsi_lateral',
+      ): ReflexData => {
+        const side = orelha === 'OD' ? 'od' : 'oe'
+        const getFreqVal = (f: (typeof freqs)[number]) => {
+          const raw =
+            via === 'contra_lateral' ? reflexGrid[side][f].refl_contra : reflexGrid[side][f].ipsi
+          if (raw === 'AUS' || raw === 'aus' || raw === '') return null
+          const n = parseFloat(raw)
+          return isNaN(n) ? null : n
+        }
+
+        return {
+          orelha,
+          via,
+          frequencia_500: getFreqVal(500),
+          frequencia_1000: getFreqVal(1000),
+          frequencia_2000: getFreqVal(2000),
+          frequencia_4000: getFreqVal(4000),
+          status: '',
+        }
+      }
+
+      const mapReflexes: { orelha: 'OD' | 'OE'; via: 'contra_lateral' | 'ipsi_lateral' }[] = [
+        { orelha: 'OD', via: 'contra_lateral' },
+        { orelha: 'OD', via: 'ipsi_lateral' },
+        { orelha: 'OE', via: 'contra_lateral' },
+        { orelha: 'OE', via: 'ipsi_lateral' },
+      ]
+
+      for (const item of mapReflexes) {
+        const rData = buildReflexPayload(item.orelha, item.via)
+        const p = {
+          imitanciometria_id: imitId,
+          orelha: rData.orelha,
+          via: rData.via,
+          frequencia_500: rData.frequencia_500,
+          frequencia_1000: rData.frequencia_1000,
+          frequencia_2000: rData.frequencia_2000,
+          frequencia_4000: rData.frequencia_4000,
+          status: rData.status,
+        }
+
+        // Tenta buscar se existe
+        try {
+          const existing: any[] = await pb.collection('reflexo_acustico_dados').getFullList({
+            filter: `imitanciometria_id = "${imitId}" && orelha = "${rData.orelha}" && via = "${rData.via}"`,
+          })
+          if (existing.length > 0) {
+            await pb.collection('reflexo_acustico_dados').update(existing[0].id, p)
+          } else {
+            await pb.collection('reflexo_acustico_dados').create(p)
+          }
+        } catch {
+          await pb.collection('reflexo_acustico_dados').create(p)
+        }
+      }
+
       if (finalizar) setField('status', 'finalizado')
+
+      toast({
+        title: finalizar ? 'Exame finalizado' : 'Exame salvo',
+        description: 'Imitanciometria salva com sucesso.',
+      })
     } catch (err) {
       console.error('Erro ao salvar imitanciometria:', err)
       let msg = 'Não foi possível salvar o exame.'
@@ -552,61 +724,104 @@ export default function Imitanciometria() {
     [equipments, exam.equipment_id],
   )
 
-  const buildPrintData = (): ImitPrintData => ({
-    paciente_nome: exam.paciente_nome,
-    paciente_cpf: exam.paciente_cpf,
-    paciente_nascimento: exam.paciente_nascimento,
-    paciente_idade: exam.paciente_idade,
-    paciente_sexo: exam.paciente_sexo,
-    data_exame: exam.data_exame,
-    especialista_nome: exam.especialista_nome,
-    especialista_crm: currentUser?.crmCrfa || '',
-    equipment_nome: exam.equipment_nome,
-    equipment_calibracao: selectedEquipment?.data_calibracao || '',
-    encaminhado_por: exam.encaminhado_por,
-    observacoes: exam.observacoes,
-    meatoscopia: {
-      od_normal: exam.meatoscopia_od_normal,
-      od_alterada: exam.meatoscopia_od_alterada,
-      od_obs: exam.meatoscopia_od_obs,
-      oe_normal: exam.meatoscopia_oe_normal,
-      oe_alterada: exam.meatoscopia_oe_alterada,
-      oe_obs: exam.meatoscopia_oe_obs,
-    },
-    tipo_curva_od: exam.tipo_curva_od || timpOD.tipo_curva,
-    tipo_curva_oe: exam.tipo_curva_oe || timpOE.tipo_curva,
-    reflexos_status: exam.reflexos_status,
-    laudo: exam.laudo,
-    referencias: exam.referencias,
-    timpanometria: {
-      OD: {
-        volume_meato: timpOD.volume_meato,
-        complacencia: timpOD.complacencia,
-        pressao_maxima: timpOD.pressao_maxima,
-        tipo_curva: timpOD.tipo_curva,
-        pressao_pico: timpOD.pressao_pico,
-        gradiente_curva: timpOD.gradiente_curva,
-        curva_descricao: timpOD.curva_descricao,
-        observacoes: timpOD.observacoes,
-        curva_timpanometrica: timpOD.curva_timpanometrica ?? null,
+  const buildPrintData = (): ImitPrintData => {
+    // Monta dados de reflexos para impressão a partir da reflexGrid
+    const mapReflexFromGrid = (
+      orelha: 'OD' | 'OE',
+      via: 'contra_lateral' | 'ipsi_lateral',
+    ): ReflexData => {
+      const side = orelha === 'OD' ? 'od' : 'oe'
+      const getFreq = (f: 500 | 1000 | 2000 | 4000) => {
+        const val =
+          via === 'contra_lateral' ? reflexGrid[side][f].refl_contra : reflexGrid[side][f].ipsi
+        if (val === 'AUS' || val === '' || isNaN(Number(val))) return null
+        return Number(val)
+      }
+      return {
+        orelha,
+        via,
+        frequencia_500: getFreq(500),
+        frequencia_1000: getFreq(1000),
+        frequencia_2000: getFreq(2000),
+        frequencia_4000: getFreq(4000),
+        status: '',
+      }
+    }
+
+    return {
+      paciente_nome: exam.paciente_nome,
+      paciente_cpf: exam.paciente_cpf,
+      paciente_nascimento: exam.paciente_nascimento,
+      paciente_idade: exam.paciente_idade,
+      paciente_sexo: exam.paciente_sexo,
+      data_exame: exam.data_exame,
+      especialista_nome: exam.especialista_nome,
+      especialista_crm: currentUser?.crmCrfa || '',
+      equipment_nome: exam.equipment_nome,
+      equipment_calibracao: selectedEquipment?.data_calibracao || '',
+      encaminhado_por: exam.encaminhado_por,
+      observacoes: exam.observacoes,
+      meatoscopia: {
+        od_normal: exam.meatoscopia_od_normal,
+        od_alterada: exam.meatoscopia_od_alterada,
+        od_obs: exam.meatoscopia_od_obs,
+        oe_normal: exam.meatoscopia_oe_normal,
+        oe_alterada: exam.meatoscopia_oe_alterada,
+        oe_obs: exam.meatoscopia_oe_obs,
       },
-      OE: {
-        volume_meato: timpOE.volume_meato,
-        complacencia: timpOE.complacencia,
-        pressao_maxima: timpOE.pressao_maxima,
-        tipo_curva: timpOE.tipo_curva,
-        pressao_pico: timpOE.pressao_pico,
-        gradiente_curva: timpOE.gradiente_curva,
-        curva_descricao: timpOE.curva_descricao,
-        observacoes: timpOE.observacoes,
-        curva_timpanometrica: timpOE.curva_timpanometrica ?? null,
+      tipo_curva_od: exam.tipo_curva_od,
+      tipo_curva_oe: exam.tipo_curva_oe,
+      reflexos_status: exam.reflexos_status,
+      laudo: exam.laudo,
+      referencias: exam.referencias,
+      timpanometria: {
+        OD: {
+          volume_meato: rawData.od_volume_media
+            ? Number(rawData.od_volume_media)
+            : timpOD.volume_meato,
+          complacencia: summaryData.compl_estatica_od
+            ? Number(summaryData.compl_estatica_od)
+            : timpOD.complacencia,
+          pressao_maxima: timpOD.pressao_maxima,
+          tipo_curva: exam.tipo_curva_od || timpOD.tipo_curva,
+          pressao_pico: rawData.od_pressao_media
+            ? Number(rawData.od_pressao_media)
+            : timpOD.pressao_pico,
+          gradiente_curva: timpOD.gradiente_curva,
+          curva_descricao: timpOD.curva_descricao,
+          observacoes: timpOD.observacoes,
+          curva_timpanometrica: timpOD.curva_timpanometrica ?? null,
+        },
+        OE: {
+          volume_meato: rawData.oe_volume_media
+            ? Number(rawData.oe_volume_media)
+            : timpOE.volume_meato,
+          complacencia: summaryData.compl_estatica_oe
+            ? Number(summaryData.compl_estatica_oe)
+            : timpOE.complacencia,
+          pressao_maxima: timpOE.pressao_maxima,
+          tipo_curva: exam.tipo_curva_oe || timpOE.tipo_curva,
+          pressao_pico: rawData.oe_pressao_media
+            ? Number(rawData.oe_pressao_media)
+            : timpOE.pressao_pico,
+          gradiente_curva: timpOE.gradiente_curva,
+          curva_descricao: timpOE.curva_descricao,
+          observacoes: timpOE.observacoes,
+          curva_timpanometrica: timpOE.curva_timpanometrica ?? null,
+        },
       },
-    },
-    reflexos: {
-      OD: { contra_lateral: reflexODContra, ipsi_lateral: reflexODIpsi },
-      OE: { contra_lateral: reflexOEContra, ipsi_lateral: reflexOEIpsi },
-    },
-  })
+      reflexos: {
+        OD: {
+          contra_lateral: mapReflexFromGrid('OD', 'contra_lateral'),
+          ipsi_lateral: mapReflexFromGrid('OD', 'ipsi_lateral'),
+        },
+        OE: {
+          contra_lateral: mapReflexFromGrid('OE', 'contra_lateral'),
+          ipsi_lateral: mapReflexFromGrid('OE', 'ipsi_lateral'),
+        },
+      },
+    }
+  }
 
   const professionalData = currentUser
     ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa }
@@ -663,14 +878,6 @@ export default function Imitanciometria() {
     })
   }
 
-  const handlePreview = () => {
-    setPreviewOpen(true)
-  }
-
-  const handleDownload = async () => {
-    await handlePrint()
-  }
-
   if (!patient) {
     return (
       <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-4">
@@ -685,7 +892,7 @@ export default function Imitanciometria() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="w-8 h-8 text-teal-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
       </div>
     )
   }
@@ -693,21 +900,21 @@ export default function Imitanciometria() {
   const readOnly = isSecretaria || exam.status === 'finalizado'
 
   return (
-    <div className="space-y-3 animate-in fade-in-50 duration-200 pb-12">
-      {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+    <div className="space-y-4 animate-in fade-in-50 duration-200 pb-16 text-slate-800">
+      {/* Top Header / Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             onClick={() => navigate(`/pacientes/${patient.id}/prontuario`)}
-            className="text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl"
+            className="text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-lg h-8"
           >
-            <ArrowLeft className="w-4 h-4 mr-1.5" />
+            <ArrowLeft className="w-4 h-4 mr-1" />
             Voltar
           </Button>
           <div>
-            <h1 className="text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-              <Activity className="w-5 h-5 text-emerald-600" />
+            <h1 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-blue-600" />
               Imitanciometria
             </h1>
           </div>
@@ -724,355 +931,741 @@ export default function Imitanciometria() {
             </span>
           )}
         </div>
-      </div>
 
-      {/* Prévia para impressão */}
-      <div className="hidden print:block">
-        <ImitanciometriaPrint
-          data={buildPrintData()}
-          clinicSettings={clinicSettings}
-          professional={professionalData}
-        />
-      </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPreviewOpen(true)}
+            className="h-8 text-xs font-semibold rounded-lg"
+          >
+            <Eye className="w-3.5 h-3.5 mr-1" />
+            PDF
+          </Button>
 
-      <div className="no-print space-y-3">
-        {/* Dados gerais / Identificação */}
-        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Field label="Data do Exame">
-              <Input
-                type="date"
-                value={exam.data_exame}
-                onChange={(e) => setField('data_exame', e.target.value)}
-                disabled={readOnly}
-                className="h-9 rounded-xl text-xs font-medium border-slate-300 bg-white"
-              />
-            </Field>
-            <Field label="Especialista">
-              <Input
-                value={exam.especialista_nome}
-                onChange={(e) => setField('especialista_nome', e.target.value)}
-                disabled={readOnly}
-                className="h-9 rounded-xl text-xs font-medium border-slate-300 bg-white"
-              />
-            </Field>
-            <Field label="Equipamento (instrumento)">
-              <Select
-                value={exam.equipment_id || '__none'}
-                onValueChange={(v) => {
-                  const eq = equipments.find((e) => e.id === v)
-                  setExam((prev) => ({
-                    ...prev,
-                    equipment_id: v === '__none' ? '' : v,
-                    equipment_nome: eq?.nome || '',
-                  }))
-                }}
-                disabled={readOnly}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrint}
+            className="h-8 text-xs font-semibold rounded-lg"
+          >
+            <Printer className="w-3.5 h-3.5 mr-1" />
+            Imprimir
+          </Button>
+
+          {!isSecretaria && (
+            <>
+              <Button
+                size="sm"
+                onClick={() => handleSave(false)}
+                disabled={saving || exam.status === 'finalizado'}
+                className="bg-slate-700 hover:bg-slate-800 text-white h-8 text-xs font-semibold rounded-lg"
               >
-                <SelectTrigger className="h-9 rounded-xl text-xs font-medium border-slate-300 bg-white">
-                  <SelectValue placeholder="Selecione o equipamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none">—</SelectItem>
-                  {equipments.map((eq) => (
-                    <SelectItem key={eq.id} value={eq.id}>
-                      {eq.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
-          <div className="mt-3">
-            <Field label="Encaminhado por">
-              <Input
-                value={exam.encaminhado_por}
-                onChange={(e) => setField('encaminhado_por', e.target.value)}
-                disabled={readOnly}
-                placeholder="Profissional/entidade que encaminhou o paciente (opcional)"
-                className="h-9 rounded-xl text-xs font-medium border-slate-300 bg-white"
-              />
-            </Field>
-          </div>
-        </div>
+                {saving ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                ) : (
+                  <Save className="w-3.5 h-3.5 mr-1" />
+                )}
+                Salvar
+              </Button>
 
-        {/* Seção: Meatoscopia */}
-        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 pb-2 border-b border-slate-100 mb-3">
-            <Activity className="w-4 h-4 text-emerald-600" />
-            Meatoscopia
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <MeatoscopiaCard
-              label="Orelha Direita (OD)"
-              color="red"
-              normal={exam.meatoscopia_od_normal}
-              alterada={exam.meatoscopia_od_alterada}
-              obs={exam.meatoscopia_od_obs}
-              onNormal={(v) => setField('meatoscopia_od_normal', v)}
-              onAlterada={(v) => setField('meatoscopia_od_alterada', v)}
-              onObs={(v) => setField('meatoscopia_od_obs', v)}
-              disabled={readOnly}
-            />
-            <MeatoscopiaCard
-              label="Orelha Esquerda (OE)"
-              color="blue"
-              normal={exam.meatoscopia_oe_normal}
-              alterada={exam.meatoscopia_oe_alterada}
-              obs={exam.meatoscopia_oe_obs}
-              onNormal={(v) => setField('meatoscopia_oe_normal', v)}
-              onAlterada={(v) => setField('meatoscopia_oe_alterada', v)}
-              onObs={(v) => setField('meatoscopia_oe_obs', v)}
-              disabled={readOnly}
-            />
-          </div>
-        </div>
-
-        {/* Seção 2: Timpanometria — duas colunas OD/OE */}
-        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 pb-2 border-b border-slate-100 mb-3">
-            <Activity className="w-4 h-4 text-emerald-600" />
-            Timpanometria
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <TimpCard
-              label="Orelha Direita (OD)"
-              color="red"
-              data={timpOD}
-              onChange={setTimpOD}
-              disabled={readOnly}
-            />
-            <TimpCard
-              label="Orelha Esquerda (OE)"
-              color="blue"
-              data={timpOE}
-              onChange={setTimpOE}
-              disabled={readOnly}
-            />
-          </div>
-        </div>
-
-        {/* Seção 3: Reflexo Acústico */}
-        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 pb-2 border-b border-slate-100 mb-3">
-            <Activity className="w-4 h-4 text-emerald-600" />
-            Reflexo Acústico
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ReflexCard
-              label="Orelha Direita (OD)"
-              color="red"
-              contra={reflexODContra}
-              ipsi={reflexODIpsi}
-              onContra={setReflexODContra}
-              onIpsi={setReflexODIpsi}
-              disabled={readOnly}
-            />
-            <ReflexCard
-              label="Orelha Esquerda (OE)"
-              color="blue"
-              contra={reflexOEContra}
-              ipsi={reflexOEIpsi}
-              onContra={setReflexOEContra}
-              onIpsi={setReflexOEIpsi}
-              disabled={readOnly}
-            />
-          </div>
-          {reflexesPresentes.total > 0 && (
-            <p className="text-[11px] text-slate-500 mt-2">
-              Reflexos presentes: {reflexesPresentes.present} de {reflexesPresentes.total}{' '}
-              registros.
-            </p>
+              <Button
+                size="sm"
+                onClick={() => handleSave(true)}
+                disabled={saving || exam.status === 'finalizado'}
+                className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs font-semibold rounded-lg"
+              >
+                {saving ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                )}
+                Finalizar
+              </Button>
+            </>
           )}
         </div>
+      </div>
 
-        {/* Seção 4: Parecer */}
-        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 pb-2 border-b border-slate-100 mb-3">
-            <Activity className="w-4 h-4 text-emerald-600" />
-            Parecer
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-            <Field label="Tipo de Curva OD">
-              <Select
-                value={exam.tipo_curva_od || '__none'}
-                onValueChange={(v) => setField('tipo_curva_od', v === '__none' ? '' : v)}
-                disabled={readOnly}
-              >
-                <SelectTrigger className="h-9 rounded-xl text-xs font-medium border-slate-300 bg-white">
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none">—</SelectItem>
-                  {TIPOS_CURVA.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Tipo de Curva OE">
-              <Select
-                value={exam.tipo_curva_oe || '__none'}
-                onValueChange={(v) => setField('tipo_curva_oe', v === '__none' ? '' : v)}
-                disabled={readOnly}
-              >
-                <SelectTrigger className="h-9 rounded-xl text-xs font-medium border-slate-300 bg-white">
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none">—</SelectItem>
-                  {TIPOS_CURVA.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Reflexos Acústicos">
-              <Select
-                value={exam.reflexos_status || '__none'}
-                onValueChange={(v) => setField('reflexos_status', v === '__none' ? '' : v)}
-                disabled={readOnly}
-              >
-                <SelectTrigger className="h-9 rounded-xl text-xs font-medium border-slate-300 bg-white">
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none">—</SelectItem>
-                  {REFLEXOS_STATUS_OPTS.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
-          <div className="flex items-center justify-between mb-1">
-            <Label className="text-[10px] font-semibold text-slate-600">
-              Laudo automático (editável)
+      {/* Main Container Layout */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-5 shadow-sm">
+        {/* Header Metadata Info Bar */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pb-3 border-b border-slate-200 text-xs">
+          <div>
+            <Label className="text-[10px] font-semibold text-slate-500 block mb-0.5">
+              Data do Exame
             </Label>
-            {!readOnly && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={handleSuggestedLaudo}
-                className="h-7 text-[11px] rounded-lg"
-              >
-                <Wand2 className="w-3 h-3 mr-1" />
-                Gerar laudo
-              </Button>
-            )}
+            <Input
+              type="date"
+              value={exam.data_exame}
+              onChange={(e) => setField('data_exame', e.target.value)}
+              disabled={readOnly}
+              className="h-8 text-xs rounded-md border-slate-300"
+            />
           </div>
-          <Textarea
-            value={exam.laudo}
-            onChange={(e) => setField('laudo', e.target.value)}
-            disabled={readOnly}
-            rows={5}
-            placeholder="Laudo gerado a partir das seleções acima. Edite conforme necessário."
-            className="rounded-xl text-xs border-slate-300 resize-y"
-          />
-          <Label className="text-[10px] font-semibold text-slate-600 block mt-3 mb-0.5">
-            Referências (editável)
-          </Label>
-          <Textarea
-            value={exam.referencias}
-            onChange={(e) => setField('referencias', e.target.value)}
-            disabled={readOnly}
-            rows={2}
-            className="rounded-xl text-[11px] border-slate-300 resize-y italic text-slate-600"
-          />
-          <Label className="text-[10px] font-semibold text-slate-600 block mt-3 mb-0.5">
-            Observações
-          </Label>
-          <Textarea
-            value={exam.observacoes}
-            onChange={(e) => setField('observacoes', e.target.value)}
-            disabled={readOnly}
-            rows={2}
-            placeholder="Observações adicionais (opcional)"
-            className="rounded-xl text-xs border-slate-300 resize-y"
-          />
+          <div>
+            <Label className="text-[10px] font-semibold text-slate-500 block mb-0.5">
+              Especialista
+            </Label>
+            <Input
+              value={exam.especialista_nome}
+              onChange={(e) => setField('especialista_nome', e.target.value)}
+              disabled={readOnly}
+              className="h-8 text-xs rounded-md border-slate-300"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px] font-semibold text-slate-500 block mb-0.5">
+              Equipamento
+            </Label>
+            <Select
+              value={exam.equipment_id || '__none'}
+              onValueChange={(v) => {
+                const eq = equipments.find((e) => e.id === v)
+                setExam((prev) => ({
+                  ...prev,
+                  equipment_id: v === '__none' ? '' : v,
+                  equipment_nome: eq?.nome || '',
+                }))
+              }}
+              disabled={readOnly}
+            >
+              <SelectTrigger className="h-8 text-xs rounded-md border-slate-300">
+                <SelectValue placeholder="Selecione o equipamento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">—</SelectItem>
+                {equipments.map((eq) => (
+                  <SelectItem key={eq.id} value={eq.id}>
+                    {eq.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {/* Seção 5: Assinatura (somente leitura) */}
-        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 pb-2 border-b border-slate-100 mb-3">
-            <Activity className="w-4 h-4 text-emerald-600" />
-            Assinatura
-          </h3>
-          <div className="text-center py-2">
-            <div className="mx-auto" style={{ maxWidth: 320 }}>
-              <div className="border-t border-slate-400 pt-1 text-sm font-bold text-slate-800">
-                {(currentUser?.name || SPECIALIST_NAME).toUpperCase()}
+        {/* 1. GRÁFICOS NO TOPO */}
+        <div>
+          <div className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+            Timpanometria
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* OD Box (Vermelho) */}
+            <div className="border border-red-500 rounded-md p-2 bg-white flex flex-col items-center">
+              <div className="w-full h-48 relative">
+                <TimpanogramChart
+                  width={340}
+                  height={190}
+                  odPoints={timpOD.curva_timpanometrica}
+                  odTimp={{
+                    tipo_curva: exam.tipo_curva_od || timpOD.tipo_curva,
+                    pressao_pico: rawData.od_pressao_media
+                      ? Number(rawData.od_pressao_media)
+                      : timpOD.pressao_pico,
+                    complacencia: summaryData.compl_estatica_od
+                      ? Number(summaryData.compl_estatica_od)
+                      : timpOD.complacencia,
+                  }}
+                  showLegend={false}
+                  showTitle={false}
+                />
               </div>
-              <div className="text-[11px] text-slate-500">
-                Fonoaudiólogo — CRFa{' '}
-                {(currentUser?.crmCrfa || SPECIALIST_CRFA).replace(/^crfa\s*/i, '')}
+              <div className="w-full flex justify-between items-center text-xs font-bold text-red-600 mt-1 px-1">
+                <span>DIREITA</span>
+                <span>CURVA TIPO</span>
+              </div>
+            </div>
+
+            {/* OE Box (Azul) */}
+            <div className="border border-blue-600 rounded-md p-2 bg-white flex flex-col items-center">
+              <div className="w-full h-48 relative">
+                <TimpanogramChart
+                  width={340}
+                  height={190}
+                  oePoints={timpOE.curva_timpanometrica}
+                  oeTimp={{
+                    tipo_curva: exam.tipo_curva_oe || timpOE.tipo_curva,
+                    pressao_pico: rawData.oe_pressao_media
+                      ? Number(rawData.oe_pressao_media)
+                      : timpOE.pressao_pico,
+                    complacencia: summaryData.compl_estatica_oe
+                      ? Number(summaryData.compl_estatica_oe)
+                      : timpOE.complacencia,
+                  }}
+                  showLegend={false}
+                  showTitle={false}
+                />
+              </div>
+              <div className="w-full flex justify-between items-center text-xs font-bold text-blue-700 mt-1 px-1">
+                <span>ESQUERDA</span>
+                <span>CURVA TIPO</span>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Rodapé de ações */}
-      <div className="no-print flex flex-col sm:flex-row items-center justify-end gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
-        <Button
-          variant="outline"
-          onClick={handlePreview}
-          className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10 w-full sm:w-auto"
-        >
-          <Eye className="w-4 h-4 mr-1.5" />
-          Visualizar PDF
-        </Button>
-        <Button
-          variant="outline"
-          onClick={handlePrint}
-          className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10 w-full sm:w-auto"
-        >
-          <Printer className="w-4 h-4 mr-1.5" />
-          Imprimir
-        </Button>
-        <Button
-          variant="outline"
-          onClick={handleDownload}
-          className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10 w-full sm:w-auto"
-        >
-          <Download className="w-4 h-4 mr-1.5" />
-          Baixar PDF
-        </Button>
-        {!isSecretaria && (
-          <>
-            <Button
-              onClick={() => handleSave(false)}
-              disabled={saving || exam.status === 'finalizado'}
-              className="bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold h-10 shadow-sm w-full sm:w-auto disabled:opacity-50"
+        {/* 2. SELEÇÃO DE CURVA */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label className="text-xs font-bold text-slate-700 block mb-1">Curva Tipo (OD)</Label>
+            <Select
+              value={exam.tipo_curva_od || '__none'}
+              onValueChange={(v) => {
+                const val = v === '__none' ? '' : v
+                setField('tipo_curva_od', val)
+                setTimpOD((prev) => ({ ...prev, tipo_curva: val }))
+              }}
+              disabled={readOnly}
             >
-              {saving ? (
-                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 mr-1.5" />
-              )}
-              Salvar Rascunho
-            </Button>
-            <Button
-              onClick={() => handleSave(true)}
-              disabled={saving || exam.status === 'finalizado'}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold h-10 shadow-sm w-full sm:w-auto disabled:opacity-50"
+              <SelectTrigger className="h-9 text-xs rounded-md border-slate-300">
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">Selecione...</SelectItem>
+                {TIPOS_CURVA.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-xs font-bold text-slate-700 block mb-1">Curva Tipo (OE)</Label>
+            <Select
+              value={exam.tipo_curva_oe || '__none'}
+              onValueChange={(v) => {
+                const val = v === '__none' ? '' : v
+                setField('tipo_curva_oe', val)
+                setTimpOE((prev) => ({ ...prev, tipo_curva: val }))
+              }}
+              disabled={readOnly}
             >
-              {saving ? (
-                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-              ) : (
-                <CheckCircle2 className="w-4 h-4 mr-1.5" />
-              )}
-              Finalizar
-            </Button>
-          </>
-        )}
+              <SelectTrigger className="h-9 text-xs rounded-md border-slate-300">
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">Selecione...</SelectItem>
+                {TIPOS_CURVA.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* 3. BARRA DE DESTAQUE */}
+        <div className="bg-sky-400 text-white font-bold text-xs py-2 px-4 text-center rounded shadow-sm">
+          Definição da Curva no campo Observação
+        </div>
+
+        {/* 4. TABELAS NUMÉRICAS */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          {/* Tabela 1: Dados Brutos (OD/OE x Inicial/Média/Final) */}
+          <div className="space-y-2">
+            <div className="grid grid-cols-3 text-center text-xs font-bold text-slate-700 mb-1">
+              <div>INICIAL</div>
+              <div>MÉDIA</div>
+              <div>FINAL</div>
+            </div>
+
+            <div className="border border-red-500 rounded p-2 bg-white space-y-2">
+              <div className="grid grid-cols-[100px_1fr_1fr_1fr] items-center gap-2">
+                <span className="text-[11px] font-bold text-red-600 text-center uppercase">
+                  OD Pressão (daPa)
+                </span>
+                <Input
+                  value={rawData.od_pressao_inicial}
+                  onChange={(e) =>
+                    setRawData((p) => ({ ...p, od_pressao_inicial: e.target.value }))
+                  }
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300"
+                />
+                <Input
+                  value={rawData.od_pressao_media}
+                  onChange={(e) => setRawData((p) => ({ ...p, od_pressao_media: e.target.value }))}
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300 bg-slate-50 font-medium"
+                />
+                <Input
+                  value={rawData.od_pressao_final}
+                  onChange={(e) => setRawData((p) => ({ ...p, od_pressao_final: e.target.value }))}
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300"
+                />
+              </div>
+
+              <div className="grid grid-cols-[100px_1fr_1fr_1fr] items-center gap-2">
+                <span className="text-[11px] font-bold text-red-600 text-center uppercase">
+                  OD Volume (ml)
+                </span>
+                <Input
+                  value={rawData.od_volume_inicial}
+                  onChange={(e) => setRawData((p) => ({ ...p, od_volume_inicial: e.target.value }))}
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300"
+                />
+                <Input
+                  value={rawData.od_volume_media}
+                  onChange={(e) => setRawData((p) => ({ ...p, od_volume_media: e.target.value }))}
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300 bg-slate-50 font-medium"
+                />
+                <Input
+                  value={rawData.od_volume_final}
+                  onChange={(e) => setRawData((p) => ({ ...p, od_volume_final: e.target.value }))}
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300"
+                />
+              </div>
+            </div>
+
+            <div className="border border-blue-600 rounded p-2 bg-white space-y-2">
+              <div className="grid grid-cols-[100px_1fr_1fr_1fr] items-center gap-2">
+                <span className="text-[11px] font-bold text-blue-700 text-center uppercase">
+                  OE Pressão (daPa)
+                </span>
+                <Input
+                  value={rawData.oe_pressao_inicial}
+                  onChange={(e) =>
+                    setRawData((p) => ({ ...p, oe_pressao_inicial: e.target.value }))
+                  }
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300"
+                />
+                <Input
+                  value={rawData.oe_pressao_media}
+                  onChange={(e) => setRawData((p) => ({ ...p, oe_pressao_media: e.target.value }))}
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300 bg-slate-50 font-medium"
+                />
+                <Input
+                  value={rawData.oe_pressao_final}
+                  onChange={(e) => setRawData((p) => ({ ...p, oe_pressao_final: e.target.value }))}
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300"
+                />
+              </div>
+
+              <div className="grid grid-cols-[100px_1fr_1fr_1fr] items-center gap-2">
+                <span className="text-[11px] font-bold text-blue-700 text-center uppercase">
+                  OE Volume (ml)
+                </span>
+                <Input
+                  value={rawData.oe_volume_inicial}
+                  onChange={(e) => setRawData((p) => ({ ...p, oe_volume_inicial: e.target.value }))}
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300"
+                />
+                <Input
+                  value={rawData.oe_volume_media}
+                  onChange={(e) => setRawData((p) => ({ ...p, oe_volume_media: e.target.value }))}
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300 bg-slate-50 font-medium"
+                />
+                <Input
+                  value={rawData.oe_volume_final}
+                  onChange={(e) => setRawData((p) => ({ ...p, oe_volume_final: e.target.value }))}
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Tabela 2: Resumo (Direita / Esquerda) */}
+          <div className="space-y-2">
+            <div className="grid grid-cols-[1fr_120px_120px] text-center text-xs font-bold mb-1">
+              <div></div>
+              <div className="text-red-600">DIREITA</div>
+              <div className="text-blue-700">ESQUERDA</div>
+            </div>
+
+            <div className="border border-slate-300 rounded bg-white p-2 space-y-2">
+              <div className="grid grid-cols-[1fr_120px_120px] items-center gap-2 text-[11px] font-bold text-slate-700 text-center">
+                <span>PRESSÃO OUVIDO MÉDIO (daPa)</span>
+                <Input
+                  value={summaryData.pressao_om_od}
+                  onChange={(e) => setSummaryData((p) => ({ ...p, pressao_om_od: e.target.value }))}
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
+                />
+                <Input
+                  value={summaryData.pressao_om_oe}
+                  onChange={(e) => setSummaryData((p) => ({ ...p, pressao_om_oe: e.target.value }))}
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
+                />
+              </div>
+
+              <div className="grid grid-cols-[1fr_120px_120px] items-center gap-2 text-[11px] font-bold text-slate-700 text-center">
+                <span>MÁXIMO RELAXAMENTO</span>
+                <Input
+                  value={summaryData.max_relax_od}
+                  onChange={(e) => setSummaryData((p) => ({ ...p, max_relax_od: e.target.value }))}
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
+                />
+                <Input
+                  value={summaryData.max_relax_oe}
+                  onChange={(e) => setSummaryData((p) => ({ ...p, max_relax_oe: e.target.value }))}
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
+                />
+              </div>
+
+              <div className="grid grid-cols-[1fr_120px_120px] items-center gap-2 text-[11px] font-bold text-slate-700 text-center">
+                <span>COMPLIÂNCIA +200 daPa</span>
+                <Input
+                  value={summaryData.compl_200_od}
+                  onChange={(e) => setSummaryData((p) => ({ ...p, compl_200_od: e.target.value }))}
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
+                />
+                <Input
+                  value={summaryData.compl_200_oe}
+                  onChange={(e) => setSummaryData((p) => ({ ...p, compl_200_oe: e.target.value }))}
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
+                />
+              </div>
+
+              <div className="grid grid-cols-[1fr_120px_120px] items-center gap-2 text-[11px] font-bold text-slate-700 text-center">
+                <span>COMPLIÂNCIA ESTÁTICA</span>
+                <Input
+                  value={summaryData.compl_estatica_od}
+                  onChange={(e) =>
+                    setSummaryData((p) => ({ ...p, compl_estatica_od: e.target.value }))
+                  }
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
+                />
+                <Input
+                  value={summaryData.compl_estatica_oe}
+                  onChange={(e) =>
+                    setSummaryData((p) => ({ ...p, compl_estatica_oe: e.target.value }))
+                  }
+                  disabled={readOnly}
+                  className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
+                />
+              </div>
+            </div>
+
+            {/* Botão Calcular */}
+            <div className="flex justify-end pt-1">
+              <Button
+                type="button"
+                onClick={handleCalculate}
+                className="bg-sky-500 hover:bg-sky-600 text-white text-xs font-semibold h-8 rounded px-4 shadow-sm"
+              >
+                <Calculator className="w-3.5 h-3.5 mr-1.5" />
+                Calcular
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. REFLEXOS ACÚSTICOS */}
+        <div className="space-y-2 pt-2">
+          <div className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+            Reflexos Acústicos
+          </div>
+
+          <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-2">
+            {/* Grade OD (Vermelha) */}
+            <div className="border border-red-500 rounded p-2.5 bg-white space-y-2">
+              {/* Header Colunas */}
+              <div className="grid grid-cols-4 text-center text-[11px] font-bold text-slate-700 gap-1.5 mb-1">
+                <div>Limiar</div>
+                <div className="flex items-center justify-center gap-0.5">
+                  Refl. Contra D <Info className="w-3 h-3 text-slate-400" />
+                </div>
+                <div>Diferença</div>
+                <div className="flex items-center justify-center gap-0.5">
+                  IPSI <Info className="w-3 h-3 text-slate-400" />
+                </div>
+              </div>
+
+              {[500, 1000, 2000, 4000].map((freq) => {
+                const row = reflexGrid.od[freq]
+                return (
+                  <div key={`od-${freq}`} className="grid grid-cols-4 gap-1.5 items-center">
+                    {/* Limiar */}
+                    <Input
+                      value={row.limiar}
+                      onChange={(e) =>
+                        setReflexGrid((prev) => ({
+                          ...prev,
+                          od: {
+                            ...prev.od,
+                            [freq]: { ...prev.od[freq], limiar: e.target.value },
+                          },
+                        }))
+                      }
+                      disabled={readOnly}
+                      className="h-8 text-center text-xs rounded border-red-300 focus:border-red-500"
+                    />
+
+                    {/* Refl. Contra D + Botão AUS */}
+                    <div className="flex items-center border border-red-300 rounded bg-white overflow-hidden h-8">
+                      <input
+                        type="text"
+                        value={row.refl_contra}
+                        onChange={(e) =>
+                          setReflexGrid((prev) => ({
+                            ...prev,
+                            od: {
+                              ...prev.od,
+                              [freq]: { ...prev.od[freq], refl_contra: e.target.value },
+                            },
+                          }))
+                        }
+                        disabled={readOnly}
+                        className="w-full text-center text-xs font-semibold focus:outline-none bg-transparent"
+                      />
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          onClick={() => handleSetAus('od', freq, 'refl_contra')}
+                          className="text-[10px] font-bold text-slate-500 px-1 hover:text-slate-800 border-l border-slate-200 h-full bg-slate-50"
+                        >
+                          AUS
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Diferença */}
+                    <Input
+                      value={row.diferenca}
+                      onChange={(e) =>
+                        setReflexGrid((prev) => ({
+                          ...prev,
+                          od: {
+                            ...prev.od,
+                            [freq]: { ...prev.od[freq], diferenca: e.target.value },
+                          },
+                        }))
+                      }
+                      disabled={readOnly}
+                      className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
+                    />
+
+                    {/* IPSI + Botão AUS */}
+                    <div className="flex items-center border border-red-300 rounded bg-white overflow-hidden h-8">
+                      <input
+                        type="text"
+                        value={row.ipsi}
+                        onChange={(e) =>
+                          setReflexGrid((prev) => ({
+                            ...prev,
+                            od: {
+                              ...prev.od,
+                              [freq]: { ...prev.od[freq], ipsi: e.target.value },
+                            },
+                          }))
+                        }
+                        disabled={readOnly}
+                        className="w-full text-center text-xs font-semibold focus:outline-none bg-transparent"
+                      />
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          onClick={() => handleSetAus('od', freq, 'ipsi')}
+                          className="text-[10px] font-bold text-slate-500 px-1 hover:text-slate-800 border-l border-slate-200 h-full bg-slate-50"
+                        >
+                          AUS
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Coluna Central de Frequências (Hz) */}
+            <div className="flex flex-col justify-between py-8 px-2 text-center text-xs font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded">
+              <div className="text-[10px] font-bold text-slate-400 mb-1">Freq (Hz)</div>
+              <div>500</div>
+              <div>1000</div>
+              <div>2000</div>
+              <div>4000</div>
+            </div>
+
+            {/* Grade OE (Azul) */}
+            <div className="border border-blue-600 rounded p-2.5 bg-white space-y-2">
+              {/* Header Colunas */}
+              <div className="grid grid-cols-4 text-center text-[11px] font-bold text-slate-700 gap-1.5 mb-1">
+                <div>Limiar</div>
+                <div className="flex items-center justify-center gap-0.5">
+                  Refl. Contra E <Info className="w-3 h-3 text-slate-400" />
+                </div>
+                <div>Diferença</div>
+                <div className="flex items-center justify-center gap-0.5">
+                  IPSI <Info className="w-3 h-3 text-slate-400" />
+                </div>
+              </div>
+
+              {[500, 1000, 2000, 4000].map((freq) => {
+                const row = reflexGrid.oe[freq]
+                return (
+                  <div key={`oe-${freq}`} className="grid grid-cols-4 gap-1.5 items-center">
+                    {/* Limiar */}
+                    <Input
+                      value={row.limiar}
+                      onChange={(e) =>
+                        setReflexGrid((prev) => ({
+                          ...prev,
+                          oe: {
+                            ...prev.oe,
+                            [freq]: { ...prev.oe[freq], limiar: e.target.value },
+                          },
+                        }))
+                      }
+                      disabled={readOnly}
+                      className="h-8 text-center text-xs rounded border-blue-300 focus:border-blue-500"
+                    />
+
+                    {/* Refl. Contra E + Botão AUS */}
+                    <div className="flex items-center border border-blue-300 rounded bg-white overflow-hidden h-8">
+                      <input
+                        type="text"
+                        value={row.refl_contra}
+                        onChange={(e) =>
+                          setReflexGrid((prev) => ({
+                            ...prev,
+                            oe: {
+                              ...prev.oe,
+                              [freq]: { ...prev.oe[freq], refl_contra: e.target.value },
+                            },
+                          }))
+                        }
+                        disabled={readOnly}
+                        className="w-full text-center text-xs font-semibold focus:outline-none bg-transparent"
+                      />
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          onClick={() => handleSetAus('oe', freq, 'refl_contra')}
+                          className="text-[10px] font-bold text-slate-500 px-1 hover:text-slate-800 border-l border-slate-200 h-full bg-slate-50"
+                        >
+                          AUS
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Diferença */}
+                    <Input
+                      value={row.diferenca}
+                      onChange={(e) =>
+                        setReflexGrid((prev) => ({
+                          ...prev,
+                          oe: {
+                            ...prev.oe,
+                            [freq]: { ...prev.oe[freq], diferenca: e.target.value },
+                          },
+                        }))
+                      }
+                      disabled={readOnly}
+                      className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
+                    />
+
+                    {/* IPSI + Botão AUS */}
+                    <div className="flex items-center border border-blue-300 rounded bg-white overflow-hidden h-8">
+                      <input
+                        type="text"
+                        value={row.ipsi}
+                        onChange={(e) =>
+                          setReflexGrid((prev) => ({
+                            ...prev,
+                            oe: {
+                              ...prev.oe,
+                              [freq]: { ...prev.oe[freq], ipsi: e.target.value },
+                            },
+                          }))
+                        }
+                        disabled={readOnly}
+                        className="w-full text-center text-xs font-semibold focus:outline-none bg-transparent"
+                      />
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          onClick={() => handleSetAus('oe', freq, 'ipsi')}
+                          className="text-[10px] font-bold text-slate-500 px-1 hover:text-slate-800 border-l border-slate-200 h-full bg-slate-50"
+                        >
+                          AUS
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* 6. RODAPÉ (REFERÊNCIA E OBSERVAÇÃO) */}
+        <div className="space-y-3 pt-2">
+          <div>
+            <Label className="text-xs font-bold text-slate-700 block mb-1">Referência</Label>
+            <Select
+              value={exam.referencias || DEFAULT_REFERENCIAS}
+              onValueChange={(v) => setField('referencias', v)}
+              disabled={readOnly}
+            >
+              <SelectTrigger className="h-9 text-xs rounded-md border-slate-300">
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={DEFAULT_REFERENCIAS}>
+                  Jerger (1970); Margolis e Heller (1987); Stach (1998)
+                </SelectItem>
+                <SelectItem value="Avaliação imitanciométrica padronizada conforme protocolos clínicos nacionais.">
+                  Protocolo Nacional Simplificado
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-xs font-bold text-slate-700 block mb-1">Observação</Label>
+            <Textarea
+              value={exam.observacoes}
+              onChange={(e) => setField('observacoes', e.target.value)}
+              disabled={readOnly}
+              rows={4}
+              placeholder="Digite aqui as observações do exame..."
+              className="rounded-md text-xs border-slate-300 resize-y"
+            />
+          </div>
+        </div>
+
+        {/* 7. NAVEGAÇÃO (ANTERIOR / PRÓXIMO) */}
+        <div className="flex justify-between items-center pt-4 border-t border-slate-200">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate(`/pacientes/${patient.id}/audiometria/novo`)}
+            className="border-slate-300 text-slate-700 text-xs font-semibold h-8 rounded"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Anterior
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate(`/pacientes/${patient.id}/prontuario`)}
+            className="border-slate-300 text-slate-700 text-xs font-semibold h-8 rounded"
+          >
+            Próximo
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </div>
       </div>
 
       {/* Modal de pré-visualização do PDF */}
@@ -1092,7 +1685,7 @@ export default function Imitanciometria() {
             <Button
               variant="outline"
               onClick={() => setPreviewOpen(false)}
-              className="rounded-xl text-xs"
+              className="rounded-lg text-xs"
             >
               Fechar
             </Button>
@@ -1101,7 +1694,7 @@ export default function Imitanciometria() {
                 setPreviewOpen(false)
                 handlePrint()
               }}
-              className="rounded-xl text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="rounded-lg text-xs bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Printer className="w-4 h-4 mr-1.5" />
               Imprimir
@@ -1109,298 +1702,6 @@ export default function Imitanciometria() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
-  )
-}
-
-/* ---------- Subcomponentes ---------- */
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <Label className="text-[10px] font-semibold text-slate-600 block mb-0.5">{label}</Label>
-      {children}
-    </div>
-  )
-}
-
-function TimpCard({
-  label,
-  color,
-  data,
-  onChange,
-  disabled,
-}: {
-  label: string
-  color: 'red' | 'blue'
-  data: TimpData
-  onChange: (d: TimpData) => void
-  disabled?: boolean
-}) {
-  const titleColor = color === 'red' ? 'text-red-600' : 'text-blue-600'
-  const ring = color === 'red' ? 'focus:ring-red-400' : 'focus:ring-blue-400'
-  const inputCls = `h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white focus:ring-2 ${ring}`
-  const patch = (p: Partial<TimpData>) => onChange({ ...data, ...p })
-  return (
-    <div className="p-3 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-2">
-      <h4 className={`text-xs font-extrabold uppercase tracking-wider ${titleColor}`}>{label}</h4>
-      <div className="grid grid-cols-2 gap-2">
-        <Field label="Volume do Meato (ml)">
-          <Input
-            type="number"
-            step="0.01"
-            value={data.volume_meato ?? ''}
-            onChange={(e) =>
-              patch({ volume_meato: e.target.value === '' ? null : Number(e.target.value) })
-            }
-            disabled={disabled}
-            className={inputCls}
-          />
-        </Field>
-        <Field label="Complacência (ml)">
-          <Input
-            type="number"
-            step="0.01"
-            value={data.complacencia ?? ''}
-            onChange={(e) =>
-              patch({ complacencia: e.target.value === '' ? null : Number(e.target.value) })
-            }
-            disabled={disabled}
-            className={inputCls}
-          />
-        </Field>
-        <Field label="Pressão de Pico (daPa)">
-          <Input
-            type="number"
-            min={-400}
-            max={200}
-            value={data.pressao_pico ?? ''}
-            onChange={(e) =>
-              patch({ pressao_pico: e.target.value === '' ? null : Number(e.target.value) })
-            }
-            disabled={disabled}
-            className={inputCls}
-          />
-        </Field>
-        <Field label="Pressão Máxima (daPa)">
-          <Input
-            type="number"
-            value={data.pressao_maxima ?? ''}
-            onChange={(e) =>
-              patch({ pressao_maxima: e.target.value === '' ? null : Number(e.target.value) })
-            }
-            disabled={disabled}
-            className={inputCls}
-          />
-        </Field>
-      </div>
-      <Field label="Tipo de Curva">
-        <Select
-          value={data.tipo_curva || '__none'}
-          onValueChange={(v) => patch({ tipo_curva: v === '__none' ? '' : v })}
-          disabled={disabled}
-        >
-          <SelectTrigger className="h-8 rounded-xl text-[11px] font-medium border-slate-300 bg-white">
-            <SelectValue placeholder="Selecione o tipo de curva" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none">—</SelectItem>
-            {TIPOS_CURVA.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Field>
-      <Field label="Gradiente da curva">
-        <Input
-          type="number"
-          step="0.01"
-          value={data.gradiente_curva ?? ''}
-          onChange={(e) =>
-            patch({ gradiente_curva: e.target.value === '' ? null : Number(e.target.value) })
-          }
-          disabled={disabled}
-          className={inputCls}
-        />
-      </Field>
-      <Field label="Descrição da curva timpanométrica">
-        <Input
-          value={data.curva_descricao}
-          onChange={(e) => patch({ curva_descricao: e.target.value })}
-          disabled={disabled}
-          placeholder="Ex.: Curva tipo A com pico em 0 daPa"
-          className={inputCls}
-        />
-      </Field>
-      <Field label="Observações (timpanometria)">
-        <Textarea
-          value={data.observacoes}
-          onChange={(e) => patch({ observacoes: e.target.value })}
-          disabled={disabled}
-          rows={2}
-          placeholder="Observações específicas desta orelha (opcional)"
-          className="rounded-xl text-[11px] border-slate-300 resize-y"
-        />
-      </Field>
-    </div>
-  )
-}
-
-function MeatoscopiaCard({
-  label,
-  color,
-  normal,
-  alterada,
-  obs,
-  onNormal,
-  onAlterada,
-  onObs,
-  disabled,
-}: {
-  label: string
-  color: 'red' | 'blue'
-  normal: boolean
-  alterada: boolean
-  obs: string
-  onNormal: (v: boolean) => void
-  onAlterada: (v: boolean) => void
-  onObs: (v: string) => void
-  disabled?: boolean
-}) {
-  const titleColor = color === 'red' ? 'text-red-600' : 'text-blue-600'
-  return (
-    <div className="p-3 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-2">
-      <h4 className={`text-xs font-extrabold uppercase tracking-wider ${titleColor}`}>{label}</h4>
-      <div className="flex flex-wrap gap-4">
-        <label className="flex items-center gap-2 text-[11px] font-medium text-slate-700 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={normal}
-            onChange={(e) => onNormal(e.target.checked)}
-            disabled={disabled}
-            className="w-4 h-4 rounded border-slate-300"
-          />
-          Normal
-        </label>
-        <label className="flex items-center gap-2 text-[11px] font-medium text-slate-700 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={alterada}
-            onChange={(e) => onAlterada(e.target.checked)}
-            disabled={disabled}
-            className="w-4 h-4 rounded border-slate-300"
-          />
-          Alterada
-        </label>
-      </div>
-      <Field label="Observação">
-        <Textarea
-          value={obs}
-          onChange={(e) => onObs(e.target.value)}
-          disabled={disabled}
-          rows={2}
-          placeholder="Descreva achados da meatoscopia (opcional)"
-          className="rounded-xl text-[11px] border-slate-300 resize-y"
-        />
-      </Field>
-    </div>
-  )
-}
-
-const REFLEX_FREQS: { key: keyof ReflexData; label: string }[] = [
-  { key: 'frequencia_500', label: '500 Hz' },
-  { key: 'frequencia_1000', label: '1000 Hz' },
-  { key: 'frequencia_2000', label: '2000 Hz' },
-  { key: 'frequencia_4000', label: '4000 Hz' },
-]
-
-function ReflexCard({
-  label,
-  color,
-  contra,
-  ipsi,
-  onContra,
-  onIpsi,
-  disabled,
-}: {
-  label: string
-  color: 'red' | 'blue'
-  contra: ReflexData
-  ipsi: ReflexData
-  onContra: (r: ReflexData) => void
-  onIpsi: (r: ReflexData) => void
-  disabled?: boolean
-}) {
-  const titleColor = color === 'red' ? 'text-red-600' : 'text-blue-600'
-  const ring = color === 'red' ? 'focus:ring-red-400' : 'focus:ring-blue-400'
-  const inputCls = `w-full h-7 px-0.5 text-center text-[10px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 ${ring}`
-  const th = 'border border-slate-300 bg-slate-100 text-[10px] font-bold text-center px-1 py-0.5'
-  const td = 'border border-slate-300 text-center px-0.5 py-0.5'
-
-  const renderRow = (viaLabel: string, row: ReflexData, onChange: (r: ReflexData) => void) => (
-    <tr>
-      <td className={`${td} text-left font-semibold text-[10px] pl-1`}>{viaLabel}</td>
-      {REFLEX_FREQS.map((f) => (
-        <td key={f.key} className={td}>
-          <input
-            type="number"
-            value={(row[f.key] as number | null) ?? ''}
-            onChange={(e) =>
-              onChange({
-                ...row,
-                [f.key]: e.target.value === '' ? null : Number(e.target.value),
-              })
-            }
-            disabled={disabled}
-            placeholder="—"
-            className={inputCls}
-          />
-        </td>
-      ))}
-      <td className={td}>
-        <Select
-          value={row.status || '__none'}
-          onValueChange={(v) => onChange({ ...row, status: v === '__none' ? '' : v })}
-          disabled={disabled}
-        >
-          <SelectTrigger className="h-7 rounded-md text-[10px] font-medium border-slate-300 bg-white px-1">
-            <SelectValue placeholder="—" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none">—</SelectItem>
-            <SelectItem value="presente">Presente</SelectItem>
-            <SelectItem value="ausente">Ausente</SelectItem>
-            <SelectItem value="elevado">Elevado</SelectItem>
-          </SelectContent>
-        </Select>
-      </td>
-    </tr>
-  )
-
-  return (
-    <div className="p-3 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-2">
-      <h4 className={`text-xs font-extrabold uppercase tracking-wider ${titleColor}`}>{label}</h4>
-      <div className="overflow-x-auto border border-slate-300 rounded-lg bg-white">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              <th className={th}>Via</th>
-              {REFLEX_FREQS.map((f) => (
-                <th key={f.key} className={th}>
-                  {f.label}
-                </th>
-              ))}
-              <th className={th}>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {renderRow('Contra-lateral', contra, onContra)}
-            {renderRow('Ipsi-lateral', ipsi, onIpsi)}
-          </tbody>
-        </table>
-      </div>
     </div>
   )
 }
