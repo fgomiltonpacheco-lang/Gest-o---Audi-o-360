@@ -2199,12 +2199,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       description: `Atendimento agendado para ${newAppointment.patientName} em ${newAppointment.date} às ${newAppointment.time}.`,
     })
 
+    const proceduresList =
+      appData.proceduresList && appData.proceduresList.length > 0
+        ? appData.proceduresList
+        : [
+            {
+              procedureId: appData.procedureId || '',
+              procedureName: appData.type || '',
+              value: appData.value ?? 0,
+              planType: appData.planType || 'Particular',
+            },
+          ]
     const payload: any = {
       patientId: appData.patientId || '',
       patientName: appData.patientName,
       patientPhone: appData.patientPhone || '',
       procedureId: appData.procedureId || '',
       type: appData.type,
+      // Campo legado em texto (vírgula-separated) para consultas/buscas.
+      procedimentos: appData.procedimentos || appData.type || '',
       date: appData.date,
       time: appData.time,
       duration: appData.duration,
@@ -2214,20 +2227,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notes: appData.notes || '',
       planType: appData.planType || 'Particular',
       reception: appData.reception ?? '',
-      // proceduresList: espelha a lista enviada (quando houver). Para novos
-      // agendamentos criados pelo AppointmentModal, montamos um item a partir
-      // do procedimento principal para manter consistência.
-      proceduresList:
-        appData.proceduresList && appData.proceduresList.length > 0
-          ? appData.proceduresList
-          : [
-              {
-                procedureId: appData.procedureId || '',
-                procedureName: appData.type || '',
-                value: appData.value ?? 0,
-                planType: appData.planType || 'Particular',
-              },
-            ],
+      // proceduresList: lista estruturada de procedimentos (multi-select).
+      proceduresList,
     }
     pb.collection('appointments')
       .create(payload)

@@ -85,7 +85,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { ScrollText, FileSignature, Ban, Lock } from 'lucide-react'
+import { ScrollText, FileSignature, Ban, Lock, Sparkles, Loader2 } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -289,6 +289,8 @@ export default function Prontuario() {
   const [evoDate, setEvoDate] = useState(new Date().toISOString().split('T')[0])
   const [evoProf, setEvoProf] = useState('Milton Soares Pacheco')
   const [evoDesc, setEvoDesc] = useState('')
+  // Loading do botão "Corrigir com IA" na evolução.
+  const [aiCorrecting, setAiCorrecting] = useState(false)
 
   // Confirmação de Exclusão
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -415,6 +417,72 @@ export default function Prontuario() {
     })
     setEvoDesc('')
     setEvoModalOpen(false)
+  }
+
+  /**
+   * Envia o texto da evolução para a IA corrigir gramática/ortografia/clareza
+   * e substitui o conteúdo do campo pelo resultado. Usa a chave de API
+   * configurada no ambiente (VITE_AI_API_KEY). Em caso de erro ou ausência da
+   * chave, exibe um toast e mantém o texto original.
+   */
+  const handleAiCorrectEvolution = async () => {
+    const apiKey = import.meta.env.VITE_AI_API_KEY as string | undefined
+    if (!apiKey) {
+      toast({
+        title: 'IA não configurada',
+        description: 'Configure a chave de IA nas configurações.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (!evoDesc.trim()) {
+      toast({
+        title: 'Texto vazio',
+        description: 'Digite o texto da evolução antes de corrigir.',
+        variant: 'destructive',
+      })
+      return
+    }
+    setAiCorrecting(true)
+    try {
+      const prompt = `Corrija e melhore o texto a seguir, mantendo o significado clínico e o tom profissional. Apenas corrija gramática, ortografia e melhore a clareza. Retorne SOMENTE o texto corrigido, sem explicações:\n\n${evoDesc.trim()}`
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            { role: 'system', content: 'Você é um revisor de textos clínicos.' },
+            { role: 'user', content: prompt },
+          ],
+          temperature: 0.3,
+        }),
+      })
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '')
+        throw new Error(`HTTP ${res.status}: ${errText.slice(0, 200)}`)
+      }
+      const data = await res.json()
+      const corrected: string | undefined = data?.choices?.[0]?.message?.content?.trim()
+      if (!corrected) throw new Error('Resposta vazia da IA.')
+      setEvoDesc(corrected)
+      toast({
+        title: 'Texto corrigido',
+        description: 'A IA revisou sua evolução clínica.',
+      })
+    } catch (err) {
+      console.error('Erro ao corrigir com IA:', err)
+      toast({
+        title: 'Erro na IA',
+        description: 'Não foi possível corrigir o texto. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setAiCorrecting(false)
+    }
   }
 
   const handleSaveAppointment = (data: any) => {
@@ -1470,9 +1538,32 @@ export default function Prontuario() {
               </div>
 
               <div>
-                <Label className="text-xs font-semibold text-slate-700">
-                  Descrição do Atendimento
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-slate-700">
+                    Descrição do Atendimento
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAiCorrectEvolution}
+                    disabled={aiCorrecting || !evoDesc.trim()}
+                    className="h-7 px-2.5 text-[11px] font-semibold rounded-lg border-teal-200 text-teal-700 hover:bg-teal-50 disabled:opacity-50"
+                    title="Corrigir gramática e clareza do texto com IA"
+                  >
+                    {aiCorrecting ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                        Corrigindo...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5 mr-1" />
+                        Corrigir com IA
+                      </>
+                    )}
+                  </Button>
+                </div>
                 <Textarea
                   value={evoDesc}
                   onChange={(e) => setEvoDesc(e.target.value)}

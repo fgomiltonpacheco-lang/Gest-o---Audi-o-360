@@ -76,10 +76,14 @@ import { AgendaPrint } from '@/components/print/PrintDocuments'
  */
 function getProceduresLabel(app: Appointment): string {
   const list = app.proceduresList
-  if (!list || list.length <= 1) return app.type
-  const extra = list.length - 1
-  const firstName = list[0]?.procedureName || app.type
-  return `${firstName} + ${extra} procedimento${extra > 1 ? 's' : ''}`
+  if (!list || list.length === 0) return app.type
+  // Exibe TODOS os procedimentos selecionados, separados por vírgula.
+  return (
+    list
+      .map((it) => it.procedureName)
+      .filter(Boolean)
+      .join(', ') || app.type
+  )
 }
 
 /**

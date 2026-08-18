@@ -31,11 +31,22 @@ import {
   AppointmentStatus,
   Procedure,
   PatientPlanType,
+  AppointmentProcedureItem,
   getProcedureValueByPlan,
 } from '@/types'
 import { useApp } from '@/context/AppContext'
 import { getAppointmentColor, formatCurrency } from '@/lib/formatters'
-import { Calendar, Clock, User, AlertCircle, DollarSign, Check, ChevronsUpDown } from 'lucide-react'
+import {
+  Calendar,
+  Clock,
+  User,
+  AlertCircle,
+  DollarSign,
+  Check,
+  ChevronsUpDown,
+  X,
+} from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import pb from '@/lib/pocketbase/client'
 
 const DURATIONS = [15, 30, 45, 60, 90, 120]
@@ -82,8 +93,10 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   const [patientId, setPatientId] = useState('')
   const [patientSearch, setPatientSearch] = useState('')
   const [patientDropdownOpen, setPatientDropdownOpen] = useState(false)
-  const [procedureId, setProcedureId] = useState<string>('')
-  const [procedureName, setProcedureName] = useState<string>('')
+  // Lista de procedimentos selecionados (multi-select). O tempo total do
+  // agendamento é a SOMA das durações de cada procedimento; o valor é a SOMA
+  // dos valores conforme o plano do paciente.
+  const [selectedProcedures, setSelectedProcedures] = useState<AppointmentProcedureItem[]>([])
   const [procedureSearch, setProcedureSearch] = useState<string>('')
   const [procedureComboboxOpen, setProcedureComboboxOpen] = useState(false)
   const [planType, setPlanType] = useState<PatientPlanType>('Particular')
@@ -142,22 +155,32 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
     if (appointmentToEdit) {
       setPatientId(appointmentToEdit.patientId)
       setPatientSearch(appointmentToEdit.patientName)
-      setProcedureId(appointmentToEdit.procedureId || '')
-      setProcedureName(appointmentToEdit.type || '')
-      setProcedureSearch(appointmentToEdit.type || '')
+      // Ao editar, monta a lista de procedimentos selecionados a partir do
+      // proceduresList salvo (ou fallback legado procedureId/type/value).
+      const pat = patients.find((p) => p.id === appointmentToEdit.patientId)
+      const plan: PatientPlanType = appointmentToEdit.planType || pat?.planType || 'Particular'
+      setPlanType(plan)
+      const initialList: AppointmentProcedureItem[] =
+        Array.isArray(appointmentToEdit.proceduresList) &&
+        appointmentToEdit.proceduresList.length > 0
+          ? appointmentToEdit.proceduresList
+          : appointmentToEdit.procedureId || appointmentToEdit.type
+            ? [
+                {
+                  procedureId: appointmentToEdit.procedureId || '',
+                  procedureName: appointmentToEdit.type || '',
+                  value: Number(appointmentToEdit.value || 0),
+                  planType: plan,
+                },
+              ]
+            : []
+      setSelectedProcedures(initialList)
+      setProcedureSearch('')
       setDate(appointmentToEdit.date)
       setTime(appointmentToEdit.time)
       setDuration(appointmentToEdit.duration)
       setValue(appointmentToEdit.value ?? 0)
-      // Ao editar, pré-seleciona o tipo de pagamento conforme o plano do
-      // paciente e indica a origem do valor.
-      {
-        const pat = patients.find((p) => p.id === appointmentToEdit.patientId)
-        // Prefere o planType já salvo no agendamento; senão, usa o do paciente.
-        const plan: PatientPlanType = appointmentToEdit.planType || pat?.planType || 'Particular'
-        setPlanType(plan)
-        setValueSourceLabel(appointmentToEdit.procedureId ? `Valor para ${plan}` : '')
-      }
+      setValueSourceLabel(initialList.length > 0 ? `Soma para ${plan}` : '')
       setProfessionalName(appointmentToEdit.professionalName)
       setStatus(appointmentToEdit.status)
       setNotes(appointmentToEdit.notes || '')
@@ -169,8 +192,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
         const pat = initialPatientId ? patients.find((p) => p.id === initialPatientId) : undefined
         setPlanType(pat?.planType || 'Particular')
       }
-      setProcedureId('')
-      setProcedureName('')
+      setSelectedProcedures([])
       setProcedureSearch('')
       setDate(initialDate || new Date().toISOString().split('T')[0])
       setTime(initialTime || '09:00')
@@ -217,15 +239,21 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
    * Reajusta o valor exibido conforme o procedimento e o tipo de pagamento
    * informados. Mantém o campo editável em seguida.
    */
-  const applyProcedureValue = useCallback(
-    (procId: string, plan: PatientPlanType) => {
-      const proc = procedures.find((p) => p.id === procId)
-      if (proc) {
-        setValue(getProcedureValueByPlan(proc, plan))
-        setValueSourceLabel(`Valor para ${plan}`)
-      } else {
-        setValueSourceLabel('')
-      }
+  /**
+   * Recalcula, a partir da lista de procedimentos selecionados, a duração
+   * total (soma das durações) e o valor total (soma dos valores conforme o
+   * plano) exibidos no modal. Os campos continuam editáveis depois.
+   */
+  const recalcTotals = useCallback(
+    (list: AppointmentProcedureItem[], plan: PatientPlanType) => {
+      const totalDuration = list.reduce((sum, it) => {
+        const proc = procedures.find((p) => p.id === it.procedureId)
+        return sum + (proc ? Number(proc.duration) || 0 : 0)
+      }, 0)
+      const totalValue = list.reduce((sum, it) => sum + (Number(it.value) || 0), 0)
+      setDuration(totalDuration > 0 ? totalDuration : 60)
+      setValue(totalValue)
+      setValueSourceLabel(list.length > 0 ? `Soma para ${plan}` : '')
     },
     [procedures],
   )
@@ -237,38 +265,79 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
     // Pré-seleciona o tipo de pagamento conforme o plano do novo paciente.
     const plan: PatientPlanType = p.planType || 'Particular'
     setPlanType(plan)
-    // Se um procedimento já estiver selecionado, reajusta o valor conforme o
-    // novo tipo de pagamento.
-    if (procedureId) {
-      applyProcedureValue(procedureId, plan)
+    // Reajusta os valores dos procedimentos já selecionados conforme o novo
+    // plano do paciente.
+    if (selectedProcedures.length > 0) {
+      const updated = selectedProcedures.map((it) => {
+        const proc = procedures.find((pp) => pp.id === it.procedureId)
+        return {
+          ...it,
+          value: proc ? getProcedureValueByPlan(proc, plan) : it.value,
+          planType: plan,
+        }
+      })
+      setSelectedProcedures(updated)
+      recalcTotals(updated, plan)
     }
   }
 
   /**
-   * Ao selecionar um procedimento no combobox, preenche nome/duração/valor
-   * automaticamente. O valor é escolhido conforme o tipo de pagamento atual.
-   * Os campos continuam editáveis depois.
+   * Alterna um procedimento na seleção múltipla. Ao marcar, soma sua
+   * duração/valor; ao desmarcar, subtrai. O combobox permanece aberto para
+   * permitir selecionar vários procedimentos em sequência.
    */
-  const handleSelectProcedure = (procId: string) => {
+  const handleToggleProcedure = (procId: string) => {
     const proc = procedures.find((p) => p.id === procId)
-    if (proc) {
-      setProcedureId(proc.id)
-      setProcedureName(proc.name)
-      setProcedureSearch(proc.name)
-      setDuration(proc.duration)
-      applyProcedureValue(proc.id, planType)
-      setProcedureComboboxOpen(false)
-    }
+    if (!proc) return
+    setSelectedProcedures((prev) => {
+      const exists = prev.find((it) => it.procedureId === procId)
+      let next: AppointmentProcedureItem[]
+      if (exists) {
+        next = prev.filter((it) => it.procedureId !== procId)
+      } else {
+        next = [
+          ...prev,
+          {
+            procedureId: proc.id,
+            procedureName: proc.name,
+            value: getProcedureValueByPlan(proc, planType),
+            planType,
+          },
+        ]
+      }
+      recalcTotals(next, planType)
+      return next
+    })
   }
 
   /**
-   * Ao trocar o tipo de pagamento, reajusta o valor conforme o procedimento
-   * já selecionado e o novo plano.
+   * Remove um procedimento da seleção (tag/badge clicável).
+   */
+  const handleRemoveProcedure = (procId: string) => {
+    setSelectedProcedures((prev) => {
+      const next = prev.filter((it) => it.procedureId !== procId)
+      recalcTotals(next, planType)
+      return next
+    })
+  }
+
+  /**
+   * Ao trocar o tipo de pagamento, reajusta os valores de todos os
+   * procedimentos selecionados conforme o novo plano.
    */
   const handleChangePlanType = (plan: PatientPlanType) => {
     setPlanType(plan)
-    if (procedureId) {
-      applyProcedureValue(procedureId, plan)
+    if (selectedProcedures.length > 0) {
+      const updated = selectedProcedures.map((it) => {
+        const proc = procedures.find((pp) => pp.id === it.procedureId)
+        return {
+          ...it,
+          value: proc ? getProcedureValueByPlan(proc, plan) : it.value,
+          planType: plan,
+        }
+      })
+      setSelectedProcedures(updated)
+      recalcTotals(updated, plan)
     }
   }
 
@@ -280,8 +349,8 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       setErrorMessage('Selecione ou informe o paciente.')
       return
     }
-    if (!procedureName.trim()) {
-      setErrorMessage('Selecione um procedimento.')
+    if (selectedProcedures.length === 0) {
+      setErrorMessage('Selecione ao menos um procedimento.')
       return
     }
     if (!date) {
@@ -297,12 +366,20 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
     const patientName = patientObj ? patientObj.name : patientSearch.trim()
     const patientPhone = patientObj?.mobile || patientObj?.phone || ''
 
+    // Nome de exibição = todos os procedimentos separados por vírgula.
+    const proceduresDisplay = selectedProcedures.map((it) => it.procedureName).join(', ')
+    // Campo legado: mantém o primeiro procedimento para compatibilidade.
+    const firstProc = selectedProcedures[0]
+
     const payload = {
       patientId: patientId || `pat-temp-${Date.now()}`,
       patientName,
       patientPhone,
-      procedureId: procedureId || '',
-      type: procedureName.trim(),
+      procedureId: firstProc?.procedureId || '',
+      type: proceduresDisplay,
+      // Lista completa de procedimentos (estruturada) + string legada.
+      proceduresList: selectedProcedures,
+      procedimentos: proceduresDisplay,
       date,
       time,
       duration,
@@ -372,11 +449,14 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
             )}
           </div>
 
-          {/* Procedimento (combobox digitável) + Profissional */}
+          {/* Procedimentos (multi-select) + Profissional */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
+            <div className="sm:col-span-2">
               <Label className="text-xs font-semibold text-slate-700">
-                Procedimento <span className="text-red-500">*</span>
+                Procedimentos <span className="text-red-500">*</span>{' '}
+                <span className="text-slate-400 font-normal">
+                  (selecione um ou mais — a duração é a soma)
+                </span>
               </Label>
               <Popover open={procedureComboboxOpen} onOpenChange={setProcedureComboboxOpen}>
                 <PopoverTrigger asChild>
@@ -387,10 +467,11 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                     className="flex h-10 w-full items-center justify-between rounded-xl mt-1 border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-800 text-left hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/40"
                   >
                     <span className="truncate">
-                      {procedureName ||
-                        (proceduresLoading
+                      {selectedProcedures.length > 0
+                        ? `${selectedProcedures.length} procedimento(s) selecionado(s)`
+                        : proceduresLoading
                           ? 'Carregando...'
-                          : 'Digite ou selecione o procedimento')}
+                          : 'Selecione um ou mais procedimentos'}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </button>
@@ -400,15 +481,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                     <CommandInput
                       placeholder="Digite parte do nome do procedimento..."
                       value={procedureSearch}
-                      onValueChange={(v) => {
-                        setProcedureSearch(v)
-                        // Ao digitar, libera o nome para edição manual sem
-                        // vincular a um procedimento da lista até que ele seja
-                        // selecionado no dropdown.
-                        setProcedureName(v)
-                        setProcedureId('')
-                        setValueSourceLabel('')
-                      }}
+                      onValueChange={setProcedureSearch}
                     />
                     <CommandList>
                       {procedures.length === 0 && !proceduresLoading && (
@@ -423,14 +496,24 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                       <CommandGroup>
                         {filteredProcedures.map((p) => {
                           const color = getAppointmentColor(p.name)
+                          const checked = selectedProcedures.some((it) => it.procedureId === p.id)
                           return (
                             <CommandItem
                               key={p.id}
                               value={p.id}
-                              onSelect={() => handleSelectProcedure(p.id)}
+                              onSelect={() => handleToggleProcedure(p.id)}
                               className="text-xs font-medium"
                             >
                               <span className="flex items-center gap-2 w-full">
+                                <span
+                                  className={`flex h-4 w-4 items-center justify-center rounded border shrink-0 ${
+                                    checked
+                                      ? 'bg-teal-500 border-teal-500 text-white'
+                                      : 'border-slate-300 bg-white'
+                                  }`}
+                                >
+                                  {checked && <Check className="h-3 w-3" />}
+                                </span>
                                 <span
                                   className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
                                   style={{ backgroundColor: color.hex }}
@@ -441,9 +524,6 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                                   {formatCurrency(p.valueSUS)} • Conv:{' '}
                                   {formatCurrency(p.valueConvenio)}
                                 </span>
-                                {procedureId === p.id && (
-                                  <Check className="h-3.5 w-3.5 text-teal-600 shrink-0" />
-                                )}
                               </span>
                             </CommandItem>
                           )
@@ -453,18 +533,35 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                   </Command>
                 </PopoverContent>
               </Popover>
-              {/* Editar nome livremente caso o procedimento não esteja na lista */}
-              {procedureId && (
-                <Input
-                  value={procedureName}
-                  onChange={(e) => setProcedureName(e.target.value)}
-                  placeholder="Nome do procedimento"
-                  className="h-8 rounded-lg mt-1 text-[11px] border-slate-200"
-                />
+              {/* Tags dos procedimentos selecionados */}
+              {selectedProcedures.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {selectedProcedures.map((it) => {
+                    const color = getAppointmentColor(it.procedureName)
+                    return (
+                      <Badge
+                        key={it.procedureId}
+                        variant="secondary"
+                        className="text-[10px] font-semibold pl-2 pr-1 py-0.5 gap-1 rounded-full"
+                        style={{ backgroundColor: `${color.hex}22`, color: color.hex }}
+                      >
+                        {it.procedureName}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveProcedure(it.procedureId)}
+                          className="ml-0.5 hover:bg-black/10 rounded-full p-0.5"
+                          aria-label={`Remover ${it.procedureName}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    )
+                  })}
+                </div>
               )}
             </div>
 
-            <div>
+            <div className="sm:col-span-2">
               <Label className="text-xs font-semibold text-slate-700">
                 Profissional Responsável <span className="text-red-500">*</span>
               </Label>

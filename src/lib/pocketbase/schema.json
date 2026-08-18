@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T02:13:36.835Z",
+  "generatedAt": "2026-08-18T02:37:07.650Z",
   "collections": [
     {
       "name": "users",
@@ -417,6 +417,12 @@
         {
           "name": "proceduresList",
           "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "procedimentos",
+          "type": "text",
           "required": false,
           "system": false
         }
