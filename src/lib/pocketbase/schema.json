@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T01:55:34.465Z",
+  "generatedAt": "2026-08-18T02:13:36.835Z",
   "collections": [
     {
       "name": "users",
@@ -5300,6 +5300,115 @@
         }
       ],
       "indexes": []
+    },
+    {
+      "name": "testes_aparelho",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "paciente_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "patients"
+        },
+        {
+          "name": "paciente_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_teste",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "orelha",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["OD", "OE", "Ambas"]
+        },
+        {
+          "name": "tipo_teste",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["ganho_funcional", "acoplador", "REM"]
+        },
+        {
+          "name": "fabricante_aparelho",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "modelo_aparelho",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ganho",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "especialista_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "especialista_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["rascunho", "finalizado"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_testes_aparelho_paciente ON testes_aparelho (paciente_id)",
+        "CREATE INDEX idx_testes_aparelho_data ON testes_aparelho (data_teste)",
+        "CREATE INDEX idx_testes_aparelho_status ON testes_aparelho (status)"
+      ]
     }
   ]
 }
