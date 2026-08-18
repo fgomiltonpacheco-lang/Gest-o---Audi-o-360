@@ -27,6 +27,7 @@ import {
   SlidersHorizontal,
   ShieldCheck,
   ChevronDown,
+  Brain,
   TrendingUp,
   Target,
   CalendarX,
@@ -120,6 +121,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       ? {
           '/relatorios': window.location.pathname.startsWith('/relatorios'),
           '/agenda': window.location.pathname.startsWith('/agenda'),
+          '/configuracoes': window.location.pathname.startsWith('/configuracoes'),
         }
       : {},
   )
@@ -349,6 +351,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               name: 'Modelos de Laudo',
               path: '/configuracoes/laudos',
               icon: FileText,
+              roles: ADMIN_ONLY,
+            },
+            {
+              name: 'Editor de IA',
+              path: '/configuracoes/ia',
+              icon: Brain,
               roles: ADMIN_ONLY,
             },
           ],

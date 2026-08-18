@@ -29,6 +29,7 @@ import AlterarSenha from '@/pages/AlterarSenha'
 import Users from '@/pages/Users'
 import Procedimentos from '@/pages/Procedimentos'
 import Configuracoes from '@/pages/Configuracoes'
+import EditorRegrasIA from '@/pages/EditorRegrasIA'
 import VendasB2B from '@/pages/VendasB2B'
 import RelatorioComissoesB2B from '@/pages/RelatorioComissoesB2B'
 import NovaVendaB2B from '@/pages/NovaVendaB2B'
@@ -484,6 +485,16 @@ export function App() {
               element={
                 <AdminRoute>
                   <Configuracoes />
+                </AdminRoute>
+              }
+            />
+
+            {/* ===== Editor de Regras da IA (Admin only) ===== */}
+            <Route
+              path="/configuracoes/ia"
+              element={
+                <AdminRoute>
+                  <EditorRegrasIA />
                 </AdminRoute>
               }
             />
