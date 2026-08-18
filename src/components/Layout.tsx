@@ -43,6 +43,7 @@ import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useSessionTimeout } from '@/lib/sessionTimeout'
 import { SessionTimeoutModal } from '@/components/SessionTimeoutModal'
+import { ChatWidget } from '@/components/ChatWidget'
 
 interface LayoutProps {
   children?: React.ReactNode
@@ -731,6 +732,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         onContinue={handleSessionContinue}
         onExpire={handleSessionExpire}
       />
+
+      {/* WIDGET DE CHAT FLUTUANTE (canto inferior direito) */}
+      <ChatWidget />
     </div>
   )
 }
