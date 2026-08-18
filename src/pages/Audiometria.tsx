@@ -512,8 +512,8 @@ export default function Audiometria() {
     const airOeMap = toAudiogramMap(exam.air_oe)
     const mtOD = exam.mt_od || mediaTritonal(airOdMap)
     const mtOE = exam.mt_oe || mediaTritonal(airOeMap)
-    const lrfOD = exam.lrf_od ?? exam.srt_od
-    const lrfOE = exam.lrf_oe ?? exam.srt_oe
+    const lrfOD = exam.lrf_od || exam.srt_od
+    const lrfOE = exam.lrf_oe || exam.srt_oe
     const payload: Record<string, any> = {
       patient: patient.id,
       patientName: patient.name,

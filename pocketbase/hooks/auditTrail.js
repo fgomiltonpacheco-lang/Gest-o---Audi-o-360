@@ -99,7 +99,7 @@ onRecordCreateRequest(
           modulo: 'prontuario',
           entidade_tipo: 'clinical_records',
           descricao: function (r) {
-            return 'Prontuário: ' + (r.getString('patientName') || r.id)
+            return 'Prontuário: ' + (r.getString('patientName') || r.get('id'))
           },
         },
         evolutions: {
@@ -117,14 +117,14 @@ onRecordCreateRequest(
           modulo: 'audiometria',
           entidade_tipo: 'audiometries',
           descricao: function (r) {
-            return 'Audiometria: ' + (r.getString('patientName') || r.id)
+            return 'Audiometria: ' + (r.getString('patientName') || r.get('id'))
           },
         },
         audiometry_exams: {
           modulo: 'audiometria',
           entidade_tipo: 'audiometry_exams',
           descricao: function (r) {
-            return 'Exame audiológico: ' + (r.getString('patientName') || r.id)
+            return 'Exame audiológico: ' + (r.getString('patientName') || r.get('id'))
           },
         },
         imitanciometrias: {
@@ -133,7 +133,7 @@ onRecordCreateRequest(
           descricao: function (r) {
             return (
               'Imitanciometria: ' +
-              (r.getString('paciente_nome') || r.id) +
+              (r.getString('paciente_nome') || r.get('id')) +
               (r.getString('data_exame') ? ' — ' + r.getString('data_exame') : '')
             )
           },
@@ -144,7 +144,7 @@ onRecordCreateRequest(
           descricao: function (r) {
             return (
               'Teste de aparelho: ' +
-              (r.getString('patient_name') || r.id) +
+              (r.getString('patient_name') || r.get('id')) +
               (r.getString('product_name') ? ' — ' + r.getString('product_name') : '')
             )
           },
@@ -174,14 +174,14 @@ onRecordCreateRequest(
           modulo: 'vendas_b2b',
           entidade_tipo: 'vendas_b2b',
           descricao: function (r) {
-            return 'Venda B2B ' + (r.getString('numero_venda') || '#' + r.id)
+            return 'Venda B2B ' + (r.getString('numero_venda') || '#' + r.get('id'))
           },
         },
         itens_venda_b2b: {
           modulo: 'vendas_b2b',
           entidade_tipo: 'itens_venda_b2b',
           descricao: function (r) {
-            return 'Item Venda B2B: ' + (r.getString('produto_nome') || r.id)
+            return 'Item Venda B2B: ' + (r.getString('produto_nome') || r.get('id'))
           },
         },
         fechamentos_caixa: {
@@ -209,7 +209,7 @@ onRecordCreateRequest(
           modulo: 'estoque',
           entidade_tipo: 'inventory',
           descricao: function (r) {
-            return 'Item de estoque: ' + (r.getString('name') || r.id)
+            return 'Item de estoque: ' + (r.getString('name') || r.get('id'))
           },
         },
         inventory_movements: {
@@ -231,7 +231,7 @@ onRecordCreateRequest(
           descricao: function (r) {
             return (
               'Empresa parceira: ' +
-              (r.getString('nome_fantasia') || r.getString('razao_social') || r.id)
+              (r.getString('nome_fantasia') || r.getString('razao_social') || r.get('id'))
             )
           },
         },
@@ -239,21 +239,21 @@ onRecordCreateRequest(
           modulo: 'configuracoes',
           entidade_tipo: 'equipments',
           descricao: function (r) {
-            return 'Equipamento: ' + (r.getString('nome') || r.id)
+            return 'Equipamento: ' + (r.getString('nome') || r.get('id'))
           },
         },
         clinic_settings: {
           modulo: 'configuracoes',
           entidade_tipo: 'clinic_settings',
           descricao: function (r) {
-            return 'Configurações da clínica: ' + (r.getString('nome') || r.id)
+            return 'Configurações da clínica: ' + (r.getString('nome') || r.get('id'))
           },
         },
         nf_servico_comissao: {
           modulo: 'vendas_b2b',
           entidade_tipo: 'nf_servico_comissao',
           descricao: function (r) {
-            return 'NF de serviço: ' + (r.getString('numero_nfse') || r.id)
+            return 'NF de serviço: ' + (r.getString('numero_nfse') || r.get('id'))
           },
         },
         contas_receber: {
@@ -286,7 +286,10 @@ onRecordCreateRequest(
           entidade_tipo: 'despesas',
           descricao: function (r) {
             return (
-              'Despesa: ' + (r.getString('descricao') || r.id) + ' — R$ ' + (r.get('valor') || 0)
+              'Despesa: ' +
+              (r.getString('descricao') || r.get('id')) +
+              ' — R$ ' +
+              (r.get('valor') || 0)
             )
           },
         },
@@ -294,7 +297,7 @@ onRecordCreateRequest(
           modulo: 'configuracoes',
           entidade_tipo: 'exam_report_templates',
           descricao: function (r) {
-            return 'Modelo de laudo: ' + (r.getString('nome_modelo') || r.id)
+            return 'Modelo de laudo: ' + (r.getString('nome_modelo') || r.get('id'))
           },
         },
         exam_report_template_versions: {
@@ -368,7 +371,7 @@ onRecordCreateRequest(
       try {
         descricao = meta.descricao(e.record)
       } catch (_) {
-        descricao = meta.entidade_tipo + ':' + e.record.id
+        descricao = meta.entidade_tipo + ':' + e.record.get('id')
       }
 
       try {
@@ -380,7 +383,7 @@ onRecordCreateRequest(
         rec.set('modulo', meta.modulo)
         rec.set('acao', 'criar')
         rec.set('entidade_tipo', meta.entidade_tipo)
-        rec.set('entidade_id', e.record.id)
+        rec.set('entidade_id', e.record.get('id'))
         rec.set('entidade_descricao', descricao)
         rec.set('alteracoes', alteracoes)
         rec.set('ip', ip)
@@ -508,7 +511,7 @@ onRecordUpdateRequest(
           estornoValue: '',
           acaoEspecial: '',
           descricao: function (r) {
-            return 'Prontuário: ' + (r.getString('patientName') || r.id)
+            return 'Prontuário: ' + (r.getString('patientName') || r.get('id'))
           },
         },
         evolutions: {
@@ -534,7 +537,7 @@ onRecordUpdateRequest(
           estornoValue: '',
           acaoEspecial: '',
           descricao: function (r) {
-            return 'Audiometria: ' + (r.getString('patientName') || r.id)
+            return 'Audiometria: ' + (r.getString('patientName') || r.get('id'))
           },
         },
         audiometry_exams: {
@@ -545,7 +548,7 @@ onRecordUpdateRequest(
           estornoValue: '',
           acaoEspecial: '',
           descricao: function (r) {
-            return 'Exame audiológico: ' + (r.getString('patientName') || r.id)
+            return 'Exame audiológico: ' + (r.getString('patientName') || r.get('id'))
           },
         },
         imitanciometrias: {
@@ -558,7 +561,7 @@ onRecordUpdateRequest(
           descricao: function (r) {
             return (
               'Imitanciometria: ' +
-              (r.getString('paciente_nome') || r.id) +
+              (r.getString('paciente_nome') || r.get('id')) +
               (r.getString('data_exame') ? ' — ' + r.getString('data_exame') : '')
             )
           },
@@ -573,7 +576,7 @@ onRecordUpdateRequest(
           descricao: function (r) {
             return (
               'Teste de aparelho: ' +
-              (r.getString('patient_name') || r.id) +
+              (r.getString('patient_name') || r.get('id')) +
               (r.getString('product_name') ? ' — ' + r.getString('product_name') : '')
             )
           },
@@ -615,7 +618,7 @@ onRecordUpdateRequest(
           estornoValue: '',
           acaoEspecial: '',
           descricao: function (r) {
-            return 'Venda B2B ' + (r.getString('numero_venda') || '#' + r.id)
+            return 'Venda B2B ' + (r.getString('numero_venda') || '#' + r.get('id'))
           },
         },
         itens_venda_b2b: {
@@ -626,7 +629,7 @@ onRecordUpdateRequest(
           estornoValue: '',
           acaoEspecial: '',
           descricao: function (r) {
-            return 'Item Venda B2B: ' + (r.getString('produto_nome') || r.id)
+            return 'Item Venda B2B: ' + (r.getString('produto_nome') || r.get('id'))
           },
         },
         fechamentos_caixa: {
@@ -666,7 +669,7 @@ onRecordUpdateRequest(
           estornoValue: '',
           acaoEspecial: '',
           descricao: function (r) {
-            return 'Item de estoque: ' + (r.getString('name') || r.id)
+            return 'Item de estoque: ' + (r.getString('name') || r.get('id'))
           },
         },
         inventory_movements: {
@@ -696,7 +699,7 @@ onRecordUpdateRequest(
           descricao: function (r) {
             return (
               'Empresa parceira: ' +
-              (r.getString('nome_fantasia') || r.getString('razao_social') || r.id)
+              (r.getString('nome_fantasia') || r.getString('razao_social') || r.get('id'))
             )
           },
         },
@@ -708,7 +711,7 @@ onRecordUpdateRequest(
           estornoValue: '',
           acaoEspecial: '',
           descricao: function (r) {
-            return 'Equipamento: ' + (r.getString('nome') || r.id)
+            return 'Equipamento: ' + (r.getString('nome') || r.get('id'))
           },
         },
         clinic_settings: {
@@ -719,7 +722,7 @@ onRecordUpdateRequest(
           estornoValue: '',
           acaoEspecial: '',
           descricao: function (r) {
-            return 'Configurações da clínica: ' + (r.getString('nome') || r.id)
+            return 'Configurações da clínica: ' + (r.getString('nome') || r.get('id'))
           },
         },
         nf_servico_comissao: {
@@ -730,7 +733,7 @@ onRecordUpdateRequest(
           estornoValue: '',
           acaoEspecial: 'nf',
           descricao: function (r) {
-            return 'NF de serviço: ' + (r.getString('numero_nfse') || r.id)
+            return 'NF de serviço: ' + (r.getString('numero_nfse') || r.get('id'))
           },
         },
         contas_receber: {
@@ -775,7 +778,10 @@ onRecordUpdateRequest(
           acaoEspecial: '',
           descricao: function (r) {
             return (
-              'Despesa: ' + (r.getString('descricao') || r.id) + ' — R$ ' + (r.get('valor') || 0)
+              'Despesa: ' +
+              (r.getString('descricao') || r.get('id')) +
+              ' — R$ ' +
+              (r.get('valor') || 0)
             )
           },
         },
@@ -787,7 +793,7 @@ onRecordUpdateRequest(
           estornoValue: '',
           acaoEspecial: '',
           descricao: function (r) {
-            return 'Modelo de laudo: ' + (r.getString('nome_modelo') || r.id)
+            return 'Modelo de laudo: ' + (r.getString('nome_modelo') || r.get('id'))
           },
         },
         exam_report_template_versions: {
@@ -1074,7 +1080,7 @@ onRecordUpdateRequest(
       try {
         descricao = meta.descricao(e.record)
       } catch (_) {
-        descricao = meta.entidade_tipo + ':' + e.record.id
+        descricao = meta.entidade_tipo + ':' + e.record.get('id')
       }
 
       try {
@@ -1086,7 +1092,7 @@ onRecordUpdateRequest(
         rec.set('modulo', meta.modulo)
         rec.set('acao', acao)
         rec.set('entidade_tipo', meta.entidade_tipo)
-        rec.set('entidade_id', e.record.id)
+        rec.set('entidade_id', e.record.get('id'))
         rec.set('entidade_descricao', descricao)
         rec.set('alteracoes', alteracoes)
         rec.set('ip', ip)
@@ -1182,42 +1188,42 @@ onRecordDeleteRequest(
           modulo: 'pacientes',
           entidade_tipo: 'patients',
           descricao: function (r) {
-            return 'Paciente: ' + (r.getString('name') || r.id)
+            return 'Paciente: ' + (r.getString('name') || r.get('id'))
           },
         },
         appointments: {
           modulo: 'agenda',
           entidade_tipo: 'appointments',
           descricao: function (r) {
-            return 'Agendamento: ' + (r.getString('patientName') || r.id)
+            return 'Agendamento: ' + (r.getString('patientName') || r.get('id'))
           },
         },
         clinical_records: {
           modulo: 'prontuario',
           entidade_tipo: 'clinical_records',
           descricao: function (r) {
-            return 'Prontuário: ' + (r.getString('patientName') || r.id)
+            return 'Prontuário: ' + (r.getString('patientName') || r.get('id'))
           },
         },
         evolutions: {
           modulo: 'prontuario',
           entidade_tipo: 'evolutions',
           descricao: function (r) {
-            return 'Evolução: ' + (r.getString('patientName') || r.id)
+            return 'Evolução: ' + (r.getString('patientName') || r.get('id'))
           },
         },
         audiometries: {
           modulo: 'audiometria',
           entidade_tipo: 'audiometries',
           descricao: function (r) {
-            return 'Audiometria: ' + (r.getString('patientName') || r.id)
+            return 'Audiometria: ' + (r.getString('patientName') || r.get('id'))
           },
         },
         audiometry_exams: {
           modulo: 'audiometria',
           entidade_tipo: 'audiometry_exams',
           descricao: function (r) {
-            return 'Exame audiológico: ' + (r.getString('patientName') || r.id)
+            return 'Exame audiológico: ' + (r.getString('patientName') || r.get('id'))
           },
         },
         imitanciometrias: {
@@ -1226,7 +1232,7 @@ onRecordDeleteRequest(
           descricao: function (r) {
             return (
               'Imitanciometria: ' +
-              (r.getString('paciente_nome') || r.id) +
+              (r.getString('paciente_nome') || r.get('id')) +
               (r.getString('data_exame') ? ' — ' + r.getString('data_exame') : '')
             )
           },
@@ -1235,7 +1241,7 @@ onRecordDeleteRequest(
           modulo: 'audiometria',
           entidade_tipo: 'hearing_aid_tests',
           descricao: function (r) {
-            return 'Teste de aparelho: ' + (r.getString('patient_name') || r.id)
+            return 'Teste de aparelho: ' + (r.getString('patient_name') || r.get('id'))
           },
         },
         hearing_aids: {
@@ -1264,14 +1270,14 @@ onRecordDeleteRequest(
           modulo: 'vendas_b2b',
           entidade_tipo: 'vendas_b2b',
           descricao: function (r) {
-            return 'Venda B2B ' + (r.getString('numero_venda') || '#' + r.id)
+            return 'Venda B2B ' + (r.getString('numero_venda') || '#' + r.get('id'))
           },
         },
         itens_venda_b2b: {
           modulo: 'vendas_b2b',
           entidade_tipo: 'itens_venda_b2b',
           descricao: function (r) {
-            return 'Item Venda B2B: ' + (r.getString('produto_nome') || r.id)
+            return 'Item Venda B2B: ' + (r.getString('produto_nome') || r.get('id'))
           },
         },
         fechamentos_caixa: {
@@ -1287,21 +1293,21 @@ onRecordDeleteRequest(
           modulo: 'caixa',
           entidade_tipo: 'movimentacoes_caixa',
           descricao: function (r) {
-            return 'Movimentação de caixa: ' + (r.getString('descricao') || r.id)
+            return 'Movimentação de caixa: ' + (r.getString('descricao') || r.get('id'))
           },
         },
         inventory: {
           modulo: 'estoque',
           entidade_tipo: 'inventory',
           descricao: function (r) {
-            return 'Item de estoque: ' + (r.getString('name') || r.id)
+            return 'Item de estoque: ' + (r.getString('name') || r.get('id'))
           },
         },
         inventory_movements: {
           modulo: 'estoque',
           entidade_tipo: 'inventory_movements',
           descricao: function (r) {
-            return 'Movimentação de estoque: ' + (r.getString('item_name') || r.id)
+            return 'Movimentação de estoque: ' + (r.getString('item_name') || r.get('id'))
           },
         },
         empresas_parceiras: {
@@ -1310,7 +1316,7 @@ onRecordDeleteRequest(
           descricao: function (r) {
             return (
               'Empresa parceira: ' +
-              (r.getString('nome_fantasia') || r.getString('razao_social') || r.id)
+              (r.getString('nome_fantasia') || r.getString('razao_social') || r.get('id'))
             )
           },
         },
@@ -1318,21 +1324,21 @@ onRecordDeleteRequest(
           modulo: 'configuracoes',
           entidade_tipo: 'equipments',
           descricao: function (r) {
-            return 'Equipamento: ' + (r.getString('nome') || r.id)
+            return 'Equipamento: ' + (r.getString('nome') || r.get('id'))
           },
         },
         clinic_settings: {
           modulo: 'configuracoes',
           entidade_tipo: 'clinic_settings',
           descricao: function (r) {
-            return 'Configurações da clínica: ' + (r.getString('nome') || r.id)
+            return 'Configurações da clínica: ' + (r.getString('nome') || r.get('id'))
           },
         },
         nf_servico_comissao: {
           modulo: 'vendas_b2b',
           entidade_tipo: 'nf_servico_comissao',
           descricao: function (r) {
-            return 'NF de serviço: ' + (r.getString('numero_nfse') || r.id)
+            return 'NF de serviço: ' + (r.getString('numero_nfse') || r.get('id'))
           },
         },
         contas_receber: {
@@ -1365,7 +1371,10 @@ onRecordDeleteRequest(
           entidade_tipo: 'despesas',
           descricao: function (r) {
             return (
-              'Despesa: ' + (r.getString('descricao') || r.id) + ' — R$ ' + (r.get('valor') || 0)
+              'Despesa: ' +
+              (r.getString('descricao') || r.get('id')) +
+              ' — R$ ' +
+              (r.get('valor') || 0)
             )
           },
         },
@@ -1373,7 +1382,7 @@ onRecordDeleteRequest(
           modulo: 'configuracoes',
           entidade_tipo: 'exam_report_templates',
           descricao: function (r) {
-            return 'Modelo de laudo: ' + (r.getString('nome_modelo') || r.id)
+            return 'Modelo de laudo: ' + (r.getString('nome_modelo') || r.get('id'))
           },
         },
         exam_report_template_versions: {
@@ -1443,7 +1452,7 @@ onRecordDeleteRequest(
       try {
         descricao = meta.descricao(e.record)
       } catch (_) {
-        descricao = meta.entidade_tipo + ':' + e.record.id
+        descricao = meta.entidade_tipo + ':' + e.record.get('id')
       }
 
       // Prossegue com a operação original (best-effort: o log nunca bloqueia).
@@ -1458,7 +1467,7 @@ onRecordDeleteRequest(
         rec.set('modulo', meta.modulo)
         rec.set('acao', 'deletar')
         rec.set('entidade_tipo', meta.entidade_tipo)
-        rec.set('entidade_id', e.record.id)
+        rec.set('entidade_id', e.record.get('id'))
         rec.set('entidade_descricao', descricao)
         rec.set('alteracoes', alteracoes)
         rec.set('ip', ip)
