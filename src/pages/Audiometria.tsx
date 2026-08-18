@@ -487,8 +487,31 @@ export default function Audiometria() {
     setSaving(true)
     // MT (Média Tritonal) calculada automaticamente a partir do mapa aéreo
     // quando não estiver explicitamente preenchida. LRF usa srt como fallback.
-    const mtOD = exam.mt_od || mediaTritonal(exam.air_od)
-    const mtOE = exam.mt_oe || mediaTritonal(exam.air_oe)
+    //
+    // mediaTritonal espera AudiogramMap (Record<string, {db, symbol}>), mas o
+    // banco pode ter persistido air_od/air_oe como Record<string, number>
+    // (formato plano). Normalizamos antes de chamar para garantir o cálculo.
+    const toAudiogramMap = (raw: any): AudiogramMap => {
+      if (!raw || typeof raw !== 'object') return {}
+      const out: AudiogramMap = {}
+      Object.keys(raw).forEach((f) => {
+        const v = raw[f]
+        if (v !== null && v !== undefined && typeof v === 'object') {
+          out[f] = {
+            db: v.db === null || v.db === undefined ? null : Number(v.db),
+            symbol: (v.symbol as AudiogramSymbol) || 'normal',
+          }
+        } else if (v !== null && v !== undefined && v !== '') {
+          // valor plano (number) — converte para o formato esperado
+          out[f] = { db: Number(v), symbol: 'normal' }
+        }
+      })
+      return out
+    }
+    const airOdMap = toAudiogramMap(exam.air_od)
+    const airOeMap = toAudiogramMap(exam.air_oe)
+    const mtOD = exam.mt_od || mediaTritonal(airOdMap)
+    const mtOE = exam.mt_oe || mediaTritonal(airOeMap)
     const lrfOD = exam.lrf_od ?? exam.srt_od
     const lrfOE = exam.lrf_oe ?? exam.srt_oe
     const payload: Record<string, any> = {
