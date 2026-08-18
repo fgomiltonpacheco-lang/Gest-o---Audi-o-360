@@ -174,27 +174,27 @@ export function App() {
             <Route
               path="/pacientes/:id/prontuario"
               element={
-                <ProtectedRoute>
+                <NonSecretariaRoute>
                   <Prontuario />
-                </ProtectedRoute>
+                </NonSecretariaRoute>
               }
             />
 
             <Route
               path="/pacientes/:id/audiometria/:examId?"
               element={
-                <ProtectedRoute>
+                <NonSecretariaRoute>
                   <Audiometria />
-                </ProtectedRoute>
+                </NonSecretariaRoute>
               }
             />
 
             <Route
               path="/pacientes/:id/imitanciometria/:examId?"
               element={
-                <ProtectedRoute>
+                <NonSecretariaRoute>
                   <Imitanciometria />
-                </ProtectedRoute>
+                </NonSecretariaRoute>
               }
             />
 
@@ -321,9 +321,9 @@ export function App() {
             <Route
               path="/pacientes/:id/teste-aparelho/:examId?"
               element={
-                <ProtectedRoute>
+                <NonSecretariaRoute>
                   <TesteAparelho />
-                </ProtectedRoute>
+                </NonSecretariaRoute>
               }
             />
 

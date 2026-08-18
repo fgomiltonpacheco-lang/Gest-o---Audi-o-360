@@ -299,10 +299,16 @@ function LembreteStatusBadge({ lembrete }: { lembrete?: LembreteWhatsapp }) {
 }
 
 export default function Agenda() {
-  const { appointments, addAppointment, updateAppointment, deleteAppointment } = useApp()
+  const { appointments, addAppointment, updateAppointment, deleteAppointment, currentUser } =
+    useApp()
   const navigate = useNavigate()
   const location = useLocation()
   const { print } = usePrint()
+
+  // O botão "Atender" (que leva ao prontuário) só aparece para Admin e
+  // Profissional. A secretária vê apenas o seletor de status (Agendado /
+  // Confirmado / Chegou / Cancelado) para marcar a chegada na recepção.
+  const canAttend = currentUser?.role !== 'secretaria'
 
   const [viewMode, setViewMode] = useState<ViewMode>('dia')
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
@@ -1215,8 +1221,9 @@ export default function Agenda() {
                                   </SelectContent>
                                 </Select>
 
-                                {/* Botão Atender: habilitado/visível apenas quando status for 'Chegou' (reception === 'presente') */}
-                                {app.status !== 'Realizado' && (
+                                {/* Botão Atender: visível apenas para Admin e Profissional.
+                                    A secretária vê apenas o seletor de status (recepção). */}
+                                {canAttend && app.status !== 'Realizado' && (
                                   <Button
                                     size="sm"
                                     variant="ghost"
@@ -1645,8 +1652,8 @@ export default function Agenda() {
                               </SelectContent>
                             </Select>
 
-                            {/* Botão Atender na tabela em lista */}
-                            {app.status !== 'Realizado' && (
+                            {/* Botão Atender na tabela em lista (somente Admin/Profissional) */}
+                            {canAttend && app.status !== 'Realizado' && (
                               <Button
                                 size="sm"
                                 variant="ghost"

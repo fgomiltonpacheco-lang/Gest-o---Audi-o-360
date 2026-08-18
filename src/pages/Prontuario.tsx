@@ -30,6 +30,7 @@ import {
   Building2,
   ShoppingCart,
   RotateCcw,
+  Wallet,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { CompareAudiometriesModal } from '@/components/CompareAudiometriesModal'
@@ -2656,8 +2657,15 @@ function TesteAparelhoSection({ patient }: { patient: Patient }) {
 function FinanceiroAtendimentoSection({ patient }: { patient: Patient }) {
   const { appointments, updateAppointment, addSale } = useApp()
   const { toast } = useToast()
+  const navigate = useNavigate()
 
   const today = new Date().toISOString().split('T')[0]
+
+  // Forma de pagamento do atendimento. Quando diferente de "À vista", a
+  // venda gera automaticamente uma conta a receber (Convênio/Boleto = 1
+  // conta; Parcelado = N contas, uma por parcela).
+  const [formaPagamento, setFormaPagamento] = React.useState<PDVPaymentMethod>('À vista')
+  const [parcelas, setParcelas] = React.useState<number>(1)
 
   // Buscar agendamento do paciente para hoje não cancelado
   const todayAppointment = React.useMemo(() => {
@@ -2854,18 +2862,24 @@ function FinanceiroAtendimentoSection({ patient }: { patient: Patient }) {
         .map((it) => `${it.procedureName} (${formatCurrency(it.value)})`)
         .join(' + ')
 
-      // 1. Criar Venda na coleção sales (e no estado)
+      // Determina o número de parcelas conforme a forma de pagamento.
+      const numParcelas = formaPagamento === 'Parcelado' ? Math.max(1, Number(parcelas) || 1) : 1
+
+      // 1. Criar Venda na coleção sales (e no estado).
+      //    O addSale já cria automaticamente as contas a receber quando a
+      //    forma de pagamento é Convênio, Boleto ou Parcelado.
       addSale({
         patientId: patient.id,
         patientName: patient.name,
         date: today,
         itemsDescription: itemsSummary,
         totalValue: totalValue,
-        paymentMethod: 'À vista',
-        installmentsCount: 1,
+        paymentMethod: formaPagamento,
+        installmentsCount: numParcelas,
         interestPercent: 0,
         firstDueDate: today,
         status: 'Concluída',
+        type: 'atendimento',
       })
 
       // 2. Atualizar agendamento status = 'Realizado', reception = ''
@@ -3102,6 +3116,58 @@ function FinanceiroAtendimentoSection({ patient }: { patient: Patient }) {
             </tfoot>
           </table>
         </div>
+      </div>
+
+      {/* Forma de Pagamento */}
+      <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 mb-3">
+          <Wallet className="w-4 h-4 text-teal-600" />
+          Forma de Pagamento
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+          <div className="space-y-1">
+            <Label className="text-xs font-semibold text-slate-700">Forma de pagamento</Label>
+            <Select
+              value={formaPagamento}
+              onValueChange={(v) => setFormaPagamento(v as PDVPaymentMethod)}
+            >
+              <SelectTrigger className="h-10 rounded-xl text-xs border-slate-300">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="À vista">À Vista</SelectItem>
+                <SelectItem value="Convênio">Convênio</SelectItem>
+                <SelectItem value="Boleto">Boleto</SelectItem>
+                <SelectItem value="Parcelado">Parcelado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {formaPagamento === 'Parcelado' && (
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-slate-700">Número de parcelas</Label>
+              <Input
+                type="number"
+                min={1}
+                max={24}
+                value={parcelas}
+                onChange={(e) => setParcelas(Number(e.target.value))}
+                className="h-10 rounded-xl text-xs border-slate-300"
+              />
+            </div>
+          )}
+        </div>
+        {(formaPagamento === 'Convênio' ||
+          formaPagamento === 'Boleto' ||
+          formaPagamento === 'Parcelado') && (
+          <p className="text-[11px] text-amber-700 mt-3 flex items-center gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5" />
+            Será criada automaticamente uma conta a receber
+            {formaPagamento === 'Parcelado'
+              ? ` em ${Math.max(1, Number(parcelas) || 1)}x`
+              : ''} no
+            módulo financeiro.
+          </p>
+        )}
       </div>
 
       {/* Botão Finalizar Atendimento */}

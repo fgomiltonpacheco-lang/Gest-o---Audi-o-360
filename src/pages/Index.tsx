@@ -43,6 +43,8 @@ export default function Index() {
     alerts,
     vendasB2B,
     fetchVendasB2B,
+    contasReceber,
+    fetchContasReceber,
   } = useApp()
   const navigate = useNavigate()
 
@@ -53,6 +55,30 @@ export default function Index() {
   useEffect(() => {
     if (!isSecretaria) fetchVendasB2B()
   }, [fetchVendasB2B, isSecretaria])
+
+  // Contas a receber pendentes — carregadas para o card da secretária.
+  // A secretária precisa ver, no Dashboard, as contas a receber de hoje que
+  // ainda estão pendentes para acompanhar a recepção/cobrança do dia.
+  useEffect(() => {
+    if (isSecretaria) fetchContasReceber()
+  }, [fetchContasReceber, isSecretaria])
+
+  // Contas a receber pendentes para hoje (vencimento = hoje) ou vencidas (ainda
+  // não recebidas totalmente). Usado pelo card "💰 Contas a Receber Hoje".
+  const contasReceberHoje = useMemo(() => {
+    return contasReceber.filter(
+      (c) =>
+        c.status !== 'recebido_total' &&
+        c.status !== 'cancelado' &&
+        c.status !== 'renegociado' &&
+        c.data_vencimento <= todayStr,
+    )
+  }, [contasReceber, todayStr])
+
+  const contasReceberHojeTotal = contasReceberHoje.reduce(
+    (acc, c) => acc + (c.valor_restante || 0),
+    0,
+  )
 
   // Data atual
   const today = new Date()
