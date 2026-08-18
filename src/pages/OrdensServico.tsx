@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Wrench,
   Plus,
@@ -154,6 +155,7 @@ function isMesAtual(dataStr?: string): boolean {
 }
 
 export default function OrdensServico() {
+  const navigate = useNavigate()
   const { toast } = useToast()
 
   const [ordens, setOrdens] = useState<OrdemServico[]>([])
@@ -329,7 +331,7 @@ export default function OrdensServico() {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            onClick={() => toast({ title: 'Formulário de Nova OS em desenvolvimento.' })}
+            onClick={() => navigate('/ordens-servico/nova')}
             className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-sm shadow-sm"
           >
             <Plus className="w-4 h-4 mr-1.5" /> Nova OS
@@ -607,7 +609,7 @@ export default function OrdensServico() {
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => toast({ title: 'Edição de OS em desenvolvimento.' })}
+                          onClick={() => navigate(`/ordens-servico/${os.id}/editar`)}
                           title="Editar"
                           className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800"
                         >
@@ -792,7 +794,7 @@ export default function OrdensServico() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => toast({ title: 'Edição de OS em desenvolvimento.' })}
+              onClick={() => detailOS && navigate(`/ordens-servico/${detailOS.id}/editar`)}
               className="rounded-xl text-xs"
             >
               <Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar

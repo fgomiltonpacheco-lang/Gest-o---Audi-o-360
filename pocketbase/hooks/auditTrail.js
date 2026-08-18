@@ -340,7 +340,7 @@ onRecordCreateRequest(
           userAgent = headers['User-Agent'] || headers['user-agent'] || ''
           var auth = ri.auth
           if (auth) {
-            authId = auth.id || ''
+            authId = auth.get('id') || ''
             authNome = auth.getString('name') || auth.get('email') || 'Sistema'
             authPerfil = auth.getString('role') || ''
           }
@@ -840,7 +840,7 @@ onRecordUpdateRequest(
           userAgent = headers['User-Agent'] || headers['user-agent'] || ''
           var auth = ri.auth
           if (auth) {
-            authId = auth.id || ''
+            authId = auth.get('id') || ''
             authNome = auth.getString('name') || auth.get('email') || 'Sistema'
             authPerfil = auth.getString('role') || ''
           }
@@ -1424,7 +1424,7 @@ onRecordDeleteRequest(
           userAgent = headers['User-Agent'] || headers['user-agent'] || ''
           var auth = ri.auth
           if (auth) {
-            authId = auth.id || ''
+            authId = auth.get('id') || ''
             authNome = auth.getString('name') || auth.get('email') || 'Sistema'
             authPerfil = auth.getString('role') || ''
           }

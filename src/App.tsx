@@ -41,6 +41,8 @@ import FluxoProjetado from '@/pages/FluxoProjetado'
 import Despesas from '@/pages/Despesas'
 import Lembretes from '@/pages/Lembretes'
 import OrdensServico from '@/pages/OrdensServico'
+import OrdemServicoForm from '@/pages/OrdemServicoForm'
+import TesteAparelho from '@/pages/TesteAparelho'
 import NotFound from '@/pages/NotFound'
 import ExamReportTemplatesList from '@/pages/laudos/ExamReportTemplatesList'
 import ExamReportTemplateNovo from '@/pages/laudos/ExamReportTemplateNovo'
@@ -284,6 +286,32 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <OrdensServico />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ordens-servico/nova"
+              element={
+                <ProtectedRoute>
+                  <OrdemServicoForm />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ordens-servico/:id/editar"
+              element={
+                <ProtectedRoute>
+                  <OrdemServicoForm />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ===== Teste com Aparelho (formulário de digitação) ===== */}
+            <Route
+              path="/pacientes/:id/teste-aparelho/:examId?"
+              element={
+                <ProtectedRoute>
+                  <TesteAparelho />
                 </ProtectedRoute>
               }
             />

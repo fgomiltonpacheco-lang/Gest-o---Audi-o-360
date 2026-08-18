@@ -16,6 +16,7 @@ import {
   DollarSign,
   ArrowLeft,
   AlertCircle,
+  FileText,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { useToast } from '@/hooks/use-toast'
@@ -39,8 +40,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import NfseEmitirModal from '@/components/NfseEmitirModal'
 import pb from '@/lib/pocketbase/client'
-import { getProcedureValueByPlan, type SaleItem, type PDVPaymentMethod } from '@/types'
+import { getProcedureValueByPlan, type SaleItem, type PDVPaymentMethod, type Sale } from '@/types'
 
 interface CatalogEntry {
   id: string
@@ -118,6 +120,7 @@ export default function PDV() {
   const [discountInput, setDiscountInput] = useState<string>('0')
   const [submitting, setSubmitting] = useState(false)
   const [receiptSale, setReceiptSale] = useState<any | null>(null)
+  const [nfEmitirSale, setNfEmitirSale] = useState<Sale | null>(null)
 
   // ---- Pacientes (autocomplete) ----
   const filteredPatients = useMemo(() => {
@@ -824,7 +827,7 @@ export default function PDV() {
               </div>
             </div>
           )}
-          <DialogFooter className="pt-2 border-t border-slate-100">
+          <DialogFooter className="pt-2 border-t border-slate-100 flex-wrap gap-2">
             <Button
               variant="outline"
               onClick={() => setReceiptSale(null)}
@@ -839,9 +842,26 @@ export default function PDV() {
               <Printer className="w-3.5 h-3.5 mr-1.5" />
               Imprimir Comprovante
             </Button>
+            {receiptSale && (
+              <Button
+                onClick={() => {
+                  setNfEmitirSale(receiptSale as Sale)
+                }}
+                className="rounded-xl text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <FileText className="w-3.5 h-3.5 mr-1.5" /> Emitir NF
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Emissão de NFS-e */}
+      <NfseEmitirModal
+        sale={nfEmitirSale}
+        open={!!nfEmitirSale}
+        onOpenChange={(o) => !o && setNfEmitirSale(null)}
+      />
     </div>
   )
 }

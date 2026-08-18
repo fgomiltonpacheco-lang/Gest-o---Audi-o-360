@@ -1435,3 +1435,158 @@ export interface NfseB2BConfig {
   created?: string
   updated?: string
 }
+
+// ===== Módulo de Auditoria =====
+
+export type AuditModulo =
+  | 'pacientes'
+  | 'agenda'
+  | 'prontuario'
+  | 'audiometria'
+  | 'vendas_pdv'
+  | 'vendas_b2b'
+  | 'caixa'
+  | 'estoque'
+  | 'configuracoes'
+  | 'parceiros'
+  | 'relatorios'
+
+export type AuditAcaoTrail =
+  | 'criar'
+  | 'editar'
+  | 'deletar'
+  | 'cancelar'
+  | 'estornar'
+  | 'emitir_nf'
+  | 'abrir_caixa'
+  | 'fechar_caixa'
+  | 'acessar'
+  | 'exportar'
+  | 'imprimir'
+  | 'baixar_estoque_venda'
+  | 'devolver_estoque_venda'
+  | 'cancelar_venda_paga'
+
+export interface AuditTrail {
+  id: string
+  usuario_id: string
+  usuario_nome: string
+  usuario_perfil: string
+  modulo: AuditModulo
+  acao: AuditAcaoTrail
+  entidade_tipo: string
+  entidade_id: string
+  entidade_descricao: string
+  alteracoes?: Record<string, unknown>
+  ip?: string
+  user_agent?: string
+  contexto?: Record<string, unknown>
+  created: string
+  updated: string
+}
+
+export const AUDIT_MODULO_LABELS: Record<AuditModulo, string> = {
+  pacientes: 'Pacientes',
+  agenda: 'Agenda',
+  prontuario: 'Prontuário',
+  audiometria: 'Audiometria',
+  vendas_pdv: 'Vendas PDV',
+  vendas_b2b: 'Vendas B2B',
+  caixa: 'Caixa',
+  estoque: 'Estoque',
+  configuracoes: 'Configurações',
+  parceiros: 'Parceiros',
+  relatorios: 'Relatórios',
+}
+
+export const AUDIT_ACAO_LABELS: Record<AuditAcaoTrail, string> = {
+  criar: 'Criar',
+  editar: 'Editar',
+  deletar: 'Deletar',
+  cancelar: 'Cancelar',
+  estornar: 'Estornar',
+  emitir_nf: 'Emitir NF',
+  abrir_caixa: 'Abrir Caixa',
+  fechar_caixa: 'Fechar Caixa',
+  acessar: 'Acessar',
+  exportar: 'Exportar',
+  imprimir: 'Imprimir',
+  baixar_estoque_venda: 'Baixa Estoque (Venda)',
+  devolver_estoque_venda: 'Devolução Estoque (Venda)',
+  cancelar_venda_paga: 'Cancelamento Venda Paga',
+}
+
+// ===== Módulo de Lembretes WhatsApp =====
+
+export type LembreteStatusEnvio = 'pendente' | 'enviado' | 'falhou' | 'entregue' | 'lido'
+
+export type LembreteStatusConfirmacao = 'aguardando' | 'confirmado' | 'cancelado' | 'sem_resposta'
+
+export interface LembreteWhatsapp {
+  id: string
+  agendamento_id: string
+  paciente_id: string
+  telefone: string
+  mensagem: string
+  data_envio: string
+  status_envio: LembreteStatusEnvio
+  status_confirmacao: LembreteStatusConfirmacao
+  data_confirmacao: string
+  resposta_paciente: string
+  tentativas: number
+  error_message: string
+  created: string
+  updated: string
+  agendamento?: {
+    id: string
+    date: string
+    time: string
+    patientName: string
+    type: string
+    status: string
+  }
+  paciente?: {
+    id: string
+    name: string
+    mobile: string
+    phone: string
+  }
+}
+
+export const LEMBRETE_STATUS_ENVIO_LABELS: Record<LembreteStatusEnvio, string> = {
+  pendente: 'Pendente',
+  enviado: 'Enviado',
+  falhou: 'Falhou',
+  entregue: 'Entregue',
+  lido: 'Lido',
+}
+
+export const LEMBRETE_STATUS_CONFIRMACAO_LABELS: Record<LembreteStatusConfirmacao, string> = {
+  aguardando: 'Aguardando',
+  confirmado: 'Confirmado',
+  cancelado: 'Cancelado',
+  sem_resposta: 'Sem Resposta',
+}
+
+export const LEMBRETE_STATUS_ENVIO_CLASS: Record<LembreteStatusEnvio, string> = {
+  pendente: 'bg-slate-100 text-slate-700 border-slate-200',
+  enviado: 'bg-blue-100 text-blue-700 border-blue-200',
+  falhou: 'bg-red-100 text-red-700 border-red-200',
+  entregue: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  lido: 'bg-green-100 text-green-700 border-green-200',
+}
+
+export const LEMBRETE_STATUS_CONFIRMACAO_CLASS: Record<LembreteStatusConfirmacao, string> = {
+  aguardando: 'bg-slate-100 text-slate-700 border-slate-200',
+  confirmado: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  cancelado: 'bg-red-100 text-red-700 border-red-200',
+  sem_resposta: 'bg-amber-100 text-amber-700 border-amber-200',
+}
+
+export const PAGE_SIZES: Record<string, { largura: number; altura: number; label: string }> = {
+  A4: { largura: 210, altura: 297, label: 'A4 (210 × 297 mm)' },
+  'A4-L': { largura: 297, altura: 210, label: 'A4 Paisagem (297 × 210 mm)' },
+  Carta: { largura: 215.9, altura: 279.4, label: 'Carta (215.9 × 279.4 mm)' },
+  'Carta-L': { largura: 279.4, altura: 215.9, label: 'Carta Paisagem (279.4 × 215.9 mm)' },
+  Ofício: { largura: 215.9, altura: 355.6, label: 'Ofício (215.9 × 355.6 mm)' },
+}
