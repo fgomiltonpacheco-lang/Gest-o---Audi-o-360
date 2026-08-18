@@ -286,7 +286,7 @@ routerAdd('POST', '/api/whatsapp/webhook', function (c) {
         var aptId = lemb.getString('agendamento_id') || ''
         if (aptId) {
           var apt = $app.findRecordById('appointments', aptId)
-          if (apt && apt.getString('status') === 'Agendado') {
+          if (apt) {
             apt.set('status', 'Confirmado')
             $app.save(apt)
           }

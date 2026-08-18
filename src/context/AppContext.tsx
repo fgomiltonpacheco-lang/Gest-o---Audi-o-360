@@ -494,18 +494,16 @@ const mapStockMovement = (r: any): StockMovement => ({
   id: r.id,
   stockItemId: r.itemId || '',
   date: r.date || '',
-  type: r.type === 'Saída' ? 'Saída' : 'Entrada',
+  type: r.type === 'Saída' || r.type === 'saida' ? 'saida' : 'entrada',
   quantity: Number(r.quantity) || 0,
   responsible: r.responsible || '',
   reason: r.reason || '',
   supplier: r.supplier || '',
-  patientName: r.patientName || '',
-  saleId: r.saleId || undefined,
+  patient: r.patientName || '',
   createdAt: toDateStr(r.created),
 })
 
 const mapFechamentoCaixa = (r: any): FechamentoCaixa => {
-  const usuario = r.expand?.usuario
   return {
     id: r.id,
     data: toDateStr(r.data),
@@ -522,117 +520,52 @@ const mapFechamentoCaixa = (r: any): FechamentoCaixa => {
     totalVendas: Number(r.total_vendas) || 0,
     quantidadeVendas: Number(r.quantidade_vendas) || 0,
     diferenca: Number(r.diferenca) || 0,
-    status: (r.status === 'fechado' ? 'fechado' : 'aberto') as FechamentoCaixaStatus,
+    status: r.status === 'fechado' ? 'fechado' : 'aberto',
     observacao: r.observacao || '',
     usuarioId: r.usuario || undefined,
-    usuarioNome: usuario?.name || undefined,
     created: toDateStr(r.created),
     updated: toDateStr(r.updated),
   }
 }
 
 const mapMovimentacaoCaixa = (r: any): MovimentacaoCaixa => {
-  const usuario = r.expand?.usuario
   return {
     id: r.id,
     fechamentoId: r.fechamento || '',
-    tipo: (r.tipo === 'saida' ? 'saida' : 'entrada') as MovimentacaoCaixaTipo,
+    tipo: r.tipo === 'saida' ? 'saida' : 'entrada',
     valor: Number(r.valor) || 0,
     descricao: r.descricao || '',
     formaPagamento: (r.forma_pagamento || 'dinheiro') as FormaPagamentoCaixa,
     data: toDateStr(r.data),
-    saleId: r.sale || undefined,
-    usuarioId: r.usuario || undefined,
-    usuarioNome: usuario?.name || undefined,
     created: toDateStr(r.created),
   }
 }
 
 const mapEmpresaParceira = (r: any): EmpresaParceira => ({
   id: r.id,
-  razao_social: r.razao_social || '',
-  nome_fantasia: r.nome_fantasia || '',
+  nome: r.razao_social || r.nome || '',
   cnpj: r.cnpj || '',
-  inscricao_estadual: r.inscricao_estadual || '',
-  email: r.email || '',
   telefone: r.telefone || '',
-  endereco: r.endereco || '',
-  cidade: r.cidade || '',
-  estado: r.estado || '',
-  cep: r.cep || '',
-  status: (r.status === 'inativo' ? 'inativo' : 'ativo') as EmpresaParceira['status'],
+  email: r.email || '',
+  contato: r.contato || '',
+  comissao_padrao: Number(r.comissao_padrao) || 0,
+  ativo: r.status !== 'inativo',
+  observacoes: r.observacoes || '',
   created: toDateStr(r.created),
   updated: toDateStr(r.updated),
-})
-
-const mapItemVendaB2B = (r: any): ItemVendaB2B => ({
-  id: r.id,
-  venda_b2b_id: r.venda_b2b_id || r.venda_b2b || '',
-  produto_id: r.produto_id || r.produto || '',
-  produto_nome: r.produto_nome || '',
-  quantidade: Number(r.quantidade) || 0,
-  valor_unitario: Number(r.valor_unitario) || 0,
-  valor_subtotal: Number(r.valor_subtotal) || 0,
-  created: toDateStr(r.created),
 })
 
 const mapNFServicoComissao = (r: any): NFServicoComissao => ({
   id: r.id,
-  venda_b2b_id: r.venda_b2b_id || r.venda_b2b || '',
-  numero_nfse: r.numero_nfse || r.numero_nf || '',
-  codigo_verificacao: r.codigo_verificacao || '',
-  data_emissao: toDateStr(r.data_emissao),
-  valor_base: Number(r.valor_base) || 0,
+  venda_id: r.venda_b2b_id || r.venda_id || '',
+  parceiro_id: r.parceiro_id || '',
+  numero_nf: r.numero_nfse || r.numero_nf || '',
+  valor_servico: Number(r.valor_liquido || r.valor_base) || 0,
   aliquota_iss: Number(r.aliquota_iss) || 0,
   valor_iss: Number(r.valor_iss) || 0,
   valor_liquido: Number(r.valor_liquido) || 0,
-  discriminacao_servico: r.discriminacao_servico || '',
-  item_lista_servico: r.item_lista_servico || '',
-  tomador_cnpj: r.tomador_cnpj || '',
-  tomador_razao_social: r.tomador_razao_social || '',
-  tomador_endereco: r.tomador_endereco || '',
-  tomador_municipio: r.tomador_municipio || '',
-  tomador_uf: r.tomador_uf || '',
-  tomador_cep: r.tomador_cep || '',
-  tomador_email: r.tomador_email || '',
-  motivo_cancelamento: r.motivo_cancelamento || undefined,
-  pdf_url: r.pdf_url || undefined,
-  status: (r.status || 'rascunho') as NFServicoComissao['status'],
-  created: toDateStr(r.created),
-  updated: toDateStr(r.updated),
-})
-
-const DEFAULT_NFSE_CONFIG: Omit<NfseB2BConfig, 'id' | 'created' | 'updated'> = {
-  municipio: 'Caçador',
-  uf: 'SC',
-  codigo_municipio: '8107308',
-  provedor: 'BETHA',
-  url_api: '',
-  login_api: '',
-  token_api: '',
-  inscricao_municipal: '',
-  aliquota_iss_padrao: 3,
-  item_lista_servico: '10.01',
-  discriminacao_padrao: 'Intermediação comercial - Comissão sobre venda de aparelhos auditivos',
-  ambiente: 'homologacao',
-  ativo: true,
-}
-
-const mapNfseB2BConfig = (r: any): NfseB2BConfig => ({
-  id: r.id,
-  municipio: r.municipio || '',
-  uf: r.uf || '',
-  codigo_municipio: r.codigo_municipio || '',
-  provedor: (r.provedor || 'BETHA') as NfseB2BConfig['provedor'],
-  url_api: r.url_api || '',
-  login_api: r.login_api || '',
-  token_api: r.token_api || '',
-  inscricao_municipal: r.inscricao_municipal || '',
-  aliquota_iss_padrao: Number(r.aliquota_iss_padrao) || 0,
-  item_lista_servico: r.item_lista_servico || '',
-  discriminacao_padrao: r.discriminacao_padrao || '',
-  ambiente: (r.ambiente === 'producao' ? 'producao' : 'homologacao') as NfseB2BConfig['ambiente'],
-  ativo: r.ativo !== false,
+  status: (r.status || 'pendente') as NFServicoComissao['status'],
+  data_emissao: toDateStr(r.data_emissao),
   created: toDateStr(r.created),
   updated: toDateStr(r.updated),
 })
@@ -640,40 +573,31 @@ const mapNfseB2BConfig = (r: any): NfseB2BConfig => ({
 const mapContaReceber = (r: any): ContaReceber => ({
   id: r.id,
   venda_id: r.venda_id || '',
-  venda_origem: (r.venda_origem === 'b2b' ? 'b2b' : 'pdv') as ContaReceberOrigem,
-  paciente_id: r.paciente_id || r.paciente || '',
-  empresa_parceira_id: r.empresa_parceira_id || r.empresa_parceira || '',
+  venda_origem: r.venda_origem || 'pdv',
+  cliente_id: r.paciente_id || r.cliente_id || '',
   cliente_nome: r.cliente_nome || '',
-  cliente_telefone: r.cliente_telefone || '',
   descricao: r.descricao || '',
   valor_original: Number(r.valor_original) || 0,
   valor_recebido: Number(r.valor_recebido) || 0,
   valor_restante: Number(r.valor_restante) || 0,
-  forma_pagamento: (r.forma_pagamento || 'boleto') as ContaReceberForma,
-  numero_parcelas: Number(r.numero_parcelas) || 1,
-  parcela_atual: Number(r.parcela_atual) || 1,
-  data_venda: toDateStr(r.data_venda),
   data_vencimento: toDateStr(r.data_vencimento),
   data_recebimento: r.data_recebimento ? toDateStr(r.data_recebimento) : undefined,
-  status: (r.status || 'a_receber') as ContaReceberStatus,
+  status: (r.status || 'pendente') as ContaReceberStatus,
+  forma_pagamento: r.forma_pagamento || 'boleto',
+  numero_parcelas: Number(r.numero_parcelas) || 1,
+  parcela_atual: Number(r.parcela_atual) || 1,
   observacoes: r.observacoes || '',
-  conta_origem_id: r.conta_origem_id || '',
-  motivo_renegociacao: r.motivo_renegociacao || '',
-  motivo_cancelamento: r.motivo_cancelamento || '',
-  usuario_id: r.usuario_id || r.usuario || '',
   created: toDateStr(r.created),
   updated: toDateStr(r.updated),
 })
 
 const mapRecebimento = (r: any): Recebimento => ({
   id: r.id,
-  conta_receber_id: r.conta_receber_id || r.conta_receber || '',
+  conta_id: r.conta_receber_id || r.conta_id || '',
   valor: Number(r.valor) || 0,
   data_recebimento: toDateStr(r.data_recebimento),
   forma_recebimento: (r.forma_recebimento || 'dinheiro') as FormaRecebimento,
   observacoes: r.observacoes || '',
-  usuario_id: r.usuario_id || r.usuario || '',
-  usuario_nome: r.usuario_nome || '',
   created: toDateStr(r.created),
 })
 
@@ -689,9 +613,6 @@ const mapDespesa = (r: any): Despesa => ({
   valor_pago: Number(r.valor_pago) || 0,
   comprovante: r.comprovante || undefined,
   observacoes: r.observacoes || undefined,
-  motivo_cancelamento: r.motivo_cancelamento || undefined,
-  usuario_id: r.usuario_id || r.usuario || '',
-  movimentacao_caixa_id: r.movimentacao_caixa_id || undefined,
   created: toDateStr(r.created),
   updated: toDateStr(r.updated),
 })
@@ -1318,10 +1239,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [])
 
-  // ---------- Carregar dados quando autenticado ----------
+  // ---------- Carregar dados e assinar Realtime quando autenticado ----------
   useEffect(() => {
     if (currentUser && pb.authStore.isValid) {
       reloadAll()
+
+      // Assinatura Realtime do PocketBase para a coleção 'appointments'
+      pb.collection('appointments')
+        .subscribe('*', (e) => {
+          if (e.action === 'create') {
+            const mapped = mapAppointment(e.record)
+            setAppointments((prev) => {
+              if (prev.some((a) => a.id === mapped.id)) return prev
+              return [...prev, mapped]
+            })
+          } else if (e.action === 'update') {
+            const mapped = mapAppointment(e.record)
+            setAppointments((prev) => prev.map((a) => (a.id === mapped.id ? mapped : a)))
+          } else if (e.action === 'delete') {
+            setAppointments((prev) => prev.filter((a) => a.id !== e.record.id))
+          }
+        })
+        .catch((err) => {
+          console.warn('Erro ao assinar realtime de appointments:', err)
+        })
+    }
+
+    return () => {
+      pb.collection('appointments')
+        .unsubscribe('*')
+        .catch(() => {})
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id])

@@ -2884,8 +2884,13 @@ function FinanceiroAtendimentoSection({ patient }: { patient: Patient }) {
 
       toast({
         title: 'Atendimento finalizado com sucesso!',
-        description: `Procedimentos concluídos e venda enviada para recepção (${formatCurrency(totalValue)}).`,
+        description: `Procedimentos concluídos e atendimento marcado como realizado. Redirecionando para a agenda...`,
       })
+
+      // Redireciona automaticamente para a agenda do dia (Página Inicial '/')
+      setTimeout(() => {
+        navigate('/')
+      }, 800)
     } catch (err) {
       console.error('Erro ao finalizar atendimento:', err)
       toast({

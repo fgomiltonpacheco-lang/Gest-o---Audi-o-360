@@ -1181,29 +1181,57 @@ export default function Agenda() {
                               </div>
 
                               <div className="flex items-center gap-1 shrink-0">
-                                {/* Chegou: marcar presença na recepção */}
-                                {app.status !== 'Cancelado' &&
-                                  app.status !== 'Realizado' &&
-                                  !app.reception && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => handleArrival(app)}
-                                      className="h-8 px-2 text-xs text-emerald-700 hover:bg-emerald-100/60 rounded-lg font-semibold"
-                                      title="Confirmar chegada do paciente"
-                                    >
-                                      <UserCheck className="w-3.5 h-3.5 mr-1" />
+                                {/* Seletor de Status (Agendado, Confirmado, Chegou, Cancelado) */}
+                                <Select
+                                  value={app.reception === 'presente' ? 'Chegou' : app.status}
+                                  onValueChange={(val: string) => {
+                                    if (val === 'Chegou') {
+                                      handleArrival(app)
+                                    } else {
+                                      updateAppointment(app.id, {
+                                        status: val as AppointmentStatus,
+                                        reception:
+                                          app.reception === 'presente' ? '' : app.reception,
+                                      })
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8 text-xs font-semibold rounded-lg border-slate-200 bg-white/90 hover:bg-white w-[120px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Agendado" className="text-xs">
+                                      Agendado
+                                    </SelectItem>
+                                    <SelectItem value="Confirmado" className="text-xs">
+                                      Confirmado
+                                    </SelectItem>
+                                    <SelectItem value="Chegou" className="text-xs">
                                       Chegou
-                                    </Button>
-                                  )}
-                                {/* Atender: só quando paciente presente e ainda não realizado */}
-                                {app.status !== 'Realizado' && isPresent && (
+                                    </SelectItem>
+                                    <SelectItem value="Cancelado" className="text-xs text-red-600">
+                                      Cancelado
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+
+                                {/* Botão Atender: habilitado/visível apenas quando status for 'Chegou' (reception === 'presente') */}
+                                {app.status !== 'Realizado' && (
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() => handleFulfill(app)}
-                                    className="h-8 px-2 text-xs text-emerald-900 bg-emerald-100 hover:bg-emerald-200 rounded-lg font-semibold"
-                                    title="Realizar atendimento e abrir prontuário"
+                                    disabled={!isPresent}
+                                    onClick={() => isPresent && handleFulfill(app)}
+                                    className={`h-8 px-2 text-xs rounded-lg font-semibold transition-all ${
+                                      isPresent
+                                        ? 'text-emerald-900 bg-emerald-100 hover:bg-emerald-200 cursor-pointer'
+                                        : 'text-slate-400 bg-slate-100 cursor-not-allowed opacity-60'
+                                    }`}
+                                    title={
+                                      isPresent
+                                        ? 'Iniciar atendimento e abrir prontuário'
+                                        : 'Altere o status para "Chegou" para atender'
+                                    }
                                   >
                                     <Check className="w-3.5 h-3.5 mr-1" />
                                     Atender
@@ -1584,27 +1612,56 @@ export default function Agenda() {
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {app.status !== 'Cancelado' &&
-                              app.status !== 'Realizado' &&
-                              !app.reception && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleArrival(app)}
-                                  className="h-8 px-2 text-xs text-emerald-700 hover:bg-emerald-50 font-semibold rounded-lg"
-                                  title="Confirmar chegada do paciente"
-                                >
-                                  <UserCheck className="w-4 h-4 mr-1" />
+                            {/* Seletor de Status na tabela em lista */}
+                            <Select
+                              value={app.reception === 'presente' ? 'Chegou' : app.status}
+                              onValueChange={(val: string) => {
+                                if (val === 'Chegou') {
+                                  handleArrival(app)
+                                } else {
+                                  updateAppointment(app.id, {
+                                    status: val as AppointmentStatus,
+                                    reception: app.reception === 'presente' ? '' : app.reception,
+                                  })
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-xs font-semibold rounded-lg border-slate-200 bg-white w-[110px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Agendado" className="text-xs">
+                                  Agendado
+                                </SelectItem>
+                                <SelectItem value="Confirmado" className="text-xs">
+                                  Confirmado
+                                </SelectItem>
+                                <SelectItem value="Chegou" className="text-xs">
                                   Chegou
-                                </Button>
-                              )}
-                            {app.status !== 'Realizado' && app.reception === 'presente' && (
+                                </SelectItem>
+                                <SelectItem value="Cancelado" className="text-xs text-red-600">
+                                  Cancelado
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            {/* Botão Atender na tabela em lista */}
+                            {app.status !== 'Realizado' && (
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => handleFulfill(app)}
-                                className="h-8 px-2 text-xs text-emerald-900 bg-emerald-100 hover:bg-emerald-200 font-semibold rounded-lg"
-                                title="Realizar e abrir prontuário"
+                                disabled={app.reception !== 'presente'}
+                                onClick={() => app.reception === 'presente' && handleFulfill(app)}
+                                className={`h-8 px-2 text-xs rounded-lg font-semibold transition-all ${
+                                  app.reception === 'presente'
+                                    ? 'text-emerald-900 bg-emerald-100 hover:bg-emerald-200 cursor-pointer'
+                                    : 'text-slate-400 bg-slate-100 cursor-not-allowed opacity-60'
+                                }`}
+                                title={
+                                  app.reception === 'presente'
+                                    ? 'Iniciar atendimento e abrir prontuário'
+                                    : 'Altere o status para "Chegou" para atender'
+                                }
                               >
                                 <Check className="w-4 h-4 mr-1" />
                                 Atender
