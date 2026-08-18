@@ -355,6 +355,39 @@ export default function Index() {
         </div>
       )}
 
+      {/* Card Contas a Receber Hoje — exclusivo da secretária */}
+      {isSecretaria && (
+        <button
+          onClick={() => navigate('/financeiro/contas-receber')}
+          className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group text-left w-full"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center shadow-inner text-2xl">
+                💰
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 group-hover:text-emerald-700 transition-colors">
+                  Contas a Receber Hoje
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  {contasReceberHoje.length} conta(s) pendente(s)
+                </p>
+              </div>
+            </div>
+            <DollarSign className="w-5 h-5 text-slate-300 group-hover:text-emerald-600 transition-colors" />
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+              Valor total a receber
+            </p>
+            <p className="text-2xl font-extrabold text-emerald-600 mt-0.5">
+              {formatCurrency(contasReceberHojeTotal)}
+            </p>
+          </div>
+        </button>
+      )}
+
       {/* Grid de 6 Cards de Métricas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {metricCards.map((card, i) => {

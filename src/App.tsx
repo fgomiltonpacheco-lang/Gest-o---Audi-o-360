@@ -243,9 +243,9 @@ export function App() {
             <Route
               path="/financeiro/contas-receber"
               element={
-                <AdminRoute>
+                <ProtectedRoute>
                   <ContasReceberPage />
-                </AdminRoute>
+                </ProtectedRoute>
               }
             />
             <Route
