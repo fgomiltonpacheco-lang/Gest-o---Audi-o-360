@@ -2063,18 +2063,8 @@ function EarVocalAndIprfSection({
 
               {/* Trissílabos */}
               <tr>
-                <td className="py-2 px-3 font-semibold text-slate-800 border-r border-slate-200">
-                  Trissílabos
-                </td>
                 <td className="p-1 border-r border-slate-200 text-center">
                   <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
-                    <Input
-                      type="number"
-                      value={vocalRow.trissilabos_erros ?? ''}
-                      onChange={(e) => updateVocalField('trissilabos_erros', e.target.value)}
-                      disabled={isSecretaria}
-                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
-                    />
                     <span className="text-[10px] text-slate-500 font-bold">#</span>
                   </div>
                 </td>
