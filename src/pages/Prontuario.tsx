@@ -421,20 +421,12 @@ export default function Prontuario() {
 
   /**
    * Envia o texto da evolução para a IA corrigir gramática/ortografia/clareza
-   * e substitui o conteúdo do campo pelo resultado. Usa a chave de API
-   * configurada no ambiente (VITE_AI_API_KEY). Em caso de erro ou ausência da
-   * chave, exibe um toast e mantém o texto original.
+   * e substitui o conteúdo do campo pelo resultado. A chamada é feita pelo
+   * endpoint do AI Gateway do Skip (pb_hook `/backend/v1/ai/correct-text`),
+   * que mantém as credenciais no servidor — nunca no bundle do frontend.
+   * Em caso de erro, exibe um toast e mantém o texto original.
    */
   const handleAiCorrectEvolution = async () => {
-    const apiKey = import.meta.env.VITE_AI_API_KEY as string | undefined
-    if (!apiKey) {
-      toast({
-        title: 'IA não configurada',
-        description: 'Configure a chave de IA nas configurações.',
-        variant: 'destructive',
-      })
-      return
-    }
     if (!evoDesc.trim()) {
       toast({
         title: 'Texto vazio',
@@ -445,28 +437,11 @@ export default function Prontuario() {
     }
     setAiCorrecting(true)
     try {
-      const prompt = `Corrija e melhore o texto a seguir, mantendo o significado clínico e o tom profissional. Apenas corrija gramática, ortografia e melhore a clareza. Retorne SOMENTE o texto corrigido, sem explicações:\n\n${evoDesc.trim()}`
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const data = await pb.send('/backend/v1/ai/correct-text', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            { role: 'system', content: 'Você é um revisor de textos clínicos.' },
-            { role: 'user', content: prompt },
-          ],
-          temperature: 0.3,
-        }),
+        body: { text: evoDesc.trim() },
       })
-      if (!res.ok) {
-        const errText = await res.text().catch(() => '')
-        throw new Error(`HTTP ${res.status}: ${errText.slice(0, 200)}`)
-      }
-      const data = await res.json()
-      const corrected: string | undefined = data?.choices?.[0]?.message?.content?.trim()
+      const corrected: string | undefined = data?.corrected?.trim()
       if (!corrected) throw new Error('Resposta vazia da IA.')
       setEvoDesc(corrected)
       toast({
