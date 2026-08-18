@@ -17,6 +17,7 @@ import {
   Handshake,
   Menu,
   MessageCircle,
+  MessagesSquare,
   X,
   LogOut,
   Ear,
@@ -54,6 +55,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     securitySettings,
     sessionTimeoutDisabled,
     setSessionTimeoutDisabled,
+    unreadMessagesCount,
   } = useApp()
   const location = useLocation()
   const navigate = useNavigate()
@@ -145,6 +147,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           path: '/',
           icon: LayoutDashboard,
           exact: true,
+          roles: ALL_ROLES,
+        },
+        {
+          name: 'Mensagens',
+          path: '/mensagens',
+          icon: MessagesSquare,
           roles: ALL_ROLES,
         },
       ],
@@ -658,8 +666,38 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <Link to="/" className="flex items-center h-8">
           <img src={logoImg} alt="Audição360" className="h-full object-contain" />
         </Link>
-        <div className="w-9" /> {/* balance spacer */}
+        <div className="flex items-center gap-1">
+          {/* Badge de mensagens não lidas */}
+          <Link
+            to="/mensagens"
+            className="relative p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+            aria-label="Mensagens"
+            title="Mensagens"
+          >
+            <MessagesSquare className="w-5 h-5" />
+            {unreadMessagesCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white">
+                {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
+              </span>
+            )}
+          </Link>
+        </div>
       </div>
+
+      {/* BADGE DE MENSAGENS NO TOPO (desktop) — flutua no canto superior direito */}
+      <Link
+        to="/mensagens"
+        className="hidden lg:flex fixed top-4 right-6 z-30 items-center justify-center w-11 h-11 rounded-full bg-white border border-slate-200 shadow-sm text-slate-600 hover:text-teal-600 hover:border-teal-300 transition-colors"
+        aria-label="Mensagens"
+        title="Mensagens"
+      >
+        <MessagesSquare className="w-5 h-5" />
+        {unreadMessagesCount > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-red-600 text-white text-[11px] font-bold flex items-center justify-center ring-2 ring-white">
+            {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
+          </span>
+        )}
+      </Link>
 
       {/* ÁREA DE CONTEÚDO PRINCIPAL (Offset Desktop 260px sem padding superior de header) */}
       <main className="flex-1 lg:ml-[260px] p-4 sm:p-6 lg:p-8 min-h-screen">

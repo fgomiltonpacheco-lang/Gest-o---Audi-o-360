@@ -1079,6 +1079,12 @@ interface AppContextType {
 
   // Utilitário para recarregar dados do banco
   resetToSeedData: () => void
+
+  // Chat Interno
+  /** Número de mensagens não lidas destinadas ao usuário logado (diretas ou grupo). */
+  unreadMessagesCount: number
+  /** Recarrega a contagem de mensagens não lidas do backend. */
+  refreshUnreadMessagesCount: () => Promise<void>
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
@@ -1134,6 +1140,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // NFS-e emitidas (Vendas PDV)
   const [nfseEmitidas, setNfseEmitidas] = useState<NfseEmitida[]>([])
+
+  // Chat Interno — contagem de mensagens não lidas
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
 
   // Segurança — configurações globais + estado 2FA + timeout
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings | null>(null)
@@ -1324,6 +1333,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id])
+
+  // ---------- Chat Interno: contagem de mensagens não lidas ----------
+  const refreshUnreadMessagesCount = useCallback(async () => {
+    if (!currentUser?.id || !pb.authStore.isValid) {
+      setUnreadMessagesCount(0)
+      return
+    }
+    try {
+      // Mensagens diretas: destinadas ao usuário e ainda não lidas.
+      const direct = await pb.collection('mensagens').getList(1, 1, {
+        filter: `destinatario = "${currentUser.id}" && lida = false && remetente != "${currentUser.id}"`,
+      })
+      // Mensagens de grupo (destinatario vazio): todas não lidas que não
+      // foram enviadas pelo próprio usuário. Não há controle individual de
+      // leitura por usuário no esquema, então contamos as não lidas do grupo.
+      const grupo = await pb.collection('mensagens').getList(1, 1, {
+        filter: `destinatario = "" && lida = false && remetente != "${currentUser.id}"`,
+      })
+      setUnreadMessagesCount((direct.totalItems || 0) + (grupo.totalItems || 0))
+    } catch (err) {
+      // Silencioso — a coleção pode não existir em ambientes sem a migration.
+      console.warn('Erro ao contar mensagens não lidas:', err)
+      setUnreadMessagesCount(0)
+    }
+  }, [currentUser?.id])
+
+  // Carrega a contagem ao autenticar e faz polling a cada 30s.
+  useEffect(() => {
+    if (!currentUser?.id || !pb.authStore.isValid) {
+      setUnreadMessagesCount(0)
+      return
+    }
+    refreshUnreadMessagesCount()
+    const interval = setInterval(refreshUnreadMessagesCount, 30000)
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id, refreshUnreadMessagesCount])
 
   // ---------- Carregar configurações de segurança ----------
   const fetchSecuritySettings = useCallback(async () => {
@@ -5539,6 +5585,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         alerts,
         unreadAlertsCount,
         resetToSeedData,
+        // Chat Interno
+        unreadMessagesCount,
+        refreshUnreadMessagesCount,
       }}
     >
       {children}
