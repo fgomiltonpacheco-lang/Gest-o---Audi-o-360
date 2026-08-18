@@ -63,6 +63,10 @@ export default function Index() {
     if (isSecretaria) fetchContasReceber()
   }, [fetchContasReceber, isSecretaria])
 
+  // Data atual
+  const today = new Date()
+  const todayStr = today.toISOString().split('T')[0]
+
   // Contas a receber pendentes para hoje (vencimento = hoje) ou vencidas (ainda
   // não recebidas totalmente). Usado pelo card "💰 Contas a Receber Hoje".
   const contasReceberHoje = useMemo(() => {
@@ -79,10 +83,6 @@ export default function Index() {
     (acc, c) => acc + (c.valor_restante || 0),
     0,
   )
-
-  // Data atual
-  const today = new Date()
-  const todayStr = today.toISOString().split('T')[0]
 
   const tomorrow = new Date()
   tomorrow.setDate(tomorrow.getDate() + 1)
