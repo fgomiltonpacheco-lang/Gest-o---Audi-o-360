@@ -153,6 +153,15 @@ export function App() {
             />
 
             <Route
+              path="/mensagens"
+              element={
+                <ProtectedRoute>
+                  <Mensagens />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
               path="/pacientes"
               element={
                 <ProtectedRoute>
