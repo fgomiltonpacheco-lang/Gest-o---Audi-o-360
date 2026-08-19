@@ -887,17 +887,6 @@ export default function Prontuario() {
               <form onSubmit={handleSaveClinicalRecord} className="space-y-4">
                 {' '}
                 <div>
-                  <Label className="text-xs font-bold text-slate-800">Queixa Principal</Label>
-                  <Textarea
-                    value={mainComplaint}
-                    onChange={(e) => setMainComplaint(e.target.value)}
-                    placeholder="Relato espontâneo do paciente quanto à sua audição..."
-                    rows={2}
-                    disabled={isSecretaria}
-                    className="rounded-xl mt-1 text-xs border-slate-300"
-                  />
-                </div>
-                <div>
                   <Label className="text-xs font-bold text-slate-800">Anamnese Geral</Label>
                   <Textarea
                     value={anamnesis}
@@ -909,81 +898,14 @@ export default function Prontuario() {
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs font-bold text-slate-800">
-                      Histórico Auditivo e Ocupacional
-                    </Label>
-                    <Textarea
-                      value={hearingHistory}
-                      onChange={(e) => setHearingHistory(e.target.value)}
-                      placeholder="Exposição a ruído, histórico de otites, cirurgias..."
-                      rows={2}
-                      disabled={isSecretaria}
-                      className="rounded-xl mt-1 text-xs border-slate-300"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-bold text-slate-800">Medicações em Uso</Label>
-                    <Textarea
-                      value={currentMedications}
-                      onChange={(e) => setCurrentMedications(e.target.value)}
-                      placeholder="Anti-hipertensivos, ototóxicos, ansiolíticos..."
-                      rows={2}
-                      disabled={isSecretaria}
-                      className="rounded-xl mt-1 text-xs border-slate-300"
-                    />
-                  </div>
+                  <div></div>
+                  <div></div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs font-bold text-slate-800">
-                      Antecedentes Familiares
-                    </Label>
-                    <Textarea
-                      value={familyHistory}
-                      onChange={(e) => setFamilyHistory(e.target.value)}
-                      placeholder="Histórico familiar de perda auditiva precoce..."
-                      rows={2}
-                      disabled={isSecretaria}
-                      className="rounded-xl mt-1 text-xs border-slate-300"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-bold text-slate-800">
-                      Diagnóstico Audiológico
-                    </Label>
-                    <Textarea
-                      value={diagnosis}
-                      onChange={(e) => setDiagnosis(e.target.value)}
-                      placeholder="Perda neurossensorial, mista, condutiva..."
-                      rows={2}
-                      disabled={isSecretaria}
-                      className="rounded-xl mt-1 text-xs border-slate-300"
-                    />
-                  </div>
+                  <div></div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="sm:col-span-2">
-                    <Label className="text-xs font-bold text-slate-800">Conduta Terapêutica</Label>
-                    <Textarea
-                      value={conduct}
-                      onChange={(e) => setConduct(e.target.value)}
-                      placeholder="Indicação de amplificação sonora, encaminhamentos..."
-                      rows={2}
-                      disabled={isSecretaria}
-                      className="rounded-xl mt-1 text-xs border-slate-300"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-bold text-slate-800">Próximo Retorno</Label>
-                    <Input
-                      type="date"
-                      value={nextReturn}
-                      onChange={(e) => setNextReturn(e.target.value)}
-                      disabled={isSecretaria}
-                      className="h-10 rounded-xl mt-1 text-xs border-slate-300"
-                    />
-                  </div>
+                  <div className="sm:col-span-2"></div>
                 </div>
                 {!isSecretaria && (
                   <div className="flex justify-end pt-2 border-t border-slate-100">
