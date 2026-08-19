@@ -2667,6 +2667,21 @@ function FinanceiroAtendimentoSection({ patient }: { patient: Patient }) {
   const [formaPagamento, setFormaPagamento] = React.useState<PDVPaymentMethod>('À vista')
   const [parcelas, setParcelas] = React.useState<number>(1)
 
+  // Espelha os valores atuais do seletor em refs para que o
+  // `handleFinalizarAtendimento` sempre leia o valor mais recente
+  // selecionado pelo usuário, evitando ler um valor obsoleto do estado
+  // (stale closure) no momento de chamar `addSale`. Sem isso, a forma de
+  // pagamento chegava sempre como "À vista" ao addSale e nenhuma conta a
+  // receber era criada para Convênio/Boleto/Parcelado.
+  const formaPagamentoRef = React.useRef(formaPagamento)
+  React.useEffect(() => {
+    formaPagamentoRef.current = formaPagamento
+  }, [formaPagamento])
+  const parcelasRef = React.useRef(parcelas)
+  React.useEffect(() => {
+    parcelasRef.current = parcelas
+  }, [parcelas])
+
   // Buscar agendamento do paciente para hoje não cancelado
   const todayAppointment = React.useMemo(() => {
     return appointments.find(
@@ -2862,8 +2877,13 @@ function FinanceiroAtendimentoSection({ patient }: { patient: Patient }) {
         .map((it) => `${it.procedureName} (${formatCurrency(it.value)})`)
         .join(' + ')
 
-      // Determina o número de parcelas conforme a forma de pagamento.
-      const numParcelas = formaPagamento === 'Parcelado' ? Math.max(1, Number(parcelas) || 1) : 1
+      // Lê o valor mais recente do seletor a partir da ref, garantindo
+      // que a forma de pagamento escolhida pelo usuário (e não um valor
+      // obsoleto) seja repassada ao addSale. Isso é o que dispara a
+      // criação da conta a receber para Convênio/Boleto/Parcelado.
+      const formaSelecionada = formaPagamentoRef.current
+      const numParcelas =
+        formaSelecionada === 'Parcelado' ? Math.max(1, Number(parcelasRef.current) || 1) : 1
 
       // 1. Criar Venda na coleção sales (e no estado).
       //    O addSale já cria automaticamente as contas a receber quando a
@@ -2874,7 +2894,7 @@ function FinanceiroAtendimentoSection({ patient }: { patient: Patient }) {
         date: today,
         itemsDescription: itemsSummary,
         totalValue: totalValue,
-        paymentMethod: formaPagamento,
+        paymentMethod: formaSelecionada,
         installmentsCount: numParcelas,
         interestPercent: 0,
         firstDueDate: today,
