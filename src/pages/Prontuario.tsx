@@ -921,7 +921,7 @@ export default function Prontuario() {
             </TabsContent>
 
             {/* 3. ABA EXAMES */}
-            <TabsContent value="exames" className="space-y-6 pt-5">
+            <TabsContent value="exames" className="space-y-6 pt-5 text-[0rem]">
               <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
                 <h3 className="text-sm font-bold text-slate-900">
                   Histórico de Exames Audiológicos
@@ -1126,75 +1126,67 @@ export default function Prontuario() {
 
               {/* Imitanciometrias (legado — tympanometries) */}
               <div className="space-y-3 pt-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <Activity className="w-4 h-4" />
-                  Imitanciometrias (registro rápido) ({patientTympanometries.length})
-                </h4>
-                {patientTympanometries.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic">
-                    Nenhuma imitanciometria registrada.
-                  </p>
-                ) : (
-                  patientTympanometries.map((exam) => (
-                    <div
-                      key={exam.id}
-                      className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-extrabold text-slate-900">
-                          Imitanciometria em {formatDate(exam.date)}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() =>
-                              print({
-                                title: 'Laudo de Imitanciometria',
-                                subtitle: `${patient.name} — ${formatDate(exam.date)}`,
-                                body: (
-                                  <Suspense fallback={null}>
-                                    <TympanometryPrint exam={exam} />
-                                  </Suspense>
-                                ),
-                              })
-                            }
-                            className="h-7 w-7 p-0 text-teal-600 hover:bg-teal-50 rounded-lg"
-                            title="Imprimir laudo"
-                          >
-                            <Printer className="w-3.5 h-3.5" />
-                          </Button>
-                          {!isSecretaria && (
+                {patientTympanometries.length === 0
+                  ? null
+                  : patientTympanometries.map((exam) => (
+                      <div
+                        key={exam.id}
+                        className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-extrabold text-slate-900">
+                            Imitanciometria em {formatDate(exam.date)}
+                          </span>
+                          <div className="flex items-center gap-2">
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => {
-                                setDeleteTarget({
-                                  type: 'tympanometry',
-                                  id: exam.id,
-                                  name: `Imitanciometria de ${formatDate(exam.date)}`,
+                              onClick={() =>
+                                print({
+                                  title: 'Laudo de Imitanciometria',
+                                  subtitle: `${patient.name} — ${formatDate(exam.date)}`,
+                                  body: (
+                                    <Suspense fallback={null}>
+                                      <TympanometryPrint exam={exam} />
+                                    </Suspense>
+                                  ),
                                 })
-                                setDeleteConfirmOpen(true)
-                              }}
-                              className="h-7 w-7 p-0 text-red-500 hover:bg-red-50 rounded-lg"
+                              }
+                              className="h-7 w-7 p-0 text-teal-600 hover:bg-teal-50 rounded-lg"
+                              title="Imprimir laudo"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Printer className="w-3.5 h-3.5" />
                             </Button>
-                          )}
+                            {!isSecretaria && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setDeleteTarget({
+                                    type: 'tympanometry',
+                                    id: exam.id,
+                                    name: `Imitanciometria de ${formatDate(exam.date)}`,
+                                  })
+                                  setDeleteConfirmOpen(true)
+                                }}
+                                className="h-7 w-7 p-0 text-red-500 hover:bg-red-50 rounded-lg"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs bg-white p-2.5 rounded-lg border border-slate-200">
+                          <div>
+                            Curva OD: <strong>Tipo {exam.tympanometryOD.curve}</strong>
+                          </div>
+                          <div>
+                            Curva OE: <strong>Tipo {exam.tympanometryOE.curve}</strong>
+                          </div>
+                        </div>
+                        <p className="text-xs text-slate-700">{exam.conclusion}</p>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs bg-white p-2.5 rounded-lg border border-slate-200">
-                        <div>
-                          Curva OD: <strong>Tipo {exam.tympanometryOD.curve}</strong>
-                        </div>
-                        <div>
-                          Curva OE: <strong>Tipo {exam.tympanometryOE.curve}</strong>
-                        </div>
-                      </div>
-                      <p className="text-xs text-slate-700">{exam.conclusion}</p>
-                    </div>
-                  ))
-                )}
+                    ))}
               </div>
 
               {/* BERAs */}
