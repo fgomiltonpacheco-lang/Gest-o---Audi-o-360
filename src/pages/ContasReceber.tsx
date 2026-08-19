@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Wallet,
   TrendingDown,
@@ -10,6 +10,9 @@ import {
   RefreshCw,
   XCircle,
   Plus,
+  Trash2,
+  PackagePlus,
+  Percent,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { useToast } from '@/hooks/use-toast'
@@ -61,6 +64,9 @@ import {
 } from '@/types'
 type StatusFilter = 'all' | ContaReceberStatus
 
+/** Gera um id único para um item extra do recebimento (chave de lista). */
+const novoItemId = () => `ie-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+
 export default function ContasReceberPage() {
   const {
     contasReceber,
@@ -93,6 +99,13 @@ export default function ContasReceberPage() {
   const [recForma, setRecForma] = useState<FormaRecebimento>('pix')
   const [recObs, setRecObs] = useState('')
   const [saving, setSaving] = useState(false)
+
+  // ---- Itens extras + desconto (Registrar Recebimento) ----
+  const [recItensExtras, setRecItensExtras] = useState<
+    Array<{ id: string; nome: string; quantidade: string; valor_unitario: string }>
+  >([])
+  const [recDescontoTipo, setRecDescontoTipo] = useState<'valor' | 'percentual'>('valor')
+  const [recDescontoValor, setRecDescontoValor] = useState('')
 
   const [renVenc, setRenVenc] = useState('')
   const [renValor, setRenValor] = useState('')
@@ -156,6 +169,69 @@ export default function ContasReceberPage() {
     })
   }, [contasReceber, search, statusFilter, formaFilter, vencInicio, vencFim])
 
+  // ---- Itens extras + desconto (Registrar Recebimento) ----
+  const recObsAutoRef = useRef('')
+  const recItensParsed = useMemo(
+    () =>
+      recItensExtras.map((i) => {
+        const qtd = Math.max(0, Number((i.quantidade || '0').replace(',', '.')) || 0)
+        const vu = Math.max(0, Number((i.valor_unitario || '0').replace(',', '.')) || 0)
+        return { id: i.id, nome: i.nome, quantidade: qtd, valor_unitario: vu, subtotal: qtd * vu }
+      }),
+    [recItensExtras],
+  )
+  const recSubtotalExtras = useMemo(
+    () => recItensParsed.reduce((s, i) => s + i.subtotal, 0),
+    [recItensParsed],
+  )
+  const recValorBase = contaSelecionada?.valor_restante ?? 0
+  const recDescontoValorNum = useMemo(() => {
+    const v = Number((recDescontoValor || '').replace(',', '.')) || 0
+    return Math.max(0, v)
+  }, [recDescontoValor])
+  const recDescontoRS = useMemo(() => {
+    if (recDescontoTipo === 'percentual') {
+      return (recValorBase + recSubtotalExtras) * (recDescontoValorNum / 100)
+    }
+    return recDescontoValorNum
+  }, [recDescontoTipo, recDescontoValorNum, recValorBase, recSubtotalExtras])
+  const recTotalReceber = useMemo(
+    () => Math.max(0, recValorBase + recSubtotalExtras - recDescontoRS),
+    [recValorBase, recSubtotalExtras, recDescontoRS],
+  )
+  const resumoItens = useMemo(() => {
+    const validos = recItensParsed.filter(
+      (i) => i.nome.trim() && i.quantidade > 0 && i.valor_unitario > 0,
+    )
+    if (validos.length === 0) return ''
+    const partes = validos.map(
+      (i) =>
+        `${i.nome.trim()} (${i.quantidade.toLocaleString('pt-BR')}x ${formatCurrency(i.valor_unitario)})`,
+    )
+    return `Acrescido: ${partes.join(' + ')}`
+  }, [recItensParsed])
+
+  // Observações automáticas: prefixa o resumo dos itens, preservando o texto
+  // que a secretária digitou manualmente abaixo do resumo.
+  useEffect(() => {
+    const novoAuto = resumoItens
+    setRecObs((prev) => {
+      let manual = prev
+      const antigo = recObsAutoRef.current
+      if (antigo && prev.startsWith(antigo)) {
+        manual = prev.slice(antigo.length).replace(/^\n/, '')
+      }
+      recObsAutoRef.current = novoAuto
+      if (!novoAuto) return manual
+      return manual ? `${novoAuto}\n${manual}` : novoAuto
+    })
+  }, [resumoItens])
+
+  // Sincroniza o campo "Valor a receber" com o total calculado em tempo real.
+  useEffect(() => {
+    setRecValor(recTotalReceber.toFixed(2))
+  }, [recTotalReceber])
+
   // ---- Handlers ----
   const openRecebimento = (c: ContaReceber) => {
     setContaSelecionada(c)
@@ -163,6 +239,10 @@ export default function ContasReceberPage() {
     setRecData(todayStr())
     setRecForma('pix')
     setRecObs('')
+    setRecItensExtras([])
+    setRecDescontoTipo('valor')
+    setRecDescontoValor('')
+    recObsAutoRef.current = ''
     setRecebimentoOpen(true)
   }
 
@@ -191,11 +271,28 @@ export default function ContasReceberPage() {
   const submitRecebimento = async () => {
     if (!contaSelecionada) return
     setSaving(true)
+    const valorBase = contaSelecionada.valor_restante
+    const itensParaSalvar = recItensParsed
+      .filter((i) => i.nome.trim() && i.quantidade > 0 && i.valor_unitario > 0)
+      .map((i) => ({
+        nome: i.nome.trim(),
+        quantidade: i.quantidade,
+        valor_unitario: i.valor_unitario,
+        subtotal: i.subtotal,
+      }))
+    const temExtras = itensParaSalvar.length > 0 || recDescontoRS > 0
+    const valorTotal = recTotalReceber
     const res = await registrarRecebimento(contaSelecionada.id, {
-      valor: Number(recValor.replace(',', '.')),
+      // Com extras/desconto, registra o total; sem eles, o valor digitado.
+      valor: temExtras ? valorTotal : Number(recValor.replace(',', '.')),
       data_recebimento: recData,
       forma_recebimento: recForma,
       observacoes: recObs,
+      valor_base: valorBase,
+      itens_extras: itensParaSalvar,
+      desconto_tipo: recDescontoRS > 0 ? recDescontoTipo : '',
+      desconto_valor: recDescontoRS > 0 ? recDescontoValorNum : 0,
+      valor_total: valorTotal,
     })
     setSaving(false)
     if (res.success) {
@@ -528,7 +625,7 @@ export default function ContasReceberPage() {
 
       {/* ===== Modal: Registrar Recebimento ===== */}
       <Dialog open={recebimentoOpen} onOpenChange={setRecebimentoOpen}>
-        <DialogContent className="max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+        <DialogContent className="max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
           <DialogHeader className="border-b border-slate-100 pb-3">
             <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-emerald-600" />
@@ -538,13 +635,235 @@ export default function ContasReceberPage() {
               {contaSelecionada?.cliente_nome} — {contaSelecionada?.descricao}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 pt-3">
+          <div className="space-y-4 pt-3">
+            {/* Valor base (restante) */}
             <div className="bg-slate-50 rounded-lg p-3 text-sm flex justify-between">
-              <span className="text-slate-500">Valor restante:</span>
+              <span className="text-slate-500">Valor restante da conta:</span>
               <span className="font-bold text-slate-900">
                 {formatCurrency(contaSelecionada?.valor_restante || 0)}
               </span>
             </div>
+
+            {/* Data + Forma */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                  Data do recebimento *
+                </Label>
+                <Input
+                  type="date"
+                  value={recData}
+                  onChange={(e) => setRecData(e.target.value)}
+                  className="h-9 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-600 mb-1 block">
+                  Forma de recebimento *
+                </Label>
+                <Select value={recForma} onValueChange={(v) => setRecForma(v as FormaRecebimento)}>
+                  <SelectTrigger className="h-9 rounded-lg text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(FORMA_RECEBIMENTO_LABELS).map(([v, l]) => (
+                      <SelectItem key={v} value={v}>
+                        {l}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* ===== Acrescentar Produtos/Procedimentos ===== */}
+            <div className="border border-slate-200 rounded-xl p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-slate-700">
+                  <PackagePlus className="w-4 h-4 text-emerald-600" />
+                  <span className="text-sm font-semibold">Acrescentar Produtos/Procedimentos</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setRecItensExtras((prev) => [
+                      ...prev,
+                      { id: novoItemId(), nome: '', quantidade: '1', valor_unitario: '' },
+                    ])
+                  }
+                  className="h-7 rounded-lg text-xs"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar item
+                </Button>
+              </div>
+
+              {recItensExtras.length === 0 ? (
+                <p className="text-xs text-slate-400 py-1">
+                  Nenhum item adicional. Clique em &quot;Adicionar item&quot; para incluir produtos
+                  ou procedimentos ao recebimento.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {recItensExtras.map((item, idx) => {
+                    const parsed = recItensParsed[idx]
+                    return (
+                      <div
+                        key={item.id}
+                        className="rounded-lg border border-slate-200 bg-slate-50/50 p-2 space-y-2"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-semibold text-slate-400 w-5">
+                            {idx + 1}.
+                          </span>
+                          <Input
+                            value={item.nome}
+                            onChange={(e) =>
+                              setRecItensExtras((prev) =>
+                                prev.map((p) =>
+                                  p.id === item.id ? { ...p, nome: e.target.value } : p,
+                                ),
+                              )
+                            }
+                            placeholder="Nome do produto/procedimento"
+                            className="h-8 rounded-md text-sm flex-1"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setRecItensExtras((prev) => prev.filter((p) => p.id !== item.id))
+                            }
+                            title="Remover item"
+                            className="p-1.5 rounded-lg text-red-500 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 pl-7">
+                          <div>
+                            <Label className="text-[10px] font-semibold text-slate-500 mb-0.5 block">
+                              Quantidade
+                            </Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.001"
+                              value={item.quantidade}
+                              onChange={(e) =>
+                                setRecItensExtras((prev) =>
+                                  prev.map((p) =>
+                                    p.id === item.id ? { ...p, quantidade: e.target.value } : p,
+                                  ),
+                                )
+                              }
+                              className="h-8 rounded-md text-sm"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] font-semibold text-slate-500 mb-0.5 block">
+                              Valor unitário (R$)
+                            </Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.valor_unitario}
+                              onChange={(e) =>
+                                setRecItensExtras((prev) =>
+                                  prev.map((p) =>
+                                    p.id === item.id ? { ...p, valor_unitario: e.target.value } : p,
+                                  ),
+                                )
+                              }
+                              className="h-8 rounded-md text-sm"
+                            />
+                          </div>
+                        </div>
+                        <div className="pl-7 flex justify-end">
+                          <span className="text-[11px] text-slate-500">
+                            Subtotal:{' '}
+                            <span className="font-semibold text-slate-700">
+                              {formatCurrency(parsed?.subtotal ?? 0)}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* ===== Desconto ===== */}
+            <div className="border border-slate-200 rounded-xl p-3 space-y-2">
+              <div className="flex items-center gap-1.5 text-slate-700">
+                <Percent className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-semibold">Desconto</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setRecDescontoTipo('valor')}
+                    className={`px-3 h-9 text-xs font-semibold ${
+                      recDescontoTipo === 'valor'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    R$
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRecDescontoTipo('percentual')}
+                    className={`px-3 h-9 text-xs font-semibold border-l border-slate-200 ${
+                      recDescontoTipo === 'percentual'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    %
+                  </button>
+                </div>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={recDescontoValor}
+                  onChange={(e) => setRecDescontoValor(e.target.value)}
+                  placeholder={recDescontoTipo === 'percentual' ? '0' : '0,00'}
+                  className="h-9 rounded-lg text-sm flex-1"
+                />
+                <span className="text-xs text-slate-500 whitespace-nowrap">
+                  = {formatCurrency(recDescontoRS)}
+                </span>
+              </div>
+            </div>
+
+            {/* ===== Total em tempo real ===== */}
+            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 space-y-1">
+              <div className="flex justify-between text-xs text-slate-600">
+                <span>Valor original da conta</span>
+                <span className="font-medium">{formatCurrency(recValorBase)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-slate-600">
+                <span>+ Subtotal dos itens extras</span>
+                <span className="font-medium">{formatCurrency(recSubtotalExtras)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-slate-600">
+                <span>− Desconto</span>
+                <span className="font-medium text-red-600">− {formatCurrency(recDescontoRS)}</span>
+              </div>
+              <div className="border-t border-emerald-200 mt-1 pt-1 flex justify-between items-center">
+                <span className="text-sm font-bold text-slate-800">Total a receber</span>
+                <span className="text-lg font-extrabold text-emerald-700">
+                  {formatCurrency(recTotalReceber)}
+                </span>
+              </div>
+            </div>
+
+            {/* Valor a receber (sincronizado com o total) */}
             <div>
               <Label className="text-xs font-semibold text-slate-600 mb-1 block">
                 Valor a receber *
@@ -557,40 +876,15 @@ export default function ContasReceberPage() {
                 className="h-9 rounded-lg text-sm"
               />
             </div>
-            <div>
-              <Label className="text-xs font-semibold text-slate-600 mb-1 block">
-                Data do recebimento *
-              </Label>
-              <Input
-                type="date"
-                value={recData}
-                onChange={(e) => setRecData(e.target.value)}
-                className="h-9 rounded-lg text-sm"
-              />
-            </div>
-            <div>
-              <Label className="text-xs font-semibold text-slate-600 mb-1 block">
-                Forma de recebimento *
-              </Label>
-              <Select value={recForma} onValueChange={(v) => setRecForma(v as FormaRecebimento)}>
-                <SelectTrigger className="h-9 rounded-lg text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(FORMA_RECEBIMENTO_LABELS).map(([v, l]) => (
-                    <SelectItem key={v} value={v}>
-                      {l}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+
+            {/* Observações (preenchida automaticamente com o resumo dos itens) */}
             <div>
               <Label className="text-xs font-semibold text-slate-600 mb-1 block">Observações</Label>
               <Textarea
                 value={recObs}
                 onChange={(e) => setRecObs(e.target.value)}
                 className="rounded-lg text-sm min-h-[60px]"
+                placeholder="Observações do recebimento..."
               />
             </div>
           </div>
@@ -689,27 +983,73 @@ export default function ContasReceberPage() {
                   <p className="text-sm text-slate-400">Nenhum recebimento registrado.</p>
                 ) : (
                   <div className="space-y-1.5">
-                    {recebimentos.map((r) => (
-                      <div
-                        key={r.id}
-                        className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 text-xs"
-                      >
-                        <div>
-                          <span className="font-semibold text-slate-800">
-                            {formatCurrency(r.valor)}
-                          </span>
-                          <span className="text-slate-500 ml-2">
-                            {FORMA_RECEBIMENTO_LABELS[r.forma_recebimento]}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-slate-600">{formatDate(r.data_recebimento)}</div>
-                          {r.usuario_nome && (
-                            <div className="text-slate-400 text-[11px]">por {r.usuario_nome}</div>
+                    {recebimentos.map((r) => {
+                      const extrasTotal = Array.isArray(r.itens_extras)
+                        ? r.itens_extras.reduce((s, it) => s + Number(it.subtotal || 0), 0)
+                        : 0
+                      const base = Number(r.valor_base || 0)
+                      const descRS =
+                        r.desconto_tipo === 'percentual'
+                          ? (base + extrasTotal) * (Number(r.desconto_valor || 0) / 100)
+                          : Number(r.desconto_valor || 0)
+                      const temDetalhe =
+                        (Array.isArray(r.itens_extras) && r.itens_extras.length > 0) ||
+                        (r.desconto_tipo && (Number(r.desconto_valor) || 0) > 0)
+                      return (
+                        <div
+                          key={r.id}
+                          className="bg-slate-50 rounded-lg px-3 py-2 text-xs space-y-1"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="font-semibold text-slate-800">
+                                {formatCurrency(r.valor)}
+                              </span>
+                              <span className="text-slate-500 ml-2">
+                                {FORMA_RECEBIMENTO_LABELS[r.forma_recebimento]}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-slate-600">{formatDate(r.data_recebimento)}</div>
+                              {r.usuario_nome && (
+                                <div className="text-slate-400 text-[11px]">
+                                  por {r.usuario_nome}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {temDetalhe && (
+                            <div className="text-[11px] text-slate-500 space-y-0.5 pl-2 border-l-2 border-slate-200">
+                              {r.valor_base != null && <div>Conta: {formatCurrency(base)}</div>}
+                              {Array.isArray(r.itens_extras) && r.itens_extras.length > 0 && (
+                                <div>
+                                  + Itens:{' '}
+                                  {r.itens_extras
+                                    .map(
+                                      (it) =>
+                                        `${it.nome} (${Number(it.quantidade).toLocaleString('pt-BR')}x ${formatCurrency(Number(it.valor_unitario))})`,
+                                    )
+                                    .join(' + ')}{' '}
+                                  = {formatCurrency(extrasTotal)}
+                                </div>
+                              )}
+                              {r.desconto_tipo && (Number(r.desconto_valor) || 0) > 0 && (
+                                <div>
+                                  − Desconto (
+                                  {r.desconto_tipo === 'percentual'
+                                    ? `${Number(r.desconto_valor).toLocaleString('pt-BR')}%`
+                                    : formatCurrency(Number(r.desconto_valor))}
+                                  ): − {formatCurrency(descRS)}
+                                </div>
+                              )}
+                              <div className="font-semibold text-slate-700">
+                                = Total: {formatCurrency(r.valor_total ?? r.valor)}
+                              </div>
+                            </div>
                           )}
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>

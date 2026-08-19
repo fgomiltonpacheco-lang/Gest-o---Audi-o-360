@@ -598,6 +598,11 @@ const mapRecebimento = (r: any): Recebimento => ({
   data_recebimento: toDateStr(r.data_recebimento),
   forma_recebimento: (r.forma_recebimento || 'dinheiro') as FormaRecebimento,
   observacoes: r.observacoes || '',
+  valor_base: r.valor_base != null ? Number(r.valor_base) : undefined,
+  itens_extras: Array.isArray(r.itens_extras) ? r.itens_extras : undefined,
+  desconto_tipo: (r.desconto_tipo || '') as Recebimento['desconto_tipo'],
+  desconto_valor: r.desconto_valor != null ? Number(r.desconto_valor) : undefined,
+  valor_total: r.valor_total != null ? Number(r.valor_total) : undefined,
   created: toDateStr(r.created),
 })
 
@@ -960,6 +965,17 @@ interface AppContextType {
       data_recebimento: string
       forma_recebimento: FormaRecebimento
       observacoes?: string
+      // ---- Acréscimo de itens extras + desconto (Registrar Recebimento) ----
+      valor_base?: number
+      itens_extras?: Array<{
+        nome: string
+        quantidade: number
+        valor_unitario: number
+        subtotal: number
+      }>
+      desconto_tipo?: 'valor' | 'percentual' | ''
+      desconto_valor?: number
+      valor_total?: number
     },
   ) => Promise<{ success: boolean; message?: string }>
   renegociarConta: (
@@ -5002,6 +5018,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         data_recebimento: string
         forma_recebimento: FormaRecebimento
         observacoes?: string
+        // ---- Acréscimo de itens extras + desconto (Registrar Recebimento) ----
+        valor_base?: number
+        itens_extras?: Array<{
+          nome: string
+          quantidade: number
+          valor_unitario: number
+          subtotal: number
+        }>
+        desconto_tipo?: 'valor' | 'percentual' | ''
+        desconto_valor?: number
+        valor_total?: number
       },
     ): Promise<{ success: boolean; message?: string }> => {
       try {
@@ -5009,11 +5036,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!conta) return { success: false, message: 'Conta não encontrada.' }
         const valor = Number(data.valor) || 0
         if (valor <= 0) return { success: false, message: 'Informe um valor válido.' }
-        if (valor > conta.valor_restante + 0.01) {
+        // Quando há itens extras/desconto, o valor a quitar é o valor_total (maior
+        // que o restante original). Sem extras, mantém o limite do restante.
+        const temExtras =
+          (Array.isArray(data.itens_extras) && data.itens_extras.length > 0) ||
+          (Number(data.desconto_valor) || 0) > 0
+        const limite = temExtras ? Number.MAX_SAFE_INTEGER : conta.valor_restante + 0.01
+        if (valor > limite) {
           return { success: false, message: 'Valor maior que o restante da conta.' }
         }
 
-        // Cria o recebimento
+        // Cria o recebimento (com itens extras + desconto, quando houver)
         await pb.collection('recebimentos').create({
           conta_receber_id: contaId,
           valor,
@@ -5022,14 +5055,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           observacoes: data.observacoes || '',
           usuario_id: currentUser?.id || '',
           usuario_nome: currentUser?.name || '',
+          valor_base: data.valor_base != null ? Number(data.valor_base) : conta.valor_restante,
+          itens_extras: Array.isArray(data.itens_extras) ? data.itens_extras : [],
+          desconto_tipo: data.desconto_tipo || '',
+          desconto_valor: Number(data.desconto_valor) || 0,
+          valor_total: data.valor_total != null ? Number(data.valor_total) : valor,
         })
 
-        // Atualiza a conta
+        // Atualiza a conta: o valor quitado contra a conta é o `valor` informado
+        // (já contabilizando extras/desconto). O acréscimo líquido
+        // (itens extras - desconto em R$) ajusta o valor_original da conta,
+        // de modo que o restante seja zerado ao receber o total. Pode ser
+        // negativo quando o desconto supera os acréscimos (abatimento da conta).
         const novoRecebido = conta.valor_recebido + valor
-        const novoRestante = Math.max(0, conta.valor_original - novoRecebido)
+        const acrescimoLiquido = temExtras ? valor - conta.valor_restante : 0
+        const novoOriginal = Math.max(0, conta.valor_original + acrescimoLiquido)
+        const novoRestante = Math.max(0, novoOriginal - novoRecebido)
         const novoStatus: ContaReceberStatus =
           novoRestante <= 0.01 ? 'recebido_total' : 'recebido_parcial'
         const updated: any = await pb.collection('contas_receber').update(contaId, {
+          valor_original: novoOriginal,
           valor_recebido: novoRecebido,
           valor_restante: novoRestante,
           status: novoStatus,

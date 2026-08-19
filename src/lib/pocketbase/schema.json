@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-19T00:07:56.172Z",
+  "generatedAt": "2026-08-19T13:39:46.593Z",
   "collections": [
     {
       "name": "users",
@@ -4333,6 +4333,37 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "valor_base",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "itens_extras",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "desconto_tipo",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["valor", "percentual"]
+        },
+        {
+          "name": "desconto_valor",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valor_total",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

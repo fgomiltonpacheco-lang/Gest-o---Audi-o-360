@@ -923,6 +923,17 @@ export type FormaRecebimento =
   | 'deposito'
   | 'transferencia'
 
+/** Item extra (produto/procedimento) adicionado no momento do recebimento. */
+export interface RecebimentoItemExtra {
+  nome: string
+  quantidade: number
+  valor_unitario: number
+  subtotal: number
+}
+
+/** Tipo de desconto aplicado em um recebimento. */
+export type RecebimentoDescontoTipo = 'valor' | 'percentual' | ''
+
 export interface Recebimento {
   id: string
   conta_id: string
@@ -930,6 +941,17 @@ export interface Recebimento {
   data_recebimento: string
   forma_recebimento: FormaRecebimento
   observacoes?: string
+  // ---- Campos de acréscimo/desconto (Registrar Recebimento) ----
+  /** Valor original da conta usado como base para o cálculo (valor_restante na data do recebimento). */
+  valor_base?: number
+  /** Itens extras (produtos/procedimentos) adicionados no recebimento. */
+  itens_extras?: RecebimentoItemExtra[]
+  /** Tipo do desconto aplicado: valor (R$) ou percentual (%). Vazio quando não há desconto. */
+  desconto_tipo?: RecebimentoDescontoTipo
+  /** Valor do desconto (em R$ quando tipo=valor; em % quando tipo=percentual). */
+  desconto_valor?: number
+  /** Total efetivamente recebido: valor_base + soma(itens_extras) - desconto em R$. */
+  valor_total?: number
   created?: string
 }
 
