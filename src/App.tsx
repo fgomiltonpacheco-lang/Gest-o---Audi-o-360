@@ -42,6 +42,7 @@ import RelatorioRecebimentos from '@/pages/RelatorioRecebimentos'
 import Inadimplentes from '@/pages/Inadimplentes'
 import FluxoProjetado from '@/pages/FluxoProjetado'
 import Despesas from '@/pages/Despesas'
+import NotasFiscaisPage from '@/pages/NotasFiscaisPage'
 import Lembretes from '@/pages/Lembretes'
 import Mensagens from '@/pages/Mensagens'
 import OrdensServico from '@/pages/OrdensServico'
@@ -296,6 +297,14 @@ export function App() {
                 <AdminRoute>
                   <Despesas />
                 </AdminRoute>
+              }
+            />
+            <Route
+              path="/financeiro/notas-fiscais"
+              element={
+                <ProtectedRoute>
+                  <NotasFiscaisPage />
+                </ProtectedRoute>
               }
             />
 

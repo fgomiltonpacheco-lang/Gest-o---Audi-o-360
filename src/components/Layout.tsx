@@ -279,6 +279,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           roles: ADMIN_ONLY,
         },
         {
+          name: 'Notas Fiscais',
+          path: '/financeiro/notas-fiscais',
+          icon: FileText,
+          roles: ALL_ROLES,
+        },
+        {
           name: 'Inadimplentes',
           path: '/financeiro/inadimplentes',
           icon: TrendingDown,
