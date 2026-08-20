@@ -807,16 +807,26 @@ export default function Imitanciometria() {
     }
 
     return {
-      paciente_nome: exam.paciente_nome,
-      paciente_cpf: exam.paciente_cpf,
-      paciente_nascimento: exam.paciente_nascimento,
-      paciente_idade: exam.paciente_idade,
-      paciente_sexo: exam.paciente_sexo,
+      paciente_nome: exam.paciente_nome || patient?.name || '',
+      paciente_cpf: exam.paciente_cpf || patient?.cpf || '',
+      paciente_nascimento: exam.paciente_nascimento || patient?.birthDate || '',
+      paciente_idade:
+        exam.paciente_idade || (patient ? String(calculateAge(patient.birthDate) ?? '') : ''),
+      paciente_sexo: exam.paciente_sexo || patient?.gender || '',
+      paciente_convenio:
+        patient?.planType === 'Convênio'
+          ? patient.planName || 'Convênio'
+          : patient?.planType === 'SUS'
+            ? 'SUS'
+            : patient?.planType === 'Particular'
+              ? 'Particular'
+              : patient?.planType || 'Particular',
       data_exame: exam.data_exame,
-      especialista_nome: exam.especialista_nome,
-      especialista_crm: currentUser?.crmCrfa || '',
-      equipment_nome: exam.equipment_nome,
-      equipment_calibracao: selectedEquipment?.data_calibracao || '',
+      especialista_nome:
+        exam.especialista_nome || currentUser?.name || clinicSettings?.especialista_nome || '',
+      especialista_crm: currentUser?.crmCrfa || clinicSettings?.especialista_crfa || '',
+      equipment_nome: exam.equipment_nome || clinicSettings?.audiometro || '',
+      equipment_calibracao: selectedEquipment?.data_calibracao || clinicSettings?.calibracao || '',
       encaminhado_por: exam.encaminhado_por,
       observacoes: exam.observacoes,
       meatoscopia: {
@@ -834,35 +844,51 @@ export default function Imitanciometria() {
       referencias: exam.referencias,
       timpanometria: {
         OD: {
-          volume_meato: rawData.od_volume_media
-            ? Number(rawData.od_volume_media)
-            : timpOD.volume_meato,
-          complacencia: summaryData.compl_estatica_od
-            ? Number(summaryData.compl_estatica_od)
-            : timpOD.complacencia,
+          volume_meato: summaryData.compl_200_od
+            ? Number(summaryData.compl_200_od)
+            : rawData.od_volume_media
+              ? Number(rawData.od_volume_media)
+              : timpOD.volume_meato,
+          complacencia: summaryData.max_relax_od
+            ? Number(summaryData.max_relax_od)
+            : summaryData.compl_estatica_od
+              ? Number(summaryData.compl_estatica_od)
+              : timpOD.complacencia,
           pressao_maxima: timpOD.pressao_maxima,
           tipo_curva: exam.tipo_curva_od || timpOD.tipo_curva,
-          pressao_pico: rawData.od_pressao_media
-            ? Number(rawData.od_pressao_media)
-            : timpOD.pressao_pico,
-          gradiente_curva: timpOD.gradiente_curva,
+          pressao_pico: summaryData.pressao_om_od
+            ? Number(summaryData.pressao_om_od)
+            : rawData.od_pressao_media
+              ? Number(rawData.od_pressao_media)
+              : timpOD.pressao_pico,
+          gradiente_curva: summaryData.compl_estatica_od
+            ? Number(summaryData.compl_estatica_od)
+            : timpOD.gradiente_curva,
           curva_descricao: timpOD.curva_descricao,
           observacoes: timpOD.observacoes,
           curva_timpanometrica: timpOD.curva_timpanometrica ?? null,
         },
         OE: {
-          volume_meato: rawData.oe_volume_media
-            ? Number(rawData.oe_volume_media)
-            : timpOE.volume_meato,
-          complacencia: summaryData.compl_estatica_oe
-            ? Number(summaryData.compl_estatica_oe)
-            : timpOE.complacencia,
+          volume_meato: summaryData.compl_200_oe
+            ? Number(summaryData.compl_200_oe)
+            : rawData.oe_volume_media
+              ? Number(rawData.oe_volume_media)
+              : timpOE.volume_meato,
+          complacencia: summaryData.max_relax_oe
+            ? Number(summaryData.max_relax_oe)
+            : summaryData.compl_estatica_oe
+              ? Number(summaryData.compl_estatica_oe)
+              : timpOE.complacencia,
           pressao_maxima: timpOE.pressao_maxima,
           tipo_curva: exam.tipo_curva_oe || timpOE.tipo_curva,
-          pressao_pico: rawData.oe_pressao_media
-            ? Number(rawData.oe_pressao_media)
-            : timpOE.pressao_pico,
-          gradiente_curva: timpOE.gradiente_curva,
+          pressao_pico: summaryData.pressao_om_oe
+            ? Number(summaryData.pressao_om_oe)
+            : rawData.oe_pressao_media
+              ? Number(rawData.oe_pressao_media)
+              : timpOE.pressao_pico,
+          gradiente_curva: summaryData.compl_estatica_oe
+            ? Number(summaryData.compl_estatica_oe)
+            : timpOE.gradiente_curva,
           curva_descricao: timpOE.curva_descricao,
           observacoes: timpOE.observacoes,
           curva_timpanometrica: timpOE.curva_timpanometrica ?? null,
@@ -878,6 +904,7 @@ export default function Imitanciometria() {
           ipsi_lateral: mapReflexFromGrid('OE', 'ipsi_lateral'),
         },
       },
+      reflexGrid,
     }
   }
 
@@ -891,6 +918,7 @@ export default function Imitanciometria() {
     const fallbackNode = (
       <ImitanciometriaPrint
         data={buildPrintData()}
+        patient={patient}
         clinicSettings={clinicSettings}
         professional={professionalData}
       />
@@ -1643,6 +1671,7 @@ export default function Imitanciometria() {
           <div className="border border-slate-200 rounded-lg p-4 bg-white">
             <ImitanciometriaPrint
               data={buildPrintData()}
+              patient={patient}
               clinicSettings={clinicSettings}
               professional={professionalData}
             />

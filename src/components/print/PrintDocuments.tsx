@@ -21,6 +21,8 @@ import { mediaTritonal, mediaQuadritonal } from '@/lib/audiogram'
 import { TemplateRenderer, type TemplateDataContext } from '@/components/print/TemplateRenderer'
 import { getPublishedTemplate } from '@/lib/examReportTemplates'
 import type { ExamReportTemplate, ExamReportTipoExame } from '@/types'
+import { ImitanciometriaPrint, type ImitPrintData } from '@/components/print/ImitanciometriaPrint'
+export { ImitanciometriaPrint, type ImitPrintData } from '@/components/print/ImitanciometriaPrint'
 
 const FREQUENCIES_AIR = [
   '250',
