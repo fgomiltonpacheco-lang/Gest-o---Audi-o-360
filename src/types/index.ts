@@ -1288,7 +1288,12 @@ export interface ClinicSettings {
   telefone?: string
   email?: string
   site?: string
+  logo?: string
   logo_url?: string
+  audiometro?: string
+  calibracao?: string
+  especialista_nome?: string
+  especialista_crfa?: string
   created?: string
   updated?: string
 }

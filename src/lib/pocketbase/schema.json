@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T14:40:22.442Z",
+  "generatedAt": "2026-08-20T18:31:42.369Z",
   "collections": [
     {
       "name": "users",
@@ -2338,6 +2338,36 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "logo",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "audiometro",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "calibracao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "especialista_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "especialista_crfa",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []

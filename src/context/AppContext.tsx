@@ -784,7 +784,7 @@ interface AppContextType {
   // Configurações da Clínica
   clinicSettings: ClinicSettings | null
   saveClinicSettings: (
-    data: Omit<ClinicSettings, 'id'>,
+    data: Partial<Omit<ClinicSettings, 'id'>> & { logoFile?: File | null },
   ) => Promise<{ success: boolean; message?: string }>
   equipments: Equipment[]
   addEquipment: (
@@ -1235,12 +1235,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
       if (clinicRec) {
+        const logoUrl = clinicRec.logo
+          ? pb.files.getURL(clinicRec, clinicRec.logo)
+          : clinicRec.logo_url || ''
         setClinicSettings({
           id: clinicRec.id,
           nome: clinicRec.nome || '',
+          cnpj: clinicRec.cnpj || '',
           endereco: clinicRec.endereco || '',
           telefone: clinicRec.telefone || '',
           email: clinicRec.email || '',
+          site: clinicRec.site || '',
+          logo: clinicRec.logo || '',
+          logo_url: logoUrl,
+          audiometro: clinicRec.audiometro || '',
+          calibracao: clinicRec.calibracao || '',
+          especialista_nome: clinicRec.especialista_nome || '',
+          especialista_crfa: clinicRec.especialista_crfa || '',
         })
       }
 
@@ -1938,7 +1949,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ---------- Configurações da Clínica Handlers ----------
   const saveClinicSettings = async (
-    data: Omit<ClinicSettings, 'id'>,
+    data: Partial<Omit<ClinicSettings, 'id'>> & { logoFile?: File | null },
   ): Promise<{ success: boolean; message?: string }> => {
     try {
       // Garante que exista um registro singleton carregado.
@@ -1948,43 +1959,85 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const list = await pb.collection('clinic_settings').getList(1, 1, { sort: '-created' })
           if (list.items.length > 0) {
             const r = list.items[0] as any
+            const logoUrl = r.logo ? pb.files.getURL(r, r.logo) : r.logo_url || ''
             current = {
               id: r.id,
               nome: r.nome || '',
+              cnpj: r.cnpj || '',
               endereco: r.endereco || '',
               telefone: r.telefone || '',
               email: r.email || '',
+              site: r.site || '',
+              logo: r.logo || '',
+              logo_url: logoUrl,
+              audiometro: r.audiometro || '',
+              calibracao: r.calibracao || '',
+              especialista_nome: r.especialista_nome || '',
+              especialista_crfa: r.especialista_crfa || '',
             }
           }
         } catch {
           /* intentionally ignored */
         }
       }
-      if (!current) {
-        const created: any = await pb.collection('clinic_settings').create({
-          nome: data.nome || '',
-          endereco: data.endereco || '',
-          telefone: data.telefone || '',
-          email: data.email || '',
-        })
-        const newRec: ClinicSettings = { id: created.id, ...data }
-        setClinicSettings(newRec)
-        toast({ title: 'Configurações salvas', description: 'Dados da clínica atualizados.' })
-        return { success: true }
+
+      let updated: any
+      if (data.logoFile) {
+        const formData = new FormData()
+        if (data.nome !== undefined) formData.append('nome', data.nome)
+        if (data.cnpj !== undefined) formData.append('cnpj', data.cnpj)
+        if (data.endereco !== undefined) formData.append('endereco', data.endereco)
+        if (data.telefone !== undefined) formData.append('telefone', data.telefone)
+        if (data.email !== undefined) formData.append('email', data.email)
+        if (data.site !== undefined) formData.append('site', data.site)
+        if (data.audiometro !== undefined) formData.append('audiometro', data.audiometro)
+        if (data.calibracao !== undefined) formData.append('calibracao', data.calibracao)
+        if (data.especialista_nome !== undefined)
+          formData.append('especialista_nome', data.especialista_nome)
+        if (data.especialista_crfa !== undefined)
+          formData.append('especialista_crfa', data.especialista_crfa)
+        formData.append('logo', data.logoFile)
+
+        if (!current) {
+          updated = await pb.collection('clinic_settings').create(formData)
+        } else {
+          updated = await pb.collection('clinic_settings').update(current.id, formData)
+        }
+      } else {
+        const payload: Record<string, any> = {}
+        if (data.nome !== undefined) payload.nome = data.nome
+        if (data.cnpj !== undefined) payload.cnpj = data.cnpj
+        if (data.endereco !== undefined) payload.endereco = data.endereco
+        if (data.telefone !== undefined) payload.telefone = data.telefone
+        if (data.email !== undefined) payload.email = data.email
+        if (data.site !== undefined) payload.site = data.site
+        if (data.audiometro !== undefined) payload.audiometro = data.audiometro
+        if (data.calibracao !== undefined) payload.calibracao = data.calibracao
+        if (data.especialista_nome !== undefined) payload.especialista_nome = data.especialista_nome
+        if (data.especialista_crfa !== undefined) payload.especialista_crfa = data.especialista_crfa
+
+        if (!current) {
+          updated = await pb.collection('clinic_settings').create(payload)
+        } else {
+          updated = await pb.collection('clinic_settings').update(current.id, payload)
+        }
       }
-      const payload: Record<string, any> = {
-        nome: data.nome || '',
-        endereco: data.endereco || '',
-        telefone: data.telefone || '',
-        email: data.email || '',
-      }
-      const updated: any = await pb.collection('clinic_settings').update(current.id, payload)
+
+      const logoUrl = updated.logo ? pb.files.getURL(updated, updated.logo) : updated.logo_url || ''
       setClinicSettings({
         id: updated.id,
         nome: updated.nome || '',
+        cnpj: updated.cnpj || '',
         endereco: updated.endereco || '',
         telefone: updated.telefone || '',
         email: updated.email || '',
+        site: updated.site || '',
+        logo: updated.logo || '',
+        logo_url: logoUrl,
+        audiometro: updated.audiometro || '',
+        calibracao: updated.calibracao || '',
+        especialista_nome: updated.especialista_nome || '',
+        especialista_crfa: updated.especialista_crfa || '',
       })
       toast({ title: 'Configurações salvas', description: 'Dados da clínica atualizados.' })
       return { success: true }
