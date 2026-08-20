@@ -1304,7 +1304,7 @@ export default function Imitanciometria() {
               </div>
 
               <div className="grid grid-cols-[1fr_120px_120px] items-center gap-2 text-[11px] font-bold text-slate-700 text-center">
-                <span>COMPLIÂNCIA ESTÁTICA</span>
+                <span>GRADIENTE</span>
                 <Input
                   value={summaryData.compl_estatica_od}
                   onChange={(e) => handleSummaryChange('compl_estatica_od', e.target.value, 'OD')}
