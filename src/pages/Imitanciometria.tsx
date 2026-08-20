@@ -1164,7 +1164,7 @@ export default function Imitanciometria() {
         </div>
 
         {/* 4. TABELAS NUMÉRICAS */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start text-center">
           {/* Tabela 1: Dados Brutos (OD/OE x Inicial/Média/Final) */}
           <div className="space-y-2">
             <div className="grid grid-cols-3 text-center text-xs font-bold text-slate-700 mb-1"></div>
@@ -1196,7 +1196,7 @@ export default function Imitanciometria() {
               </div>
 
               <div className="grid grid-cols-[1fr_120px_120px] items-center gap-2 text-[11px] font-bold text-slate-700 text-center">
-                <span>MÁXIMO RELAXAMENTO</span>
+                <span>COMPLIÂNCIA (ml)</span>
                 <Input
                   value={summaryData.max_relax_od}
                   onChange={(e) => setSummaryData((p) => ({ ...p, max_relax_od: e.target.value }))}
@@ -1212,7 +1212,7 @@ export default function Imitanciometria() {
               </div>
 
               <div className="grid grid-cols-[1fr_120px_120px] items-center gap-2 text-[11px] font-bold text-slate-700 text-center">
-                <span>COMPLIÂNCIA +200 daPa</span>
+                <span>VOLUME (ml)</span>
                 <Input
                   value={summaryData.compl_200_od}
                   onChange={(e) => setSummaryData((p) => ({ ...p, compl_200_od: e.target.value }))}
