@@ -2582,7 +2582,7 @@ function FinanceiroAtendimentoSection({ patient }: { patient: Patient }) {
   // Forma de pagamento do atendimento. Quando diferente de "À vista", a
   // venda gera automaticamente uma conta a receber (Convênio/Boleto = 1
   // conta; Parcelado = N contas, uma por parcela).
-  const [formaPagamento, setFormaPagamento] = React.useState<PDVPaymentMethod>('À vista')
+  const [formaPagamento, setFormaPagamento] = React.useState<PDVPaymentMethod>('Boleto')
   const [parcelas, setParcelas] = React.useState<number>(1)
 
   // Espelha os valores atuais do seletor em refs para que o
