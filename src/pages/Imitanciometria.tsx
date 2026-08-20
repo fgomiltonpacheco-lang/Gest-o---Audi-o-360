@@ -1167,11 +1167,7 @@ export default function Imitanciometria() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           {/* Tabela 1: Dados Brutos (OD/OE x Inicial/Média/Final) */}
           <div className="space-y-2">
-            <div className="grid grid-cols-3 text-center text-xs font-bold text-slate-700 mb-1">
-              <div>INICIAL</div>
-              <div>MÉDIA</div>
-              <div>FINAL</div>
-            </div>
+            <div className="grid grid-cols-3 text-center text-xs font-bold text-slate-700 mb-1"></div>
           </div>
 
           {/* Tabela 2: Resumo (Direita / Esquerda) */}
