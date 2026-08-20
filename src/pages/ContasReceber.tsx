@@ -119,59 +119,47 @@ export default function ContasReceberPage() {
   const [recDescontoTipo, setRecDescontoTipo] = useState<'valor' | 'percentual'>('valor')
   const [recDescontoValor, setRecDescontoValor] = useState('')
 
-  // Catálogo de itens disponíveis (inventory + procedures) para o combobox
-  const [catalogoItens, setCatalogoItens] = useState<
+  // Procedimentos da biblioteca (coleção procedures com active = true)
+  const [procedimentosBiblioteca, setProcedimentosBiblioteca] = useState<
     Array<{
       id: string
-      name: string
-      price: number
-      type: 'inventory' | 'procedure'
+      nome: string
+      valor_padrao: number
+      code?: string
+      ativo: boolean
     }>
   >([])
-  const [popoverAbertoIdx, setPopoverAbertoIdx] = useState<number | null>(null)
+  const [popoverProcedimentosOpen, setPopoverProcedimentosOpen] = useState(false)
+  const [buscaProcedimento, setBuscaProcedimento] = useState('')
 
   useEffect(() => {
     let ativo = true
-    async function carregarCatalogo() {
+    async function carregarProcedimentos() {
       try {
-        const [invRes, procRes] = await Promise.all([
-          pb
-            .collection('inventory')
-            .getFullList({ sort: 'name' })
-            .catch((err) => {
-              console.error('Erro ao buscar estoque (inventory) para catálogo de recebimento:', err)
-              return []
-            }),
-          pb
-            .collection('procedures')
-            .getFullList({ filter: 'active = true', sort: 'name' })
-            .catch((err) => {
-              console.error(
-                'Erro ao buscar procedimentos (procedures) para catálogo de recebimento:',
-                err,
-              )
-              return []
-            }),
-        ])
+        const records = await pb
+          .collection('procedures')
+          .getFullList({ filter: 'active = true', sort: 'name' })
+          .catch((err) => {
+            console.error('Erro ao carregar procedimentos para recebimento:', err)
+            return []
+          })
         if (!ativo) return
-        const itensInv = (invRes || []).map((i: any) => ({
-          id: `inv-${i.id}`,
-          name: i.name + (i.brand ? ` (${i.brand})` : ''),
-          price: Number(i.salePrice) || 0,
-          type: 'inventory' as const,
-        }))
-        const itensProc = (procRes || []).map((p: any) => ({
-          id: `proc-${p.id}`,
-          name: p.name,
-          price: Number(p.valueParticular ?? p.value ?? 0),
-          type: 'procedure' as const,
-        }))
-        setCatalogoItens([...itensInv, ...itensProc])
+        const formatados = (records || []).map((p: any) => {
+          const val = Number(p.valueParticular ?? p.value ?? 0) || 0
+          return {
+            id: p.id,
+            nome: p.name || '',
+            valor_padrao: val,
+            code: p.code || '',
+            ativo: p.active !== false,
+          }
+        })
+        setProcedimentosBiblioteca(formatados)
       } catch (err) {
-        console.error('Erro geral ao carregar catálogo para recebimento:', err)
+        console.error('Erro geral ao buscar procedimentos:', err)
       }
     }
-    carregarCatalogo()
+    carregarProcedimentos()
     return () => {
       ativo = false
     }
@@ -312,8 +300,29 @@ export default function ContasReceberPage() {
     setRecItensExtras([])
     setRecDescontoTipo('valor')
     setRecDescontoValor('')
+    setPopoverProcedimentosOpen(false)
+    setBuscaProcedimento('')
     recObsAutoRef.current = ''
     setRecebimentoOpen(true)
+  }
+
+  // Adiciona procedimento selecionado da biblioteca à lista de itens extras
+  const handleSelecionarProcedimento = (proc: {
+    id: string
+    nome: string
+    valor_padrao: number
+    code?: string
+  }) => {
+    setRecItensExtras((prev) => [
+      ...prev,
+      {
+        id: novoItemId(),
+        nome: proc.nome,
+        quantidade: '1',
+        valor_unitario: proc.valor_padrao > 0 ? proc.valor_padrao.toFixed(2) : '0',
+      },
+    ])
+    setPopoverProcedimentosOpen(false)
   }
 
   const openDetalhes = async (c: ContaReceber) => {
@@ -746,38 +755,101 @@ export default function ContasReceberPage() {
               </div>
             </div>
 
-            {/* ===== Acrescentar Produtos/Procedimentos ===== */}
-            <div className="border border-slate-200 rounded-xl p-3 space-y-2">
-              <div className="flex items-center justify-between">
+            {/* ===== Acrescentar Itens / Procedimentos ===== */}
+            <div className="border border-slate-200 rounded-xl p-3 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 text-slate-700">
                   <PackagePlus className="w-4 h-4 text-emerald-600" />
-                  <span className="text-sm font-semibold">Acrescentar Produtos/Procedimentos</span>
+                  <span className="text-sm font-semibold">Itens e Procedimentos Extras</span>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setRecItensExtras((prev) => {
-                      const newIdx = prev.length
-                      // Abre o popover automaticamente para o novo item
-                      setTimeout(() => setPopoverAbertoIdx(newIdx), 50)
-                      return [
+                <div className="flex items-center gap-2">
+                  {/* Dropdown/Combobox da Biblioteca de Procedimentos */}
+                  <Popover
+                    open={popoverProcedimentosOpen}
+                    onOpenChange={setPopoverProcedimentosOpen}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        role="combobox"
+                        aria-expanded={popoverProcedimentosOpen}
+                        className="h-7 rounded-lg text-xs border-teal-200 bg-teal-50/60 text-teal-700 hover:bg-teal-100/70 hover:text-teal-800 font-medium gap-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Selecionar da Biblioteca
+                        <ChevronsUpDown className="w-3 h-3 opacity-60 ml-0.5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[300px] sm:w-[360px] p-0" align="end">
+                      <Command
+                        filter={(value, search) => {
+                          if (!search) return 1
+                          return value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+                        }}
+                      >
+                        <CommandInput
+                          placeholder="Buscar na biblioteca de procedimentos..."
+                          className="h-8 text-xs"
+                        />
+                        <CommandList className="max-h-56">
+                          <CommandEmpty className="py-3 text-center text-xs text-slate-400">
+                            Nenhum procedimento ativo encontrado.
+                          </CommandEmpty>
+                          <CommandGroup heading="Procedimentos Cadastrados">
+                            {procedimentosBiblioteca.map((proc) => (
+                              <CommandItem
+                                key={proc.id}
+                                value={`${proc.nome} ${proc.code || ''}`}
+                                onSelect={() => handleSelecionarProcedimento(proc)}
+                                className="text-xs flex items-center justify-between cursor-pointer py-2"
+                              >
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <span className="text-sm">🩺</span>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="truncate font-medium text-slate-800">
+                                      {proc.nome}
+                                    </div>
+                                    {proc.code && (
+                                      <div className="text-[10px] font-mono text-slate-400">
+                                        {proc.code}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <span className="font-bold text-teal-700 shrink-0 ml-2">
+                                  {formatCurrency(proc.valor_padrao)}
+                                </span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Botão de adicionar item livre manual */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setRecItensExtras((prev) => [
                         ...prev,
                         { id: novoItemId(), nome: '', quantidade: '1', valor_unitario: '' },
-                      ]
-                    })
-                  }}
-                  className="h-7 rounded-lg text-xs"
-                >
-                  <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar item
-                </Button>
+                      ])
+                    }}
+                    className="h-7 rounded-lg text-xs"
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Item livre
+                  </Button>
+                </div>
               </div>
 
               {recItensExtras.length === 0 ? (
                 <p className="text-xs text-slate-400 py-1">
-                  Nenhum item adicional. Clique em &quot;Adicionar item&quot; para incluir produtos
-                  ou procedimentos ao recebimento.
+                  Nenhum item adicional. Selecione um procedimento da biblioteca ou adicione um item
+                  manual.
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -786,97 +858,26 @@ export default function ContasReceberPage() {
                     return (
                       <div
                         key={item.id}
-                        className="rounded-lg border border-slate-200 bg-slate-50/50 p-2 space-y-2"
+                        className="rounded-lg border border-slate-200 bg-slate-50/50 p-2.5 space-y-2"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-semibold text-slate-400 w-5">
+                          <span className="text-[11px] font-semibold text-slate-400 w-5 shrink-0">
                             {idx + 1}.
                           </span>
                           <div className="flex-1 min-w-0">
-                            <Popover
-                              open={popoverAbertoIdx === idx}
-                              onOpenChange={(open) => setPopoverAbertoIdx(open ? idx : null)}
-                            >
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={popoverAbertoIdx === idx}
-                                  className="w-full h-8 justify-between text-left text-xs font-normal rounded-md border-slate-300 px-2.5 bg-white"
-                                >
-                                  <span className="truncate">
-                                    {item.nome || 'Selecione um produto ou procedimento...'}
-                                  </span>
-                                  <ChevronsUpDown className="ml-1.5 h-3.5 w-3.5 shrink-0 opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[320px] sm:w-[380px] p-0" align="start">
-                                <Command
-                                  filter={(value, search) => {
-                                    if (!search) return 1
-                                    return value.toLowerCase().includes(search.toLowerCase())
-                                      ? 1
-                                      : 0
-                                  }}
-                                >
-                                  <CommandInput
-                                    placeholder="Buscar produto ou procedimento..."
-                                    className="h-8 text-xs"
-                                  />
-                                  <CommandList className="max-h-56">
-                                    <CommandEmpty className="py-2.5 text-center text-xs text-slate-400">
-                                      Nenhum item encontrado.
-                                    </CommandEmpty>
-                                    <CommandGroup heading="Produtos e Procedimentos">
-                                      {catalogoItens.length === 0 ? (
-                                        <div className="py-2 text-center text-xs text-slate-400">
-                                          Nenhum produto ou procedimento cadastrado.
-                                        </div>
-                                      ) : (
-                                        catalogoItens.map((cat) => (
-                                          <CommandItem
-                                            key={cat.id}
-                                            value={`${cat.name} ${cat.type === 'inventory' ? 'produto estoque' : 'procedimento'}`}
-                                            onSelect={() => {
-                                              setRecItensExtras((prev) =>
-                                                prev.map((p) =>
-                                                  p.id === item.id
-                                                    ? {
-                                                        ...p,
-                                                        nome: cat.name,
-                                                        valor_unitario: cat.price.toFixed(2),
-                                                      }
-                                                    : p,
-                                                ),
-                                              )
-                                              setPopoverAbertoIdx(null)
-                                            }}
-                                            className="text-xs flex items-center justify-between cursor-pointer py-1.5"
-                                          >
-                                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                              <Check
-                                                className={`h-3.5 w-3.5 shrink-0 ${
-                                                  item.nome === cat.name
-                                                    ? 'opacity-100'
-                                                    : 'opacity-0'
-                                                }`}
-                                              />
-                                              <span className="truncate">
-                                                {cat.type === 'inventory' ? '📦 ' : '🩺 '}
-                                                {cat.name}
-                                              </span>
-                                            </div>
-                                            <span className="font-bold text-teal-700 shrink-0 ml-2">
-                                              {formatCurrency(cat.price)}
-                                            </span>
-                                          </CommandItem>
-                                        ))
-                                      )}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
+                            <Input
+                              type="text"
+                              value={item.nome}
+                              onChange={(e) =>
+                                setRecItensExtras((prev) =>
+                                  prev.map((p) =>
+                                    p.id === item.id ? { ...p, nome: e.target.value } : p,
+                                  ),
+                                )
+                              }
+                              placeholder="Nome do procedimento ou item..."
+                              className="h-8 rounded-md text-xs bg-white"
+                            />
                           </div>
                           <button
                             type="button"
@@ -884,7 +885,7 @@ export default function ContasReceberPage() {
                               setRecItensExtras((prev) => prev.filter((p) => p.id !== item.id))
                             }
                             title="Remover item"
-                            className="p-1.5 rounded-lg text-red-500 hover:bg-red-50"
+                            className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 shrink-0"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -906,7 +907,7 @@ export default function ContasReceberPage() {
                                   ),
                                 )
                               }
-                              className="h-8 rounded-md text-sm"
+                              className="h-8 rounded-md text-xs bg-white"
                             />
                           </div>
                           <div>
@@ -925,7 +926,8 @@ export default function ContasReceberPage() {
                                   ),
                                 )
                               }
-                              className="h-8 rounded-md text-sm"
+                              placeholder="0,00"
+                              className="h-8 rounded-md text-xs bg-white"
                             />
                           </div>
                         </div>

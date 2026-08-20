@@ -945,6 +945,8 @@ export interface Recebimento {
   data_recebimento: string
   forma_recebimento: FormaRecebimento
   observacoes?: string
+  usuario_id?: string
+  usuario_nome?: string
   // ---- Campos de acréscimo/desconto (Registrar Recebimento) ----
   /** Valor original da conta usado como base para o cálculo (valor_restante na data do recebimento). */
   valor_base?: number
@@ -980,6 +982,9 @@ export interface ContaReceber {
   numero_parcelas: number
   parcela_atual: number
   observacoes?: string
+  conta_origem_id?: string
+  motivo_renegociacao?: string
+  motivo_cancelamento?: string
   created?: string
   updated?: string
 }
