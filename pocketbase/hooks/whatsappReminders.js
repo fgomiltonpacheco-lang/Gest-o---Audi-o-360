@@ -97,7 +97,7 @@ onRecordAfterCreateSuccess(function (e) {
       } catch (_) {}
     }
     if (!telefone) {
-      console.log('[whatsappReminder] sem telefone para agendamento ' + rec.getId())
+      console.log('[whatsappReminder] sem telefone para agendamento ' + rec.get('id'))
       return
     }
     telefone = normalizePhone(telefone)
@@ -112,7 +112,7 @@ onRecordAfterCreateSuccess(function (e) {
 
     var lembCol = $app.findCollectionByNameOrId('lembretes_whatsapp')
     var lemb = new Record(lembCol)
-    lemb.set('agendamento_id', rec.getId())
+    lemb.set('agendamento_id', rec.get('id'))
     if (pacienteId) lemb.set('paciente_id', pacienteId)
     lemb.set('telefone', telefone)
     lemb.set('mensagem', mensagem)
