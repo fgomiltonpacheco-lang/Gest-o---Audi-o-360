@@ -29,7 +29,6 @@ import {
   FileEdit,
   Eye,
   Download,
-  Calculator,
   ChevronLeft,
   ChevronRight,
   Info,
@@ -178,8 +177,71 @@ function emptyReflexGrid(): ReflexGridStore {
 
 function numOr(v: unknown): number | null {
   if (v === null || v === undefined || v === '') return null
-  const n = Number(v)
+  const n = Number(String(v).replace(',', '.'))
   return isNaN(n) ? null : n
+}
+
+/**
+ * Classifica automaticamente o tipo da curva com base em compliância e pressão:
+ * - Tipo A: compliância entre 0.3 e 1.6 + pressão entre -100 e +50
+ * - Tipo As: compliância menor que 0.3 (quando maior que limiar plano)
+ * - Tipo Ad: compliância maior que 1.6
+ * - Tipo B: curva plana (compliância muito baixa, próximo de zero <= 0.1 ou zero)
+ * - Tipo C: pressão menor que -100
+ */
+function determineCurveType(
+  complianceVal: string | number | null | undefined,
+  pressureVal: string | number | null | undefined,
+): string | null {
+  const c = numOr(complianceVal)
+  const p = numOr(pressureVal)
+
+  // Se nenhum dado foi inserido, não altera/calcula tipo
+  if (c === null && p === null) return null
+
+  // Regra Tipo B: curva plana (compliância muito baixa, próximo de zero)
+  if (c !== null && c <= 0.1) {
+    return 'B'
+  }
+
+  // Regra Tipo Ad: compliância maior que 1.6
+  if (c !== null && c > 1.6) {
+    return 'Ad'
+  }
+
+  // Regra Tipo As: compliância menor que 0.3 (e > 0.1)
+  if (c !== null && c < 0.3) {
+    return 'As'
+  }
+
+  // Regra Tipo C: pressão menor que -100
+  if (p !== null && p < -100) {
+    return 'C'
+  }
+
+  // Regra Tipo A: compliância entre 0.3 e 1.6 + pressão entre -100 e +50
+  // Também caso compliância esteja na faixa e pressão esteja dentro de [-100, +50] (ou pressão não informada mas compliância normal)
+  if (c !== null && c >= 0.3 && c <= 1.6) {
+    if (p !== null) {
+      if (p >= -100 && p <= 50) {
+        return 'A'
+      }
+      // Se pressão for > 50 mas compliância normal, mantém A ou padrão
+      if (p > 50) {
+        return 'A'
+      }
+    } else {
+      return 'A'
+    }
+  }
+
+  // Se apenas pressão informada:
+  if (p !== null) {
+    if (p < -100) return 'C'
+    if (p >= -100 && p <= 50) return 'A'
+  }
+
+  return null
 }
 
 export default function Imitanciometria() {
@@ -438,89 +500,85 @@ export default function Imitanciometria() {
     setExam((prev) => ({ ...prev, [key]: value }))
   }
 
-  // Função para o botão "Calcular"
-  const handleCalculate = () => {
-    // Se o usuário preencheu inicial/final ou valores de pressão e volume, calcula as médias
-    const calcAvg = (v1: string, v2: string) => {
-      const n1 = parseFloat(v1)
-      const n2 = parseFloat(v2)
-      if (!isNaN(n1) && !isNaN(n2)) return ((n1 + n2) / 2).toFixed(1)
-      if (!isNaN(n1)) return n1.toFixed(1)
-      if (!isNaN(n2)) return n2.toFixed(1)
-      return ''
-    }
+  // Atualiza campo numérico de resumo e recalcula timpanometria e tipo de curva em tempo real
+  const handleSummaryChange = (field: keyof SummaryDataStore, value: string, side: 'OD' | 'OE') => {
+    setSummaryData((prevSummary) => {
+      const nextSummary = { ...prevSummary, [field]: value }
 
-    const odPressaoMedia =
-      rawData.od_pressao_media || calcAvg(rawData.od_pressao_inicial, rawData.od_pressao_final)
-    const odVolumeMedia =
-      rawData.od_volume_media || calcAvg(rawData.od_volume_inicial, rawData.od_volume_final)
-    const oePressaoMedia =
-      rawData.oe_pressao_media || calcAvg(rawData.oe_pressao_inicial, rawData.oe_pressao_final)
-    const oeVolumeMedia =
-      rawData.oe_volume_media || calcAvg(rawData.oe_volume_inicial, rawData.oe_volume_final)
+      // Atualiza estado timpOD / timpOE
+      if (side === 'OD') {
+        const pressaoVal = field === 'pressao_om_od' ? value : nextSummary.pressao_om_od
+        const complVal =
+          field === 'max_relax_od'
+            ? value
+            : field === 'compl_estatica_od'
+              ? value
+              : nextSummary.max_relax_od || nextSummary.compl_estatica_od
+        const volumeVal = field === 'compl_200_od' ? value : nextSummary.compl_200_od
 
-    setRawData((prev) => ({
-      ...prev,
-      od_pressao_media: odPressaoMedia,
-      od_volume_media: odVolumeMedia,
-      oe_pressao_media: oePressaoMedia,
-      oe_volume_media: oeVolumeMedia,
-    }))
+        const pressaoNum = numOr(pressaoVal)
+        const complNum = numOr(complVal)
+        const volumeNum = numOr(volumeVal)
 
-    // Sincroniza com summary e com timpOD/OE
-    const pOD = odPressaoMedia ? parseFloat(odPressaoMedia) : timpOD.pressao_pico
-    const vOD = odVolumeMedia ? parseFloat(odVolumeMedia) : timpOD.volume_meato
-    const pOE = oePressaoMedia ? parseFloat(oePressaoMedia) : timpOE.pressao_pico
-    const vOE = oeVolumeMedia ? parseFloat(oeVolumeMedia) : timpOE.volume_meato
+        // Sincroniza rawData
+        if (field === 'pressao_om_od') {
+          setRawData((r) => ({ ...r, od_pressao_media: value }))
+        } else if (field === 'compl_200_od') {
+          setRawData((r) => ({ ...r, od_volume_media: value }))
+        }
 
-    setSummaryData((prev) => ({
-      ...prev,
-      pressao_om_od:
-        odPressaoMedia ||
-        prev.pressao_om_od ||
-        (timpOD.pressao_pico != null ? String(timpOD.pressao_pico) : ''),
-      pressao_om_oe:
-        oePressaoMedia ||
-        prev.pressao_om_oe ||
-        (timpOE.pressao_pico != null ? String(timpOE.pressao_pico) : ''),
-      compl_estatica_od:
-        prev.compl_estatica_od || (timpOD.complacencia != null ? String(timpOD.complacencia) : ''),
-      compl_estatica_oe:
-        prev.compl_estatica_oe || (timpOE.complacencia != null ? String(timpOE.complacencia) : ''),
-    }))
+        // Determinação automática do tipo de curva
+        const autoTipo = determineCurveType(complVal, pressaoVal)
 
-    setTimpOD((prev) => ({
-      ...prev,
-      pressao_pico: pOD,
-      volume_meato: vOD,
-    }))
+        setTimpOD((prev) => ({
+          ...prev,
+          pressao_pico: pressaoNum,
+          complacencia: complNum,
+          volume_meato: volumeNum,
+          tipo_curva: autoTipo || prev.tipo_curva,
+        }))
 
-    setTimpOE((prev) => ({
-      ...prev,
-      pressao_pico: pOE,
-      volume_meato: vOE,
-    }))
+        if (autoTipo) {
+          setExam((prev) => ({ ...prev, tipo_curva_od: autoTipo }))
+        }
+      } else {
+        const pressaoVal = field === 'pressao_om_oe' ? value : nextSummary.pressao_om_oe
+        const complVal =
+          field === 'max_relax_oe'
+            ? value
+            : field === 'compl_estatica_oe'
+              ? value
+              : nextSummary.max_relax_oe || nextSummary.compl_estatica_oe
+        const volumeVal = field === 'compl_200_oe' ? value : nextSummary.compl_200_oe
 
-    // Atualiza diferença nos reflexos se limiar e refl. contra estiverem preenchidos
-    const freqs = [500, 1000, 2000, 4000] as const
-    setReflexGrid((prev) => {
-      const next = { ...prev }
-      ;(['od', 'oe'] as const).forEach((side) => {
-        freqs.forEach((f) => {
-          const row = next[side][f]
-          const lim = parseFloat(row.limiar)
-          const contra = parseFloat(row.refl_contra)
-          if (!isNaN(lim) && !isNaN(contra)) {
-            row.diferenca = String(contra - lim)
-          }
-        })
-      })
-      return next
-    })
+        const pressaoNum = numOr(pressaoVal)
+        const complNum = numOr(complVal)
+        const volumeNum = numOr(volumeVal)
 
-    toast({
-      title: 'Valores calculados',
-      description: 'Valores médios, pressões e diferenças calculados com sucesso.',
+        // Sincroniza rawData
+        if (field === 'pressao_om_oe') {
+          setRawData((r) => ({ ...r, oe_pressao_media: value }))
+        } else if (field === 'compl_200_oe') {
+          setRawData((r) => ({ ...r, oe_volume_media: value }))
+        }
+
+        // Determinação automática do tipo de curva
+        const autoTipo = determineCurveType(complVal, pressaoVal)
+
+        setTimpOE((prev) => ({
+          ...prev,
+          pressao_pico: pressaoNum,
+          complacencia: complNum,
+          volume_meato: volumeNum,
+          tipo_curva: autoTipo || prev.tipo_curva,
+        }))
+
+        if (autoTipo) {
+          setExam((prev) => ({ ...prev, tipo_curva_oe: autoTipo }))
+        }
+      }
+
+      return nextSummary
     })
   }
 
@@ -1183,13 +1241,19 @@ export default function Imitanciometria() {
                 <span>PRESSÃO OUVIDO MÉDIO (daPa)</span>
                 <Input
                   value={summaryData.pressao_om_od}
-                  onChange={(e) => setSummaryData((p) => ({ ...p, pressao_om_od: e.target.value }))}
+                  onChange={(e) => handleSummaryChange('pressao_om_od', e.target.value, 'OD')}
+                  onInput={(e) =>
+                    handleSummaryChange('pressao_om_od', (e.target as HTMLInputElement).value, 'OD')
+                  }
                   disabled={readOnly}
                   className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
                 />
                 <Input
                   value={summaryData.pressao_om_oe}
-                  onChange={(e) => setSummaryData((p) => ({ ...p, pressao_om_oe: e.target.value }))}
+                  onChange={(e) => handleSummaryChange('pressao_om_oe', e.target.value, 'OE')}
+                  onInput={(e) =>
+                    handleSummaryChange('pressao_om_oe', (e.target as HTMLInputElement).value, 'OE')
+                  }
                   disabled={readOnly}
                   className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
                 />
@@ -1199,13 +1263,19 @@ export default function Imitanciometria() {
                 <span>COMPLIÂNCIA (ml)</span>
                 <Input
                   value={summaryData.max_relax_od}
-                  onChange={(e) => setSummaryData((p) => ({ ...p, max_relax_od: e.target.value }))}
+                  onChange={(e) => handleSummaryChange('max_relax_od', e.target.value, 'OD')}
+                  onInput={(e) =>
+                    handleSummaryChange('max_relax_od', (e.target as HTMLInputElement).value, 'OD')
+                  }
                   disabled={readOnly}
                   className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
                 />
                 <Input
                   value={summaryData.max_relax_oe}
-                  onChange={(e) => setSummaryData((p) => ({ ...p, max_relax_oe: e.target.value }))}
+                  onChange={(e) => handleSummaryChange('max_relax_oe', e.target.value, 'OE')}
+                  onInput={(e) =>
+                    handleSummaryChange('max_relax_oe', (e.target as HTMLInputElement).value, 'OE')
+                  }
                   disabled={readOnly}
                   className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
                 />
@@ -1215,13 +1285,19 @@ export default function Imitanciometria() {
                 <span>VOLUME (ml)</span>
                 <Input
                   value={summaryData.compl_200_od}
-                  onChange={(e) => setSummaryData((p) => ({ ...p, compl_200_od: e.target.value }))}
+                  onChange={(e) => handleSummaryChange('compl_200_od', e.target.value, 'OD')}
+                  onInput={(e) =>
+                    handleSummaryChange('compl_200_od', (e.target as HTMLInputElement).value, 'OD')
+                  }
                   disabled={readOnly}
                   className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
                 />
                 <Input
                   value={summaryData.compl_200_oe}
-                  onChange={(e) => setSummaryData((p) => ({ ...p, compl_200_oe: e.target.value }))}
+                  onChange={(e) => handleSummaryChange('compl_200_oe', e.target.value, 'OE')}
+                  onInput={(e) =>
+                    handleSummaryChange('compl_200_oe', (e.target as HTMLInputElement).value, 'OE')
+                  }
                   disabled={readOnly}
                   className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
                 />
@@ -1231,33 +1307,31 @@ export default function Imitanciometria() {
                 <span>COMPLIÂNCIA ESTÁTICA</span>
                 <Input
                   value={summaryData.compl_estatica_od}
-                  onChange={(e) =>
-                    setSummaryData((p) => ({ ...p, compl_estatica_od: e.target.value }))
+                  onChange={(e) => handleSummaryChange('compl_estatica_od', e.target.value, 'OD')}
+                  onInput={(e) =>
+                    handleSummaryChange(
+                      'compl_estatica_od',
+                      (e.target as HTMLInputElement).value,
+                      'OD',
+                    )
                   }
                   disabled={readOnly}
                   className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
                 />
                 <Input
                   value={summaryData.compl_estatica_oe}
-                  onChange={(e) =>
-                    setSummaryData((p) => ({ ...p, compl_estatica_oe: e.target.value }))
+                  onChange={(e) => handleSummaryChange('compl_estatica_oe', e.target.value, 'OE')}
+                  onInput={(e) =>
+                    handleSummaryChange(
+                      'compl_estatica_oe',
+                      (e.target as HTMLInputElement).value,
+                      'OE',
+                    )
                   }
                   disabled={readOnly}
                   className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
                 />
               </div>
-            </div>
-
-            {/* Botão Calcular */}
-            <div className="flex justify-end pt-1">
-              <Button
-                type="button"
-                onClick={handleCalculate}
-                className="bg-sky-500 hover:bg-sky-600 text-white text-xs font-semibold h-8 rounded px-4 shadow-sm"
-              >
-                <Calculator className="w-3.5 h-3.5 mr-1.5" />
-                Calcular
-              </Button>
             </div>
           </div>
         </div>
