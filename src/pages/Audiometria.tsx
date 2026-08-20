@@ -2063,140 +2063,17 @@ function EarVocalAndIprfSection({
 
               {/* Trissílabos */}
               <tr>
-                <td className="p-1 border-r border-slate-200 text-center">
-                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
-                    <span className="text-[10px] text-slate-500 font-bold">#</span>
-                  </div>
-                </td>
-                <td className="p-1 border-r border-slate-200 text-center">
-                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
-                    <Input
-                      type="number"
-                      value={vocalRow.trissilabos ?? ''}
-                      onChange={(e) => updateVocalField('trissilabos', e.target.value)}
-                      disabled={isSecretaria}
-                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
-                    />
-                    <span className="text-[10px] text-slate-500 font-bold">%</span>
-                  </div>
-                </td>
-                <td className="p-1 border-r border-slate-200 text-center">
-                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
-                    <Input
-                      type="number"
-                      value={vocalRow.intensidade_trissilabos ?? ''}
-                      onChange={(e) => updateVocalField('intensidade_trissilabos', e.target.value)}
-                      disabled={isSecretaria}
-                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
-                    />
-                    <span className="text-[10px] text-slate-500 font-bold">dB</span>
-                  </div>
-                </td>
-                <td className="p-1 border-r border-slate-200 text-center">
-                  <Select
-                    value={vocalRow.tipo_mascaramento_trissilabos || '__none'}
-                    onValueChange={(v) =>
-                      updateVocalField('tipo_mascaramento_trissilabos', v === '__none' ? '' : v)
-                    }
-                    disabled={isSecretaria}
-                  >
-                    <SelectTrigger className="h-7 text-xs font-semibold border-slate-300 bg-white mx-auto max-w-[120px]">
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none">Selecione...</SelectItem>
-                      <SelectItem value="SN">SN</SelectItem>
-                      <SelectItem value="WN">WN</SelectItem>
-                      <SelectItem value="NB">NB</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </td>
+                <td className="p-1 border-r border-slate-200 text-center"></td>
+                <td className="p-1 border-r border-slate-200 text-center"></td>
+
                 <td className="p-1 text-center">
-                  <div className="flex items-center justify-center max-w-[100px] mx-auto">
-                    <Input
-                      type="number"
-                      value={vocalRow.mascaramento_trissilabos ?? ''}
-                      onChange={(e) => updateVocalField('mascaramento_trissilabos', e.target.value)}
-                      disabled={isSecretaria}
-                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
-                    />
-                  </div>
+                  <div className="flex items-center justify-center max-w-[100px] mx-auto"></div>
                 </td>
               </tr>
 
               {/* Polissílabos */}
               <tr>
-                <td className="py-2 px-3 font-semibold text-slate-800 border-r border-slate-200">
-                  Polissílabos
-                </td>
-                <td className="p-1 border-r border-slate-200 text-center">
-                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
-                    <Input
-                      type="number"
-                      value={vocalRow.polissilabos_erros ?? ''}
-                      onChange={(e) => updateVocalField('polissilabos_erros', e.target.value)}
-                      disabled={isSecretaria}
-                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
-                    />
-                    <span className="text-[10px] text-slate-500 font-bold">#</span>
-                  </div>
-                </td>
-                <td className="p-1 border-r border-slate-200 text-center">
-                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
-                    <Input
-                      type="number"
-                      value={vocalRow.polissilabos ?? ''}
-                      onChange={(e) => updateVocalField('polissilabos', e.target.value)}
-                      disabled={isSecretaria}
-                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
-                    />
-                    <span className="text-[10px] text-slate-500 font-bold">%</span>
-                  </div>
-                </td>
-                <td className="p-1 border-r border-slate-200 text-center">
-                  <div className="flex items-center justify-center gap-1 max-w-[100px] mx-auto">
-                    <Input
-                      type="number"
-                      value={vocalRow.intensidade_polissilabos ?? ''}
-                      onChange={(e) => updateVocalField('intensidade_polissilabos', e.target.value)}
-                      disabled={isSecretaria}
-                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
-                    />
-                    <span className="text-[10px] text-slate-500 font-bold">dB</span>
-                  </div>
-                </td>
-                <td className="p-1 border-r border-slate-200 text-center">
-                  <Select
-                    value={vocalRow.tipo_mascaramento_polissilabos || '__none'}
-                    onValueChange={(v) =>
-                      updateVocalField('tipo_mascaramento_polissilabos', v === '__none' ? '' : v)
-                    }
-                    disabled={isSecretaria}
-                  >
-                    <SelectTrigger className="h-7 text-xs font-semibold border-slate-300 bg-white mx-auto max-w-[120px]">
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none">Selecione...</SelectItem>
-                      <SelectItem value="SN">SN</SelectItem>
-                      <SelectItem value="WN">WN</SelectItem>
-                      <SelectItem value="NB">NB</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </td>
-                <td className="p-1 text-center">
-                  <div className="flex items-center justify-center max-w-[100px] mx-auto">
-                    <Input
-                      type="number"
-                      value={vocalRow.mascaramento_polissilabos ?? ''}
-                      onChange={(e) =>
-                        updateVocalField('mascaramento_polissilabos', e.target.value)
-                      }
-                      disabled={isSecretaria}
-                      className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
-                    />
-                  </div>
-                </td>
+                <td className="p-1 border-r border-slate-200 text-center"></td>
               </tr>
             </tbody>
           </table>

@@ -135,8 +135,23 @@ export default function ContasReceberPage() {
     async function carregarCatalogo() {
       try {
         const [invRes, procRes] = await Promise.all([
-          pb.collection('inventory').getFullList({ sort: 'name' }),
-          pb.collection('procedures').getFullList({ filter: 'active = true', sort: 'name' }),
+          pb
+            .collection('inventory')
+            .getFullList({ sort: 'name' })
+            .catch((err) => {
+              console.error('Erro ao buscar estoque (inventory) para catálogo de recebimento:', err)
+              return []
+            }),
+          pb
+            .collection('procedures')
+            .getFullList({ filter: 'active = true', sort: 'name' })
+            .catch((err) => {
+              console.error(
+                'Erro ao buscar procedimentos (procedures) para catálogo de recebimento:',
+                err,
+              )
+              return []
+            }),
         ])
         if (!ativo) return
         const itensInv = (invRes || []).map((i: any) => ({
@@ -153,7 +168,7 @@ export default function ContasReceberPage() {
         }))
         setCatalogoItens([...itensInv, ...itensProc])
       } catch (err) {
-        console.error('Erro ao carregar catálogo para recebimento:', err)
+        console.error('Erro geral ao carregar catálogo para recebimento:', err)
       }
     }
     carregarCatalogo()
@@ -742,12 +757,17 @@ export default function ContasReceberPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() =>
-                    setRecItensExtras((prev) => [
-                      ...prev,
-                      { id: novoItemId(), nome: '', quantidade: '1', valor_unitario: '' },
-                    ])
-                  }
+                  onClick={() => {
+                    setRecItensExtras((prev) => {
+                      const newIdx = prev.length
+                      // Abre o popover automaticamente para o novo item
+                      setTimeout(() => setPopoverAbertoIdx(newIdx), 50)
+                      return [
+                        ...prev,
+                        { id: novoItemId(), nome: '', quantidade: '1', valor_unitario: '' },
+                      ]
+                    })
+                  }}
                   className="h-7 rounded-lg text-xs"
                 >
                   <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar item
@@ -808,42 +828,50 @@ export default function ContasReceberPage() {
                                       Nenhum item encontrado.
                                     </CommandEmpty>
                                     <CommandGroup heading="Produtos e Procedimentos">
-                                      {catalogoItens.map((cat) => (
-                                        <CommandItem
-                                          key={cat.id}
-                                          value={`${cat.name} ${cat.type === 'inventory' ? 'produto estoque' : 'procedimento'}`}
-                                          onSelect={() => {
-                                            setRecItensExtras((prev) =>
-                                              prev.map((p) =>
-                                                p.id === item.id
-                                                  ? {
-                                                      ...p,
-                                                      nome: cat.name,
-                                                      valor_unitario: cat.price.toFixed(2),
-                                                    }
-                                                  : p,
-                                              ),
-                                            )
-                                            setPopoverAbertoIdx(null)
-                                          }}
-                                          className="text-xs flex items-center justify-between cursor-pointer py-1.5"
-                                        >
-                                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                            <Check
-                                              className={`h-3.5 w-3.5 shrink-0 ${
-                                                item.nome === cat.name ? 'opacity-100' : 'opacity-0'
-                                              }`}
-                                            />
-                                            <span className="truncate">
-                                              {cat.type === 'inventory' ? '📦 ' : '🩺 '}
-                                              {cat.name}
+                                      {catalogoItens.length === 0 ? (
+                                        <div className="py-2 text-center text-xs text-slate-400">
+                                          Nenhum produto ou procedimento cadastrado.
+                                        </div>
+                                      ) : (
+                                        catalogoItens.map((cat) => (
+                                          <CommandItem
+                                            key={cat.id}
+                                            value={`${cat.name} ${cat.type === 'inventory' ? 'produto estoque' : 'procedimento'}`}
+                                            onSelect={() => {
+                                              setRecItensExtras((prev) =>
+                                                prev.map((p) =>
+                                                  p.id === item.id
+                                                    ? {
+                                                        ...p,
+                                                        nome: cat.name,
+                                                        valor_unitario: cat.price.toFixed(2),
+                                                      }
+                                                    : p,
+                                                ),
+                                              )
+                                              setPopoverAbertoIdx(null)
+                                            }}
+                                            className="text-xs flex items-center justify-between cursor-pointer py-1.5"
+                                          >
+                                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                              <Check
+                                                className={`h-3.5 w-3.5 shrink-0 ${
+                                                  item.nome === cat.name
+                                                    ? 'opacity-100'
+                                                    : 'opacity-0'
+                                                }`}
+                                              />
+                                              <span className="truncate">
+                                                {cat.type === 'inventory' ? '📦 ' : '🩺 '}
+                                                {cat.name}
+                                              </span>
+                                            </div>
+                                            <span className="font-bold text-teal-700 shrink-0 ml-2">
+                                              {formatCurrency(cat.price)}
                                             </span>
-                                          </div>
-                                          <span className="font-bold text-teal-700 shrink-0 ml-2">
-                                            {formatCurrency(cat.price)}
-                                          </span>
-                                        </CommandItem>
-                                      ))}
+                                          </CommandItem>
+                                        ))
+                                      )}
                                     </CommandGroup>
                                   </CommandList>
                                 </Command>
