@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T14:23:32.002Z",
+  "generatedAt": "2026-08-20T14:25:23.942Z",
   "collections": [
     {
       "name": "users",
@@ -1860,6 +1860,12 @@
         {
           "name": "valueConvenio",
           "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "code",
+          "type": "text",
           "required": false,
           "system": false
         }

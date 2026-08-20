@@ -28,6 +28,7 @@ import Profile from '@/pages/Profile'
 import AlterarSenha from '@/pages/AlterarSenha'
 import Users from '@/pages/Users'
 import Procedimentos from '@/pages/Procedimentos'
+import RelatorioFinanceiro from '@/pages/RelatorioFinanceiro'
 import Configuracoes from '@/pages/Configuracoes'
 import EditorRegrasIA from '@/pages/EditorRegrasIA'
 import VendasB2B from '@/pages/VendasB2B'
@@ -247,6 +248,22 @@ export function App() {
                 <ProtectedRoute>
                   <ContasReceberPage />
                 </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/financeiro/relatorio"
+              element={
+                <AdminRoute>
+                  <RelatorioFinanceiro />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/relatorio-financeiro"
+              element={
+                <AdminRoute>
+                  <RelatorioFinanceiro />
+                </AdminRoute>
               }
             />
             <Route
@@ -483,9 +500,17 @@ export function App() {
             <Route
               path="/procedimentos"
               element={
-                <AdminRoute>
+                <ProtectedRoute>
                   <Procedimentos />
-                </AdminRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/configuracoes/procedimentos"
+              element={
+                <ProtectedRoute>
+                  <Procedimentos />
+                </ProtectedRoute>
               }
             />
 

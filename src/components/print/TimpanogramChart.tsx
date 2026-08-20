@@ -291,8 +291,7 @@ export const TimpanogramChart: React.FC<TimpanogramChartProps> = ({
       </text>
 
       {/* Curvas */}
-      <path d={oeFill} fill={COLOR_OE} opacity={0.08} />
-      <path d={odFill} fill={COLOR_OD} opacity={0.08} />
+
       <path
         d={oePath}
         fill="none"

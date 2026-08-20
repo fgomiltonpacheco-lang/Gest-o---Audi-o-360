@@ -255,9 +255,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           roles: ADMIN_ONLY,
         },
         {
+          name: 'Relatório Financeiro',
+          path: '/financeiro/relatorio',
+          icon: FileText,
+          roles: ADMIN_ONLY,
+        },
+        {
           name: 'Relatório de Recebimentos',
           path: '/financeiro/relatorio-recebimentos',
           icon: FileText,
+          roles: ALL_ROLES,
+        },
+        {
+          name: 'Biblioteca de Procedimentos',
+          path: '/configuracoes/procedimentos',
+          icon: ListChecks,
           roles: ALL_ROLES,
         },
         {
@@ -398,9 +410,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         },
         {
           name: 'Procedimentos',
-          path: '/procedimentos',
+          path: '/configuracoes/procedimentos',
           icon: ListChecks,
-          roles: ADMIN_ONLY,
+          roles: ALL_ROLES,
         },
       ],
     },
