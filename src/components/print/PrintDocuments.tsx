@@ -363,14 +363,64 @@ const emptyIprfVocalRow = (): IprfVocalRow => ({
 
 export function AudiometriaFullPrint({
   exam,
+  patient,
   clinicSettings,
   professional,
 }: {
   exam: AudiometryExamFull
+  patient?: Patient | null
   clinicSettings?: ClinicSettings | null
   professional?: { name: string; crmCrfa?: string } | null
 }) {
-  const clinicAddress = clinicSettings?.endereco?.trim() || CLINIC_ADDRESS
+  // 1. Logo
+  const logoSrc = clinicSettings?.logo_url || logoImg
+
+  // 2. Dados da clínica
+  const clinicAddress =
+    clinicSettings?.endereco?.trim() ||
+    [clinicSettings?.endereco, clinicSettings?.telefone, clinicSettings?.email]
+      .filter(Boolean)
+      .join(' • ') ||
+    CLINIC_ADDRESS
+
+  // 3. Equipamento (Audiômetro e Calibração)
+  const audiometer =
+    exam.audiometer?.trim() || clinicSettings?.audiometro?.trim() || 'Não informado'
+  const calibration = exam.calibration?.trim()
+    ? formatDate(exam.calibration)
+    : clinicSettings?.calibracao?.trim() || 'Não informada'
+
+  // 4. Especialista
+  const specialistName =
+    professional?.name?.trim() || clinicSettings?.especialista_nome?.trim() || SPECIALIST_PRINT
+  const specialistCrfa =
+    professional?.crmCrfa?.trim() || clinicSettings?.especialista_crfa?.trim() || SPECIALIST_CRFA
+  const formattedCrfa = specialistCrfa.replace(/^crfa\s*/i, '').trim()
+
+  // 5. Dados do paciente
+  const patientName = patient?.name || exam.patientName || ''
+  const patientCpf = patient?.cpf || exam.cpf || ''
+  const patientDob = patient?.birthDate || exam.dob || ''
+  const patientSex = patient?.gender || exam.sex || ''
+  const patientConvenio =
+    patient?.planType === 'Convênio'
+      ? patient.planName || 'Convênio'
+      : patient?.planType === 'SUS'
+        ? 'SUS'
+        : patient?.planType === 'Particular'
+          ? 'Particular'
+          : patient?.planType || (exam as any).convenio || 'Particular'
+
+  const isFemale =
+    patientSex === 'F' ||
+    patientSex === 'Feminino' ||
+    patientSex === 'f' ||
+    patientSex?.toLowerCase().startsWith('f')
+  const isMale =
+    patientSex === 'M' ||
+    patientSex === 'Masculino' ||
+    patientSex === 'm' ||
+    patientSex?.toLowerCase().startsWith('m')
 
   const thStyle: React.CSSProperties = {
     border: '1px solid #000',
@@ -396,19 +446,18 @@ export function AudiometriaFullPrint({
       return 'AUS'
     }
     if (val === 0) {
-      return '0 dB'
+      return '0'
     }
     if (val !== null && val !== undefined && val !== ('' as any)) {
-      return `${val} dB`
+      return `${val}`
     }
     if (fallbackStr && fallbackStr.trim() !== '') {
-      return fallbackStr.includes('dB') ? fallbackStr : `${fallbackStr} dB`
+      return fallbackStr.replace(/\s*dB/gi, '').trim()
     }
-    return '___ dB'
+    return '____'
   }
 
-  // MT (Média Tritonal) é calculada automaticamente a partir do mapa aéreo
-  // quando não estiver explicitamente preenchida no exame.
+  // MT (Média Tritonal) calculada automaticamente
   const mtOD = exam.mt_od || mediaTritonal(exam.air_od)
   const mtOE = exam.mt_oe || mediaTritonal(exam.air_oe)
 
@@ -420,13 +469,9 @@ export function AudiometriaFullPrint({
   const lrfOEStr = formatDbVal(exam.lrf_oe || exam.srt_oe)
   const ldvOEStr = formatDbVal(exam.ldv_oe)
 
-  const formatIprfIntens = (val?: string) => (val && val.trim() ? `${val} dB` : '-')
-  const formatIprfPct = (val?: string) => (val && val.trim() ? `${val} %` : '%')
-  const formatIprfMasc = (val?: string) => (val && val.trim() ? `${val} dB` : 'dB')
-  const formatIprfPal = (val?: string) => (val && val.trim() ? val : '-')
-
-  const isFemale = exam.sex === 'F' || exam.sex === 'Feminino' || exam.sex === 'f'
-  const isMale = exam.sex === 'M' || exam.sex === 'Masculino' || exam.sex === 'm'
+  const formatIprfIntens = (val?: string) => (val && val.trim() ? `${val}` : '')
+  const formatIprfPct = (val?: string) => (val && val.trim() ? `${val}` : '')
+  const formatIprfMasc = (val?: string) => (val && val.trim() ? `${val}` : '')
 
   return (
     <div
@@ -441,73 +486,161 @@ export function AudiometriaFullPrint({
         padding: '2mm',
       }}
     >
-      {/* 1. Logo "Audição 360" centralizada no topo */}
+      {/* 1. Logo centralizada no topo */}
       <div style={{ textAlign: 'center', marginBottom: '8px' }}>
         <img
-          src={logoImg}
-          alt="Audição 360 Centro Auditivo"
-          style={{ maxHeight: '60px', width: 'auto', display: 'inline-block' }}
+          src={logoSrc}
+          alt="Logo da Clínica"
+          style={{
+            maxHeight: '65px',
+            maxWidth: '240px',
+            width: 'auto',
+            display: 'inline-block',
+            objectFit: 'contain',
+          }}
         />
       </div>
 
-      {/* 2. Cabeçalho com Nome, Data, CPF, DN, Sexo, Audiômetro e Calibração */}
-      <div style={{ fontSize: '8.5pt', marginBottom: '10px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-          <div style={{ flex: 1, borderBottom: '1px solid #000', marginRight: '16px' }}>
-            <strong>Nome:</strong> {exam.patientName || ''}
+      {/* 2. Cabeçalho com dados do paciente e equipamento */}
+      <div style={{ fontSize: '8.5pt', marginBottom: '8px' }}>
+        {/* Linha 1: Nome + Data */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            marginBottom: '3px',
+          }}
+        >
+          <div style={{ flex: 1, marginRight: '16px', display: 'flex', alignItems: 'baseline' }}>
+            <strong style={{ whiteSpace: 'nowrap' }}>Nome:</strong>
+            <span
+              style={{
+                marginLeft: '6px',
+                borderBottom: '1px solid #000',
+                flex: 1,
+                paddingBottom: '1px',
+              }}
+            >
+              {patientName}
+            </span>
           </div>
-          <div style={{ width: '150px' }}>
-            <strong>Data</strong> {formatDate(exam.date) || '___/___/______'}
+          <div style={{ width: '150px', display: 'flex', alignItems: 'baseline' }}>
+            <strong style={{ whiteSpace: 'nowrap' }}>Data:</strong>
+            <span
+              style={{
+                marginLeft: '6px',
+                borderBottom: '1px solid #000',
+                flex: 1,
+                textAlign: 'center',
+                paddingBottom: '1px',
+              }}
+            >
+              {formatDate(exam.date) || '___/___/______'}
+            </span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-          <div style={{ flex: 1, display: 'flex', gap: '20px' }}>
-            <div>
-              <strong>CPF:</strong> {maskCPF(exam.cpf) || '___________________'}
-            </div>
-            <div>
-              <strong>DN:</strong> {formatDate(exam.dob) || '___/___/______'}
-            </div>
+        {/* Linha 2: CPF + DN + Sexo + Convênio */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            marginBottom: '3px',
+            flexWrap: 'wrap',
+            gap: '8px 12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'baseline', minWidth: '150px' }}>
+            <strong style={{ whiteSpace: 'nowrap' }}>CPF:</strong>
+            <span
+              style={{
+                marginLeft: '4px',
+                borderBottom: '1px solid #000',
+                minWidth: '100px',
+                paddingBottom: '1px',
+              }}
+            >
+              {maskCPF(patientCpf) || '________________'}
+            </span>
           </div>
-          <div style={{ width: '150px' }}>
-            <strong>Sexo:</strong> F ({isFemale ? 'X' : ' '}) &nbsp; M ({isMale ? 'X' : ' '})
+          <div style={{ display: 'flex', alignItems: 'baseline', minWidth: '130px' }}>
+            <strong style={{ whiteSpace: 'nowrap' }}>DN:</strong>
+            <span
+              style={{
+                marginLeft: '4px',
+                borderBottom: '1px solid #000',
+                minWidth: '80px',
+                textAlign: 'center',
+                paddingBottom: '1px',
+              }}
+            >
+              {formatDate(patientDob) || '___/___/______'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline' }}>
+            <strong>Sexo:</strong>
+            <span style={{ marginLeft: '4px' }}>
+              F ({isFemale ? 'X' : ' '}) &nbsp; M ({isMale ? 'X' : ' '})
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', minWidth: '140px' }}>
+            <strong style={{ whiteSpace: 'nowrap' }}>Convênio:</strong>
+            <span
+              style={{
+                marginLeft: '4px',
+                borderBottom: '1px solid #000',
+                minWidth: '80px',
+                paddingBottom: '1px',
+              }}
+            >
+              {patientConvenio}
+            </span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <div style={{ flex: 1 }}>
-            <strong>Audiômetro:</strong> {exam.audiometer || 'do sistema'}
+        {/* Linha 3: Audiômetro + Calibração */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            marginTop: '2px',
+          }}
+        >
+          <div style={{ flex: 1, marginRight: '16px' }}>
+            <strong>Audiômetro:</strong> <span style={{ marginLeft: '4px' }}>{audiometer}</span>
           </div>
-          <div style={{ width: '150px' }}>
-            <strong>Calibração:</strong> {formatDate(exam.calibration) || 'do sistema'}
+          <div style={{ minWidth: '180px', textAlign: 'right' }}>
+            <strong>Calibração:</strong> <span style={{ marginLeft: '4px' }}>{calibration}</span>
           </div>
         </div>
       </div>
 
-      {/* Linha dupla superior separadora do cabeçalho */}
-      <div style={{ borderTop: '2.5px solid #000', marginBottom: '10px' }} />
+      {/* Linha divisória */}
+      <div style={{ borderTop: '2.5px solid #000', marginBottom: '8px' }} />
 
-      {/* 3. Título AUDIOMETRIA centralizado */}
+      {/* 3. Título AUDIOMETRIA */}
       <h2
         style={{
           textAlign: 'center',
           fontSize: '11pt',
           fontWeight: 800,
-          margin: '0 0 10px 0',
+          margin: '0 0 8px 0',
           letterSpacing: '0.05em',
         }}
       >
         AUDIOMETRIA
       </h2>
 
-      {/* 4. Dois audiogramas gráficos LADO A LADO: Orelha Direita (vermelho) e Orelha Esquerda (azul) */}
+      {/* 4. Audiogramas Lado a Lado (OD / OE) */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           gap: '12px',
-          marginBottom: '6px',
+          marginBottom: '4px',
         }}
       >
         {/* OD */}
@@ -521,11 +654,15 @@ export function AudiometriaFullPrint({
             compact
             hideLegend
           />
-          {/* 5. Abaixo de cada gráfico: MT, LRF, LDV em vermelho */}
-          <div style={{ fontSize: '8.5pt', fontWeight: 700, marginTop: '4px', color: '#dc2626' }}>
-            MT: <span style={{ textDecoration: 'underline' }}>{mtODStr}</span> &nbsp;&nbsp;&nbsp;
-            LRF: <span style={{ textDecoration: 'underline' }}>{lrfODStr}</span> &nbsp;&nbsp;&nbsp;
-            LDV: <span style={{ textDecoration: 'underline' }}>{ldvODStr}</span>
+          {/* MT, LRF, LDV OD */}
+          <div style={{ fontSize: '8pt', fontWeight: 700, marginTop: '4px', color: '#dc2626' }}>
+            MT:{' '}
+            <span style={{ borderBottom: '1px solid #dc2626', padding: '0 2px' }}>{mtODStr}</span>{' '}
+            dB &nbsp;&nbsp;&nbsp; LRF:{' '}
+            <span style={{ borderBottom: '1px solid #dc2626', padding: '0 2px' }}>{lrfODStr}</span>{' '}
+            dB &nbsp;&nbsp;&nbsp; LDV:{' '}
+            <span style={{ borderBottom: '1px solid #dc2626', padding: '0 2px' }}>{ldvODStr}</span>{' '}
+            dB
           </div>
         </div>
 
@@ -540,159 +677,427 @@ export function AudiometriaFullPrint({
             compact
             hideLegend
           />
-          {/* 5. Abaixo de cada gráfico: MT, LRF, LDV em azul */}
-          <div style={{ fontSize: '8.5pt', fontWeight: 700, marginTop: '4px', color: '#2563eb' }}>
-            MT: <span style={{ textDecoration: 'underline' }}>{mtOEStr}</span> &nbsp;&nbsp;&nbsp;
-            LRF: <span style={{ textDecoration: 'underline' }}>{lrfOEStr}</span> &nbsp;&nbsp;&nbsp;
-            LDV: <span style={{ textDecoration: 'underline' }}>{ldvOEStr}</span>
+          {/* MT, LRF, LDV OE */}
+          <div style={{ fontSize: '8pt', fontWeight: 700, marginTop: '4px', color: '#2563eb' }}>
+            MT:{' '}
+            <span style={{ borderBottom: '1px solid #2563eb', padding: '0 2px' }}>{mtOEStr}</span>{' '}
+            dB &nbsp;&nbsp;&nbsp; LRF:{' '}
+            <span style={{ borderBottom: '1px solid #2563eb', padding: '0 2px' }}>{lrfOEStr}</span>{' '}
+            dB &nbsp;&nbsp;&nbsp; LDV:{' '}
+            <span style={{ borderBottom: '1px solid #2563eb', padding: '0 2px' }}>{ldvOEStr}</span>{' '}
+            dB
           </div>
         </div>
       </div>
 
-      {/* 6. Tabela IPRF (Índice de Reconhecimento de Fala) */}
-      <div style={{ marginTop: '12px', marginBottom: '14px' }}>
-        <div
-          style={{ textAlign: 'center', fontSize: '8.5pt', fontWeight: 700, marginBottom: '2px' }}
-        >
-          Índice de Reconhecimento de Fala
-        </div>
-        <table
-          style={{
-            borderCollapse: 'collapse',
-            width: '62%',
-            margin: '0 auto',
-            border: '1.5px solid #000',
-          }}
-        >
-          <thead>
-            <tr>
-              <th style={{ ...thStyle, width: '22%' }}>-</th>
-              <th style={{ ...thStyle, width: '18%' }}>Intensid.</th>
-              <th style={{ ...thStyle, width: '20%' }}>Monossíl.</th>
-              <th style={{ ...thStyle, width: '20%' }}>Dissíl.</th>
-              <th style={{ ...thStyle, width: '20%' }}>Masc.</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={{ ...tdStyle, fontWeight: 600 }}>Pal. Faladas</td>
-              <td style={tdStyle}>{formatIprfPal(odVocal.palavras_faladas)}</td>
-              <td style={tdStyle}>{formatIprfPal(odVocal.palavras_faladas)}</td>
-              <td style={tdStyle}>{formatIprfPal(odVocal.palavras_faladas)}</td>
-              <td style={tdStyle}>-</td>
-            </tr>
-            <tr>
-              <td style={{ ...tdStyle, color: '#dc2626', fontWeight: 700 }}>OD</td>
-              <td style={{ ...tdStyle, color: '#dc2626', fontWeight: 700 }}>
-                {formatIprfIntens(odVocal.intensidade)}
-              </td>
-              <td style={{ ...tdStyle, color: '#dc2626', fontWeight: 700 }}>
-                {formatIprfPct(odVocal.monossilabos)}
-              </td>
-              <td style={{ ...tdStyle, color: '#dc2626', fontWeight: 700 }}>
-                {formatIprfPct(odVocal.dissilabos)}
-              </td>
-              <td style={{ ...tdStyle, color: '#2563eb', fontWeight: 700 }}>
-                {formatIprfMasc(odVocal.mascaramento)}
-              </td>
-            </tr>
-            <tr>
-              <td style={{ ...tdStyle, color: '#2563eb', fontWeight: 700 }}>OE</td>
-              <td style={{ ...tdStyle, color: '#2563eb', fontWeight: 700 }}>
-                {formatIprfIntens(oeVocal.intensidade)}
-              </td>
-              <td style={{ ...tdStyle, color: '#2563eb', fontWeight: 700 }}>
-                {formatIprfPct(oeVocal.monossilabos)}
-              </td>
-              <td style={{ ...tdStyle, color: '#2563eb', fontWeight: 700 }}>
-                {formatIprfPct(oeVocal.dissilabos)}
-              </td>
-              <td style={{ ...tdStyle, color: '#dc2626', fontWeight: 700 }}>
-                {formatIprfMasc(oeVocal.mascaramento)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* 7. Seção Parecer Audiológico com linhas horizontais e texto de referência padrão */}
-      <div style={{ marginTop: '10px', marginBottom: '20px' }}>
-        <div style={{ textAlign: 'center', fontSize: '9pt', fontWeight: 700, marginBottom: '6px' }}>
-          Parecer Audiológico
-        </div>
-
-        {/* Texto do laudo renderizado sobre/com linhas horizontais */}
-        <div style={{ position: 'relative', minHeight: '80px', marginBottom: '4px' }}>
-          {/* Linhas de caderno de fundo */}
+      {/* 5. Tabela IPRF + Tabela de Legenda Lado a Lado (conforme modelo visual) */}
+      <div
+        style={{
+          marginTop: '8px',
+          marginBottom: '8px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: '12px',
+        }}
+      >
+        {/* Tabela IPRF */}
+        <div style={{ flex: 1.2 }}>
           <div
+            style={{ textAlign: 'center', fontSize: '8pt', fontWeight: 700, marginBottom: '2px' }}
+          >
+            Índice de Reconhecimento de Fala
+          </div>
+          <table
             style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundImage: 'linear-gradient(to bottom, #000 1px, transparent 1px)',
-              backgroundSize: '100% 20px',
-              zIndex: 1,
-            }}
-          />
-          <div
-            style={{
-              position: 'relative',
-              zIndex: 2,
-              lineHeight: '20px',
-              fontSize: '8.5pt',
-              paddingTop: '2px',
-              whiteSpace: 'pre-wrap',
+              borderCollapse: 'collapse',
+              width: '100%',
+              border: '1.5px solid #000',
             }}
           >
-            {exam.report || ''}
-          </div>
+            <thead>
+              <tr>
+                <th style={{ ...thStyle, width: '20%' }}>-</th>
+                <th style={{ ...thStyle, width: '20%' }}>Intensid.</th>
+                <th style={{ ...thStyle, width: '20%' }}>Dissíl.</th>
+                <th style={{ ...thStyle, width: '20%' }}>monos</th>
+                <th style={{ ...thStyle, width: '20%' }}>Masc.</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ ...tdStyle, color: '#dc2626', fontWeight: 700 }}>OD</td>
+                <td style={{ ...tdStyle, color: '#dc2626', fontWeight: 700 }}>
+                  {formatIprfIntens(odVocal.intensidade)
+                    ? `${formatIprfIntens(odVocal.intensidade)} dB`
+                    : 'dB'}
+                </td>
+                <td style={{ ...tdStyle, color: '#dc2626', fontWeight: 700 }}>
+                  {formatIprfPct(odVocal.dissilabos)
+                    ? `${formatIprfPct(odVocal.dissilabos)} %`
+                    : '%'}
+                </td>
+                <td style={{ ...tdStyle, color: '#dc2626', fontWeight: 700 }}>
+                  {formatIprfPct(odVocal.monossilabos)
+                    ? `${formatIprfPct(odVocal.monossilabos)} %`
+                    : '%'}
+                </td>
+                <td style={{ ...tdStyle, color: '#2563eb', fontWeight: 700 }}>
+                  {formatIprfMasc(odVocal.mascaramento)
+                    ? `${formatIprfMasc(odVocal.mascaramento)} dB`
+                    : 'dB'}
+                </td>
+              </tr>
+              <tr>
+                <td style={{ ...tdStyle, color: '#2563eb', fontWeight: 700 }}>OE</td>
+                <td style={{ ...tdStyle, color: '#2563eb', fontWeight: 700 }}>
+                  {formatIprfIntens(oeVocal.intensidade)
+                    ? `${formatIprfIntens(oeVocal.intensidade)} dB`
+                    : 'dB'}
+                </td>
+                <td style={{ ...tdStyle, color: '#2563eb', fontWeight: 700 }}>
+                  {formatIprfPct(oeVocal.dissilabos)
+                    ? `${formatIprfPct(oeVocal.dissilabos)} %`
+                    : '%'}
+                </td>
+                <td style={{ ...tdStyle, color: '#2563eb', fontWeight: 700 }}>
+                  {formatIprfPct(oeVocal.monossilabos)
+                    ? `${formatIprfPct(oeVocal.monossilabos)} %`
+                    : '%'}
+                </td>
+                <td style={{ ...tdStyle, color: '#dc2626', fontWeight: 700 }}>
+                  {formatIprfMasc(oeVocal.mascaramento)
+                    ? `${formatIprfMasc(oeVocal.mascaramento)} dB`
+                    : 'dB'}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
-        {/* Texto de referência padrão no rodapé da seção */}
+        {/* Tabela de Legenda Compacta */}
+        <div style={{ flex: 1 }}>
+          <div
+            style={{ textAlign: 'center', fontSize: '8pt', fontWeight: 700, marginBottom: '2px' }}
+          >
+            Legenda
+          </div>
+          <table
+            style={{
+              borderCollapse: 'collapse',
+              width: '100%',
+              border: '1.5px solid #000',
+              fontSize: '6.5pt',
+            }}
+          >
+            <thead>
+              <tr>
+                <th style={{ ...thStyle, fontSize: '6pt', padding: '1px 2px', width: '40%' }}>
+                  PROCEDIMENTO DE TESTE
+                </th>
+                <th
+                  style={{
+                    ...thStyle,
+                    fontSize: '6pt',
+                    padding: '1px 2px',
+                    color: '#dc2626',
+                    width: '30%',
+                  }}
+                >
+                  ORELHA DIREITA
+                </th>
+                <th
+                  style={{
+                    ...thStyle,
+                    fontSize: '6pt',
+                    padding: '1px 2px',
+                    color: '#2563eb',
+                    width: '30%',
+                  }}
+                >
+                  ORELHA ESQUERDA
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ ...tdStyle, fontSize: '6pt', padding: '1px 2px', textAlign: 'left' }}>
+                  Presença de resposta não mascarada (VA)
+                </td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontSize: '6.5pt',
+                    padding: '1px 2px',
+                    color: '#dc2626',
+                    fontWeight: 700,
+                  }}
+                >
+                  ○
+                </td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontSize: '6.5pt',
+                    padding: '1px 2px',
+                    color: '#2563eb',
+                    fontWeight: 700,
+                  }}
+                >
+                  ✕
+                </td>
+              </tr>
+              <tr>
+                <td style={{ ...tdStyle, fontSize: '6pt', padding: '1px 2px', textAlign: 'left' }}>
+                  Presença de resposta mascarada (VA)
+                </td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontSize: '6.5pt',
+                    padding: '1px 2px',
+                    color: '#dc2626',
+                    fontWeight: 700,
+                  }}
+                >
+                  △
+                </td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontSize: '6.5pt',
+                    padding: '1px 2px',
+                    color: '#2563eb',
+                    fontWeight: 700,
+                  }}
+                >
+                  □
+                </td>
+              </tr>
+              <tr>
+                <td style={{ ...tdStyle, fontSize: '6pt', padding: '1px 2px', textAlign: 'left' }}>
+                  Ausência de resposta não mascarada (VA)
+                </td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontSize: '6.5pt',
+                    padding: '1px 2px',
+                    color: '#dc2626',
+                    fontWeight: 700,
+                  }}
+                >
+                  ○↓
+                </td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontSize: '6.5pt',
+                    padding: '1px 2px',
+                    color: '#2563eb',
+                    fontWeight: 700,
+                  }}
+                >
+                  ✕↓
+                </td>
+              </tr>
+              <tr>
+                <td style={{ ...tdStyle, fontSize: '6pt', padding: '1px 2px', textAlign: 'left' }}>
+                  Ausência de resposta mascarada (VA)
+                </td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontSize: '6.5pt',
+                    padding: '1px 2px',
+                    color: '#dc2626',
+                    fontWeight: 700,
+                  }}
+                >
+                  △↓
+                </td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontSize: '6.5pt',
+                    padding: '1px 2px',
+                    color: '#2563eb',
+                    fontWeight: 700,
+                  }}
+                >
+                  □↓
+                </td>
+              </tr>
+              <tr>
+                <td style={{ ...tdStyle, fontSize: '6pt', padding: '1px 2px', textAlign: 'left' }}>
+                  Presença de resposta não mascarada (VO)
+                </td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontSize: '6.5pt',
+                    padding: '1px 2px',
+                    color: '#dc2626',
+                    fontWeight: 700,
+                  }}
+                >
+                  &lt;
+                </td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontSize: '6.5pt',
+                    padding: '1px 2px',
+                    color: '#2563eb',
+                    fontWeight: 700,
+                  }}
+                >
+                  &gt;
+                </td>
+              </tr>
+              <tr>
+                <td style={{ ...tdStyle, fontSize: '6pt', padding: '1px 2px', textAlign: 'left' }}>
+                  Presença de resposta mascarada (VO)
+                </td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontSize: '6.5pt',
+                    padding: '1px 2px',
+                    color: '#dc2626',
+                    fontWeight: 700,
+                  }}
+                >
+                  [
+                </td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontSize: '6.5pt',
+                    padding: '1px 2px',
+                    color: '#2563eb',
+                    fontWeight: 700,
+                  }}
+                >
+                  ]
+                </td>
+              </tr>
+              <tr>
+                <td style={{ ...tdStyle, fontSize: '6pt', padding: '1px 2px', textAlign: 'left' }}>
+                  Ausência de resposta não mascarada (VO)
+                </td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontSize: '6.5pt',
+                    padding: '1px 2px',
+                    color: '#dc2626',
+                    fontWeight: 700,
+                  }}
+                >
+                  &lt;↓
+                </td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontSize: '6.5pt',
+                    padding: '1px 2px',
+                    color: '#2563eb',
+                    fontWeight: 700,
+                  }}
+                >
+                  &gt;↓
+                </td>
+              </tr>
+              <tr>
+                <td style={{ ...tdStyle, fontSize: '6pt', padding: '1px 2px', textAlign: 'left' }}>
+                  Ausência de resposta mascarada (VO)
+                </td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontSize: '6.5pt',
+                    padding: '1px 2px',
+                    color: '#dc2626',
+                    fontWeight: 700,
+                  }}
+                >
+                  [↓
+                </td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    fontSize: '6.5pt',
+                    padding: '1px 2px',
+                    color: '#2563eb',
+                    fontWeight: 700,
+                  }}
+                >
+                  ]↓
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 6. Parecer Audiológico (Caixa Retangular) */}
+      <div style={{ marginTop: '8px', marginBottom: '8px' }}>
+        <div
+          style={{ textAlign: 'center', fontSize: '8.5pt', fontWeight: 700, marginBottom: '4px' }}
+        >
+          Parecer Audiológico
+        </div>
+        <div
+          style={{
+            border: '1.5px solid #000',
+            minHeight: '65px',
+            padding: '6px 8px',
+            fontSize: '8pt',
+            lineHeight: 1.35,
+            whiteSpace: 'pre-wrap',
+          }}
+        >
+          {exam.report || ''}
+        </div>
+        {/* Rodapé da referência teórica */}
         <div
           style={{
             fontSize: '5.5pt',
             color: '#000000',
-            textAlign: 'justify',
-            fontStyle: 'italic',
-            marginTop: '4px',
+            textAlign: 'left',
+            fontStyle: 'normal',
+            marginTop: '3px',
           }}
         >
-          {REPORT_REFERENCE}
+          Laudo audiológico baseado em {REPORT_REFERENCE}
         </div>
       </div>
 
-      {/* 8. Assinaturas no rodapé: "Fonoaudiólogo" e "Cliente" */}
+      {/* 7. Assinatura do Especialista Centralizada */}
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginTop: '35px',
-          marginBottom: '20px',
-          padding: '0 20px',
+          textAlign: 'center',
+          marginTop: '24px',
+          marginBottom: '16px',
         }}
       >
-        <div style={{ width: '220px', textAlign: 'center' }}>
-          <div style={{ borderTop: '1px solid #000', paddingTop: '3px', fontSize: '8pt' }}>
-            Fonoaudiólogo
-          </div>
-        </div>
-        <div style={{ width: '220px', textAlign: 'center' }}>
-          <div style={{ borderTop: '1px solid #000', paddingTop: '3px', fontSize: '8pt' }}>
-            Cliente
-          </div>
+        <div style={{ display: 'inline-block', minWidth: '260px' }}>
+          <div style={{ borderTop: '1px solid #000', marginBottom: '4px' }} />
+          <div style={{ fontSize: '9pt', fontWeight: 700 }}>{specialistName}</div>
+          <div style={{ fontSize: '7.5pt', fontWeight: 600 }}>Fonoaudiólogo</div>
+          <div style={{ fontSize: '7.5pt' }}>Especialista em Audiologia</div>
+          <div style={{ fontSize: '7.5pt' }}>(CRFa {formattedCrfa || '—'})</div>
         </div>
       </div>
 
-      {/* 9. Rodapé final com o endereço da clínica cadastrado */}
+      {/* 8. Rodapé com Endereço da Clínica */}
       <div
         style={{
           fontSize: '7.5pt',
           color: '#000000',
           textAlign: 'center',
-          marginTop: '15px',
+          marginTop: '10px',
         }}
       >
         {clinicAddress}

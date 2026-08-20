@@ -240,6 +240,12 @@ export default function Configuracoes() {
   const [clinicEndereco, setClinicEndereco] = useState('')
   const [clinicTelefone, setClinicTelefone] = useState('')
   const [clinicEmail, setClinicEmail] = useState('')
+  const [clinicAudiometro, setClinicAudiometro] = useState('')
+  const [clinicCalibracao, setClinicCalibracao] = useState('')
+  const [clinicEspecialistaNome, setClinicEspecialistaNome] = useState('')
+  const [clinicEspecialistaCrfa, setClinicEspecialistaCrfa] = useState('')
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string>('')
   const [clinicSaving, setClinicSaving] = useState(false)
 
   // Sincroniza formulário de dados da clínica quando o singleton é carregado.
@@ -249,8 +255,24 @@ export default function Configuracoes() {
       setClinicEndereco(clinicSettings.endereco || '')
       setClinicTelefone(clinicSettings.telefone || '')
       setClinicEmail(clinicSettings.email || '')
+      setClinicAudiometro(clinicSettings.audiometro || '')
+      setClinicCalibracao(clinicSettings.calibracao || '')
+      setClinicEspecialistaNome(clinicSettings.especialista_nome || '')
+      setClinicEspecialistaCrfa(clinicSettings.especialista_crfa || '')
+      if (clinicSettings.logo_url) {
+        setLogoPreview(clinicSettings.logo_url)
+      }
     }
   }, [clinicSettings])
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setLogoFile(file)
+      const url = URL.createObjectURL(file)
+      setLogoPreview(url)
+    }
+  }
 
   const handleSaveClinic = async () => {
     setClinicSaving(true)
@@ -259,6 +281,11 @@ export default function Configuracoes() {
       endereco: clinicEndereco,
       telefone: clinicTelefone,
       email: clinicEmail,
+      audiometro: clinicAudiometro,
+      calibracao: clinicCalibracao,
+      especialista_nome: clinicEspecialistaNome,
+      especialista_crfa: clinicEspecialistaCrfa,
+      logoFile,
     })
     setClinicSaving(false)
     if (!res.success) {
@@ -815,52 +842,141 @@ export default function Configuracoes() {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-bold text-slate-900">Dados da Clínica</CardTitle>
               <CardDescription className="text-xs text-slate-500">
-                Informações cadastrais usadas no cabeçalho dos laudos impressos (audiometria e
-                futuros exames).
+                Informações cadastrais, logo, audiômetro padrão e dados do especialista usados no
+                laudo impresso da audiometria e demais exames.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <Label className="text-xs font-semibold text-slate-700">
-                    Nome da Clínica <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    value={clinicNome}
-                    onChange={(e) => setClinicNome(e.target.value)}
-                    placeholder="Ex.: Audição360"
-                    className="h-10 rounded-xl mt-1 text-sm border-slate-300"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Label className="text-xs font-semibold text-slate-700">Endereço completo</Label>
-                  <Input
-                    value={clinicEndereco}
-                    onChange={(e) => setClinicEndereco(e.target.value)}
-                    placeholder="Rua, número, bairro, cidade - UF, CEP"
-                    className="h-10 rounded-xl mt-1 text-sm border-slate-300"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs font-semibold text-slate-700">Telefone</Label>
-                  <Input
-                    value={clinicTelefone}
-                    onChange={(e) => setClinicTelefone(e.target.value)}
-                    placeholder="(00) 0000-0000"
-                    className="h-10 rounded-xl mt-1 text-sm border-slate-300"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs font-semibold text-slate-700">E-mail</Label>
-                  <Input
-                    type="email"
-                    value={clinicEmail}
-                    onChange={(e) => setClinicEmail(e.target.value)}
-                    placeholder="contato@clinica.com.br"
-                    className="h-10 rounded-xl mt-1 text-sm border-slate-300"
-                  />
+            <CardContent className="space-y-6">
+              {/* Logo da Clínica */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-700">Logo da Clínica</Label>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  {logoPreview ? (
+                    <div className="h-20 w-44 rounded-xl border border-slate-200 bg-white p-2 flex items-center justify-center overflow-hidden shadow-sm">
+                      <img
+                        src={logoPreview}
+                        alt="Logo Preview"
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-20 w-44 rounded-xl border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-[11px] text-slate-400 font-medium">
+                      Sem logo cadastrado
+                    </div>
+                  )}
+                  <div className="space-y-1">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoChange}
+                      className="h-10 rounded-xl text-xs border-slate-300 max-w-xs file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
+                    />
+                    <p className="text-[11px] text-slate-400">
+                      Formatos recomendados: PNG ou JPG com fundo transparente ou branco.
+                    </p>
+                  </div>
                 </div>
               </div>
+
+              {/* Informações Básicas da Clínica */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Identificação e Contato
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <Label className="text-xs font-semibold text-slate-700">
+                      Nome da Clínica <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      value={clinicNome}
+                      onChange={(e) => setClinicNome(e.target.value)}
+                      placeholder="Ex.: Audição360 Centro Auditivo"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-xs font-semibold text-slate-700">
+                      Endereço completo
+                    </Label>
+                    <Input
+                      value={clinicEndereco}
+                      onChange={(e) => setClinicEndereco(e.target.value)}
+                      placeholder="Rua, número, bairro, cidade - UF, CEP"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">Telefone</Label>
+                    <Input
+                      value={clinicTelefone}
+                      onChange={(e) => setClinicTelefone(e.target.value)}
+                      placeholder="(00) 0000-0000"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">E-mail</Label>
+                    <Input
+                      type="email"
+                      value={clinicEmail}
+                      onChange={(e) => setClinicEmail(e.target.value)}
+                      placeholder="contato@clinica.com.br"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Dados Padrão para Audiometria */}
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Dados do Laudo de Audiometria
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">Audiômetro</Label>
+                    <Input
+                      value={clinicAudiometro}
+                      onChange={(e) => setClinicAudiometro(e.target.value)}
+                      placeholder="Ex.: AD629 - Interacoustics"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">Calibração</Label>
+                    <Input
+                      value={clinicCalibracao}
+                      onChange={(e) => setClinicCalibracao(e.target.value)}
+                      placeholder="Ex.: 15/01/2025"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">
+                      Especialista Nome
+                    </Label>
+                    <Input
+                      value={clinicEspecialistaNome}
+                      onChange={(e) => setClinicEspecialistaNome(e.target.value)}
+                      placeholder="Ex.: Milton Soares Pacheco"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">
+                      Especialista CRFa
+                    </Label>
+                    <Input
+                      value={clinicEspecialistaCrfa}
+                      onChange={(e) => setClinicEspecialistaCrfa(e.target.value)}
+                      placeholder="Ex.: 3-11981-5"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="flex justify-end pt-2 border-t border-slate-100">
                 <Button
                   onClick={handleSaveClinic}

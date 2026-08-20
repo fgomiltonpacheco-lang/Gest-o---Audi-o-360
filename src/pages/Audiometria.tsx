@@ -50,6 +50,7 @@ import {
   emptyAudiogramMap,
   emptyIprfVocal,
   emptyAudiometryExamFull,
+  ClinicSettings,
 } from '@/types'
 import { calculateAge, formatDate, maskCPF } from '@/lib/formatters'
 import { mediaTritonal, mediaQuadritonal } from '@/lib/audiogram'
@@ -607,6 +608,7 @@ export default function Audiometria() {
     const fallbackNode = (
       <AudiometriaFullPrint
         exam={fullExam}
+        patient={patient}
         clinicSettings={clinicSettings}
         professional={currentUser ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa } : null}
       />
@@ -1482,7 +1484,7 @@ function ExamPreview({
 }: {
   exam: AudiometryExamFull
   patientAgeDetailed: string
-  clinicSettings?: { nome: string; endereco: string; telefone: string; email: string } | null
+  clinicSettings?: ClinicSettings | null
   professional?: { name: string; crmCrfa?: string } | null
 }) {
   const profName = (professional?.name?.trim() || SPECIALIST_NAME).toUpperCase()
