@@ -255,6 +255,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           roles: ADMIN_ONLY,
         },
         {
+          name: 'Relatório de Recebimentos',
+          path: '/financeiro/relatorio-recebimentos',
+          icon: FileText,
+          roles: ALL_ROLES,
+        },
+        {
           name: 'Despesas',
           path: '/financeiro/despesas',
           icon: ArrowDownCircle,

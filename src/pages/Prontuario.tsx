@@ -1735,7 +1735,11 @@ function TesteAparelhoSection({ patient }: { patient: Patient }) {
   }
 
   // Cria o vínculo de HearingAid a partir de um teste convertido em venda.
-  const vincularHearingAid = (t: HearingAidTest, saleValue: number): string => {
+  const vincularHearingAid = (
+    t: HearingAidTest,
+    saleValue: number,
+    method: PDVPaymentMethod = 'À vista',
+  ): string => {
     const item = stockItems.find((p) => p.id === t.inventory_item_id)
     const warrantyMonths = 24
     const warrantyEndDate = computeWarrantyEnd(today, warrantyMonths)
@@ -1749,7 +1753,7 @@ function TesteAparelhoSection({ patient }: { patient: Patient }) {
       serialNumber: t.inventory_item_id ? t.inventory_item_id : `TST-${today}`,
       saleDate: today,
       saleValue,
-      paymentMethod: 'À vista',
+      paymentMethod: method,
       warrantyMonths,
       warrantyEndDate,
       powerSource: 'Recarregável',
@@ -2115,7 +2119,7 @@ function TesteAparelhoSection({ patient }: { patient: Patient }) {
       )
 
       // Cria vínculo de aparelho auditivo no paciente
-      const warrantyEndDate = vincularHearingAid(diretaTarget, total)
+      const warrantyEndDate = vincularHearingAid(diretaTarget, total, diretaPagamento)
       toast({
         title: 'Venda direta registrada!',
         description: `Venda #${newSale.number} criada e estoque baixado.`,

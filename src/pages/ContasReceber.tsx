@@ -13,7 +13,10 @@ import {
   Trash2,
   PackagePlus,
   Percent,
+  ChevronsUpDown,
+  Check,
 } from 'lucide-react'
+import pb from '@/lib/pocketbase/client'
 import { useApp } from '@/context/AppContext'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
@@ -45,6 +48,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 import { formatCurrency, formatDate } from '@/lib/formatters'
 import {
   addDays,
@@ -106,6 +118,49 @@ export default function ContasReceberPage() {
   >([])
   const [recDescontoTipo, setRecDescontoTipo] = useState<'valor' | 'percentual'>('valor')
   const [recDescontoValor, setRecDescontoValor] = useState('')
+
+  // Catálogo de itens disponíveis (inventory + procedures) para o combobox
+  const [catalogoItens, setCatalogoItens] = useState<
+    Array<{
+      id: string
+      name: string
+      price: number
+      type: 'inventory' | 'procedure'
+    }>
+  >([])
+  const [popoverAbertoIdx, setPopoverAbertoIdx] = useState<number | null>(null)
+
+  useEffect(() => {
+    let ativo = true
+    async function carregarCatalogo() {
+      try {
+        const [invRes, procRes] = await Promise.all([
+          pb.collection('inventory').getFullList({ sort: 'name' }),
+          pb.collection('procedures').getFullList({ filter: 'active = true', sort: 'name' }),
+        ])
+        if (!ativo) return
+        const itensInv = (invRes || []).map((i: any) => ({
+          id: `inv-${i.id}`,
+          name: i.name + (i.brand ? ` (${i.brand})` : ''),
+          price: Number(i.salePrice) || 0,
+          type: 'inventory' as const,
+        }))
+        const itensProc = (procRes || []).map((p: any) => ({
+          id: `proc-${p.id}`,
+          name: p.name,
+          price: Number(p.valueParticular ?? p.value ?? 0),
+          type: 'procedure' as const,
+        }))
+        setCatalogoItens([...itensInv, ...itensProc])
+      } catch (err) {
+        console.error('Erro ao carregar catálogo para recebimento:', err)
+      }
+    }
+    carregarCatalogo()
+    return () => {
+      ativo = false
+    }
+  }, [])
 
   const [renVenc, setRenVenc] = useState('')
   const [renValor, setRenValor] = useState('')
@@ -717,18 +772,84 @@ export default function ContasReceberPage() {
                           <span className="text-[11px] font-semibold text-slate-400 w-5">
                             {idx + 1}.
                           </span>
-                          <Input
-                            value={item.nome}
-                            onChange={(e) =>
-                              setRecItensExtras((prev) =>
-                                prev.map((p) =>
-                                  p.id === item.id ? { ...p, nome: e.target.value } : p,
-                                ),
-                              )
-                            }
-                            placeholder="Nome do produto/procedimento"
-                            className="h-8 rounded-md text-sm flex-1"
-                          />
+                          <div className="flex-1 min-w-0">
+                            <Popover
+                              open={popoverAbertoIdx === idx}
+                              onOpenChange={(open) => setPopoverAbertoIdx(open ? idx : null)}
+                            >
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={popoverAbertoIdx === idx}
+                                  className="w-full h-8 justify-between text-left text-xs font-normal rounded-md border-slate-300 px-2.5 bg-white"
+                                >
+                                  <span className="truncate">
+                                    {item.nome || 'Selecione um produto ou procedimento...'}
+                                  </span>
+                                  <ChevronsUpDown className="ml-1.5 h-3.5 w-3.5 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[320px] sm:w-[380px] p-0" align="start">
+                                <Command
+                                  filter={(value, search) => {
+                                    if (!search) return 1
+                                    return value.toLowerCase().includes(search.toLowerCase())
+                                      ? 1
+                                      : 0
+                                  }}
+                                >
+                                  <CommandInput
+                                    placeholder="Buscar produto ou procedimento..."
+                                    className="h-8 text-xs"
+                                  />
+                                  <CommandList className="max-h-56">
+                                    <CommandEmpty className="py-2.5 text-center text-xs text-slate-400">
+                                      Nenhum item encontrado.
+                                    </CommandEmpty>
+                                    <CommandGroup heading="Produtos e Procedimentos">
+                                      {catalogoItens.map((cat) => (
+                                        <CommandItem
+                                          key={cat.id}
+                                          value={`${cat.name} ${cat.type === 'inventory' ? 'produto estoque' : 'procedimento'}`}
+                                          onSelect={() => {
+                                            setRecItensExtras((prev) =>
+                                              prev.map((p) =>
+                                                p.id === item.id
+                                                  ? {
+                                                      ...p,
+                                                      nome: cat.name,
+                                                      valor_unitario: cat.price.toFixed(2),
+                                                    }
+                                                  : p,
+                                              ),
+                                            )
+                                            setPopoverAbertoIdx(null)
+                                          }}
+                                          className="text-xs flex items-center justify-between cursor-pointer py-1.5"
+                                        >
+                                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                            <Check
+                                              className={`h-3.5 w-3.5 shrink-0 ${
+                                                item.nome === cat.name ? 'opacity-100' : 'opacity-0'
+                                              }`}
+                                            />
+                                            <span className="truncate">
+                                              {cat.type === 'inventory' ? '📦 ' : '🩺 '}
+                                              {cat.name}
+                                            </span>
+                                          </div>
+                                          <span className="font-bold text-teal-700 shrink-0 ml-2">
+                                            {formatCurrency(cat.price)}
+                                          </span>
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
                           <button
                             type="button"
                             onClick={() =>

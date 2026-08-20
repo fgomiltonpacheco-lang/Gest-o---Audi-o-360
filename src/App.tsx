@@ -37,6 +37,7 @@ import DetalhesVendaB2B from '@/pages/DetalhesVendaB2B'
 import EmpresasParceiras from '@/pages/EmpresasParceiras'
 import Auditoria from '@/pages/Auditoria'
 import ContasReceberPage from '@/pages/ContasReceber'
+import RelatorioRecebimentos from '@/pages/RelatorioRecebimentos'
 import Inadimplentes from '@/pages/Inadimplentes'
 import FluxoProjetado from '@/pages/FluxoProjetado'
 import Despesas from '@/pages/Despesas'
@@ -245,6 +246,14 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <ContasReceberPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/financeiro/relatorio-recebimentos"
+              element={
+                <ProtectedRoute>
+                  <RelatorioRecebimentos />
                 </ProtectedRoute>
               }
             />

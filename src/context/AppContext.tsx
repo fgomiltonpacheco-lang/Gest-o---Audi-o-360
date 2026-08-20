@@ -5089,6 +5089,78 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               : 'Recebimento parcial registrado',
           description: `R$ ${valor.toFixed(2)} • ${conta.cliente_nome}`,
         })
+
+        // FEATURE 2: Notificar profissional via chat interno quando secretária recebe pagamento
+        try {
+          const valorFormatado = valor.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+          const dataFormatada = data.data_recebimento
+            ? data.data_recebimento.split('-').reverse().join('/')
+            : new Date().toLocaleDateString('pt-BR')
+          const formaTexto = data.forma_recebimento || 'outros'
+          const mensagemTexto = `✅ Recebimento registrado: ${conta.cliente_nome} — R$ ${valorFormatado} via ${formaTexto} em ${dataFormatada}`
+
+          // Tentar identificar o profissional que atendeu o paciente
+          let destinatarioIds: string[] = []
+
+          if (conta.venda_id) {
+            try {
+              const saleRec: any = await pb.collection('sales').getOne(conta.venda_id)
+              if (saleRec?.appointmentId) {
+                const aptRec: any = await pb
+                  .collection('appointments')
+                  .getOne(saleRec.appointmentId)
+                if (aptRec?.professionalName) {
+                  // Busca o user pelo nome do profissional
+                  const profUsers = await pb.collection('users').getFullList({
+                    filter: `name ~ "${aptRec.professionalName}" || role = "profissional"`,
+                  })
+                  const matchedProf = profUsers.find(
+                    (u: any) =>
+                      u.name &&
+                      (u.name.toLowerCase().includes(aptRec.professionalName.toLowerCase()) ||
+                        aptRec.professionalName.toLowerCase().includes(u.name.toLowerCase())),
+                  )
+                  if (matchedProf) {
+                    destinatarioIds.push(matchedProf.id)
+                  }
+                }
+              }
+            } catch (errFindApt) {
+              console.warn('Não foi possível identificar agendamento da venda:', errFindApt)
+            }
+          }
+
+          // Se não encontrou profissional específico pelo agendamento, busca todos com role='profissional'
+          if (destinatarioIds.length === 0) {
+            try {
+              const allProfs = await pb.collection('users').getFullList({
+                filter: 'role = "profissional"',
+              })
+              destinatarioIds = allProfs.map((u: any) => u.id)
+            } catch (errProfs) {
+              console.warn('Erro ao listar profissionais para notificação:', errProfs)
+            }
+          }
+
+          const remetenteId = currentUser?.id || ''
+          // Envia a mensagem para os profissionais identificados
+          for (const destId of destinatarioIds) {
+            if (destId && destId !== remetenteId) {
+              await pb.collection('mensagens').create({
+                remetente: remetenteId,
+                destinatario: destId,
+                texto: mensagemTexto,
+                lida: false,
+              })
+            }
+          }
+        } catch (errNotif) {
+          console.error('Erro ao enviar notificação de recebimento ao profissional:', errNotif)
+        }
+
         return { success: true }
       } catch (err) {
         console.error('Erro ao registrar recebimento:', err)
