@@ -63,6 +63,7 @@ interface AppointmentModalProps {
   initialPatientName?: string
   allowEncaixe?: boolean
   isEncaixe?: boolean
+  readOnly?: boolean
   onSave: (appData: any, options?: { ignoreConflict?: boolean }) => boolean
 }
 
@@ -86,6 +87,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   initialPatientId,
   initialPatientName,
   allowEncaixe = false,
+  readOnly = false,
   onSave,
 }) => {
   const { patients } = useApp()
@@ -345,6 +347,11 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
     e.preventDefault()
     setErrorMessage('')
 
+    if (readOnly || appointmentToEdit?.status === 'Realizado') {
+      setErrorMessage('Agendamento com status "Realizado" não pode ser alterado.')
+      return
+    }
+
     if (!patientId && !patientSearch.trim()) {
       setErrorMessage('Selecione ou informe o paciente.')
       return
@@ -402,7 +409,13 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
         <DialogHeader className="border-b border-slate-100 pb-3">
           <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-teal-600" />
-            <span>{appointmentToEdit ? 'Editar Agendamento' : 'Novo Agendamento'}</span>
+            <span>
+              {appointmentToEdit
+                ? appointmentToEdit.status === 'Realizado' || readOnly
+                  ? 'Visualizar Agendamento (Finalizado)'
+                  : 'Editar Agendamento'
+                : 'Novo Agendamento'}
+            </span>
           </DialogTitle>
         </DialogHeader>
 
@@ -720,14 +733,16 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
               onClick={() => onOpenChange(false)}
               className="rounded-xl border-slate-300 text-xs font-semibold"
             >
-              Cancelar
+              {readOnly || appointmentToEdit?.status === 'Realizado' ? 'Fechar' : 'Cancelar'}
             </Button>
-            <Button
-              type="submit"
-              className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold shadow-sm"
-            >
-              Salvar Agendamento
-            </Button>
+            {!(readOnly || appointmentToEdit?.status === 'Realizado') && (
+              <Button
+                type="submit"
+                className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-semibold shadow-sm"
+              >
+                Salvar Agendamento
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

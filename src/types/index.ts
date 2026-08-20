@@ -126,6 +126,7 @@ export interface Appointment {
   procedureId?: string
   /** Nome do procedimento exibido (fallback do antigo campo "type"). */
   type: string
+  procedimentos?: string
   date: string // YYYY-MM-DD
   time: string // HH:mm
   duration: number // minutes
@@ -845,6 +846,7 @@ export interface StockItem {
   unidadeMedida?: string
   code?: string
   sku?: string
+  movements?: StockMovement[]
   createdAt?: string
   updatedAt?: string
 }
@@ -876,6 +878,7 @@ export interface MovimentacaoCaixa {
   descricao: string
   formaPagamento: FormaPagamentoCaixa
   data: string
+  saleId?: string
   created?: string
 }
 
@@ -898,6 +901,7 @@ export interface FechamentoCaixa {
   status: 'aberto' | 'fechado'
   observacao: string
   usuarioId?: string
+  usuarioNome?: string
   created?: string
   updated?: string
 }
@@ -961,6 +965,10 @@ export interface ContaReceber {
   venda_origem: string
   cliente_id: string
   cliente_nome: string
+  paciente_id?: string
+  empresa_parceira_id?: string
+  cliente_telefone?: string
+  data_venda?: string
   descricao: string
   valor_original: number
   valor_recebido: number
@@ -1030,6 +1038,8 @@ export type DespesaFormaPagamento =
   | 'pix'
   | 'boleto'
   | 'transferencia'
+  | 'cartao'
+  | 'cheque'
 
 export type DespesaStatus = 'a_pagar' | 'pago' | 'vencido' | 'cancelado'
 
@@ -1084,9 +1094,15 @@ export interface Despesa {
   categoria: DespesaCategoria
   forma_pagamento?: DespesaFormaPagamento
   status: DespesaStatus
-  valor_pago: number
+  valor_pago?: number
   observacoes?: string
+  motivo_cancelamento?: string
+  movimentacao_caixa_id?: string
   comprovante?: string
+  fornecedor?: string
+  comprovante_url?: string
+  recorrente?: boolean
+  frequencia_recorrencia?: 'mensal' | 'anual'
   created?: string
   updated?: string
 }
@@ -1123,29 +1139,38 @@ export const TEXTO_PADRAO_CONSENTIMENTO: Record<TipoConsentimento, string> = {
 export interface Consentimento {
   id: string
   paciente_id: string
-  tipo: TipoConsentimento
-  texto: string
-  arquivo_url?: string
-  data_consentimento: string
+  tipo?: TipoConsentimento
+  tipo_consentimento?: TipoConsentimento
+  texto?: string
+  versao_termo?: string
+  data_consentimento?: string
+  data_aceitacao?: string
+  ip_aceitacao?: string
+  usuario_id?: string
+  usuario_nome?: string
+  status?: string
+  data_revogacao?: string
+  observacoes?: string
   revogado_em?: string
   revogado_motivo?: string
   created?: string
   updated?: string
 }
-
 // ===== Módulo de Equipamentos =====
 
 export interface Equipment {
   id: string
   nome: string
-  modelo: string
-  marca: string
-  tipo: string
-  numero_serie: string
-  data_aquisicao: string
-  data_ultima_calibracao: string
-  data_proxima_calibracao: string
-  status: string
+  modelo?: string
+  marca?: string
+  tipo?: string
+  numero_serie?: string
+  data_aquisicao?: string
+  data_calibracao?: string
+  data_ultima_calibracao?: string
+  proxima_calibracao?: string
+  data_proxima_calibracao?: string
+  status?: string
   observacoes?: string
   created?: string
   updated?: string
@@ -1156,48 +1181,94 @@ export interface Equipment {
 export interface EmpresaParceira {
   id: string
   nome: string
+  razao_social?: string
+  nome_fantasia?: string
   cnpj?: string
+  inscricao_estadual?: string
   telefone?: string
   email?: string
   contato?: string
+  endereco?: string
+  cidade?: string
+  estado?: string
+  cep?: string
   comissao_padrao: number
   ativo: boolean
+  status?: string
   observacoes?: string
   created?: string
   updated?: string
 }
 
-export type VendaB2BStatus = 'pendente' | 'confirmada' | 'entregue' | 'cancelada'
+export type VendaB2BStatus =
+  | 'pendente'
+  | 'confirmada'
+  | 'entregue'
+  | 'cancelada'
+  | 'aprovada'
+  | 'concluida'
 
-export type NFServicoStatus = 'pendente' | 'emitida' | 'cancelada' | 'erro'
+export type NFServicoStatus =
+  | 'pendente'
+  | 'emitida'
+  | 'cancelada'
+  | 'cancelada_prefeitura'
+  | 'erro'
+  | 'rascunho'
 
 export interface NFServicoComissao {
   id: string
   venda_id: string
+  venda_b2b_id?: string
   parceiro_id: string
   numero_nf?: string
+  numero_nfse?: string
+  codigo_verificacao?: string
+  discriminacao_servico?: string
+  item_lista_servico?: string
+  valor_base?: number
+  tomador_razao_social?: string
+  tomador_cnpj?: string
+  tomador_endereco?: string
+  tomador_municipio?: string
+  tomador_uf?: string
+  tomador_cep?: string
+  tomador_email?: string
   valor_servico: number
   aliquota_iss: number
   valor_iss: number
   valor_liquido: number
   status: NFServicoStatus
   data_emissao?: string
+  pdf_url?: string
+  motivo_cancelamento?: string
   created?: string
   updated?: string
 }
 
 export interface VendaB2B {
   id: string
+  numero_venda?: string
+  cliente_empresa_id?: string
+  cliente_empresa_nome?: string
+  especialista_id?: string
+  especialista_nome?: string
+  status_repasse?: 'pendente' | 'recebido' | string
+  data_recebimento_comissao?: string
   parceiro_id: string
   parceiro_nome: string
   paciente_nome: string
   data_venda: string
   valor_total: number
-  comissao_percentual: number
-  comissao_valor: number
+  percentual_comissao?: number
+  comissao_percentual?: number
+  valor_comissao?: number
+  valor_repasse?: number
+  comissao_valor?: number
   status: VendaB2BStatus
+  nf?: NFServicoComissao | null
   nf_servico?: NFServicoComissao
-  itens?: string
+  itens?: ItemVendaB2B[] | string
   observacoes?: string
   created?: string
   updated?: string
@@ -1205,7 +1276,8 @@ export interface VendaB2B {
 
 export interface ClinicSettings {
   id: string
-  nome_clinica: string
+  nome?: string
+  nome_clinica?: string
   cnpj?: string
   endereco?: string
   telefone?: string
@@ -1223,22 +1295,31 @@ export type NfseB2BProvedor = 'betta' | 'giss' | 'eiss' | 'simples_nacional'
 export type NfseB2BAmbiente = 'homologacao' | 'producao'
 
 export interface PolicyTexts {
-  dados_cadastrais: { texto: string }
-  dados_saude: { texto: string }
-  marketing: { texto: string }
-  pesquisa: { texto: string }
+  dados_cadastrais: { texto: string; versao?: string }
+  dados_saude: { texto: string; versao?: string }
+  marketing: { texto: string; versao?: string }
+  pesquisa: { texto: string; versao?: string }
+  politica_privacidade?: { texto: string; versao?: string }
 }
 
 // ===== Módulo de Templates de Laudos =====
 
-export type ExamReportTipoExame = 'audiometria' | 'imitanciometria' | 'teste_aparelho' | 'outro'
+export type ExamReportTipoExame =
+  | 'audiometria'
+  | 'imitanciometria'
+  | 'teste_aparelho'
+  | 'personalizado'
+  | 'outro'
 
 export const EXAM_REPORT_TIPO_LABELS: Record<ExamReportTipoExame, string> = {
   audiometria: 'Audiometria Tonal e Vocal',
   imitanciometria: 'Imitanciometria',
   teste_aparelho: 'Teste com Aparelho',
+  personalizado: 'Personalizado',
   outro: 'Outro Exame',
 }
+
+export type LayoutElementType = string
 
 export type ExamReportStatus = 'rascunho' | 'publicado' | 'arquivado'
 
@@ -1269,6 +1350,11 @@ export interface LayoutElementStyle {
   paddingRight?: number
   lineHeight?: number
   opacity?: number
+  bold?: boolean
+  italic?: boolean
+  underline?: boolean
+  align?: 'left' | 'center' | 'right'
+  padding?: number
 }
 
 export interface LayoutElement {
@@ -1279,13 +1365,16 @@ export interface LayoutElement {
   width: number
   height: number
   content?: string
+  label?: string
   style?: LayoutElementStyle
   locked?: boolean
+  visible?: boolean
   zIndex?: number
   fieldKey?: string
   imageUrl?: string
   tableData?: { rows: number; cols: number; headers?: string[]; cells?: string[][] }
   config?: Record<string, any>
+  props?: Record<string, any>
 }
 
 export interface ExamReportTemplate {
@@ -1408,11 +1497,13 @@ export type ContaReceberForma =
   | 'credito'
   | 'pix'
   | 'convenio'
+  | 'convênio'
   | 'boleto'
   | 'promissoria'
   | 'deposito'
   | 'transferencia'
   | 'cartao'
+  | 'parcelado'
 
 export type ContaReceberOrigem = 'pdv' | 'b2b'
 

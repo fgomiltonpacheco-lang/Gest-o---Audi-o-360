@@ -1187,40 +1187,52 @@ export default function Agenda() {
                               </div>
 
                               <div className="flex items-center gap-1 shrink-0">
-                                {/* Seletor de Status (Agendado, Confirmado, Chegou, Cancelado) */}
-                                <Select
-                                  value={app.reception === 'presente' ? 'Chegou' : app.status}
-                                  onValueChange={(val: string) => {
-                                    if (val === 'Chegou') {
-                                      handleArrival(app)
-                                    } else {
-                                      updateAppointment(app.id, {
-                                        status: val as AppointmentStatus,
-                                        reception:
-                                          app.reception === 'presente' ? '' : app.reception,
-                                      })
-                                    }
-                                  }}
-                                >
-                                  <SelectTrigger className="h-8 text-xs font-semibold rounded-lg border-slate-200 bg-white/90 hover:bg-white w-[120px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="Agendado" className="text-xs">
-                                      Agendado
-                                    </SelectItem>
-                                    <SelectItem value="Confirmado" className="text-xs">
-                                      Confirmado
-                                    </SelectItem>
-                                    <SelectItem value="Chegou" className="text-xs">
-                                      Chegou
-                                    </SelectItem>
-                                    <SelectItem value="Cancelado" className="text-xs text-red-600">
-                                      Cancelado
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-
+                                {/* Seletor de Status ou Texto Fixo Finalizado */}
+                                {app.status === 'Realizado' ? (
+                                  <div
+                                    className="h-8 px-3 flex items-center justify-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 text-xs font-bold shadow-xs cursor-default"
+                                    title="Atendimento finalizado - alterações e exclusão bloqueadas"
+                                  >
+                                    <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                                    <span>Finalizado</span>
+                                  </div>
+                                ) : (
+                                  <Select
+                                    value={app.reception === 'presente' ? 'Chegou' : app.status}
+                                    onValueChange={(val: string) => {
+                                      if (val === 'Chegou') {
+                                        handleArrival(app)
+                                      } else {
+                                        updateAppointment(app.id, {
+                                          status: val as AppointmentStatus,
+                                          reception:
+                                            app.reception === 'presente' ? '' : app.reception,
+                                        })
+                                      }
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-8 text-xs font-semibold rounded-lg border-slate-200 bg-white/90 hover:bg-white w-[120px]">
+                                      <SelectValue placeholder="Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Agendado" className="text-xs">
+                                        Agendado
+                                      </SelectItem>
+                                      <SelectItem value="Confirmado" className="text-xs">
+                                        Confirmado
+                                      </SelectItem>
+                                      <SelectItem value="Chegou" className="text-xs">
+                                        Chegou
+                                      </SelectItem>
+                                      <SelectItem
+                                        value="Cancelado"
+                                        className="text-xs text-red-600"
+                                      >
+                                        Cancelado
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                )}
                                 {/* Botão Atender: visível apenas para Admin e Profissional.
                                     A secretária vê apenas o seletor de status (recepção). */}
                                 {canAttend && app.status !== 'Realizado' && (
@@ -1247,27 +1259,47 @@ export default function Agenda() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
+                                  disabled={app.status === 'Realizado'}
                                   onClick={() => {
+                                    if (app.status === 'Realizado') return
                                     setAppointmentToEdit(app)
                                     setModalOpen(true)
                                   }}
-                                  className="h-8 w-8 p-0 text-slate-600 hover:bg-white/80 rounded-lg"
-                                  title="Editar"
+                                  className={`h-8 w-8 p-0 rounded-lg ${
+                                    app.status === 'Realizado'
+                                      ? 'text-slate-300 opacity-40 cursor-not-allowed'
+                                      : 'text-slate-600 hover:bg-white/80'
+                                  }`}
+                                  title={
+                                    app.status === 'Realizado'
+                                      ? 'Atendimento finalizado não pode ser editado'
+                                      : 'Editar'
+                                  }
                                 >
                                   <Pencil className="w-3.5 h-3.5" />
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="ghost"
+                                  disabled={app.status === 'Realizado'}
                                   onClick={() => {
+                                    if (app.status === 'Realizado') return
                                     setAppointmentToDelete(app)
                                     setDeleteConfirmOpen(true)
                                   }}
-                                  className="h-8 w-8 p-0 text-red-500 hover:bg-white/80 rounded-lg"
-                                  title="Excluir"
+                                  className={`h-8 w-8 p-0 rounded-lg ${
+                                    app.status === 'Realizado'
+                                      ? 'text-slate-300 opacity-40 cursor-not-allowed'
+                                      : 'text-red-500 hover:bg-white/80'
+                                  }`}
+                                  title={
+                                    app.status === 'Realizado'
+                                      ? 'Atendimento finalizado não pode ser excluído da agenda'
+                                      : 'Excluir'
+                                  }
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
+                                </Button>{' '}
                               </div>
                             </div>
                           )
@@ -1368,11 +1400,23 @@ export default function Agenda() {
                             <div
                               key={app.id}
                               onClick={() => {
-                                setAppointmentToEdit(app)
-                                setModalOpen(true)
+                                if (app.status !== 'Realizado') {
+                                  setAppointmentToEdit(app)
+                                  setModalOpen(true)
+                                }
                               }}
-                              className={`p-2 rounded-lg border ${typeConfig.border} ${typeConfig.bg} text-left cursor-pointer hover:shadow-sm transition-all`}
+                              className={`p-2 rounded-lg border ${typeConfig.border} ${typeConfig.bg} text-left ${
+                                app.status === 'Realizado'
+                                  ? 'cursor-default'
+                                  : 'cursor-pointer hover:shadow-sm'
+                              } transition-all`}
+                              title={
+                                app.status === 'Realizado'
+                                  ? 'Atendimento finalizado'
+                                  : 'Clique para editar agendamento'
+                              }
                             >
+                              {' '}
                               <div className="flex items-center justify-between gap-1">
                                 <span className="text-[10px] font-extrabold text-slate-500 font-mono">
                                   {app.time}
@@ -1619,39 +1663,48 @@ export default function Agenda() {
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {/* Seletor de Status na tabela em lista */}
-                            <Select
-                              value={app.reception === 'presente' ? 'Chegou' : app.status}
-                              onValueChange={(val: string) => {
-                                if (val === 'Chegou') {
-                                  handleArrival(app)
-                                } else {
-                                  updateAppointment(app.id, {
-                                    status: val as AppointmentStatus,
-                                    reception: app.reception === 'presente' ? '' : app.reception,
-                                  })
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="h-8 text-xs font-semibold rounded-lg border-slate-200 bg-white w-[110px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Agendado" className="text-xs">
-                                  Agendado
-                                </SelectItem>
-                                <SelectItem value="Confirmado" className="text-xs">
-                                  Confirmado
-                                </SelectItem>
-                                <SelectItem value="Chegou" className="text-xs">
-                                  Chegou
-                                </SelectItem>
-                                <SelectItem value="Cancelado" className="text-xs text-red-600">
-                                  Cancelado
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-
+                            {/* Seletor de Status ou Texto Fixo Finalizado na tabela em lista */}
+                            {app.status === 'Realizado' ? (
+                              <div
+                                className="h-8 px-2.5 flex items-center justify-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 text-xs font-bold shadow-xs cursor-default"
+                                title="Atendimento finalizado - alterações e exclusão bloqueadas"
+                              >
+                                <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                                <span>Finalizado</span>
+                              </div>
+                            ) : (
+                              <Select
+                                value={app.reception === 'presente' ? 'Chegou' : app.status}
+                                onValueChange={(val: string) => {
+                                  if (val === 'Chegou') {
+                                    handleArrival(app)
+                                  } else {
+                                    updateAppointment(app.id, {
+                                      status: val as AppointmentStatus,
+                                      reception: app.reception === 'presente' ? '' : app.reception,
+                                    })
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="h-8 text-xs font-semibold rounded-lg border-slate-200 bg-white w-[110px]">
+                                  <SelectValue placeholder="Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Agendado" className="text-xs">
+                                    Agendado
+                                  </SelectItem>
+                                  <SelectItem value="Confirmado" className="text-xs">
+                                    Confirmado
+                                  </SelectItem>
+                                  <SelectItem value="Chegou" className="text-xs">
+                                    Chegou
+                                  </SelectItem>
+                                  <SelectItem value="Cancelado" className="text-xs text-red-600">
+                                    Cancelado
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
                             {/* Botão Atender na tabela em lista (somente Admin/Profissional) */}
                             {canAttend && app.status !== 'Realizado' && (
                               <Button
@@ -1677,25 +1730,47 @@ export default function Agenda() {
                             <Button
                               size="sm"
                               variant="ghost"
+                              disabled={app.status === 'Realizado'}
                               onClick={() => {
+                                if (app.status === 'Realizado') return
                                 setAppointmentToEdit(app)
                                 setModalOpen(true)
                               }}
-                              className="h-8 w-8 p-0 text-slate-600 hover:bg-slate-100 rounded-lg"
+                              className={`h-8 w-8 p-0 rounded-lg ${
+                                app.status === 'Realizado'
+                                  ? 'text-slate-300 opacity-40 cursor-not-allowed'
+                                  : 'text-slate-600 hover:bg-slate-100'
+                              }`}
+                              title={
+                                app.status === 'Realizado'
+                                  ? 'Atendimento finalizado não pode ser editado'
+                                  : 'Editar'
+                              }
                             >
                               <Pencil className="w-4 h-4" />
                             </Button>
                             <Button
                               size="sm"
                               variant="ghost"
+                              disabled={app.status === 'Realizado'}
                               onClick={() => {
+                                if (app.status === 'Realizado') return
                                 setAppointmentToDelete(app)
                                 setDeleteConfirmOpen(true)
                               }}
-                              className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 rounded-lg"
+                              className={`h-8 w-8 p-0 rounded-lg ${
+                                app.status === 'Realizado'
+                                  ? 'text-slate-300 opacity-40 cursor-not-allowed'
+                                  : 'text-red-500 hover:bg-red-50'
+                              }`}
+                              title={
+                                app.status === 'Realizado'
+                                  ? 'Atendimento finalizado não pode ser excluído da agenda'
+                                  : 'Excluir'
+                              }
                             >
                               <Trash2 className="w-4 h-4" />
-                            </Button>
+                            </Button>{' '}
                           </div>
                         </td>
                       </tr>
@@ -1767,6 +1842,7 @@ export default function Agenda() {
             setRetornoPatient(null)
           }
         }}
+        readOnly={appointmentToEdit?.status === 'Realizado'}
         appointmentToEdit={appointmentToEdit}
         initialDate={modalInitialDate}
         initialTime={modalInitialTime}
