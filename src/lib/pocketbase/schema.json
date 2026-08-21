@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-21T02:21:45.919Z",
+  "generatedAt": "2026-08-21T02:30:09.609Z",
   "collections": [
     {
       "name": "users",
@@ -2378,6 +2378,30 @@
         {
           "name": "especialista_crfa",
           "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cnpj",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "inscricao_estadual",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "inscricao_municipal",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "certificado_digital",
+          "type": "file",
           "required": false,
           "system": false
         }

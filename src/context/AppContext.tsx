@@ -784,7 +784,10 @@ interface AppContextType {
   // Configurações da Clínica
   clinicSettings: ClinicSettings | null
   saveClinicSettings: (
-    data: Partial<Omit<ClinicSettings, 'id'>> & { logoFile?: File | null },
+    data: Partial<Omit<ClinicSettings, 'id'>> & {
+      logoFile?: File | null
+      certificadoFile?: File | null
+    },
   ) => Promise<{ success: boolean; message?: string }>
   equipments: Equipment[]
   addEquipment: (
@@ -1238,10 +1241,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const logoUrl = clinicRec.logo
           ? pb.files.getURL(clinicRec, clinicRec.logo)
           : clinicRec.logo_url || ''
+        const certificadoUrl = clinicRec.certificado_digital
+          ? pb.files.getURL(clinicRec, clinicRec.certificado_digital)
+          : clinicRec.certificado_digital_url || ''
         setClinicSettings({
           id: clinicRec.id,
           nome: clinicRec.nome || '',
           cnpj: clinicRec.cnpj || '',
+          inscricao_estadual: clinicRec.inscricao_estadual || '',
+          inscricao_municipal: clinicRec.inscricao_municipal || '',
+          certificado_digital: clinicRec.certificado_digital || '',
+          certificado_digital_url: certificadoUrl,
           endereco: clinicRec.endereco || '',
           telefone: clinicRec.telefone || '',
           email: clinicRec.email || '',
@@ -1949,7 +1959,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ---------- Configurações da Clínica Handlers ----------
   const saveClinicSettings = async (
-    data: Partial<Omit<ClinicSettings, 'id'>> & { logoFile?: File | null },
+    data: Partial<Omit<ClinicSettings, 'id'>> & {
+      logoFile?: File | null
+      certificadoFile?: File | null
+    },
   ): Promise<{ success: boolean; message?: string }> => {
     try {
       // Garante que exista um registro singleton carregado.
@@ -1960,10 +1973,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (list.items.length > 0) {
             const r = list.items[0] as any
             const logoUrl = r.logo ? pb.files.getURL(r, r.logo) : r.logo_url || ''
+            const certificadoUrl = r.certificado_digital
+              ? pb.files.getURL(r, r.certificado_digital)
+              : r.certificado_digital_url || ''
             current = {
               id: r.id,
               nome: r.nome || '',
               cnpj: r.cnpj || '',
+              inscricao_estadual: r.inscricao_estadual || '',
+              inscricao_municipal: r.inscricao_municipal || '',
+              certificado_digital: r.certificado_digital || '',
+              certificado_digital_url: certificadoUrl,
               endereco: r.endereco || '',
               telefone: r.telefone || '',
               email: r.email || '',
@@ -1982,10 +2002,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       let updated: any
-      if (data.logoFile) {
+      if (data.logoFile || data.certificadoFile) {
         const formData = new FormData()
         if (data.nome !== undefined) formData.append('nome', data.nome)
         if (data.cnpj !== undefined) formData.append('cnpj', data.cnpj)
+        if (data.inscricao_estadual !== undefined)
+          formData.append('inscricao_estadual', data.inscricao_estadual)
+        if (data.inscricao_municipal !== undefined)
+          formData.append('inscricao_municipal', data.inscricao_municipal)
         if (data.endereco !== undefined) formData.append('endereco', data.endereco)
         if (data.telefone !== undefined) formData.append('telefone', data.telefone)
         if (data.email !== undefined) formData.append('email', data.email)
@@ -1996,7 +2020,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           formData.append('especialista_nome', data.especialista_nome)
         if (data.especialista_crfa !== undefined)
           formData.append('especialista_crfa', data.especialista_crfa)
-        formData.append('logo', data.logoFile)
+        if (data.logoFile) {
+          formData.append('logo', data.logoFile)
+        }
+        if (data.certificadoFile) {
+          formData.append('certificado_digital', data.certificadoFile)
+        }
 
         if (!current) {
           updated = await pb.collection('clinic_settings').create(formData)
@@ -2007,6 +2036,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const payload: Record<string, any> = {}
         if (data.nome !== undefined) payload.nome = data.nome
         if (data.cnpj !== undefined) payload.cnpj = data.cnpj
+        if (data.inscricao_estadual !== undefined)
+          payload.inscricao_estadual = data.inscricao_estadual
+        if (data.inscricao_municipal !== undefined)
+          payload.inscricao_municipal = data.inscricao_municipal
         if (data.endereco !== undefined) payload.endereco = data.endereco
         if (data.telefone !== undefined) payload.telefone = data.telefone
         if (data.email !== undefined) payload.email = data.email
@@ -2024,10 +2057,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       const logoUrl = updated.logo ? pb.files.getURL(updated, updated.logo) : updated.logo_url || ''
+      const certificadoUrl = updated.certificado_digital
+        ? pb.files.getURL(updated, updated.certificado_digital)
+        : updated.certificado_digital_url || ''
       setClinicSettings({
         id: updated.id,
         nome: updated.nome || '',
         cnpj: updated.cnpj || '',
+        inscricao_estadual: updated.inscricao_estadual || '',
+        inscricao_municipal: updated.inscricao_municipal || '',
+        certificado_digital: updated.certificado_digital || '',
+        certificado_digital_url: certificadoUrl,
         endereco: updated.endereco || '',
         telefone: updated.telefone || '',
         email: updated.email || '',

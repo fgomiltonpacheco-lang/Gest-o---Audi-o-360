@@ -52,6 +52,9 @@ import {
   FileText,
   ShieldCheck,
   MessageCircle,
+  Receipt,
+  UploadCloud,
+  FileCheck2,
 } from 'lucide-react'
 import type { Equipment, NfseB2BProvedor, NfseB2BAmbiente, PolicyTexts } from '@/types'
 import { getEquipmentStatus } from '@/types'
@@ -110,6 +113,15 @@ const DEFAULT_HOURS: OperatingHours = {
   friday: { open: true, start: '07:00', end: '19:00' },
   saturday: { open: true, start: '08:00', end: '12:00' },
   sunday: { open: false, start: '', end: '' },
+}
+
+function maskCNPJ(value: string): string {
+  const d = value.replace(/\D/g, '').slice(0, 14)
+  if (d.length <= 2) return d
+  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`
+  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`
+  if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`
 }
 
 // Lista de horários (00:00 a 23:30) para os selects.
@@ -248,6 +260,14 @@ export default function Configuracoes() {
   const [logoPreview, setLogoPreview] = useState<string>('')
   const [clinicSaving, setClinicSaving] = useState(false)
 
+  // ---- Seção Fiscal ----
+  const [fiscalCnpj, setFiscalCnpj] = useState('')
+  const [fiscalIE, setFiscalIE] = useState('')
+  const [fiscalIM, setFiscalIM] = useState('')
+  const [certFile, setCertFile] = useState<File | null>(null)
+  const [certCurrentName, setCertCurrentName] = useState('')
+  const [fiscalSaving, setFiscalSaving] = useState(false)
+
   // Sincroniza formulário de dados da clínica quando o singleton é carregado.
   useEffect(() => {
     if (clinicSettings) {
@@ -262,6 +282,12 @@ export default function Configuracoes() {
       if (clinicSettings.logo_url) {
         setLogoPreview(clinicSettings.logo_url)
       }
+
+      // Sincroniza dados fiscais
+      setFiscalCnpj(maskCNPJ(clinicSettings.cnpj || ''))
+      setFiscalIE(clinicSettings.inscricao_estadual || '')
+      setFiscalIM(clinicSettings.inscricao_municipal || '')
+      setCertCurrentName(clinicSettings.certificado_digital || '')
     }
   }, [clinicSettings])
 
@@ -271,6 +297,14 @@ export default function Configuracoes() {
       setLogoFile(file)
       const url = URL.createObjectURL(file)
       setLogoPreview(url)
+    }
+  }
+
+  const handleCertChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setCertFile(file)
+      setCertCurrentName(file.name)
     }
   }
 
@@ -294,6 +328,26 @@ export default function Configuracoes() {
         description: res.message || 'Não foi possível salvar os dados da clínica.',
         variant: 'destructive',
       })
+    }
+  }
+
+  const handleSaveFiscal = async () => {
+    setFiscalSaving(true)
+    const res = await saveClinicSettings({
+      cnpj: fiscalCnpj.trim(),
+      inscricao_estadual: fiscalIE.trim(),
+      inscricao_municipal: fiscalIM.trim(),
+      certificadoFile: certFile,
+    })
+    setFiscalSaving(false)
+    if (!res.success) {
+      toast({
+        title: 'Erro ao salvar dados fiscais',
+        description: res.message || 'Não foi possível salvar os dados fiscais.',
+        variant: 'destructive',
+      })
+    } else {
+      setCertFile(null)
     }
   }
 
@@ -786,6 +840,13 @@ export default function Configuracoes() {
             Dados da Clínica
           </TabsTrigger>
           <TabsTrigger
+            value="fiscal"
+            className="rounded-lg text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm px-4 py-2"
+          >
+            <Receipt className="w-3.5 h-3.5 mr-1.5" />
+            Fiscal
+          </TabsTrigger>
+          <TabsTrigger
             value="equipments"
             className="rounded-lg text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm px-4 py-2"
           >
@@ -985,6 +1046,118 @@ export default function Configuracoes() {
                 >
                   <Save className="w-4 h-4" />
                   {clinicSaving ? 'Salvando...' : 'Salvar'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ============ ABA: FISCAL ============ */}
+        <TabsContent value="fiscal" className="mt-4">
+          <Card className="rounded-2xl border-slate-200 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Receipt className="w-5 h-5 text-teal-600" />
+                Dados Fiscais
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                Informações cadastrais fiscais da clínica (CNPJ, Inscrições) e upload do Certificado
+                Digital.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Informações Fiscais */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Identificação Tributária
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">CNPJ</Label>
+                    <Input
+                      value={fiscalCnpj}
+                      onChange={(e) => setFiscalCnpj(maskCNPJ(e.target.value))}
+                      placeholder="00.000.000/0000-00"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">
+                      Inscrição Estadual (IE)
+                    </Label>
+                    <Input
+                      value={fiscalIE}
+                      onChange={(e) => setFiscalIE(e.target.value)}
+                      placeholder="Ex.: 123.456.789.000 ou Isento"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700">
+                      Inscrição Municipal (IM)
+                    </Label>
+                    <Input
+                      value={fiscalIM}
+                      onChange={(e) => setFiscalIM(e.target.value)}
+                      placeholder="Ex.: 123456"
+                      className="h-10 rounded-xl mt-1 text-sm border-slate-300"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Upload de Certificado Digital */}
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Certificado Digital (A1)
+                </h3>
+                <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold text-slate-800">
+                        Arquivo do Certificado Digital
+                      </Label>
+                      <p className="text-[11px] text-slate-500">
+                        Formatos aceitos: <span className="font-semibold text-slate-700">.pfx</span>
+                        , <span className="font-semibold text-slate-700">.p12</span> ou{' '}
+                        <span className="font-semibold text-slate-700">.pem</span> (máximo 10MB).
+                      </p>
+                    </div>
+                    {certCurrentName && (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-medium self-start sm:self-auto shrink-0">
+                        <FileCheck2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="truncate max-w-[220px]" title={certCurrentName}>
+                          {certCurrentName}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Input
+                      type="file"
+                      accept=".pfx,.p12,.pem"
+                      onChange={handleCertChange}
+                      className="h-10 rounded-xl text-xs border-slate-300 max-w-md file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 cursor-pointer"
+                    />
+                    {certFile && (
+                      <span className="text-xs text-teal-700 font-medium flex items-center gap-1">
+                        <UploadCloud className="w-3.5 h-3.5" />
+                        Pronto para salvar
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2 border-t border-slate-100">
+                <Button
+                  onClick={handleSaveFiscal}
+                  disabled={fiscalSaving}
+                  className="bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-xl shadow-sm flex items-center gap-2 h-10 px-5"
+                >
+                  <Save className="w-4 h-4" />
+                  {fiscalSaving ? 'Salvando...' : 'Salvar Dados Fiscais'}
                 </Button>
               </div>
             </CardContent>

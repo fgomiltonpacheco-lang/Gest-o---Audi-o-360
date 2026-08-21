@@ -864,6 +864,405 @@ export interface StockMovement {
   createdAt: string
 }
 
+
+export type MovimentacaoCaixaTipo = 'entrada' | 'saida'
+
+export type FormaPagamentoCaixa = 'dinheiro' | 'debito' | 'credito' | 'pix' | 'convenio' | 'boleto'
+
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+export interface FechamentoCaixa {
+  id: string
+  data: string
+  saldoInicial: number
+  saldoFinal: number
+  totalDinheiro: number
+  totalDebito: number
+  totalCredito: number
+  totalPix: number
+  totalConvenio: number
+  totalBoleto: number
+  totalEntradas: number
+  totalSaidas: number
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+// ===== Módulo de Contas a Receber =====
+=======
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+// ===== Módulo de Contas a Receber =====
+=======
+  formaPagamento: FormaPagamentoCaixa
+  data: string
+  saleId?: string
+  created?: string
+}
+=======
+export interface MovimentacaoCaixa {
+  id: string
+  fechamentoId: string
+  tipo: MovimentacaoCaixaTipo
+  valor: number
+  descricao: string
+  formaPagamento: FormaPagamentoCaixa
+  data: string
+  saleId?: string
+  created?: string
+}
+=======
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
 // ===== Módulo de Caixa =====
 
 export type MovimentacaoCaixaTipo = 'entrada' | 'saida'
@@ -902,12 +1301,1337 @@ export interface FechamentoCaixa {
   observacao: string
   usuarioId?: string
   usuarioNome?: string
-export const PAGE_SIZES: Record<string, { largura: number; altura: number; label: string }> = {
-  A4: { largura: 210, altura: 297, label: 'A4 (210 × 297 mm)' },
-  'A4-L': { largura: 297, altura: 210, label: 'A4 Paisagem (297 × 210 mm)' },
-  Carta: { largura: 215.9, altura: 279.4, label: 'Carta (215.9 × 279.4 mm)' },
-  'Carta-L': { largura: 279.4, altura: 215.9, label: 'Carta Paisagem (279.4 × 215.9 mm)' },
-  Ofício: { largura: 215.9, altura: 355.6, label: 'Ofício (215.9 × 355.6 mm)' },
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}=====
+
+export type MovimentacaoCaixaTipo = 'entrada' | 'saida'
+
+export type FormaPagamentoCaixa = 'dinheiro' | 'debito' | 'credito' | 'pix' | 'convenio' | 'boleto'
+
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+export interface FechamentoCaixa {
+  id: string
+  data: string
+  saldoInicial: number
+  saldoFinal: number
+  totalDinheiro: number
+  totalDebito: number
+  totalCredito: number
+  totalPix: number
+  totalConvenio: number
+  totalBoleto: number
+  totalEntradas: number
+  totalSaidas: number
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+// ===== Módulo de Contas a Receber =====
+=======
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+// ===== Módulo de Contas a Receber =====
+=======
+  formaPagamento: FormaPagamentoCaixa
+  data: string
+  saleId?: string
+  created?: string
+}
+=======
+export interface MovimentacaoCaixa {
+  id: string
+  fechamentoId: string
+  tipo: MovimentacaoCaixaTipo
+  valor: number
+  descricao: string
+  formaPagamento: FormaPagamentoCaixa
+  data: string
+  saleId?: string
+  created?: string
+}
+=======
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+export interface FechamentoCaixa {
+  id: string
+  data: string
+  saldoInicial: number
+  saldoFinal: number
+  totalDinheiro: number
+  totalDebito: number
+  totalCredito: number
+  totalPix: number
+  totalConvenio: number
+  totalBoleto: number
+  totalEntradas: number
+  totalSaidas: number
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+// ===== Módulo de Contas a Receber =====
+=======
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+// ===== Módulo de Contas a Receber =====
+=======
+  formaPagamento: FormaPagamentoCaixa
+  data: string
+  saleId?: string
+  created?: string
+}
+
+export interface FechamentoCaixa {
+  id: string
+  data: string
+  saldoInicial: number
+  saldoFinal: number
+  totalDinheiro: number
+  totalDebito: number
+  totalCredito: number
+  totalPix: number
+  totalConvenio: number
+  totalBoleto: number
+  totalEntradas: number
+  totalSaidas: number
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+
+// ===== Módulo de Contas a Receber ==========
+
+  created?: string
+  updated?: string
+}
+=======
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+export interface FechamentoCaixa {
+  id: string
+  data: string
+  saldoInicial: number
+  saldoFinal: number
+  totalDinheiro: number
+  totalDebito: number
+  totalCredito: number
+  totalPix: number
+  totalConvenio: number
+  totalBoleto: number
+  totalEntradas: number
+  totalSaidas: number
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+// ===== Módulo de Contas a Receber =====
+=======
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+
+// ===== Módulo de Contas a Receber =====
+=======
+  created?: string
+  updated?: string
+}
+=======
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+export interface FechamentoCaixa {
+  id: string
+  data: string
+  saldoInicial: number
+  saldoFinal: number
+  totalDinheiro: number
+  totalDebito: number
+  totalCredito: number
+  totalPix: number
+  totalConvenio: number
+  totalBoleto: number
+  totalEntradas: number
+  totalSaidas: number
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+  created?: string
+  updated?: string
+}
+=======
+  usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
 }=====
 
 export interface NotaFiscalItem {
@@ -1324,6 +3048,10 @@ export interface ClinicSettings {
   nome?: string
   nome_clinica?: string
   cnpj?: string
+  inscricao_estadual?: string
+  inscricao_municipal?: string
+  certificado_digital?: string
+  certificado_digital_url?: string
   endereco?: string
   telefone?: string
   email?: string
@@ -1733,12 +3461,11 @@ export const LEMBRETE_STATUS_CONFIRMACAO_LABELS: Record<LembreteStatusConfirmaca
   sem_resposta: 'Sem Resposta',
 }
 
-export const LEMBRETE_STATUS_ENVIO_CLASS: Record<LembreteStatusEnvio, string> = {
-  pendente: 'bg-slate-100 text-slate-700 border-slate-200',
-  enviado: 'bg-blue-100 text-blue-700 border-blue-200',
-  falhou: 'bg-red-100 text-red-700 border-red-200',
-  entregue: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  lido: 'bg-green-100 text-green-700 border-green-200',
+export const LEMBRETE_STATUS_CONFIRMACAO_CLASS: Record<LembreteStatusConfirmacao, string> = {
+  aguardando: 'bg-slate-100 text-slate-700 border-slate-200',
+  confirmado: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  cancelado: 'bg-red-100 text-red-700 border-red-200',
+  sem_resposta: 'bg-amber-100 text-amber-700 border-amber-200',
 }
 
 export const PAGE_SIZES: Record<string, { largura: number; altura: number; label: string }> = {
@@ -1747,6 +3474,292 @@ export const PAGE_SIZES: Record<string, { largura: number; altura: number; label
   Carta: { largura: 215.9, altura: 279.4, label: 'Carta (215.9 × 279.4 mm)' },
   'Carta-L': { largura: 279.4, altura: 215.9, label: 'Carta Paisagem (279.4 × 215.9 mm)' },
   Ofício: { largura: 215.9, altura: 355.6, label: 'Ofício (215.9 × 355.6 mm)' },
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+export const PAGE_SIZES: Record<string, { largura: number; altura: number; label: string }> = {
+  A4: { largura: 210, altura: 297, label: 'A4 (210 × 297 mm)' },
+  'A4-L': { largura: 297, altura: 210, label: 'A4 Paisagem (297 × 210 mm)' },
+  Carta: { largura: 215.9, altura: 279.4, label: 'Carta (215.9 × 279.4 mm)' },
+  'Carta-L': { largura: 279.4, altura: 215.9, label: 'Carta Paisagem (279.4 × 215.9 mm)' },
+  Ofício: { largura: 215.9, altura: 355.6, label: 'Ofício (215.9 × 355.6 mm)' },
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+export const LEMBRETE_STATUS_CONFIRMACAO_CLASS: Record<LembreteStatusConfirmacao, string> = {
+  aguardando: 'bg-slate-100 text-slate-700 border-slate-200',
+  confirmado: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  cancelado: 'bg-red-100 text-red-700 border-red-200',
+  sem_resposta: 'bg-amber-100 text-amber-700 border-amber-200',
+}
+
+export const PAGE_SIZES: Record<string, { largura: number; altura: number; label: string }> = {
+  A4: { largura: 210, altura: 297, label: 'A4 (210 × 297 mm)' },
+  'A4-L': { largura: 297, altura: 210, label: 'A4 Paisagem (297 × 210 mm)' },
+  Carta: { largura: 215.9, altura: 279.4, label: 'Carta (215.9 × 279.4 mm)' },
+  'Carta-L': { largura: 279.4, altura: 215.9, label: 'Carta Paisagem (279.4 × 215.9 mm)' },
+  Ofício: { largura: 215.9, altura: 355.6, label: 'Ofício (215.9 × 355.6 mm)' },
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+export const PAGE_SIZES: Record<string, { largura: number; altura: number; label: string }> = {
+  A4: { largura: 210, altura: 297, label: 'A4 (210 × 297 mm)' },
+  'A4-L': { largura: 297, altura: 210, label: 'A4 Paisagem (297 × 210 mm)' },
+  Carta: { largura: 215.9, altura: 279.4, label: 'Carta (215.9 × 279.4 mm)' },
+  'Carta-L': { largura: 279.4, altura: 215.9, label: 'Carta Paisagem (279.4 × 215.9 mm)' },
+  Ofício: { largura: 215.9, altura: 355.6, label: 'Ofício (215.9 × 355.6 mm)' },
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+export const LEMBRETE_STATUS_ENVIO_CLASS: Record<LembreteStatusEnvio, string> = {
+  pendente: 'bg-slate-100 text-slate-700 border-slate-200',
+  enviado: 'bg-blue-100 text-blue-700 border-blue-200',
+  falhou: 'bg-red-100 text-red-700 border-red-200',
+  entregue: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  lido: 'bg-green-100 text-green-700 border-green-200',
+}
+
+export const LEMBRETE_STATUS_CONFIRMACAO_CLASS: Record<LembreteStatusConfirmacao, string> = {
+  aguardando: 'bg-slate-100 text-slate-700 border-slate-200',
+  confirmado: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  cancelado: 'bg-red-100 text-red-700 border-red-200',
+  sem_resposta: 'bg-amber-100 text-amber-700 border-amber-200',
+}
+=======
+export const LEMBRETE_STATUS_CONFIRMACAO_CLASS: Record<LembreteStatusConfirmacao, string> = {
+  aguardando: 'bg-slate-100 text-slate-700 border-slate-200',
+  confirmado: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  cancelado: 'bg-red-100 text-red-700 border-red-200',
+  sem_resposta: 'bg-amber-100 text-amber-700 border-amber-200',
+}
+
+export const PAGE_SIZES: Record<string, { largura: number; altura: number; label: string }> = {
+  A4: { largura: 210, altura: 297, label: 'A4 (210 × 297 mm)' },
+  'A4-L': { largura: 297, altura: 210, label: 'A4 Paisagem (297 × 210 mm)' },
+  Carta: { largura: 215.9, altura: 279.4, label: 'Carta (215.9 × 279.4 mm)' },
+  'Carta-L': { largura: 279.4, altura: 215.9, label: 'Carta Paisagem (279.4 × 215.9 mm)' },
+  Ofício: { largura: 215.9, altura: 355.6, label: 'Ofício (215.9 × 355.6 mm)' },
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+export const PAGE_SIZES: Record<string, { largura: number; altura: number; label: string }> = {
+  A4: { largura: 210, altura: 297, label: 'A4 (210 × 297 mm)' },
+  'A4-L': { largura: 297, altura: 210, label: 'A4 Paisagem (297 × 210 mm)' },
+  Carta: { largura: 215.9, altura: 279.4, label: 'Carta (215.9 × 279.4 mm)' },
+  'Carta-L': { largura: 279.4, altura: 215.9, label: 'Carta Paisagem (279.4 × 215.9 mm)' },
+  Ofício: { largura: 215.9, altura: 355.6, label: 'Ofício (215.9 × 355.6 mm)' },
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
 }=====
 
 export interface NotaFiscalItem {
