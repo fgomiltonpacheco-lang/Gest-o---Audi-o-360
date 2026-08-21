@@ -16,10 +16,17 @@ import {
   RefreshCw,
   Info,
   CheckCircle2,
+  Printer,
+  Eye,
+  X,
 } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 import { formatCurrency, formatDate, maskCPF } from '@/lib/formatters'
 import { useToast } from '@/hooks/use-toast'
+import { useApp } from '@/context/AppContext'
+import { usePrint } from '@/components/print/PrintProvider'
+import { NotaFiscalPrint } from '@/components/print/PrintDocuments'
+import type { NotaFiscal, Patient } from '@/types'
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -51,6 +58,14 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 
 interface SaleRecord {
   id: string
@@ -86,6 +101,8 @@ export interface NfItemRow {
 
 export const NotasFiscaisPage: React.FC = () => {
   const { toast } = useToast()
+  const { clinicSettings, patients: appPatients } = useApp()
+  const { print } = usePrint()
 
   // Lista de vendas
   const [sales, setSales] = useState<SaleRecord[]>([])
@@ -95,6 +112,7 @@ export const NotasFiscaisPage: React.FC = () => {
 
   // Dados do paciente
   const [patient, setPatient] = useState<PatientRecord | null>(null)
+  const [fullPatient, setFullPatient] = useState<Patient | null>(null)
   const [loadingPatient, setLoadingPatient] = useState(false)
 
   // Itens da NF
@@ -108,6 +126,12 @@ export const NotasFiscaisPage: React.FC = () => {
   const [tipoNf, setTipoNf] = useState<'nfe' | 'nfse' | 'ambos'>('ambos')
   const [observacoes, setObservacoes] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Modal / Estado de Sucesso com opção de Visualizar / Imprimir PDF DANFE
+  const [successModalOpen, setSuccessModalOpen] = useState(false)
+  const [previewModalOpen, setPreviewModalOpen] = useState(false)
+  const [emittedNf, setEmittedNf] = useState<NotaFiscal | null>(null)
+  const [emittedPatient, setEmittedPatient] = useState<Patient | null>(null)
 
   // Carrega vendas e próximo número da NF
   const fetchProximoNumero = useCallback(async () => {
@@ -169,15 +193,24 @@ export const NotasFiscaisPage: React.FC = () => {
     if (sale.patientId) {
       setLoadingPatient(true)
       try {
-        const p = await pb.collection('patients').getOne<PatientRecord>(sale.patientId)
+        const p = await pb.collection('patients').getOne<Patient>(sale.patientId)
         setPatient(p)
+        setFullPatient(p)
       } catch {
-        setPatient({
-          id: sale.patientId,
-          name: sale.patientName || 'Paciente não encontrado',
-          cpf: '',
-          birthDate: '',
-        })
+        // Fallback local do AppContext ou objeto básico
+        const fallbackP = appPatients.find((pt) => pt.id === sale.patientId)
+        if (fallbackP) {
+          setPatient(fallbackP)
+          setFullPatient(fallbackP)
+        } else {
+          setPatient({
+            id: sale.patientId,
+            name: sale.patientName || 'Paciente não encontrado',
+            cpf: '',
+            birthDate: '',
+          })
+          setFullPatient(null)
+        }
       } finally {
         setLoadingPatient(false)
       }
@@ -192,6 +225,7 @@ export const NotasFiscaisPage: React.FC = () => {
             }
           : null,
       )
+      setFullPatient(null)
     }
 
     // Processar itens da venda
@@ -339,12 +373,24 @@ export const NotasFiscaisPage: React.FC = () => {
   const resetForm = () => {
     setSelectedSaleId('')
     setPatient(null)
+    setFullPatient(null)
     setItems([])
     setSerie('1')
     setDataEmissao(new Date().toISOString().split('T')[0])
     setTipoNf('ambos')
     setObservacoes('')
     fetchProximoNumero()
+  }
+
+  // Função para imprimir PDF DANFE
+  const handlePrintDanfe = (nfData: NotaFiscal, patData: Patient | null) => {
+    print({
+      title: `DANFE - NF-e Nº ${String(nfData.numero).padStart(9, '0')}`,
+      subtitle: `Série ${nfData.serie || '1'} • Emissão: ${formatDate(nfData.data_emissao)}`,
+      body: (
+        <NotaFiscalPrint notaFiscal={nfData} patient={patData} clinicSettings={clinicSettings} />
+      ),
+    })
   }
 
   // Submissão / Emissão
@@ -406,6 +452,10 @@ export const NotasFiscaisPage: React.FC = () => {
         }
       })
 
+      // Gera chave de acesso formatada se não fornecida
+      const rawNum = String(numeroNf).padStart(9, '0')
+      const chaveGerada = `35${dataEmissao.replace(/-/g, '').slice(2, 6)}00000000000155001000${rawNum}100000001`
+
       const payload = {
         numero: Number(numeroNf),
         serie: serie.trim(),
@@ -415,11 +465,43 @@ export const NotasFiscaisPage: React.FC = () => {
         tipo: tipoNf,
         itens: itensFormatados,
         valor_total: totalNF,
+        chave_acesso: chaveGerada,
         status: 'emitida',
         observacoes: observacoes.trim(),
       }
 
-      await pb.collection('notas_fiscais').create(payload)
+      const createdRecord = await pb.collection('notas_fiscais').create<NotaFiscal>(payload)
+
+      // Guardar referências para impressão / visualização
+      const patientForDanfe =
+        fullPatient ||
+        (patient
+          ? {
+              id: patient.id,
+              name: patient.name,
+              cpf: patient.cpf || '',
+              birthDate: patient.birthDate || '',
+              gender: 'Não informar' as const,
+              phone: patient.phone || '',
+              mobile: patient.mobile || '',
+              email: '',
+              cep: '',
+              street: '',
+              number: '',
+              neighborhood: '',
+              city: '',
+              state: '',
+              planType: 'Particular' as const,
+              hearingLossType: 'Normal' as const,
+              previousHearingAid: false,
+              status: 'Ativo' as const,
+              createdAt: new Date().toISOString(),
+            }
+          : null)
+
+      setEmittedNf(createdRecord)
+      setEmittedPatient(patientForDanfe)
+      setSuccessModalOpen(true)
 
       toast({
         title: 'Nota Fiscal emitida com sucesso!',
@@ -1106,6 +1188,132 @@ export const NotasFiscaisPage: React.FC = () => {
           </CardContent>
         </Card>
       </form>
+
+      {/* Modal de Sucesso com Ações de DANFE */}
+      <Dialog open={successModalOpen} onOpenChange={setSuccessModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="text-center sm:text-left">
+            <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3 mx-auto sm:mx-0">
+              <CheckCircle2 className="w-7 h-7" />
+            </div>
+            <DialogTitle className="text-lg font-bold text-slate-900">
+              Nota Fiscal Emitida com Sucesso!
+            </DialogTitle>
+            <DialogDescription className="text-sm text-slate-600">
+              A Nota Fiscal <strong>nº {emittedNf?.numero}</strong> (Série {emittedNf?.serie || '1'}
+              ) foi gerada e registrada no sistema com status <strong>Emitida</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 my-2 text-xs space-y-2">
+            <div className="flex justify-between">
+              <span className="text-slate-500">Destinatário:</span>
+              <strong className="text-slate-800">{emittedPatient?.name || 'Cliente'}</strong>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Valor Total:</span>
+              <strong className="text-teal-700 font-bold">
+                {formatCurrency(emittedNf?.valor_total || 0)}
+              </strong>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Data de Emissão:</span>
+              <span className="text-slate-700 font-medium">
+                {emittedNf?.data_emissao ? formatDate(emittedNf.data_emissao) : '—'}
+              </span>
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setSuccessModalOpen(false)}
+              className="w-full sm:w-auto"
+            >
+              Fechar
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setPreviewModalOpen(true)
+              }}
+              className="w-full sm:w-auto gap-1.5"
+            >
+              <Eye className="w-4 h-4" />
+              Visualizar DANFE
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (emittedNf) {
+                  handlePrintDanfe(emittedNf, emittedPatient)
+                }
+              }}
+              className="w-full sm:w-auto bg-blue-900 hover:bg-blue-950 text-white gap-1.5"
+            >
+              <Printer className="w-4 h-4" />
+              Imprimir PDF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Pré-visualização do PDF DANFE */}
+      <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader className="flex flex-row items-center justify-between pb-3 border-b border-slate-200">
+            <div>
+              <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-900" />
+                Visualização do DANFE
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                NF-e / Documento Auxiliar da Nota Fiscal Eletrônica
+              </DialogDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  if (emittedNf) {
+                    handlePrintDanfe(emittedNf, emittedPatient)
+                  }
+                }}
+                className="bg-blue-900 hover:bg-blue-950 text-white text-xs gap-1.5"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Imprimir / Salvar PDF
+              </Button>
+            </div>
+          </DialogHeader>
+
+          {emittedNf && (
+            <div className="py-4 bg-slate-100 rounded-lg p-2 sm:p-4 overflow-x-auto">
+              <div className="bg-white p-4 sm:p-6 rounded-md shadow-md mx-auto max-w-[210mm]">
+                <NotaFiscalPrint
+                  notaFiscal={emittedNf}
+                  patient={emittedPatient}
+                  clinicSettings={clinicSettings}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="pt-2 border-t border-slate-200">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPreviewModalOpen(false)}
+            >
+              Fechar Pré-visualização
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

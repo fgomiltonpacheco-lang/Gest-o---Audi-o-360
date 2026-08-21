@@ -902,6 +902,45 @@ export interface FechamentoCaixa {
   observacao: string
   usuarioId?: string
   usuarioNome?: string
+export const PAGE_SIZES: Record<string, { largura: number; altura: number; label: string }> = {
+  A4: { largura: 210, altura: 297, label: 'A4 (210 × 297 mm)' },
+  'A4-L': { largura: 297, altura: 210, label: 'A4 Paisagem (297 × 210 mm)' },
+  Carta: { largura: 215.9, altura: 279.4, label: 'Carta (215.9 × 279.4 mm)' },
+  'Carta-L': { largura: 279.4, altura: 215.9, label: 'Carta Paisagem (279.4 × 215.9 mm)' },
+  Ofício: { largura: 215.9, altura: 355.6, label: 'Ofício (215.9 × 355.6 mm)' },
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
   created?: string
   updated?: string
 }
@@ -1212,6 +1251,7 @@ export type VendaB2BStatus =
   | 'cancelada'
   | 'aprovada'
   | 'concluida'
+  | 'nf_emitida'
 
 export type NFServicoStatus =
   | 'pendente'
@@ -1300,7 +1340,7 @@ export interface ClinicSettings {
 
 // ===== Módulo NFS-e Config =====
 
-export type NfseB2BProvedor = 'betta' | 'giss' | 'eiss' | 'simples_nacional'
+export type NfseB2BProvedor = 'betta' | 'BETHA' | 'giss' | 'eiss' | 'simples_nacional'
 
 export type NfseB2BAmbiente = 'homologacao' | 'producao'
 
@@ -1345,7 +1385,7 @@ export interface LayoutElementStyle {
   fontWeight?: 'normal' | 'bold'
   fontStyle?: 'normal' | 'italic'
   textDecoration?: 'none' | 'underline'
-  textAlign?: 'left' | 'center' | 'right'
+  textAlign?: 'left' | 'center' | 'right' | 'justify'
   color?: string
   backgroundColor?: string
   borderColor?: string
@@ -1363,9 +1403,11 @@ export interface LayoutElementStyle {
   bold?: boolean
   italic?: boolean
   underline?: boolean
-  align?: 'left' | 'center' | 'right'
+  align?: 'left' | 'center' | 'right' | 'justify'
   padding?: number
 }
+
+export type LayoutElementProps = LayoutElement
 
 export interface LayoutElement {
   id: string
@@ -1699,6 +1741,45 @@ export const LEMBRETE_STATUS_ENVIO_CLASS: Record<LembreteStatusEnvio, string> = 
   lido: 'bg-green-100 text-green-700 border-green-200',
 }
 
+export const PAGE_SIZES: Record<string, { largura: number; altura: number; label: string }> = {
+  A4: { largura: 210, altura: 297, label: 'A4 (210 × 297 mm)' },
+  'A4-L': { largura: 297, altura: 210, label: 'A4 Paisagem (297 × 210 mm)' },
+  Carta: { largura: 215.9, altura: 279.4, label: 'Carta (215.9 × 279.4 mm)' },
+  'Carta-L': { largura: 279.4, altura: 215.9, label: 'Carta Paisagem (279.4 × 215.9 mm)' },
+  Ofício: { largura: 215.9, altura: 355.6, label: 'Ofício (215.9 × 355.6 mm)' },
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
 export const LEMBRETE_STATUS_CONFIRMACAO_CLASS: Record<LembreteStatusConfirmacao, string> = {
   aguardando: 'bg-slate-100 text-slate-700 border-slate-200',
   confirmado: 'bg-emerald-100 text-emerald-700 border-emerald-200',
@@ -1712,4 +1793,74 @@ export const PAGE_SIZES: Record<string, { largura: number; altura: number; label
   Carta: { largura: 215.9, altura: 279.4, label: 'Carta (215.9 × 279.4 mm)' },
   'Carta-L': { largura: 279.4, altura: 215.9, label: 'Carta Paisagem (279.4 × 215.9 mm)' },
   Ofício: { largura: 215.9, altura: 355.6, label: 'Ofício (215.9 × 355.6 mm)' },
+}
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
+}
+=======
+export const PAGE_SIZES: Record<string, { largura: number; altura: number; label: string }> = {
+  A4: { largura: 210, altura: 297, label: 'A4 (210 × 297 mm)' },
+  'A4-L': { largura: 297, altura: 210, label: 'A4 Paisagem (297 × 210 mm)' },
+  Carta: { largura: 215.9, altura: 279.4, label: 'Carta (215.9 × 279.4 mm)' },
+  'Carta-L': { largura: 279.4, altura: 215.9, label: 'Carta Paisagem (279.4 × 215.9 mm)' },
+  Ofício: { largura: 215.9, altura: 355.6, label: 'Ofício (215.9 × 355.6 mm)' },
+}=====
+
+export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome: string
+  tipo?: 'produto' | 'servico'
+  quantidade: number
+  valor_unitario: number
+  valor_total?: number
+  cfop?: string
+  ncm?: string
+  cnae?: string
+}
+
+export interface NotaFiscal {
+  id: string
+  numero: number
+  serie?: string
+  data_emissao: string
+  paciente: string
+  venda?: string
+  tipo: 'nfe' | 'nfse' | 'ambos' | string
+  itens?: NotaFiscalItem[] | string
+  valor_total: number
+  chave_acesso?: string
+  status?: string
+  pdf_gerado?: string
+  observacoes?: string
+  created?: string
+  updated?: string
 }

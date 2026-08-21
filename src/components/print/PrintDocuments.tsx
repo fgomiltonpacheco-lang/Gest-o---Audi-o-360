@@ -23,6 +23,7 @@ import { getPublishedTemplate } from '@/lib/examReportTemplates'
 import type { ExamReportTemplate, ExamReportTipoExame } from '@/types'
 import { ImitanciometriaPrint, type ImitPrintData } from '@/components/print/ImitanciometriaPrint'
 export { ImitanciometriaPrint, type ImitPrintData } from '@/components/print/ImitanciometriaPrint'
+export { NotaFiscalPrint } from '@/components/print/NotaFiscalPrint'
 
 const FREQUENCIES_AIR = [
   '250',
