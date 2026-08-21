@@ -819,6 +819,36 @@ export function getEquipmentStatus(
   return 'valid'
 }
 
+export type TipoConsentimento = 'dados_cadastrais' | 'dados_saude' | 'marketing' | 'pesquisa'
+
+export interface Consentimento {
+  id: string
+  paciente_id: string
+  tipo_consentimento: TipoConsentimento
+  texto_consentimento?: string
+  status: 'ativo' | 'revogado'
+  data_criacao: string
+  revogado_em?: string
+  motivo_revogacao?: string
+  clinic_id?: string
+  created?: string
+  updated?: string
+}
+
+export const ROTULO_CONSENTIMENTO: Record<TipoConsentimento, string> = {
+  dados_cadastrais: 'Dados Cadastrais',
+  dados_saude: 'Dados de Saúde',
+  marketing: 'Marketing',
+  pesquisa: 'Pesquisa',
+}
+
+export const TIPOS_CONSENTIMENTO: TipoConsentimento[] = [
+  'dados_cadastrais',
+  'dados_saude',
+  'marketing',
+  'pesquisa',
+]
+
 export const TEXTO_PADRAO_CONSENTIMENTO = {
   dados_cadastrais:
     'Autorizo a Audição360 a coletar e armazenar meus dados cadastrais (nome, CPF, RG, data de nascimento, endereço, telefone e e-mail) para fins de identificação, contato e faturamento dos serviços prestados.',
