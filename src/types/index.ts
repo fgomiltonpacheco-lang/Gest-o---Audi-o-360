@@ -954,3 +954,217 @@ export interface NotaFiscal {
   created: string
   updated: string
 }
+
+// === Despesas ===
+export type DespesaCategoria =
+  | 'aluguel'
+  | 'salario'
+  | 'comissao'
+  | 'fornecedor'
+  | 'marketing'
+  | 'tributo'
+  | 'utilidade'
+  | 'manutencao'
+  | 'outros'
+
+export const DESPESA_CATEGORIA_LABELS: Record<DespesaCategoria, string> = {
+  aluguel: 'Aluguel',
+  salario: 'Salário/Pró-labore',
+  comissao: 'Comissão',
+  fornecedor: 'Fornecedor',
+  marketing: 'Marketing',
+  tributo: 'Tributo/Imposto',
+  utilidade: 'Utilidade (água/luz/internet)',
+  manutencao: 'Manutenção',
+  outros: 'Outros',
+}
+
+export interface Despesa {
+  id: string
+  descricao: string
+  categoria: DespesaCategoria
+  valor: number
+  data: string
+  vencimento?: string
+  pago: boolean
+  observacoes?: string
+  clinic_id?: string
+  created: string
+  updated: string
+}
+
+// === ClinicSettings ===
+export interface ClinicSettings {
+  id?: string
+  nome?: string
+  endereco?: string
+  telefone?: string
+  email?: string
+  logo?: string
+  cnpj?: string
+  inscricao_estadual?: string
+  inscricao_municipal?: string
+  certificado_digital?: string
+  audiometro?: string
+  calibracao_audiometro?: string
+  especialista_nome?: string
+  especialista_crfa?: string
+}
+
+// === Equipment ===
+export interface Equipment {
+  id: string
+  name: string
+  tipo?: string
+  marca?: string
+  modelo?: string
+  serial?: string
+  calibration_date?: string
+  next_calibration?: string
+  status: 'ativo' | 'inativo' | 'manutencao'
+  clinic_id?: string
+  created: string
+  updated: string
+}
+
+// === PolicyTexts ===
+export interface PolicyTexts {
+  privacidade?: string
+  termos?: string
+  consentimento?: string
+}
+
+// === NFS-e B2B ===
+export type NfseB2BProvedor = 'padrao' | 'issnet' | 'giss' | 'simples'
+
+export type NfseB2BAmbiente = 'producao' | 'homologacao'
+
+// === Exam Reports ===
+export type ExamReportTipoExame = 'audiometria' | 'imitanciometria' | 'otoscopia' | 'personalizado'
+
+export const EXAM_REPORT_TIPO_LABELS: Record<ExamReportTipoExame, string> = {
+  audiometria: 'Audiometria',
+  imitanciometria: 'Imitanciometria',
+  otoscopia: 'Otoscopia',
+  personalizado: 'Personalizado',
+}
+
+export const EXAM_REPORT_STATUS_LABELS: Record<string, string> = {
+  rascunho: 'Rascunho',
+  finalizado: 'Finalizado',
+  assinado: 'Assinado',
+}
+
+export interface ExamReportTemplate {
+  id: string
+  nome: string
+  tipo_exame: ExamReportTipoExame
+  elementos: LayoutElement[]
+  status: 'rascunho' | 'finalizado' | 'assinado'
+  clinic_id?: string
+  created: string
+  updated: string
+}
+
+export interface ExamReportTemplateVersion {
+  id: string
+  template_id: string
+  version: number
+  elementos: LayoutElement[]
+  created: string
+}
+
+export type LayoutElementType =
+  | 'texto'
+  | 'imagem'
+  | 'tabela'
+  | 'linha'
+  | 'grafico'
+  | 'assinatura'
+  | 'checkbox'
+
+export interface LayoutElementStyle {
+  bold?: boolean
+  italic?: boolean
+  fontSize?: number
+  align?: 'left' | 'center' | 'right'
+  color?: string
+}
+
+export interface LayoutElement {
+  id: string
+  type: LayoutElementType
+  label: string
+  field?: string
+  x: number
+  y: number
+  width: number
+  height: number
+  style?: LayoutElementStyle
+  options?: string[]
+}
+
+// === Vendas B2B ===
+export type VendaB2BStatus = 'pendente' | 'aprovado' | 'entregue' | 'cancelado'
+
+export interface VendaB2B {
+  id: string
+  empresa_id: string
+  paciente_id?: string
+  itens: NFServicoComissao[]
+  valor_total: number
+  status: VendaB2BStatus
+  data: string
+  observacoes?: string
+  clinic_id?: string
+  created: string
+  updated: string
+}
+
+export type NFServicoStatus = 'pendente' | 'faturado' | 'cancelado'
+
+export interface NFServicoComissao {
+  id: string
+  descricao: string
+  quantidade: number
+  valor_unitario: number
+  valor_total: number
+  comissao_percentual?: number
+  comissao_valor?: number
+  profissional_id?: string
+  status: NFServicoStatus
+  tipo_fiscal?: 'produto' | 'servico'
+}
+
+export interface EmpresaParceira {
+  id: string
+  razao_social: string
+  nome_fantasia?: string
+  cnpj?: string
+  telefone?: string
+  email?: string
+  clinic_id?: string
+  created: string
+  updated: string
+}
+
+// === Contas a Receber ===
+export type ContaReceberStatus = 'pendente' | 'pago' | 'atrasado' | 'cancelado'
+
+export interface ContaReceber {
+  id: string
+  paciente_id: string
+  paciente_nome?: string
+  descricao: string
+  valor: number
+  valor_pago?: number
+  data_vencimento: string
+  data_pagamento?: string
+  forma_pagamento?: string
+  status: ContaReceberStatus
+  appointment_id?: string
+  venda_id?: string
+  clinic_id?: string
+  created: string
+  updated: string
+}
