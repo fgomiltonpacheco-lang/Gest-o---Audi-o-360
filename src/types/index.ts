@@ -874,6 +874,144 @@ export interface StockItem {
   updated: string
 }
 
+// === Auditoria ===
+export type AuditAcao = 'create' | 'update' | 'delete' | 'login' | 'logout' | 'export' | 'print'
+
+export const AUDIT_ACAO_LABELS: Record<AuditAcao, string> = {
+  create: 'Criação',
+  update: 'Atualização',
+  delete: 'Exclusão',
+  login: 'Login',
+  logout: 'Logout',
+  export: 'Exportação',
+  print: 'Impressão',
+}
+
+export interface AuditLog {
+  id: string
+  acao: AuditAcao
+  entidade: string
+  entidade_id?: string
+  descricao: string
+  usuario_id: string
+  usuario_nome?: string
+  clinic_id?: string
+  created: string
+}
+
+// === VendaItem (usado em vendas) ===
+export interface VendaItem {
+  id?: string
+  descricao: string
+  quantidade: number
+  valor_unitario: number
+  valor_total: number
+  tipo_fiscal?: 'produto' | 'servico'
+  produto_id?: string
+  procedimento_id?: string
+}
+
+// === Venda ===
+export type VendaStatus = 'pendente' | 'concluida' | 'cancelada'
+
+export interface Venda {
+  id: string
+  paciente_id: string
+  paciente_nome?: string
+  professional_id?: string
+  professional_name?: string
+  appointment_id?: string
+  itens: VendaItem[]
+  valor_total: number
+  valor_pago?: number
+  status: VendaStatus
+  data: string
+  observacoes?: string
+  clinic_id?: string
+  created: string
+  updated: string
+}
+
+// === CONVENIOS (usado em pacientes) ===
+export type Convenio =
+  | 'particular'
+  | 'unimed'
+  | 'bradesco_saude'
+  | 'amil'
+  | 'sulamerica'
+  | 'porto_seguro'
+  | 'hapvida'
+  | 'intermedica'
+  | 'outros'
+
+export const CONVENIO_LABELS: Record<Convenio, string> = {
+  particular: 'Particular',
+  unimed: 'Unimed',
+  bradesco_saude: 'Bradesco Saúde',
+  amil: 'Amil',
+  sulamerica: 'SulAmérica',
+  porto_seguro: 'Porto Seguro',
+  hapvida: 'Hapvida',
+  intermedica: 'Intermédica',
+  outros: 'Outros',
+}
+
+// === TIPO DE ATENDIMENTO (usado em agendamentos) ===
+export type TipoAtendimento =
+  | 'consulta'
+  | 'exame'
+  | 'retorno'
+  | 'protese'
+  | 'molde'
+  | 'manutencao'
+  | 'outros'
+
+export const TIPO_ATENDIMENTO_LABELS: Record<TipoAtendimento, string> = {
+  consulta: 'Consulta',
+  exame: 'Exame',
+  retorno: 'Retorno',
+  protese: 'Prótese',
+  molde: 'Molde',
+  manutencao: 'Manutenção',
+  outros: 'Outros',
+}
+
+// === STATUS DE AGENDAMENTO ===
+export type AgendamentoStatus =
+  | 'agendado'
+  | 'confirmado'
+  | 'em_atendimento'
+  | 'finalizado'
+  | 'cancelado'
+  | 'faltou'
+
+export const AGENDAMENTO_STATUS_LABELS: Record<AgendamentoStatus, string> = {
+  agendado: 'Agendado',
+  confirmado: 'Confirmado',
+  em_atendimento: 'Em Atendimento',
+  finalizado: 'Finalizado',
+  cancelado: 'Cancelado',
+  faltou: 'Faltou',
+}
+
+// === GARANTIA ===
+export type GarantiaStatus = 'ativa' | 'expirada' | 'prestes_a_expirar'
+
+export interface Garantia {
+  id: string
+  paciente_id: string
+  paciente_nome?: string
+  aparelho_id?: string
+  aparelho_descricao?: string
+  data_inicio: string
+  data_fim: string
+  status: GarantiaStatus
+  observacoes?: string
+  clinic_id?: string
+  created: string
+  updated: string
+}
+
 export interface StockMovement {
   id: string
   item_id: string
