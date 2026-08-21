@@ -819,6 +819,51 @@ export function getEquipmentStatus(
   return 'valid'
 }
 
+
+// Clean
+export interface NotaFiscalItem {
+=======
+  usuarioNome?: string
+  created?: string
+=======
+export interface NotaFiscalItem {=====
+
+export interface NotaFiscalItem {
+=======
+=======
+export interface StockItem {
+  id: string
+  name: string
+  brand?: string
+  model?: string
+  color?: string
+  category: StockCategory
+  batterySize?: BatterySize
+  accessorySubcategory?: AccessorySubcategory
+  minQuantity: number
+  currentQuantity: number
+  supplier?: string
+  costPrice: number
+  salePrice: number
+  notes?: string
+  estoqueMinimo?: number
+  dataValidade?: string
+  lote?: string
+  fabricante?: string
+  diasAlertaValidade?: number
+  categoria?: InventoryCategoria
+  unidadeMedida?: string
+  code?: string
+  sku?: string
+  movements?: StockMovement[]
+  createdAt?: string
+  updatedAt?: string
+  clinica_id?: string
+}
+=======
+// Clean
+export interface NotaFiscalItem {
+=======
 // ===== Módulo de Estoque (tipos usados por AppContext e Estoque.tsx) =====
 
 export interface StockItem {
@@ -836,7 +881,6 @@ export interface StockItem {
   costPrice: number
   salePrice: number
   notes?: string
-  // Novos campos de controle
   estoqueMinimo?: number
   dataValidade?: string
   lote?: string
@@ -849,9 +893,131 @@ export interface StockItem {
   movements?: StockMovement[]
   createdAt?: string
   updatedAt?: string
+  clinica_id?: string
+}=====
+
+// Clean
+export interface NotaFiscalItem {
+=======
+  usuarioNome?: string
+  created?: string
+=======
+export interface NotaFiscalItem {=====
+
+export interface NotaFiscalItem {
+=======
+=======
+export interface StockItem {
+  id: string
+  name: string
+  brand?: string
+  model?: string
+  color?: string
+  category: StockCategory
+  batterySize?: BatterySize
+  accessorySubcategory?: AccessorySubcategory
+  minQuantity: number
+  currentQuantity: number
+  supplier?: string
+  costPrice: number
+  salePrice: number
+  notes?: string
+  estoqueMinimo?: number
+  dataValidade?: string
+  lote?: string
+  fabricante?: string
+  diasAlertaValidade?: number
+  categoria?: InventoryCategoria
+  unidadeMedida?: string
+  code?: string
+  sku?: string
+  movements?: StockMovement[]
+  createdAt?: string
+  updatedAt?: string
+  clinica_id?: string
+}
+=======
+// Clean
+export interface NotaFiscalItem {
+=======
+  usuarioNome?: string
+  created?: string
+=======
+export interface NotaFiscalItem {=====
+
+export interface NotaFiscalItem {
+=======
+// Clean
+export interface NotaFiscalItem {
+=======
+  usuarioNome?: string
+  created?: string
+  updated?: string
 }
 
+export interface NotaFiscalItem {=====
+
+export interface NotaFiscalItem {
+=======
+export interface StockMovement {
+  id: string
+  stockItemId: string
+  type: 'entrada' | 'saida'
+  quantity: number
+  reason: string
+  responsible: string
+  patient?: string
+  supplier?: string
+  date: string
+  createdAt: string
+  clinica_id?: string
+}
+
+export type MovimentacaoCaixaTipo = 'entrada' | 'saida'
+
+export type FormaPagamentoCaixa = 'dinheiro' | 'debito' | 'credito' | 'pix' | 'convenio' | 'boleto'
+
+export interface MovimentacaoCaixa {
+  id: string
+  fechamentoId: string
+  tipo: MovimentacaoCaixaTipo
+  valor: number
+  descricao: string
+  formaPagamento: FormaPagamentoCaixa
+  date?: string
+  data?: string
+  saleId?: string
+  created?: string
+  clinica_id?: string
+}
+
+export interface FechamentoCaixa {
+  id: string
+  data: string
+  saldoInicial: number
+  saldoFinal: number
+  totalDinheiro: number
+  totalDebito: number
+  totalCredito: number
+  totalPix: number
+  totalConvenio: number
+  totalBoleto: number
+  totalEntradas: number
+  totalSaidas: number
+  totalVendas: number
+  quantidadeVendas: number
+  diferenca: number
+  status: 'aberto' | 'fechado'
+  observacao: string
   usuarioId?: string
+  usuarioNome?: string
+  created?: string
+  updated?: string
+  clinica_id?: string
+}
+
+export interface NotaFiscalItem {
+=======
   usuarioNome?: string
   created?: string
   updated?: string
