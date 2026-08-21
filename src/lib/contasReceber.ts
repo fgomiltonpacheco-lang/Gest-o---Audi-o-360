@@ -48,6 +48,10 @@ export function statusEfetivo(conta: ContaReceber): ContaReceberStatus {
 }
 
 export const STATUS_BADGE_CLASS: Record<ContaReceberStatus, string> = {
+  pendente: 'bg-blue-50 text-blue-700 border-blue-200',
+  pago: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  recebido: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  atrasado: 'bg-red-50 text-red-700 border-red-200',
   a_receber: 'bg-blue-50 text-blue-700 border-blue-200',
   recebido_parcial: 'bg-amber-50 text-amber-700 border-amber-200',
   recebido_total: 'bg-emerald-50 text-emerald-700 border-emerald-200',

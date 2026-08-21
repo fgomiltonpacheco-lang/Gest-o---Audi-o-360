@@ -247,6 +247,10 @@ export const EXAME_FIELDS: Record<ExamReportTipoExame, { label: string; field: s
     { label: 'Parecer', field: 'report' },
     { label: 'Observações', field: 'observations' },
   ],
+  otoscopia: [
+    { label: 'Parecer', field: 'report' },
+    { label: 'Observações', field: 'observations' },
+  ],
   personalizado: [
     { label: 'Parecer', field: 'report' },
     { label: 'Observações', field: 'observations' },

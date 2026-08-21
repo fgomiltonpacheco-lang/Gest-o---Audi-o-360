@@ -860,18 +860,53 @@ export const TEXTO_PADRAO_CONSENTIMENTO = {
     'Autorizo a utilização anonimizada dos meus dados de saúde auditiva para fins de pesquisa, ensino e publicações científicas, sem qualquer identificação pessoal.',
 }
 
+export interface StockItemMovement {
+  id: string
+  stockItemId?: string
+  date: string
+  type: 'Entrada' | 'Saída' | 'entrada' | 'saida'
+  quantity: number
+  responsible: string
+  reason?: string
+  supplier?: string
+  patient?: string
+  createdAt?: string
+}
+
 export interface StockItem {
   id: string
   name: string
   description?: string
-  quantity: number
+  brand?: string
+  model?: string
+  color?: string
+  category: StockCategory | string
+  batterySize?: BatterySize
+  accessorySubcategory?: AccessorySubcategory
+  quantity?: number
+  minQuantity?: number
   min_quantity?: number
-  unit_price: number
-  category?: string
+  currentQuantity?: number
+  estoqueMinimo?: number
+  dataValidade?: string
+  lote?: string
+  fabricante?: string
+  code?: string
+  sku?: string
+  diasAlertaValidade?: number
+  categoria?: InventoryCategoria | string
+  unidadeMedida?: string
+  supplier?: string
+  costPrice?: number
+  salePrice?: number
+  unit_price?: number
+  notes?: string
+  movements?: StockItemMovement[]
   tipo_fiscal?: 'produto' | 'servico'
   clinic_id?: string
-  created: string
-  updated: string
+  created?: string
+  updated?: string
+  createdAt?: string
 }
 
 // === Auditoria ===
@@ -1143,11 +1178,14 @@ export interface StockMovement {
 export type MovimentacaoCaixaTipo = 'entrada' | 'saida'
 export type FormaPagamentoCaixa =
   | 'dinheiro'
+  | 'debito'
+  | 'credito'
   | 'pix'
+  | 'convenio'
+  | 'boleto'
   | 'cartao_credito'
   | 'cartao_debito'
-  | 'boleto'
-  | 'convenio'
+  | 'cartao'
   | 'transferencia'
 
 export interface MovimentacaoCaixa {
@@ -1155,14 +1193,19 @@ export interface MovimentacaoCaixa {
   descricao: string
   tipo: MovimentacaoCaixaTipo
   valor: number
-  forma_pagamento: FormaPagamentoCaixa
+  forma_pagamento?: FormaPagamentoCaixa
+  formaPagamento?: FormaPagamentoCaixa
   data: string
+  fechamentoId?: string
+  fechamento_id?: string
   profissional_id?: string
+  usuarioId?: string
+  usuarioNome?: string
   appointment_id?: string
   sale_id?: string
   clinic_id?: string
-  created: string
-  updated: string
+  created?: string
+  updated?: string
 }
 
 export type FechamentoCaixaStatus = 'aberto' | 'fechado'
@@ -1364,17 +1407,20 @@ export interface ClinicSettings {
 // === Equipment ===
 export interface Equipment {
   id: string
-  name: string
+  nome?: string
+  name?: string
   tipo?: string
   marca?: string
   modelo?: string
   serial?: string
+  data_calibracao?: string
+  proxima_calibracao?: string
   calibration_date?: string
   next_calibration?: string
-  status: 'ativo' | 'inativo' | 'manutencao'
+  status?: 'ativo' | 'inativo' | 'manutencao' | string
   clinic_id?: string
-  created: string
-  updated: string
+  created?: string
+  updated?: string
 }
 
 // === PolicyTexts ===
@@ -1382,55 +1428,72 @@ export interface PolicyTexts {
   privacidade?: string
   termos?: string
   consentimento?: string
+  politica_privacidade?: string
+  dados_cadastrais?: string
+  dados_saude?: string
+  marketing?: string
+  pesquisa?: string
 }
 
 // === NFS-e B2B ===
-export type NfseB2BProvedor = 'padrao' | 'issnet' | 'giss' | 'simples'
+export type NfseB2BProvedor = 'BETHA' | 'padrao' | 'issnet' | 'giss' | 'simples'
 
 export type NfseB2BAmbiente = 'producao' | 'homologacao'
 
 // === Exam Reports ===
-export type ExamReportTipoExame = 'audiometria' | 'imitanciometria' | 'otoscopia' | 'personalizado'
+export type ExamReportTipoExame =
+  | 'audiometria'
+  | 'imitanciometria'
+  | 'otoscopia'
+  | 'teste_aparelho'
+  | 'personalizado'
 
 export const EXAM_REPORT_TIPO_LABELS: Record<ExamReportTipoExame, string> = {
   audiometria: 'Audiometria',
   imitanciometria: 'Imitanciometria',
   otoscopia: 'Otoscopia',
+  teste_aparelho: 'Teste de Aparelho',
   personalizado: 'Personalizado',
 }
 
+export type ExamReportStatus = 'rascunho' | 'publicado' | 'arquivado' | 'finalizado' | 'assinado'
+
 export const EXAM_REPORT_STATUS_LABELS: Record<string, string> = {
   rascunho: 'Rascunho',
+  publicado: 'Publicado',
+  arquivado: 'Arquivado',
   finalizado: 'Finalizado',
   assinado: 'Assinado',
 }
 
-export interface ExamReportTemplate {
-  id: string
-  nome: string
-  tipo_exame: ExamReportTipoExame
-  elementos: LayoutElement[]
-  status: 'rascunho' | 'finalizado' | 'assinado'
-  clinic_id?: string
-  created: string
-  updated: string
-}
-
-export interface ExamReportTemplateVersion {
-  id: string
-  template_id: string
-  version: number
-  elementos: LayoutElement[]
-  created: string
-}
+export type ExamReportOrientacao = 'retrato' | 'paisagem'
 
 export type LayoutElementType =
+  | 'text'
   | 'texto'
+  | 'field'
+  | 'campo'
+  | 'image'
   | 'imagem'
-  | 'tabela'
+  | 'line'
   | 'linha'
-  | 'grafico'
+  | 'rectangle'
+  | 'retangulo'
+  | 'table'
+  | 'tabela'
+  | 'audiogram'
+  | 'audiograma'
+  | 'timpanogram'
+  | 'timpanograma'
+  | 'signature'
   | 'assinatura'
+  | 'section'
+  | 'secao'
+  | 'watermark'
+  | 'marca_dagua'
+  | 'divider'
+  | 'divisor'
+  | 'grafico'
   | 'checkbox'
 
 export interface LayoutElementStyle {
@@ -1441,11 +1504,53 @@ export interface LayoutElementStyle {
   fontFamily?: string
   align?: 'left' | 'center' | 'right'
   color?: string
-  backgroundColor?: string
+  backgroundColor?: string | null
   borderColor?: string
   borderWidth?: number | string
   padding?: number | string
   lineHeight?: number | string
+  [key: string]: unknown
+}
+
+export interface LayoutElementProps {
+  content?: string
+  contentType?: 'static' | 'dynamic'
+  dynamicField?: string
+  fallback?: string
+  src?: string
+  opacity?: number
+  fit?: 'contain' | 'cover' | 'fill'
+  direction?: 'horizontal' | 'vertical'
+  color?: string
+  thickness?: number
+  columns?: { label: string; field: string; width: number }[]
+  rows?: Record<string, any>[]
+  headerBgColor?: string
+  alternateRowColor?: string
+  borderColor?: string
+  fontSize?: number
+  dynamicSource?: string | null
+  mode?: string
+  showBone?: boolean
+  showAir?: boolean
+  showLegend?: boolean
+  lineThickness?: number
+  odColor?: string
+  oeColor?: string
+  showAbsentPoints?: boolean
+  frequencies?: number[]
+  intensityRange?: number[]
+  who?: string
+  label?: string
+  showName?: boolean
+  showCrfa?: boolean
+  lineWidth?: number
+  title?: string
+  children?: string[]
+  collapsible?: boolean
+  titleBgColor?: string
+  fieldPath?: string
+  showLabel?: boolean
   [key: string]: unknown
 }
 
@@ -1458,40 +1563,133 @@ export interface LayoutElement {
   y: number
   width: number
   height: number
+  locked?: boolean
+  visible?: boolean
+  zIndex?: number
   style?: LayoutElementStyle
   options?: string[]
-  props?: Record<string, any>
+  props?: LayoutElementProps & Record<string, any>
   content?: string
   [key: string]: unknown
 }
 
+export interface ExamReportTemplate {
+  id: string
+  nome_modelo: string
+  nome?: string
+  tipo_exame: ExamReportTipoExame
+  descricao?: string
+  versao?: number
+  status: ExamReportStatus
+  largura_pagina: number
+  altura_pagina: number
+  orientacao: ExamReportOrientacao
+  margem_superior: number
+  margem_inferior: number
+  margem_esquerda: number
+  margem_direita: number
+  estrutura_layout: LayoutElement[]
+  elementos?: LayoutElement[]
+  logo_url?: string
+  cabecalho_configuracao?: Record<string, unknown>
+  rodape_configuracao?: Record<string, unknown>
+  fonte_padrao?: string
+  tamanho_fonte_padrao?: number
+  cor_primaria?: string
+  cor_secundaria?: string
+  observacoes?: string
+  criado_por?: string
+  atualizado_por?: string
+  publicado_por?: string
+  publicado_em?: string
+  clinic_id?: string
+  clinica_id?: string
+  created?: string
+  updated?: string
+}
+
+export interface ExamReportTemplateVersion {
+  id: string
+  template_id: string
+  numero_versao: number
+  version?: number
+  estrutura_layout: LayoutElement[]
+  elementos?: LayoutElement[]
+  alterado_por?: string
+  motivo_alteracao?: string
+  created?: string
+}
+
+export interface ItemVendaB2B {
+  id: string
+  venda_b2b_id?: string
+  produto_id?: string
+  produto_nome?: string
+  quantidade: number
+  valor_unitario: number
+  valor_subtotal: number
+  created?: string
+}
+
 // === Vendas B2B ===
-export type VendaB2BStatus = 'pendente' | 'aprovado' | 'entregue' | 'cancelado'
+export type VendaB2BStatus =
+  | 'pendente'
+  | 'aprovado'
+  | 'aprovada'
+  | 'concluida'
+  | 'entregue'
+  | 'cancelado'
+  | 'cancelada'
 
 export interface VendaB2B {
   id: string
-  empresa_id: string
+  empresa_id?: string
+  cliente_empresa_id?: string
   cliente_empresa_nome?: string
-  numero_venda?: string | number
+  parceiro_id?: string
+  parceiro_nome?: string
   paciente_id?: string
-  itens: NFServicoComissao[]
+  paciente_nome?: string
+  numero_venda?: string | number
+  itens?: ItemVendaB2B[] | NFServicoComissao[]
   valor_total: number
+  percentual_comissao?: number
+  comissao_percentual?: number
+  valor_comissao?: number
+  comissao_valor?: number
+  valor_repasse?: number
   status: VendaB2BStatus
-  data: string
+  status_repasse?: 'pendente' | 'recebido' | string
+  data_recebimento_comissao?: string
+  especialista_id?: string
+  especialista_nome?: string
+  data?: string
+  data_venda?: string
   observacoes?: string
+  nf?: NFServicoComissao | null
   clinic_id?: string
-  created: string
-  updated: string
+  created?: string
+  updated?: string
 }
 
-export type NFServicoStatus = 'pendente' | 'faturado' | 'cancelado'
+export type NFServicoStatus =
+  | 'pendente'
+  | 'faturado'
+  | 'emitida'
+  | 'cancelado'
+  | 'cancelada'
+  | 'cancelada_prefeitura'
 
 export interface NFServicoComissao {
   id: string
-  descricao: string
-  quantidade: number
-  valor_unitario: number
-  valor_total: number
+  venda_id?: string
+  parceiro_id?: string
+  numero_nf?: string
+  valor_servico?: number
+  descricao?: string
+  quantidade?: number
+  valor_unitario?: number
+  valor_total?: number
   comissao_percentual?: number
   comissao_valor?: number
   profissional_id?: string
@@ -1513,6 +1711,8 @@ export interface NFServicoComissao {
   aliquota_iss?: number
   valor_iss?: number
   valor_liquido?: number
+  created?: string
+  updated?: string
 }
 
 export interface EmpresaParceira {
@@ -1751,3 +1951,12 @@ export interface LembreteWhatsapp {
     phone: string
   }
 }
+
+// === Tamanhos de Página para Laudos ===
+export const PAGE_SIZES: Record<string, { label: string; largura: number; altura: number }> = {
+  A4: { label: 'A4 (210 × 297 mm)', largura: 210, altura: 297 },
+  A5: { label: 'A5 (148 × 210 mm)', largura: 148, altura: 210 },
+  Carta: { label: 'Carta (216 × 279 mm)', largura: 216, altura: 279 },
+  Oficio: { label: 'Ofício (216 × 356 mm)', largura: 216, altura: 356 },
+}
+export type PageSize = keyof typeof PAGE_SIZES
