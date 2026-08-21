@@ -875,9 +875,93 @@ export interface StockItem {
 }
 
 // === Auditoria ===
-export type AuditAcao = 'create' | 'update' | 'delete' | 'login' | 'logout' | 'export' | 'print'
+export type AuditModulo =
+  | 'pacientes'
+  | 'agendamentos'
+  | 'agenda'
+  | 'prontuarios'
+  | 'prontuario'
+  | 'exames'
+  | 'audiometria'
+  | 'estoque'
+  | 'financeiro'
+  | 'aparelhos'
+  | 'configuracoes'
+  | 'vendas'
+  | 'vendas_pdv'
+  | 'vendas_b2b'
+  | 'procedures'
+  | 'convenios'
+  | 'clinica'
+  | 'caixa'
+  | 'parceiros'
+  | 'relatorios'
+  | 'despesas'
 
-export const AUDIT_ACAO_LABELS: Record<AuditAcao, string> = {
+export const AUDIT_MODULO_LABELS: Record<AuditModulo, string> = {
+  pacientes: 'Pacientes',
+  agendamentos: 'Agendamentos',
+  agenda: 'Agenda',
+  prontuarios: 'Prontuários',
+  prontuario: 'Prontuário',
+  exames: 'Exames',
+  audiometria: 'Audiometria',
+  estoque: 'Estoque',
+  financeiro: 'Financeiro',
+  aparelhos: 'Aparelhos Auditivos',
+  configuracoes: 'Configurações',
+  vendas: 'Vendas',
+  vendas_pdv: 'Vendas PDV',
+  vendas_b2b: 'Vendas B2B',
+  procedures: 'Procedimentos',
+  convenios: 'Convênios',
+  clinica: 'Clínica',
+  caixa: 'Caixa',
+  parceiros: 'Empresas Parceiras',
+  relatorios: 'Relatórios',
+  despesas: 'Despesas',
+}
+
+export type AuditAcao =
+  | 'create'
+  | 'update'
+  | 'delete'
+  | 'login'
+  | 'logout'
+  | 'export'
+  | 'print'
+  | 'criar'
+  | 'editar'
+  | 'deletar'
+  | 'cancelar'
+  | 'estornar'
+  | 'emitir_nf'
+  | 'abrir_caixa'
+  | 'fechar_caixa'
+  | 'acessar'
+  | 'exportar'
+  | 'imprimir'
+  | 'baixar_estoque_venda'
+  | 'devolver_estoque_venda'
+  | 'cancelar_venda_paga'
+
+export type AuditAcaoTrail =
+  | 'criar'
+  | 'editar'
+  | 'deletar'
+  | 'cancelar'
+  | 'estornar'
+  | 'emitir_nf'
+  | 'abrir_caixa'
+  | 'fechar_caixa'
+  | 'acessar'
+  | 'exportar'
+  | 'imprimir'
+  | 'baixar_estoque_venda'
+  | 'devolver_estoque_venda'
+  | 'cancelar_venda_paga'
+
+export const AUDIT_ACAO_LABELS: Record<string, string> = {
   create: 'Criação',
   update: 'Atualização',
   delete: 'Exclusão',
@@ -885,6 +969,20 @@ export const AUDIT_ACAO_LABELS: Record<AuditAcao, string> = {
   logout: 'Logout',
   export: 'Exportação',
   print: 'Impressão',
+  criar: 'Criação',
+  editar: 'Edição',
+  deletar: 'Exclusão',
+  cancelar: 'Cancelamento',
+  estornar: 'Estorno',
+  emitir_nf: 'Emissão de NF',
+  abrir_caixa: 'Abertura de Caixa',
+  fechar_caixa: 'Fechamento de Caixa',
+  acessar: 'Acesso',
+  exportar: 'Exportação',
+  imprimir: 'Impressão',
+  baixar_estoque_venda: 'Baixa de Estoque (Venda)',
+  devolver_estoque_venda: 'Devolução ao Estoque (Venda)',
+  cancelar_venda_paga: 'Cancelamento de Venda Paga',
 }
 
 export interface AuditLog {
@@ -897,6 +995,25 @@ export interface AuditLog {
   usuario_nome?: string
   clinic_id?: string
   created: string
+}
+
+export interface AuditTrail {
+  id: string
+  created: string
+  updated?: string
+  usuario_id?: string
+  usuario_nome?: string
+  usuario_perfil?: string
+  modulo: AuditModulo
+  acao: AuditAcaoTrail
+  entidade_tipo: string
+  entidade_id: string
+  entidade_descricao: string
+  alteracoes?: Record<string, { before: unknown; after: unknown }>
+  contexto?: Record<string, unknown>
+  ip?: string
+  user_agent?: string
+  clinica_id?: string
 }
 
 // === VendaItem (usado em vendas) ===
@@ -1048,23 +1165,61 @@ export interface MovimentacaoCaixa {
   updated: string
 }
 
+export type FechamentoCaixaStatus = 'aberto' | 'fechado'
+
+export const FECHAMENTO_CAIXA_STATUS_LABELS: Record<FechamentoCaixaStatus, string> = {
+  aberto: 'Aberto',
+  fechado: 'Fechado',
+}
+
 export interface FechamentoCaixa {
   id: string
-  data_fechamento: string
-  profissional_id: string
-  saldo_inicial: number
-  total_entradas: number
-  total_saidas: number
-  saldo_final: number
+  data?: string
+  data_fechamento?: string
+  profissional_id?: string
+  saldo_inicial?: number
+  saldoInicial?: number
+  saldo_final?: number
+  saldoFinal?: number
+  total_dinheiro?: number
+  totalDinheiro?: number
+  total_debito?: number
+  totalDebito?: number
+  total_credito?: number
+  totalCredito?: number
+  total_pix?: number
+  totalPix?: number
+  total_convenio?: number
+  totalConvenio?: number
+  total_boleto?: number
+  totalBoleto?: number
+  total_entradas?: number
+  totalEntradas?: number
+  total_saidas?: number
+  totalSaidas?: number
+  total_vendas?: number
+  totalVendas?: number
+  quantidade_vendas?: number
+  quantidadeVendas?: number
+  diferenca?: number
+  status?: FechamentoCaixaStatus | string
+  observacao?: string
   observacoes?: string
+  usuarioId?: string
+  usuarioNome?: string
   clinic_id?: string
-  created: string
+  created?: string
+  updated?: string
 }
 
 export interface NotaFiscalItem {
+  id?: string
+  codigo?: string
+  nome?: string
   descricao: string
   quantidade: number
   valor_unitario: number
+  valor_total?: number
   cfop?: string
   ncm?: string
   cnae?: string
@@ -1096,25 +1251,71 @@ export interface NotaFiscal {
 // === Despesas ===
 export type DespesaCategoria =
   | 'aluguel'
+  | 'energia'
+  | 'agua'
+  | 'internet'
+  | 'folha'
   | 'salario'
   | 'comissao'
+  | 'fornecedores'
   | 'fornecedor'
   | 'marketing'
+  | 'impostos'
   | 'tributo'
+  | 'imposto'
   | 'utilidade'
+  | 'utilidades'
+  | 'software'
   | 'manutencao'
   | 'outros'
 
 export const DESPESA_CATEGORIA_LABELS: Record<DespesaCategoria, string> = {
   aluguel: 'Aluguel',
-  salario: 'Salário/Pró-labore',
+  energia: 'Energia Elétrica',
+  agua: 'Água / Saneamento',
+  internet: 'Internet / Telefonia',
+  folha: 'Folha de Pagamento',
+  salario: 'Salário / Pró-labore',
   comissao: 'Comissão',
+  fornecedores: 'Fornecedores',
   fornecedor: 'Fornecedor',
-  marketing: 'Marketing',
-  tributo: 'Tributo/Imposto',
-  utilidade: 'Utilidade (água/luz/internet)',
+  marketing: 'Marketing / Publicidade',
+  impostos: 'Impostos',
+  tributo: 'Tributos / Taxas',
+  imposto: 'Imposto',
+  utilidade: 'Utilidades',
+  utilidades: 'Utilidades (água/luz/internet)',
+  software: 'Software / Sistemas',
   manutencao: 'Manutenção',
   outros: 'Outros',
+}
+
+export type DespesaStatus = 'a_pagar' | 'pago' | 'pendente' | 'vencido' | 'atrasado' | 'cancelado'
+
+export const DESPESA_STATUS_LABELS: Record<DespesaStatus, string> = {
+  a_pagar: 'A Pagar',
+  pago: 'Pago',
+  pendente: 'Pendente',
+  vencido: 'Vencido',
+  atrasado: 'Atrasado',
+  cancelado: 'Cancelado',
+}
+
+export type DespesaFormaPagamento =
+  | 'dinheiro'
+  | 'cartao'
+  | 'pix'
+  | 'transferencia'
+  | 'boleto'
+  | 'cheque'
+
+export const DESPESA_FORMA_PAGAMENTO_LABELS: Record<DespesaFormaPagamento, string> = {
+  dinheiro: 'Dinheiro',
+  cartao: 'Cartão',
+  pix: 'PIX',
+  transferencia: 'Transferência Bancária',
+  boleto: 'Boleto Bancário',
+  cheque: 'Cheque',
 }
 
 export interface Despesa {
@@ -1122,10 +1323,18 @@ export interface Despesa {
   descricao: string
   categoria: DespesaCategoria
   valor: number
-  data: string
-  vencimento?: string
-  pago: boolean
+  data?: string
+  data_vencimento?: string
+  data_pagamento?: string
+  forma_pagamento?: DespesaFormaPagamento
+  status?: DespesaStatus
+  valor_pago?: number
+  pago?: boolean
+  comprovante?: string
   observacoes?: string
+  motivo_cancelamento?: string
+  usuario_id?: string
+  movimentacao_caixa_id?: string
   clinic_id?: string
   created: string
   updated: string
@@ -1135,15 +1344,18 @@ export interface Despesa {
 export interface ClinicSettings {
   id?: string
   nome?: string
+  nome_clinica?: string
   endereco?: string
   telefone?: string
   email?: string
   logo?: string
+  logo_url?: string
   cnpj?: string
   inscricao_estadual?: string
   inscricao_municipal?: string
   certificado_digital?: string
   audiometro?: string
+  calibracao?: string
   calibracao_audiometro?: string
   especialista_nome?: string
   especialista_crfa?: string
@@ -1224,9 +1436,17 @@ export type LayoutElementType =
 export interface LayoutElementStyle {
   bold?: boolean
   italic?: boolean
+  underline?: boolean
   fontSize?: number
+  fontFamily?: string
   align?: 'left' | 'center' | 'right'
   color?: string
+  backgroundColor?: string
+  borderColor?: string
+  borderWidth?: number | string
+  padding?: number | string
+  lineHeight?: number | string
+  [key: string]: unknown
 }
 
 export interface LayoutElement {
@@ -1240,6 +1460,9 @@ export interface LayoutElement {
   height: number
   style?: LayoutElementStyle
   options?: string[]
+  props?: Record<string, any>
+  content?: string
+  [key: string]: unknown
 }
 
 // === Vendas B2B ===
@@ -1248,6 +1471,8 @@ export type VendaB2BStatus = 'pendente' | 'aprovado' | 'entregue' | 'cancelado'
 export interface VendaB2B {
   id: string
   empresa_id: string
+  cliente_empresa_nome?: string
+  numero_venda?: string | number
   paciente_id?: string
   itens: NFServicoComissao[]
   valor_total: number
@@ -1272,6 +1497,22 @@ export interface NFServicoComissao {
   profissional_id?: string
   status: NFServicoStatus
   tipo_fiscal?: 'produto' | 'servico'
+  tomador_razao_social?: string
+  tomador_cnpj?: string
+  tomador_endereco?: string
+  tomador_municipio?: string
+  tomador_uf?: string
+  tomador_cep?: string
+  tomador_email?: string
+  numero_nfse?: string
+  codigo_verificacao?: string
+  data_emissao?: string
+  discriminacao_servico?: string
+  item_lista_servico?: string
+  valor_base?: number
+  aliquota_iss?: number
+  valor_iss?: number
+  valor_liquido?: number
 }
 
 export interface EmpresaParceira {
@@ -1281,28 +1522,232 @@ export interface EmpresaParceira {
   cnpj?: string
   telefone?: string
   email?: string
+  endereco?: string
+  cidade?: string
+  estado?: string
+  cep?: string
+  inscricao_estadual?: string
+  inscricao_municipal?: string
   clinic_id?: string
   created: string
   updated: string
 }
 
 // === Contas a Receber ===
-export type ContaReceberStatus = 'pendente' | 'pago' | 'atrasado' | 'cancelado'
+export type ContaReceberStatus =
+  | 'pendente'
+  | 'pago'
+  | 'recebido'
+  | 'atrasado'
+  | 'a_receber'
+  | 'recebido_parcial'
+  | 'recebido_total'
+  | 'vencido'
+  | 'renegociado'
+  | 'cancelado'
+
+export const CONTA_RECEBER_STATUS_LABELS: Record<ContaReceberStatus, string> = {
+  pendente: 'Pendente',
+  pago: 'Pago',
+  recebido: 'Recebido',
+  atrasado: 'Atrasado',
+  a_receber: 'A Receber',
+  recebido_parcial: 'Recebido Parcial',
+  recebido_total: 'Recebido Total',
+  vencido: 'Vencido',
+  renegociado: 'Renegociado',
+  cancelado: 'Cancelado',
+}
+
+export type ContaReceberForma =
+  | 'dinheiro'
+  | 'cartao'
+  | 'pix'
+  | 'transferencia'
+  | 'boleto'
+  | 'cheque'
+  | 'convenio'
+  | 'convênio'
+  | 'parcelado'
+  | 'promissoria'
+  | 'promissória'
+
+export const CONTA_RECEBER_FORMA_LABELS: Record<ContaReceberForma, string> = {
+  dinheiro: 'Dinheiro',
+  cartao: 'Cartão',
+  pix: 'PIX',
+  transferencia: 'Transferência Bancária',
+  boleto: 'Boleto',
+  cheque: 'Cheque',
+  convenio: 'Convênio',
+  convênio: 'Convênio',
+  parcelado: 'Parcelado',
+  promissoria: 'Promissória',
+  promissória: 'Promissória',
+}
+
+export type FormaRecebimento =
+  | 'dinheiro'
+  | 'cartao'
+  | 'pix'
+  | 'transferencia'
+  | 'cheque'
+  | 'boleto'
+  | 'convenio'
+  | 'convênio'
+  | 'parcelado'
+  | 'promissoria'
+  | 'promissória'
+
+export const FORMA_RECEBIMENTO_LABELS: Record<string, string> = {
+  dinheiro: 'Dinheiro',
+  cartao: 'Cartão',
+  pix: 'PIX',
+  transferencia: 'Transferência Bancária',
+  cheque: 'Cheque',
+  boleto: 'Boleto',
+  convenio: 'Convênio',
+  convênio: 'Convênio',
+  parcelado: 'Parcelado',
+  promissoria: 'Promissória',
+  promissória: 'Promissória',
+}
+
+export type ContaReceberOrigem = 'pdv' | 'b2b'
+
+export interface RecebimentoItemExtra {
+  id?: string
+  nome: string
+  quantidade: number
+  valor_unitario: number
+  subtotal: number
+}
+
+export interface Recebimento {
+  id: string
+  conta_id: string
+  valor: number
+  data_recebimento: string
+  forma_recebimento: FormaRecebimento
+  observacoes?: string
+  valor_base?: number
+  itens_extras?: RecebimentoItemExtra[]
+  desconto_tipo?: 'valor' | 'percentual' | ''
+  desconto_valor?: number
+  valor_total?: number
+  usuario_id?: string
+  usuario_nome?: string
+  created?: string
+}
 
 export interface ContaReceber {
   id: string
-  paciente_id: string
-  paciente_nome?: string
-  descricao: string
-  valor: number
-  valor_pago?: number
-  data_vencimento: string
-  data_pagamento?: string
-  forma_pagamento?: string
-  status: ContaReceberStatus
-  appointment_id?: string
   venda_id?: string
+  venda_origem?: ContaReceberOrigem | string
+  cliente_id?: string
+  paciente_id?: string
+  paciente_nome?: string
+  cliente_nome?: string
+  cliente_telefone?: string
+  descricao: string
+  valor?: number
+  valor_original: number
+  valor_recebido: number
+  valor_restante: number
+  valor_pago?: number
+  data_venda?: string
+  data_vencimento: string
+  data_recebimento?: string
+  data_pagamento?: string
+  forma_pagamento: ContaReceberForma | string
+  numero_parcelas?: number
+  parcela_atual?: number
+  status: ContaReceberStatus
+  conta_origem_id?: string
+  motivo_renegociacao?: string
+  motivo_cancelamento?: string
+  observacoes?: string
+  appointment_id?: string
+  usuario_id?: string
   clinic_id?: string
   created: string
   updated: string
+}
+
+// === Lembretes WhatsApp ===
+export type LembreteStatusEnvio =
+  | 'pendente'
+  | 'enviando'
+  | 'enviado'
+  | 'entregue'
+  | 'lido'
+  | 'falhou'
+  | 'cancelado'
+
+export const LEMBRETE_STATUS_ENVIO_LABELS: Record<LembreteStatusEnvio, string> = {
+  pendente: 'Pendente',
+  enviando: 'Enviando',
+  enviado: 'Enviado',
+  entregue: 'Entregue',
+  lido: 'Lido',
+  falhou: 'Falhou',
+  cancelado: 'Cancelado',
+}
+
+export const LEMBRETE_STATUS_ENVIO_CLASS: Record<LembreteStatusEnvio, string> = {
+  pendente: 'bg-slate-100 text-slate-700 border-slate-300',
+  enviando: 'bg-blue-100 text-blue-700 border-blue-300',
+  enviado: 'bg-cyan-100 text-cyan-700 border-cyan-300',
+  entregue: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+  lido: 'bg-emerald-100 text-emerald-800 border-emerald-400',
+  falhou: 'bg-red-100 text-red-700 border-red-300',
+  cancelado: 'bg-slate-100 text-slate-500 border-slate-300',
+}
+
+export type LembreteStatusConfirmacao = 'aguardando' | 'confirmado' | 'cancelado' | 'sem_resposta'
+
+export const LEMBRETE_STATUS_CONFIRMACAO_LABELS: Record<LembreteStatusConfirmacao, string> = {
+  aguardando: 'Aguardando Resposta',
+  confirmado: 'Confirmado pelo Paciente',
+  cancelado: 'Cancelado pelo Paciente',
+  sem_resposta: 'Sem Resposta',
+}
+
+export const LEMBRETE_STATUS_CONFIRMACAO_CLASS: Record<LembreteStatusConfirmacao, string> = {
+  aguardando: 'bg-amber-100 text-amber-800 border-amber-300',
+  confirmado: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  cancelado: 'bg-red-100 text-red-800 border-red-300',
+  sem_resposta: 'bg-slate-100 text-slate-600 border-slate-300',
+}
+
+export interface LembreteWhatsapp {
+  id: string
+  agendamento_id: string
+  paciente_id: string
+  telefone: string
+  mensagem: string
+  data_envio: string
+  status_envio: LembreteStatusEnvio
+  status_confirmacao: LembreteStatusConfirmacao
+  data_confirmacao?: string
+  resposta_paciente?: string
+  tentativas: number
+  error_message?: string
+  clinic_id?: string
+  created?: string
+  updated?: string
+  agendamento?: {
+    id: string
+    date: string
+    time: string
+    patientName: string
+    type: string
+    status: string
+  }
+  paciente?: {
+    id: string
+    name: string
+    mobile: string
+    phone: string
+  }
 }
