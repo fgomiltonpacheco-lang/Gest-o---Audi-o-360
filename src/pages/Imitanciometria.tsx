@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast'
 import { usePrint } from '@/components/print/PrintProvider'
 import { ImitanciometriaPrint, type ImitPrintData } from '@/components/print/ImitanciometriaPrint'
 import { renderExamReport, buildImitanciometriaContext } from '@/components/print/PrintDocuments'
+import { fillImitanciometriaTemplatePdf, openPdfInNewTab } from '@/lib/pdfTemplateFiller'
 import pb from '@/lib/pocketbase/client'
 import { ClientResponseError } from 'pocketbase'
 import { Button } from '@/components/ui/button'
@@ -915,15 +916,42 @@ export default function Imitanciometria() {
   const [previewOpen, setPreviewOpen] = useState(false)
 
   const handlePrint = async () => {
+    const printData = buildPrintData()
+
+    // Se houver template PDF de imitanciometria configurado na clínica
+    const templatePdfUrl = clinicSettings?.template_imitanciometria_url
+    if (templatePdfUrl) {
+      try {
+        const res = await fetch(templatePdfUrl)
+        if (!res.ok) throw new Error('Falha ao baixar template PDF')
+        const templateBytes = await res.arrayBuffer()
+        const filledBytes = await fillImitanciometriaTemplatePdf(templateBytes, {
+          data: printData,
+          patient,
+          clinicSettings,
+          professional: professionalData,
+        })
+        openPdfInNewTab(filledBytes, `Laudo_Imitanciometria_${patient?.name || 'paciente'}.pdf`)
+        return
+      } catch (err) {
+        console.error('Erro ao preencher PDF template:', err)
+        toast({
+          title: 'Aviso',
+          description: 'Não foi possível carregar o template PDF. Utilizando impressão padrão.',
+          variant: 'default',
+        })
+      }
+    }
+
+    // Fallback: impressão HTML padrão
     const fallbackNode = (
       <ImitanciometriaPrint
-        data={buildPrintData()}
+        data={printData}
         patient={patient}
         clinicSettings={clinicSettings}
         professional={professionalData}
       />
     )
-    const printData = buildPrintData()
     const ctx = buildImitanciometriaContext({
       patientName: printData.paciente_nome,
       patientCpf: printData.paciente_cpf,

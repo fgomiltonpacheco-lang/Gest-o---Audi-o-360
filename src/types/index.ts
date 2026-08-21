@@ -1397,11 +1397,17 @@ export interface ClinicSettings {
   inscricao_estadual?: string
   inscricao_municipal?: string
   certificado_digital?: string
+  certificado_digital_url?: string
+  template_audiometria?: string
+  template_audiometria_url?: string
+  template_imitanciometria?: string
+  template_imitanciometria_url?: string
   audiometro?: string
   calibracao?: string
   calibracao_audiometro?: string
   especialista_nome?: string
   especialista_crfa?: string
+  site?: string
 }
 
 // === Equipment ===

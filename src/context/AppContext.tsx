@@ -787,6 +787,8 @@ interface AppContextType {
     data: Partial<Omit<ClinicSettings, 'id'>> & {
       logoFile?: File | null
       certificadoFile?: File | null
+      templateAudiometriaFile?: File | null
+      templateImitanciometriaFile?: File | null
     },
   ) => Promise<{ success: boolean; message?: string }>
   equipments: Equipment[]
@@ -1244,6 +1246,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const certificadoUrl = clinicRec.certificado_digital
           ? pb.files.getURL(clinicRec, clinicRec.certificado_digital)
           : clinicRec.certificado_digital_url || ''
+        const tplAudioUrl = clinicRec.template_audiometria
+          ? pb.files.getURL(clinicRec, clinicRec.template_audiometria)
+          : clinicRec.template_audiometria_url || ''
+        const tplImitUrl = clinicRec.template_imitanciometria
+          ? pb.files.getURL(clinicRec, clinicRec.template_imitanciometria)
+          : clinicRec.template_imitanciometria_url || ''
         setClinicSettings({
           id: clinicRec.id,
           nome: clinicRec.nome || '',
@@ -1252,6 +1260,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           inscricao_municipal: clinicRec.inscricao_municipal || '',
           certificado_digital: clinicRec.certificado_digital || '',
           certificado_digital_url: certificadoUrl,
+          template_audiometria: clinicRec.template_audiometria || '',
+          template_audiometria_url: tplAudioUrl,
+          template_imitanciometria: clinicRec.template_imitanciometria || '',
+          template_imitanciometria_url: tplImitUrl,
           endereco: clinicRec.endereco || '',
           telefone: clinicRec.telefone || '',
           email: clinicRec.email || '',
@@ -1962,6 +1974,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     data: Partial<Omit<ClinicSettings, 'id'>> & {
       logoFile?: File | null
       certificadoFile?: File | null
+      templateAudiometriaFile?: File | null
+      templateImitanciometriaFile?: File | null
     },
   ): Promise<{ success: boolean; message?: string }> => {
     try {
@@ -1976,6 +1990,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const certificadoUrl = r.certificado_digital
               ? pb.files.getURL(r, r.certificado_digital)
               : r.certificado_digital_url || ''
+            const tplAudioUrl = r.template_audiometria
+              ? pb.files.getURL(r, r.template_audiometria)
+              : r.template_audiometria_url || ''
+            const tplImitUrl = r.template_imitanciometria
+              ? pb.files.getURL(r, r.template_imitanciometria)
+              : r.template_imitanciometria_url || ''
             current = {
               id: r.id,
               nome: r.nome || '',
@@ -1984,6 +2004,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               inscricao_municipal: r.inscricao_municipal || '',
               certificado_digital: r.certificado_digital || '',
               certificado_digital_url: certificadoUrl,
+              template_audiometria: r.template_audiometria || '',
+              template_audiometria_url: tplAudioUrl,
+              template_imitanciometria: r.template_imitanciometria || '',
+              template_imitanciometria_url: tplImitUrl,
               endereco: r.endereco || '',
               telefone: r.telefone || '',
               email: r.email || '',
@@ -2002,7 +2026,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       let updated: any
-      if (data.logoFile || data.certificadoFile) {
+      const hasFiles =
+        !!data.logoFile ||
+        !!data.certificadoFile ||
+        !!data.templateAudiometriaFile ||
+        !!data.templateImitanciometriaFile
+
+      if (hasFiles) {
         const formData = new FormData()
         if (data.nome !== undefined) formData.append('nome', data.nome)
         if (data.cnpj !== undefined) formData.append('cnpj', data.cnpj)
@@ -2025,6 +2055,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         if (data.certificadoFile) {
           formData.append('certificado_digital', data.certificadoFile)
+        }
+        if (data.templateAudiometriaFile) {
+          formData.append('template_audiometria', data.templateAudiometriaFile)
+        }
+        if (data.templateImitanciometriaFile) {
+          formData.append('template_imitanciometria', data.templateImitanciometriaFile)
         }
 
         if (!current) {
@@ -2060,6 +2096,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const certificadoUrl = updated.certificado_digital
         ? pb.files.getURL(updated, updated.certificado_digital)
         : updated.certificado_digital_url || ''
+      const tplAudioUrl = updated.template_audiometria
+        ? pb.files.getURL(updated, updated.template_audiometria)
+        : updated.template_audiometria_url || ''
+      const tplImitUrl = updated.template_imitanciometria
+        ? pb.files.getURL(updated, updated.template_imitanciometria)
+        : updated.template_imitanciometria_url || ''
       setClinicSettings({
         id: updated.id,
         nome: updated.nome || '',
@@ -2068,6 +2110,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         inscricao_municipal: updated.inscricao_municipal || '',
         certificado_digital: updated.certificado_digital || '',
         certificado_digital_url: certificadoUrl,
+        template_audiometria: updated.template_audiometria || '',
+        template_audiometria_url: tplAudioUrl,
+        template_imitanciometria: updated.template_imitanciometria || '',
+        template_imitanciometria_url: tplImitUrl,
         endereco: updated.endereco || '',
         telefone: updated.telefone || '',
         email: updated.email || '',

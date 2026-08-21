@@ -8,6 +8,7 @@ import {
   renderExamReport,
   buildAudiometryContext,
 } from '@/components/print/PrintDocuments'
+import { fillAudiometriaTemplatePdf, openPdfInNewTab } from '@/lib/pdfTemplateFiller'
 import { AudiogramChart } from '@/components/AudiogramChart'
 import pb from '@/lib/pocketbase/client'
 import { ClientResponseError } from 'pocketbase'
@@ -604,7 +605,36 @@ export default function Audiometria() {
       created: '',
       updated: '',
     }
-    // Tenta usar o modelo de laudo publicado; se não houver, usa o layout padrão.
+
+    // Se houver um PDF template cadastrado nas configurações da clínica, preenche com pdf-lib
+    const templatePdfUrl = clinicSettings?.template_audiometria_url
+    if (templatePdfUrl) {
+      try {
+        const response = await fetch(templatePdfUrl)
+        if (!response.ok) throw new Error('Falha ao baixar template PDF')
+        const templateBytes = await response.arrayBuffer()
+        const filledBytes = await fillAudiometriaTemplatePdf(templateBytes, {
+          exam: fullExam,
+          patient,
+          clinicSettings,
+          professional: currentUser
+            ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa }
+            : null,
+        })
+        openPdfInNewTab(filledBytes, `Laudo_Audiometria_${patient?.name || 'paciente'}.pdf`)
+        return
+      } catch (err) {
+        console.error('Erro ao preencher PDF template:', err)
+        toast({
+          title: 'Aviso',
+          description:
+            'Não foi possível carregar o PDF template. Utilizando impressão padrão do sistema.',
+          variant: 'default',
+        })
+      }
+    }
+
+    // Fallback: visualização e impressão HTML padrão do sistema
     const fallbackNode = (
       <AudiometriaFullPrint
         exam={fullExam}
