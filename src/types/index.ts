@@ -819,6 +819,17 @@ export function getEquipmentStatus(
   return 'valid'
 }
 
+export const TEXTO_PADRAO_CONSENTIMENTO = {
+  dados_cadastrais:
+    'Autorizo a Audição360 a coletar e armazenar meus dados cadastrais (nome, CPF, RG, data de nascimento, endereço, telefone e e-mail) para fins de identificação, contato e faturamento dos serviços prestados.',
+  dados_saude:
+    'Autorizo expressamente a Audição360 a coletar, registrar e armazenar meus dados de saúde auditiva (exames, diagnósticos, laudos, anamnese e evolução clínica) para fins de acompanhamento clínico e emissão de laudos.',
+  marketing:
+    'Autorizo a Audição360 a utilizar meus dados de contato (telefone e e-mail) para envio de comunicações sobre agendamentos, retornos, novidades e promoções relacionadas aos serviços da clínica.',
+  pesquisa:
+    'Autorizo a utilização anonimizada dos meus dados de saúde auditiva para fins de pesquisa, ensino e publicações científicas, sem qualquer identificação pessoal.',
+}
+
 export interface StockItem {
   id: string
   name: string
