@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-21T02:30:09.609Z",
+  "generatedAt": "2026-08-21T03:03:31.478Z",
   "collections": [
     {
       "name": "users",
@@ -110,6 +110,12 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -123,11 +129,11 @@
       "name": "patients",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -299,19 +305,28 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": ["CREATE UNIQUE INDEX idx_patients_cpf ON patients (cpf) WHERE cpf != ''"]
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_patients_cpf ON patients (cpf) WHERE cpf != ''",
+        "CREATE INDEX `idx_patients_clinica_id` ON `patients` (clinica_id)"
+      ]
     },
     {
       "name": "appointments",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -425,19 +440,28 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": ["CREATE INDEX idx_appointments_date ON appointments (date)"]
+      "indexes": [
+        "CREATE INDEX idx_appointments_date ON appointments (date)",
+        "CREATE INDEX `idx_appointments_clinica_id` ON `appointments` (clinica_id)"
+      ]
     },
     {
       "name": "clinical_records",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -520,21 +544,28 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
-        "CREATE UNIQUE INDEX idx_clinical_records_patient ON clinical_records (patientId)"
+        "CREATE UNIQUE INDEX idx_clinical_records_patient ON clinical_records (patientId)",
+        "CREATE INDEX `idx_clinical_records_clinica_id` ON `clinical_records` (clinica_id)"
       ]
     },
     {
       "name": "evolutions",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -574,19 +605,25 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_evolutions_clinica_id` ON `evolutions` (clinica_id)"]
     },
     {
       "name": "audiometries",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -686,19 +723,25 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_audiometries_clinica_id` ON `audiometries` (clinica_id)"]
     },
     {
       "name": "tympanometries",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -768,19 +811,25 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_tympanometries_clinica_id` ON `tympanometries` (clinica_id)"]
     },
     {
       "name": "beras",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -838,19 +887,25 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_beras_clinica_id` ON `beras` (clinica_id)"]
     },
     {
       "name": "hearing_aids",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -969,19 +1024,25 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_hearing_aids_clinica_id` ON `hearing_aids` (clinica_id)"]
     },
     {
       "name": "maintenances",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -1021,19 +1082,25 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_maintenances_clinica_id` ON `maintenances` (clinica_id)"]
     },
     {
       "name": "adjustments",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -1073,19 +1140,25 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_adjustments_clinica_id` ON `adjustments` (clinica_id)"]
     },
     {
       "name": "budgets",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -1156,19 +1229,25 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_budgets_clinica_id` ON `budgets` (clinica_id)"]
     },
     {
       "name": "sales",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -1312,19 +1391,25 @@
           "type": "bool",
           "required": false,
           "system": false
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_sales_clinica_id` ON `sales` (clinica_id)"]
     },
     {
       "name": "installments",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -1402,19 +1487,28 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": ["CREATE INDEX idx_installments_due ON installments (dueDate)"]
+      "indexes": [
+        "CREATE INDEX idx_installments_due ON installments (dueDate)",
+        "CREATE INDEX `idx_installments_clinica_id` ON `installments` (clinica_id)"
+      ]
     },
     {
       "name": "commissions",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -1473,19 +1567,25 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_commissions_clinica_id` ON `commissions` (clinica_id)"]
     },
     {
       "name": "cash_flow",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -1530,19 +1630,25 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_cash_flow_clinica_id` ON `cash_flow` (clinica_id)"]
     },
     {
       "name": "inventory",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -1705,23 +1811,30 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX `idx_inventory_estoque_minimo` ON `inventory` (estoque_minimo)",
         "CREATE INDEX `idx_inventory_categoria` ON `inventory` (categoria)",
-        "CREATE INDEX `idx_inventory_data_validade` ON `inventory` (data_validade)"
+        "CREATE INDEX `idx_inventory_data_validade` ON `inventory` (data_validade)",
+        "CREATE INDEX `idx_inventory_clinica_id` ON `inventory` (clinica_id)"
       ]
     },
     {
       "name": "inventory_movements",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -1792,19 +1905,27 @@
           "required": false,
           "system": false,
           "collectionRef": "sales"
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": [
+        "CREATE INDEX `idx_inventory_movements_clinica_id` ON `inventory_movements` (clinica_id)"
+      ]
     },
     {
       "name": "procedures",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -1880,19 +2001,28 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": ["CREATE INDEX idx_procedures_name ON procedures (name)"]
+      "indexes": [
+        "CREATE INDEX idx_procedures_name ON procedures (name)",
+        "CREATE INDEX `idx_procedures_clinica_id` ON `procedures` (clinica_id)"
+      ]
     },
     {
       "name": "blocked_days",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -1938,19 +2068,28 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": ["CREATE INDEX `idx_blocked_days_date` ON `blocked_days` (date)"]
+      "indexes": [
+        "CREATE INDEX `idx_blocked_days_date` ON `blocked_days` (date)",
+        "CREATE INDEX `idx_blocked_days_clinica_id` ON `blocked_days` (clinica_id)"
+      ]
     },
     {
       "name": "clinic_config",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -1978,19 +2117,25 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_clinic_config_clinica_id` ON `clinic_config` (clinica_id)"]
     },
     {
       "name": "audiometry_exams",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -2295,22 +2440,29 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_audiometry_exams_patient ON audiometry_exams (patient)",
-        "CREATE INDEX idx_audiometry_exams_date ON audiometry_exams (date)"
+        "CREATE INDEX idx_audiometry_exams_date ON audiometry_exams (date)",
+        "CREATE INDEX `idx_audiometry_exams_clinica_id` ON `audiometry_exams` (clinica_id)"
       ]
     },
     {
       "name": "clinic_settings",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.role = 'admin'",
-        "delete": "@request.auth.role = 'admin'"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -2404,19 +2556,25 @@
           "type": "file",
           "required": false,
           "system": false
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_clinic_settings_clinica_id` ON `clinic_settings` (clinica_id)"]
     },
     {
       "name": "equipments",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -2450,19 +2608,28 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": ["CREATE INDEX idx_equipments_nome ON equipments (nome)"]
+      "indexes": [
+        "CREATE INDEX idx_equipments_nome ON equipments (nome)",
+        "CREATE INDEX `idx_equipments_clinica_id` ON `equipments` (clinica_id)"
+      ]
     },
     {
       "name": "fechamentos_caixa",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -2582,22 +2749,29 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_fechamentos_caixa_data ON fechamentos_caixa (data)",
-        "CREATE INDEX idx_fechamentos_caixa_status ON fechamentos_caixa (status)"
+        "CREATE INDEX idx_fechamentos_caixa_status ON fechamentos_caixa (status)",
+        "CREATE INDEX `idx_fechamentos_caixa_clinica_id` ON `fechamentos_caixa` (clinica_id)"
       ]
     },
     {
       "name": "movimentacoes_caixa",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -2666,22 +2840,29 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_movimentacoes_caixa_fechamento ON movimentacoes_caixa (fechamento)",
-        "CREATE INDEX idx_movimentacoes_caixa_data ON movimentacoes_caixa (data)"
+        "CREATE INDEX idx_movimentacoes_caixa_data ON movimentacoes_caixa (data)",
+        "CREATE INDEX `idx_movimentacoes_caixa_clinica_id` ON `movimentacoes_caixa` (clinica_id)"
       ]
     },
     {
       "name": "empresas_parceiras",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -2764,22 +2945,29 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_empresas_parceiras_status ON empresas_parceiras (status)",
-        "CREATE INDEX idx_empresas_parceiras_cnpj ON empresas_parceiras (cnpj)"
+        "CREATE INDEX idx_empresas_parceiras_cnpj ON empresas_parceiras (cnpj)",
+        "CREATE INDEX `idx_empresas_parceiras_clinica_id` ON `empresas_parceiras` (clinica_id)"
       ]
     },
     {
       "name": "vendas_b2b",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -2883,24 +3071,31 @@
           "type": "date",
           "required": false,
           "system": false
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_vendas_b2b_numero ON vendas_b2b (numero_venda)",
         "CREATE INDEX idx_vendas_b2b_data ON vendas_b2b (data_venda)",
         "CREATE INDEX idx_vendas_b2b_status ON vendas_b2b (status)",
-        "CREATE INDEX idx_vendas_b2b_empresa ON vendas_b2b (cliente_empresa_id)"
+        "CREATE INDEX idx_vendas_b2b_empresa ON vendas_b2b (cliente_empresa_id)",
+        "CREATE INDEX `idx_vendas_b2b_clinica_id` ON `vendas_b2b` (clinica_id)"
       ]
     },
     {
       "name": "itens_venda_b2b",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -2954,22 +3149,29 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_itens_venda_b2b_venda ON itens_venda_b2b (venda_b2b_id)",
-        "CREATE INDEX idx_itens_venda_b2b_produto ON itens_venda_b2b (produto_id)"
+        "CREATE INDEX idx_itens_venda_b2b_produto ON itens_venda_b2b (produto_id)",
+        "CREATE INDEX `idx_itens_venda_b2b_clinica_id` ON `itens_venda_b2b` (clinica_id)"
       ]
     },
     {
       "name": "nf_servico_comissao",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -3107,23 +3309,30 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_nf_servico_venda ON nf_servico_comissao (venda_b2b_id)",
         "CREATE INDEX idx_nf_servico_numero ON nf_servico_comissao (numero_nfse)",
-        "CREATE INDEX idx_nf_servico_status ON nf_servico_comissao (status)"
+        "CREATE INDEX idx_nf_servico_status ON nf_servico_comissao (status)",
+        "CREATE INDEX `idx_nf_servico_comissao_clinica_id` ON `nf_servico_comissao` (clinica_id)"
       ]
     },
     {
       "name": "hearing_aid_tests",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -3232,23 +3441,30 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_hearing_aid_tests_patient ON hearing_aid_tests (patient_id)",
         "CREATE INDEX idx_hearing_aid_tests_status ON hearing_aid_tests (status)",
-        "CREATE INDEX idx_hearing_aid_tests_inventory ON hearing_aid_tests (inventory_item_id)"
+        "CREATE INDEX idx_hearing_aid_tests_inventory ON hearing_aid_tests (inventory_item_id)",
+        "CREATE INDEX `idx_hearing_aid_tests_clinica_id` ON `hearing_aid_tests` (clinica_id)"
       ]
     },
     {
       "name": "nfse_b2b_config",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.role = 'admin'",
-        "update": "@request.auth.role = 'admin'",
-        "delete": "@request.auth.role = 'admin'"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -3344,19 +3560,25 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_nfse_b2b_config_clinica_id` ON `nfse_b2b_config` (clinica_id)"]
     },
     {
       "name": "consentimentos",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != \"\"",
-        "view": "@request.auth.id != \"\"",
-        "create": "@request.auth.id != \"\"",
-        "update": "@request.auth.role = \"admin\"",
-        "delete": "@request.auth.role = \"admin\""
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -3435,11 +3657,18 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_consentimentos_paciente ON consentimentos (paciente_id)",
-        "CREATE INDEX idx_consentimentos_status ON consentimentos (status)"
+        "CREATE INDEX idx_consentimentos_status ON consentimentos (status)",
+        "CREATE INDEX `idx_consentimentos_clinica_id` ON `consentimentos` (clinica_id)"
       ]
     },
     {
@@ -3528,11 +3757,11 @@
       "name": "audit_logs",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.role = \"admin\"",
-        "view": "@request.auth.role = \"admin\"",
-        "create": "",
-        "update": "",
-        "delete": ""
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -3622,24 +3851,31 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_audit_logs_usuario ON audit_logs (usuario_id)",
         "CREATE INDEX idx_audit_logs_paciente ON audit_logs (paciente_id)",
         "CREATE INDEX idx_audit_logs_acao ON audit_logs (acao)",
-        "CREATE INDEX idx_audit_logs_created ON audit_logs (created)"
+        "CREATE INDEX idx_audit_logs_created ON audit_logs (created)",
+        "CREATE INDEX `idx_audit_logs_clinica_id` ON `audit_logs` (clinica_id)"
       ]
     },
     {
       "name": "audit_trail",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.role = \"admin\"",
-        "view": "@request.auth.role = \"admin\"",
-        "create": "",
-        "update": "",
-        "delete": ""
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -3765,6 +4001,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -3772,18 +4014,19 @@
         "CREATE INDEX idx_audit_trail_modulo ON audit_trail (modulo)",
         "CREATE INDEX idx_audit_trail_acao ON audit_trail (acao)",
         "CREATE INDEX idx_audit_trail_entidade ON audit_trail (entidade_tipo, entidade_id)",
-        "CREATE INDEX idx_audit_trail_created ON audit_trail (created)"
+        "CREATE INDEX idx_audit_trail_created ON audit_trail (created)",
+        "CREATE INDEX `idx_audit_trail_clinica_id` ON `audit_trail` (clinica_id)"
       ]
     },
     {
       "name": "imitanciometrias",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -3971,23 +4214,30 @@
           "type": "json",
           "required": false,
           "system": false
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_imitanciometrias_paciente ON imitanciometrias (paciente_id)",
         "CREATE INDEX idx_imitanciometrias_data ON imitanciometrias (data_exame)",
-        "CREATE INDEX idx_imitanciometrias_status ON imitanciometrias (status)"
+        "CREATE INDEX idx_imitanciometrias_status ON imitanciometrias (status)",
+        "CREATE INDEX `idx_imitanciometrias_clinica_id` ON `imitanciometrias` (clinica_id)"
       ]
     },
     {
       "name": "timpanometria_dados",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -4066,22 +4316,29 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_timpanometria_dados_imit ON timpanometria_dados (imitanciometria_id)",
-        "CREATE INDEX idx_timpanometria_dados_orelha ON timpanometria_dados (orelha)"
+        "CREATE INDEX idx_timpanometria_dados_orelha ON timpanometria_dados (orelha)",
+        "CREATE INDEX `idx_timpanometria_dados_clinica_id` ON `timpanometria_dados` (clinica_id)"
       ]
     },
     {
       "name": "reflexo_acustico_dados",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -4149,22 +4406,29 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_reflexo_acustico_dados_imit ON reflexo_acustico_dados (imitanciometria_id)",
-        "CREATE INDEX idx_reflexo_acustico_dados_orelha ON reflexo_acustico_dados (orelha)"
+        "CREATE INDEX idx_reflexo_acustico_dados_orelha ON reflexo_acustico_dados (orelha)",
+        "CREATE INDEX `idx_reflexo_acustico_dados_clinica_id` ON `reflexo_acustico_dados` (clinica_id)"
       ]
     },
     {
       "name": "contas_receber",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -4325,6 +4589,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -4333,18 +4603,19 @@
         "CREATE INDEX idx_contas_receber_venda ON contas_receber (venda_id)",
         "CREATE INDEX idx_contas_receber_paciente ON contas_receber (paciente_id)",
         "CREATE INDEX idx_contas_receber_empresa ON contas_receber (empresa_parceira_id)",
-        "CREATE INDEX idx_contas_receber_origem ON contas_receber (conta_origem_id)"
+        "CREATE INDEX idx_contas_receber_origem ON contas_receber (conta_origem_id)",
+        "CREATE INDEX `idx_contas_receber_clinica_id` ON `contas_receber` (clinica_id)"
       ]
     },
     {
       "name": "recebimentos",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -4436,22 +4707,29 @@
           "type": "number",
           "required": false,
           "system": false
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_recebimentos_conta ON recebimentos (conta_receber_id)",
-        "CREATE INDEX idx_recebimentos_data ON recebimentos (data_recebimento)"
+        "CREATE INDEX idx_recebimentos_data ON recebimentos (data_recebimento)",
+        "CREATE INDEX `idx_recebimentos_clinica_id` ON `recebimentos` (clinica_id)"
       ]
     },
     {
       "name": "lembretes_whatsapp",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.role = 'admin'"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -4537,6 +4815,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -4544,18 +4828,19 @@
         "CREATE INDEX idx_lembretes_status_conf ON lembretes_whatsapp (status_confirmacao)",
         "CREATE INDEX idx_lembretes_data_envio ON lembretes_whatsapp (data_envio)",
         "CREATE INDEX idx_lembretes_agendamento ON lembretes_whatsapp (agendamento_id)",
-        "CREATE INDEX idx_lembretes_paciente ON lembretes_whatsapp (paciente_id)"
+        "CREATE INDEX idx_lembretes_paciente ON lembretes_whatsapp (paciente_id)",
+        "CREATE INDEX `idx_lembretes_whatsapp_clinica_id` ON `lembretes_whatsapp` (clinica_id)"
       ]
     },
     {
       "name": "whatsapp_config",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.role = 'admin'",
-        "update": "@request.auth.role = 'admin'",
-        "delete": "@request.auth.role = \"admin\""
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -4619,9 +4904,15 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_whatsapp_config_clinica_id` ON `whatsapp_config` (clinica_id)"]
     },
     {
       "name": "settings",
@@ -4703,11 +4994,11 @@
       "name": "despesas",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.role = 'admin'",
-        "update": "@request.auth.role = 'admin'",
-        "delete": ""
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -4816,6 +5107,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -4823,18 +5120,19 @@
         "CREATE INDEX idx_despesas_vencimento ON despesas (data_vencimento)",
         "CREATE INDEX idx_despesas_pagamento ON despesas (data_pagamento)",
         "CREATE INDEX idx_despesas_categoria ON despesas (categoria)",
-        "CREATE INDEX idx_despesas_usuario ON despesas (usuario_id)"
+        "CREATE INDEX idx_despesas_usuario ON despesas (usuario_id)",
+        "CREATE INDEX `idx_despesas_clinica_id` ON `despesas` (clinica_id)"
       ]
     },
     {
       "name": "exam_report_templates",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != \"\"",
-        "view": "@request.auth.id != \"\"",
-        "create": "@request.auth.role = \"admin\"",
-        "update": "@request.auth.role = \"admin\"",
-        "delete": "@request.auth.role = \"admin\""
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -5003,23 +5301,30 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_exam_report_templates_tipo ON exam_report_templates (tipo_exame)",
         "CREATE INDEX idx_exam_report_templates_status ON exam_report_templates (status)",
-        "CREATE INDEX idx_exam_report_templates_created ON exam_report_templates (created)"
+        "CREATE INDEX idx_exam_report_templates_created ON exam_report_templates (created)",
+        "CREATE INDEX `idx_exam_report_templates_clinica_id` ON `exam_report_templates` (clinica_id)"
       ]
     },
     {
       "name": "exam_report_template_versions",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != \"\"",
-        "view": "@request.auth.id != \"\"",
-        "create": "@request.auth.role = \"admin\"",
-        "update": "@request.auth.role = \"admin\"",
-        "delete": "@request.auth.role = \"admin\""
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -5065,22 +5370,29 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_exam_report_versions_template ON exam_report_template_versions (template_id)",
-        "CREATE INDEX idx_exam_report_versions_created ON exam_report_template_versions (created)"
+        "CREATE INDEX idx_exam_report_versions_created ON exam_report_template_versions (created)",
+        "CREATE INDEX `idx_exam_report_template_versions_clinica_id` ON `exam_report_template_versions` (clinica_id)"
       ]
     },
     {
       "name": "ordens_servico",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -5249,6 +5561,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -5256,18 +5574,19 @@
         "CREATE INDEX idx_ordens_servico_status ON ordens_servico (status)",
         "CREATE INDEX idx_ordens_servico_data_entrada ON ordens_servico (data_entrada)",
         "CREATE INDEX idx_ordens_servico_numero ON ordens_servico (ano, numero)",
-        "CREATE UNIQUE INDEX idx_ordens_servico_ano_numero ON ordens_servico (ano, numero)"
+        "CREATE UNIQUE INDEX idx_ordens_servico_ano_numero ON ordens_servico (ano, numero)",
+        "CREATE INDEX `idx_ordens_servico_clinica_id` ON `ordens_servico` (clinica_id)"
       ]
     },
     {
       "name": "nfse_emitidas",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.role = 'admin'",
-        "update": "@request.auth.role = 'admin'",
-        "delete": "@request.auth.role = 'admin'"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -5406,19 +5725,25 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_nfse_emitidas_clinica_id` ON `nfse_emitidas` (clinica_id)"]
     },
     {
       "name": "testes_aparelho",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -5511,23 +5836,30 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_testes_aparelho_paciente ON testes_aparelho (paciente_id)",
         "CREATE INDEX idx_testes_aparelho_data ON testes_aparelho (data_teste)",
-        "CREATE INDEX idx_testes_aparelho_status ON testes_aparelho (status)"
+        "CREATE INDEX idx_testes_aparelho_status ON testes_aparelho (status)",
+        "CREATE INDEX `idx_testes_aparelho_clinica_id` ON `testes_aparelho` (clinica_id)"
       ]
     },
     {
       "name": "mensagens",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": null
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -5569,24 +5901,31 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_mensagens_remetente ON mensagens (remetente)",
         "CREATE INDEX idx_mensagens_destinatario ON mensagens (destinatario)",
         "CREATE INDEX idx_mensagens_lida ON mensagens (lida)",
-        "CREATE INDEX idx_mensagens_created ON mensagens (created DESC)"
+        "CREATE INDEX idx_mensagens_created ON mensagens (created DESC)",
+        "CREATE INDEX `idx_mensagens_clinica_id` ON `mensagens` (clinica_id)"
       ]
     },
     {
       "name": "ia_regras",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != \"\" && user_id = @request.auth.id",
-        "view": "@request.auth.id != \"\" && user_id = @request.auth.id",
-        "create": "@request.auth.id != \"\" && user_id = @request.body.user_id",
-        "update": "@request.auth.id != \"\" && user_id = @request.auth.id",
-        "delete": "@request.auth.id != \"\" && user_id = @request.auth.id"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -5633,19 +5972,28 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": ["CREATE UNIQUE INDEX idx_ia_regras_user ON ia_regras (user_id)"]
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_ia_regras_user ON ia_regras (user_id)",
+        "CREATE INDEX `idx_ia_regras_clinica_id` ON `ia_regras` (clinica_id)"
+      ]
     },
     {
       "name": "ia_exemplos",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != \"\" && user_id = @request.auth.id",
-        "view": "@request.auth.id != \"\" && user_id = @request.auth.id",
-        "create": "@request.auth.id != \"\" && user_id = @request.body.user_id",
-        "update": "@request.auth.id != \"\" && user_id = @request.auth.id",
-        "delete": "@request.auth.id != \"\" && user_id = @request.auth.id"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -5686,19 +6034,28 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": ["CREATE INDEX idx_ia_exemplos_user_ordem ON ia_exemplos (user_id, ordem)"]
+      "indexes": [
+        "CREATE INDEX idx_ia_exemplos_user_ordem ON ia_exemplos (user_id, ordem)",
+        "CREATE INDEX `idx_ia_exemplos_clinica_id` ON `ia_exemplos` (clinica_id)"
+      ]
     },
     {
       "name": "notas_fiscais",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "view": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
+        "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
+        "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
       },
       "fields": [
         {
@@ -5788,9 +6145,181 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_notas_fiscais_clinica_id` ON `notas_fiscais` (clinica_id)"]
+    },
+    {
+      "name": "planos",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "preco_mensal",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "funcionalidades",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "max_profissionais",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ativo",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_planos_ativo ON planos (ativo)"]
+    },
+    {
+      "name": "clinicas",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (id = @request.auth.clinica_id || @request.auth.role = 'admin')",
+        "view": "@request.auth.id != '' && (id = @request.auth.clinica_id || @request.auth.role = 'admin')",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != '' && id = @request.auth.clinica_id",
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "slug",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "logo",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "endereco",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "telefone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cnpj",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "inscricao_estadual",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "inscricao_municipal",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "certificado_digital",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["trial", "ativo", "inadimplente", "cancelado"]
+        },
+        {
+          "name": "trial_ends",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "plano_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "planos"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_clinicas_slug ON clinicas (slug)"]
     }
   ]
 }
