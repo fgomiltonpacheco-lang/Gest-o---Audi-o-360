@@ -55,6 +55,7 @@ import {
   Receipt,
   UploadCloud,
   FileCheck2,
+  Eye,
 } from 'lucide-react'
 import type { Equipment, NfseB2BProvedor, NfseB2BAmbiente, PolicyTexts } from '@/types'
 import { getEquipmentStatus } from '@/types'
