@@ -918,78 +918,38 @@ export default function Imitanciometria() {
   const handlePrint = async () => {
     const printData = buildPrintData()
 
-    // Se houver template PDF de imitanciometria configurado na clínica
+    // Sempre exige um template PDF cadastrado nas configurações da clínica.
+    // Não há mais fallback de impressão HTML gerada automaticamente.
     const templatePdfUrl = clinicSettings?.template_imitanciometria_url
-    if (templatePdfUrl) {
-      try {
-        const res = await fetch(templatePdfUrl)
-        if (!res.ok) throw new Error('Falha ao baixar template PDF')
-        const templateBytes = await res.arrayBuffer()
-        const filledBytes = await fillImitanciometriaTemplatePdf(templateBytes, {
-          data: printData,
-          patient,
-          clinicSettings,
-          professional: professionalData,
-        })
-        openPdfInNewTab(filledBytes, `Laudo_Imitanciometria_${patient?.name || 'paciente'}.pdf`)
-        return
-      } catch (err) {
-        console.error('Erro ao preencher PDF template:', err)
-        toast({
-          title: 'Aviso',
-          description: 'Não foi possível carregar o template PDF. Utilizando impressão padrão.',
-          variant: 'default',
-        })
-      }
+    if (!templatePdfUrl) {
+      toast({
+        title: 'Nenhum template configurado',
+        description:
+          'Nenhum template configurado. Acesse Configurações > Templates de Laudo para fazer upload.',
+        variant: 'destructive',
+      })
+      return
     }
 
-    // Fallback: impressão HTML padrão
-    const fallbackNode = (
-      <ImitanciometriaPrint
-        data={printData}
-        patient={patient}
-        clinicSettings={clinicSettings}
-        professional={professionalData}
-      />
-    )
-    const ctx = buildImitanciometriaContext({
-      patientName: printData.paciente_nome,
-      patientCpf: printData.paciente_cpf,
-      patientBirthDate: printData.paciente_nascimento,
-      patientAge: printData.paciente_idade,
-      patientSex: printData.paciente_sexo,
-      examDate: printData.data_exame,
-      professionalName: professionalData?.name,
-      professionalCrfa: professionalData?.crmCrfa,
-      exam: {
-        tipo_curva_od: printData.tipo_curva_od,
-        tipo_curva_oe: printData.tipo_curva_oe,
-        reflexos_status: printData.reflexos_status,
-        laudo: printData.laudo,
-        observacoes: printData.observacoes,
-        encaminhado_por: printData.encaminhado_por,
-        equipment_nome: printData.equipment_nome,
-        equipment_calibracao: printData.equipment_calibracao,
-        referencias: printData.referencias,
-        meatoscopia: printData.meatoscopia,
-        timpanometria: printData.timpanometria,
-        reflexos: printData.reflexos,
-      },
-      clinicName: clinicSettings?.nome,
-      clinicAddress: clinicSettings?.endereco,
-      clinicPhone: clinicSettings?.telefone,
-      clinicEmail: clinicSettings?.email,
-    })
-    const bodyNode = await renderExamReport({
-      tipoExame: 'imitanciometria',
-      context: ctx,
-      fallback: fallbackNode,
-    })
-    print({
-      title: 'Imitanciometria',
-      subtitle: `${patient?.name || ''} — ${formatDate(exam.data_exame)}`,
-      body: bodyNode,
-    })
+    try {
+      const res = await fetch(templatePdfUrl)
+      if (!res.ok) throw new Error('Falha ao baixar template PDF')
+      const templateBytes = await res.arrayBuffer()
+      const filledBytes = await fillImitanciometriaTemplatePdf(templateBytes, {
+        data: printData,
+        patient,
+        clinicSettings,
+        professional: professionalData,
+      })
+      openPdfInNewTab(filledBytes, `Laudo_Imitanciometria_${patient?.name || 'paciente'}.pdf`)
+    } catch (err) {
+      console.error('Erro ao preencher PDF template:', err)
+      toast({
+        title: 'Erro ao gerar laudo',
+        description: 'Não foi possível carregar o template PDF. Verifique o arquivo configurado.',
+        variant: 'destructive',
+      })
+    }
   }
 
   if (!patient) {

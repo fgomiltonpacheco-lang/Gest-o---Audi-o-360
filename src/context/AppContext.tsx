@@ -1241,16 +1241,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       if (clinicRec) {
         const logoUrl = clinicRec.logo
-          ? pb.files.getURL(clinicRec, clinicRec.logo)
+          ? pb.files.getUrl(clinicRec, clinicRec.logo)
           : clinicRec.logo_url || ''
         const certificadoUrl = clinicRec.certificado_digital
-          ? pb.files.getURL(clinicRec, clinicRec.certificado_digital)
+          ? pb.files.getUrl(clinicRec, clinicRec.certificado_digital)
           : clinicRec.certificado_digital_url || ''
         const tplAudioUrl = clinicRec.template_audiometria
-          ? pb.files.getURL(clinicRec, clinicRec.template_audiometria)
+          ? pb.files.getUrl(clinicRec, clinicRec.template_audiometria)
           : clinicRec.template_audiometria_url || ''
         const tplImitUrl = clinicRec.template_imitanciometria
-          ? pb.files.getURL(clinicRec, clinicRec.template_imitanciometria)
+          ? pb.files.getUrl(clinicRec, clinicRec.template_imitanciometria)
           : clinicRec.template_imitanciometria_url || ''
         setClinicSettings({
           id: clinicRec.id,
@@ -1986,15 +1986,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const list = await pb.collection('clinic_settings').getList(1, 1, { sort: '-created' })
           if (list.items.length > 0) {
             const r = list.items[0] as any
-            const logoUrl = r.logo ? pb.files.getURL(r, r.logo) : r.logo_url || ''
+            const logoUrl = r.logo ? pb.files.getUrl(r, r.logo) : r.logo_url || ''
             const certificadoUrl = r.certificado_digital
-              ? pb.files.getURL(r, r.certificado_digital)
+              ? pb.files.getUrl(r, r.certificado_digital)
               : r.certificado_digital_url || ''
             const tplAudioUrl = r.template_audiometria
-              ? pb.files.getURL(r, r.template_audiometria)
+              ? pb.files.getUrl(r, r.template_audiometria)
               : r.template_audiometria_url || ''
             const tplImitUrl = r.template_imitanciometria
-              ? pb.files.getURL(r, r.template_imitanciometria)
+              ? pb.files.getUrl(r, r.template_imitanciometria)
               : r.template_imitanciometria_url || ''
             current = {
               id: r.id,
@@ -2092,15 +2092,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      const logoUrl = updated.logo ? pb.files.getURL(updated, updated.logo) : updated.logo_url || ''
+      const logoUrl = updated.logo ? pb.files.getUrl(updated, updated.logo) : updated.logo_url || ''
       const certificadoUrl = updated.certificado_digital
-        ? pb.files.getURL(updated, updated.certificado_digital)
+        ? pb.files.getUrl(updated, updated.certificado_digital)
         : updated.certificado_digital_url || ''
       const tplAudioUrl = updated.template_audiometria
-        ? pb.files.getURL(updated, updated.template_audiometria)
+        ? pb.files.getUrl(updated, updated.template_audiometria)
         : updated.template_audiometria_url || ''
       const tplImitUrl = updated.template_imitanciometria
-        ? pb.files.getURL(updated, updated.template_imitanciometria)
+        ? pb.files.getUrl(updated, updated.template_imitanciometria)
         : updated.template_imitanciometria_url || ''
       setClinicSettings({
         id: updated.id,

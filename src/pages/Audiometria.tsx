@@ -606,63 +606,38 @@ export default function Audiometria() {
       updated: '',
     }
 
-    // Se houver um PDF template cadastrado nas configurações da clínica, preenche com pdf-lib
+    // Sempre exige um template PDF cadastrado nas configurações da clínica.
+    // Não há mais fallback de impressão HTML gerada automaticamente.
     const templatePdfUrl = clinicSettings?.template_audiometria_url
-    if (templatePdfUrl) {
-      try {
-        const response = await fetch(templatePdfUrl)
-        if (!response.ok) throw new Error('Falha ao baixar template PDF')
-        const templateBytes = await response.arrayBuffer()
-        const filledBytes = await fillAudiometriaTemplatePdf(templateBytes, {
-          exam: fullExam,
-          patient,
-          clinicSettings,
-          professional: currentUser
-            ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa }
-            : null,
-        })
-        openPdfInNewTab(filledBytes, `Laudo_Audiometria_${patient?.name || 'paciente'}.pdf`)
-        return
-      } catch (err) {
-        console.error('Erro ao preencher PDF template:', err)
-        toast({
-          title: 'Aviso',
-          description:
-            'Não foi possível carregar o PDF template. Utilizando impressão padrão do sistema.',
-          variant: 'default',
-        })
-      }
+    if (!templatePdfUrl) {
+      toast({
+        title: 'Nenhum template configurado',
+        description:
+          'Nenhum template configurado. Acesse Configurações > Templates de Laudo para fazer upload.',
+        variant: 'destructive',
+      })
+      return
     }
 
-    // Fallback: visualização e impressão HTML padrão do sistema
-    const fallbackNode = (
-      <AudiometriaFullPrint
-        exam={fullExam}
-        patient={patient}
-        clinicSettings={clinicSettings}
-        professional={currentUser ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa } : null}
-      />
-    )
-    const ctx = buildAudiometryContext({
-      patientName: patient?.name,
-      patientCpf: patient?.cpf,
-      patientBirthDate: patient?.birthDate,
-      patientSex: patient?.gender,
-      patientPhone: patient?.mobile,
-      examDate: exam.date,
-      professionalName: currentUser?.name,
-      professionalCrfa: currentUser?.crmCrfa,
-      exam: exam as unknown as Record<string, unknown>,
-      clinicName: clinicSettings?.nome,
-      clinicAddress: clinicSettings?.endereco,
-      clinicPhone: clinicSettings?.telefone,
-    })
-    const bodyNode = fallbackNode
-    print({
-      title: 'Audiometria',
-      subtitle: `${patient?.name || ''} — ${formatDate(exam.date)}`,
-      body: bodyNode,
-    })
+    try {
+      const response = await fetch(templatePdfUrl)
+      if (!response.ok) throw new Error('Falha ao baixar template PDF')
+      const templateBytes = await response.arrayBuffer()
+      const filledBytes = await fillAudiometriaTemplatePdf(templateBytes, {
+        exam: fullExam,
+        patient,
+        clinicSettings,
+        professional: currentUser ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa } : null,
+      })
+      openPdfInNewTab(filledBytes, `Laudo_Audiometria_${patient?.name || 'paciente'}.pdf`)
+    } catch (err) {
+      console.error('Erro ao preencher PDF template:', err)
+      toast({
+        title: 'Erro ao gerar laudo',
+        description: 'Não foi possível carregar o template PDF. Verifique o arquivo configurado.',
+        variant: 'destructive',
+      })
+    }
   }
 
   const handleSuggestedReport = () => {
