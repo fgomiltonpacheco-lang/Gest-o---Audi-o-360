@@ -71,6 +71,7 @@
     "tailwind-merge": "^2.6.1",
     "tailwindcss-animate": "^1.0.7",
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^4.10.38",
     "vaul": "^1.1.2",
     "vitest": "4.1.10",
     "zod": "^4.4.3"

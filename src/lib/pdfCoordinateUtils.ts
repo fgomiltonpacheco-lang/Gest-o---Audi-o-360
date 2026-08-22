@@ -140,9 +140,7 @@ function mergeTimpan(
   }
 }
 
-export function mergeAudiometria(
-  saved?: Record<string, unknown> | null,
-): AudiometriaCoordinates {
+export function mergeAudiometria(saved?: Record<string, unknown> | null): AudiometriaCoordinates {
   if (!saved) return structuredClone(DEFAULT_AUDIOMETRIA)
   const d = DEFAULT_AUDIOMETRIA
   const s = saved as Partial<AudiometriaCoordinates>

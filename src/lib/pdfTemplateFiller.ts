@@ -417,9 +417,13 @@ export async function fillAudiometriaTemplatePdf(
   }
 
   // Coordenadas de preenchimento — valores padrão calibrados para um template
-  // A4 (595 x 842 pt). Podem ser sobrescritos via `data.coordinates` para
-  // ajustar as posições a um template personalizado.
-  const c = data.coordinates
+  // A4 (595 x 842 pt). Podem ser sobrescritas via `data.coordinates` para
+  // ajustar as posições a um template personalizado. Quando `data.coordinates`
+  // não for fornecido, utiliza as coordenadas calibradas salvas em
+  // `clinicSettings.coordenadas_audiometria` (definidas via tela de Calibração).
+  const c =
+    data.coordinates ??
+    (clinic?.coordenadas_audiometria as unknown as AudiometriaCoordinates | undefined)
   const cNome = c?.nome ?? { x: 80, y: height - 128 }
   const cData = c?.data ?? { x: 480, y: height - 128 }
   const cCpf = c?.cpf ?? { x: 75, y: height - 146 }
@@ -666,9 +670,13 @@ export async function fillImitanciometriaTemplatePdf(
   const equipment = d.equipment_nome || clinic?.audiometro || 'Não informado'
 
   // Coordenadas de preenchimento — valores padrão calibrados para um template
-  // A4 (595 x 842 pt). Podem ser sobrescritos via `data.coordinates` para
-  // ajustar as posições a um template personalizado.
-  const c = data.coordinates
+  // A4 (595 x 842 pt). Podem ser sobrescritas via `data.coordinates` para
+  // ajustar as posições a um template personalizado. Quando `data.coordinates`
+  // não for fornecido, utiliza as coordenadas calibradas salvas em
+  // `clinicSettings.coordenadas_imitanciometria` (definidas via tela de Calibração).
+  const c =
+    data.coordinates ??
+    (clinic?.coordenadas_imitanciometria as unknown as ImitanciometriaCoordinates | undefined)
   const cNome = c?.nome ?? { x: 80, y: height - 128 }
   const cData = c?.data ?? { x: 480, y: height - 128 }
   const cCpf = c?.cpf ?? { x: 75, y: height - 146 }
