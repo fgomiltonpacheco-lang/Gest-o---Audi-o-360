@@ -372,12 +372,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               roles: ADMIN_ONLY,
             },
             {
-              name: 'Modelos de Laudo',
-              path: '/configuracoes/laudos',
-              icon: FileText,
-              roles: ADMIN_ONLY,
-            },
-            {
               name: 'Editor de IA',
               path: '/configuracoes/ia',
               icon: Brain,
