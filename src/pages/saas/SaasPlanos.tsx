@@ -27,7 +27,7 @@ import { Plano, PLANO_FUNCIONALIDADE_LABELS } from '@/types'
 import { formatCurrency } from '@/lib/formatters'
 import pb from '@/lib/pocketbase/client'
 
-const TODAS_FUNCS = Object.keys(PLAN0_FUNCIONALIDADE_LABELS)
+const TODAS_FUNCS = Object.keys(PLANO_FUNCIONALIDADE_LABELS)
 
 interface PlanoForm {
   nome: string
