@@ -1264,6 +1264,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           template_audiometria_url: tplAudioUrl,
           template_imitanciometria: clinicRec.template_imitanciometria || '',
           template_imitanciometria_url: tplImitUrl,
+          coordenadas_audiometria:
+            (clinicRec.coordenadas_audiometria as Record<string, unknown> | null) ?? null,
+          coordenadas_imitanciometria:
+            (clinicRec.coordenadas_imitanciometria as Record<string, unknown> | null) ?? null,
           endereco: clinicRec.endereco || '',
           telefone: clinicRec.telefone || '',
           email: clinicRec.email || '',
@@ -2008,6 +2012,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               template_audiometria_url: tplAudioUrl,
               template_imitanciometria: r.template_imitanciometria || '',
               template_imitanciometria_url: tplImitUrl,
+              coordenadas_audiometria:
+                (r.coordenadas_audiometria as Record<string, unknown> | null) ?? null,
+              coordenadas_imitanciometria:
+                (r.coordenadas_imitanciometria as Record<string, unknown> | null) ?? null,
               endereco: r.endereco || '',
               telefone: r.telefone || '',
               email: r.email || '',
@@ -2084,6 +2092,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (data.calibracao !== undefined) payload.calibracao = data.calibracao
         if (data.especialista_nome !== undefined) payload.especialista_nome = data.especialista_nome
         if (data.especialista_crfa !== undefined) payload.especialista_crfa = data.especialista_crfa
+        if (data.coordenadas_audiometria !== undefined)
+          payload.coordenadas_audiometria = data.coordenadas_audiometria
+        if (data.coordenadas_imitanciometria !== undefined)
+          payload.coordenadas_imitanciometria = data.coordenadas_imitanciometria
 
         if (!current) {
           updated = await pb.collection('clinic_settings').create(payload)
@@ -2114,6 +2126,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         template_audiometria_url: tplAudioUrl,
         template_imitanciometria: updated.template_imitanciometria || '',
         template_imitanciometria_url: tplImitUrl,
+        coordenadas_audiometria:
+          (updated.coordenadas_audiometria as Record<string, unknown> | null) ?? null,
+        coordenadas_imitanciometria:
+          (updated.coordenadas_imitanciometria as Record<string, unknown> | null) ?? null,
         endereco: updated.endereco || '',
         telefone: updated.telefone || '',
         email: updated.email || '',

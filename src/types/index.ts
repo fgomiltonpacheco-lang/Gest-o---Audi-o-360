@@ -1402,6 +1402,18 @@ export interface ClinicSettings {
   template_audiometria_url?: string
   template_imitanciometria?: string
   template_imitanciometria_url?: string
+  /**
+   * Coordenadas calibradas (em pontos) do template de audiometria.
+   * Serialização de `AudiometriaCoordinates` (ver pdfTemplateFiller.ts).
+   * Quando ausente/vazio, o preenchimento usa os defaults A4.
+   */
+  coordenadas_audiometria?: Record<string, unknown> | null
+  /**
+   * Coordenadas calibradas (em pontos) do template de imitanciometria.
+   * Serialização de `ImitanciometriaCoordinates` (ver pdfTemplateFiller.ts).
+   * Quando ausente/vazio, o preenchimento usa os defaults A4.
+   */
+  coordenadas_imitanciometria?: Record<string, unknown> | null
   audiometro?: string
   calibracao?: string
   calibracao_audiometro?: string
