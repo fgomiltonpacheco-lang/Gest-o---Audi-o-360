@@ -7,6 +7,136 @@ export interface User {
   role: UserRole
   avatar?: string
   crmCrfa?: string
+  /** Marca o dono do SaaS (Super Admin) — vê o painel de gestão multi-clínicas. */
+  isSuperAdmin?: boolean
+}
+
+// ============================================================
+// Módulo SaaS — Gestão Multi-clínicas (Painel Super Admin)
+// ============================================================
+
+/** Status de uma clínica no SaaS. */
+export type ClinicaStatus = 'trial' | 'ativo' | 'inadimplente' | 'cancelado'
+
+export const CLINICA_STATUS_LABELS: Record<ClinicaStatus, string> = {
+  trial: 'Em Trial',
+  ativo: 'Ativo',
+  inadimplente: 'Inadimplente',
+  cancelado: 'Cancelado',
+}
+
+export const CLINICA_STATUS_CLASS: Record<ClinicaStatus, string> = {
+  trial: 'bg-blue-100 text-blue-700 border-blue-300',
+  ativo: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+  inadimplente: 'bg-red-100 text-red-700 border-red-300',
+  cancelado: 'bg-slate-200 text-slate-600 border-slate-300',
+}
+
+/** Funcionalidades disponíveis nos planos do SaaS. */
+export const PLANO_FUNCIONALIDADE_LABELS: Record<string, string> = {
+  agenda: 'Agenda',
+  pacientes: 'Pacientes',
+  prontuario: 'Prontuário',
+  exames: 'Exames',
+  financeiro: 'Financeiro',
+  aparelhos: 'Aparelhos Auditivos',
+  estoque: 'Estoque',
+  relatorios: 'Relatórios',
+  laudos_pdf: 'Laudos em PDF',
+  b2b: 'Vendas B2B',
+  auditoria: 'Auditoria',
+  ia: 'Inteligência Artificial',
+  chat: 'Chat Interno',
+  nfse: 'NFS-e',
+  contas_receber: 'Contas a Receber',
+  despesas: 'Despesas',
+  lembretes_whatsapp: 'Lembretes WhatsApp',
+}
+
+/** Plano de assinatura do SaaS. */
+export interface Plano {
+  id: string
+  nome: string
+  preco_mensal: number
+  funcionalidades: string[]
+  max_profissionais: number
+  max_pacientes: number
+  ativo: boolean
+  created: string
+  updated: string
+}
+
+/** Clínica cadastrada no SaaS. */
+export interface Clinica {
+  id: string
+  nome: string
+  slug?: string
+  email?: string
+  email_admin?: string
+  cnpj?: string
+  telefone?: string
+  endereco?: string
+  plano_id?: string
+  plano_nome?: string
+  plano_preco?: number
+  status: ClinicaStatus
+  trial_ends?: string
+  created: string
+  updated: string
+}
+
+/** Estatísticas agregadas para o Dashboard do Super Admin. */
+export interface SaaSStats {
+  total_clinicas: number
+  ativas: number
+  trial: number
+  inadimplentes: number
+  canceladas: number
+  receita_mensal: number
+  novas_30dias: number
+}
+
+/** Status de um pagamento de mensalidade no SaaS. */
+export type PagamentoSaaSStatus = 'pago' | 'pendente' | 'atrasado'
+
+export const PAGAMENTO_SAAS_STATUS_LABELS: Record<PagamentoSaaSStatus, string> = {
+  pago: 'Pago',
+  pendente: 'Pendente',
+  atrasado: 'Atrasado',
+}
+
+export const PAGAMENTO_SAAS_STATUS_CLASS: Record<PagamentoSaaSStatus, string> = {
+  pago: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+  pendente: 'bg-amber-100 text-amber-700 border-amber-300',
+  atrasado: 'bg-red-100 text-red-700 border-red-300',
+}
+
+export type PagamentoSaaSForma = 'pix' | 'boleto' | 'cartao' | 'transferencia' | 'dinheiro'
+
+export const PAGAMENTO_SAAS_FORMA_LABELS: Record<PagamentoSaaSForma, string> = {
+  pix: 'PIX',
+  boleto: 'Boleto',
+  cartao: 'Cartão',
+  transferencia: 'Transferência',
+  dinheiro: 'Dinheiro',
+}
+
+/** Pagamento de mensalidade de uma clínica (controle do Super Admin). */
+export interface PagamentoSaaS {
+  id: string
+  clinica_id: string
+  clinica_nome?: string
+  plano_id?: string
+  plano_nome?: string
+  valor: number
+  data_vencimento: string
+  data_pagamento?: string
+  forma_pagamento?: PagamentoSaaSForma
+  status: PagamentoSaaSStatus
+  referencia?: string
+  observacoes?: string
+  created: string
+  updated: string
 }
 
 export type PatientStatus = 'Ativo' | 'Em tratamento' | 'Inativo'

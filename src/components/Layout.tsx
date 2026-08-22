@@ -36,6 +36,10 @@ import {
   KeyRound,
   ArrowDownCircle,
   Wrench,
+  // Ícones do painel SaaS (Super Admin)
+  CreditCard,
+  CornerUpLeft,
+  Crown,
   type LucideIcon,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
@@ -45,6 +49,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useSessionTimeout } from '@/lib/sessionTimeout'
 import { SessionTimeoutModal } from '@/components/SessionTimeoutModal'
 import { ChatWidget } from '@/components/ChatWidget'
+import { Switch } from '@/components/ui/switch'
 
 interface LayoutProps {
   children?: React.ReactNode
@@ -125,6 +130,50 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         }
       : {},
   )
+
+  // ---------- Modo Super Admin (SaaS) ----------
+  // Toggle visível apenas para o dono do SaaS (isSuperAdmin). Persiste em
+  // localStorage e alterna entre "Minha Clínica" (modo normal) e "Gestão SaaS"
+  // (painel multi-clínicas). Ao ativar o modo SaaS, redireciona para /saas.
+  const isSuperAdmin = !!currentUser?.isSuperAdmin
+  const [saasMode, setSaasMode] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    try {
+      return window.localStorage.getItem('audicao360_saas_mode') === '1'
+    } catch {
+      return false
+    }
+  })
+
+  const toggleSaasMode = useCallback(
+    (next: boolean) => {
+      setSaasMode(next)
+      try {
+        window.localStorage.setItem('audicao360_saas_mode', next ? '1' : '0')
+      } catch {
+        /* ignore */
+      }
+      if (next) {
+        navigate('/saas')
+      } else {
+        navigate('/')
+      }
+    },
+    [navigate],
+  )
+
+  // Se o usuário não é mais super admin (ex.: trocou de conta), reseta o modo.
+  React.useEffect(() => {
+    if (!isSuperAdmin && saasMode) {
+      setSaasMode(false)
+      try {
+        window.localStorage.setItem('audicao360_saas_mode', '0')
+      } catch {
+        /* ignore */
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuperAdmin])
 
   interface NavItem {
     name: string
@@ -437,6 +486,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     }))
     .filter((group) => group.items.length > 0)
 
+  // ---------- Navegação do painel SaaS (Super Admin) ----------
+  const saasNavItems: NavItem[] = [
+    { name: 'Dashboard', path: '/saas', icon: LayoutDashboard, exact: true },
+    { name: 'Clínicas', path: '/saas/clinicas', icon: Building2 },
+    { name: 'Planos', path: '/saas/planos', icon: Package },
+    { name: 'Pagamentos', path: '/saas/pagamentos', icon: CreditCard },
+  ]
+
   const isCurrentActive = (path: string, exact = false) => {
     if (exact) return location.pathname === path
     return location.pathname.startsWith(path)
@@ -521,6 +578,62 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     )
   }
 
+  // Renderiza a navegação SaaS (modo Super Admin).
+  const renderSaasNav = ({ mobile }: { mobile: boolean }) => (
+    <div className="space-y-1">{saasNavItems.map((item) => renderNavItem(item, { mobile }))}</div>
+  )
+
+  // Bloco do toggle de modos (Super Admin). Visível apenas para o dono do SaaS.
+  const renderSaasToggle = ({ mobile }: { mobile: boolean }) => {
+    if (!isSuperAdmin) return null
+    return (
+      <div className={`px-3 ${mobile ? 'py-3' : 'py-2'}`}>
+        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <Crown className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-200/80">
+                  Modo de Gestão
+                </span>
+              </div>
+              <p className="text-[12px] font-semibold text-white mt-1 truncate">
+                {saasMode ? '👑 Gestão SaaS' : '🏥 Minha Clínica'}
+              </p>
+              <p className="text-[10px] text-slate-300/60 truncate">
+                {saasMode ? 'Painel do Super Admin' : 'Dados da clínica atual'}
+              </p>
+            </div>
+            <Switch
+              checked={saasMode}
+              onCheckedChange={toggleSaasMode}
+              aria-label="Alternar modo Super Admin"
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Bloco "Voltar para Minha Clínica" no rodapé (modo SaaS).
+  const renderBackToClinic = ({ mobile }: { mobile: boolean }) => {
+    if (!saasMode) return null
+    return (
+      <div className="px-3 pb-2">
+        <button
+          onClick={() => {
+            toggleSaasMode(false)
+            if (mobile) setMobileMenuOpen(false)
+          }}
+          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg text-sm font-medium text-slate-300/80 hover:bg-white/5 hover:text-white transition-all"
+        >
+          <CornerUpLeft className="w-4 h-4 shrink-0 text-teal-300" />
+          <span>Voltar para Minha Clínica</span>
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* SIDEBAR DESKTOP (Fixa 260px) — `transform-none` anula qualquer acidente
@@ -539,14 +652,29 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* Menu agrupado */}
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-          {navigationGroups.map((group) => (
-            <div key={group.groupTitle} className="space-y-1">
-              <span className="px-3 text-[11px] font-bold uppercase tracking-wider text-teal-300/60 block">
-                {group.groupTitle}
-              </span>
-              {group.items.map((item) => renderNavItem(item, { mobile: false }))}
-            </div>
-          ))}
+          {saasMode ? (
+            <>
+              <div className="space-y-1">
+                <span className="px-3 text-[11px] font-bold uppercase tracking-wider text-amber-300/70 block">
+                  Gestão SaaS
+                </span>
+                {renderSaasNav({ mobile: false })}
+              </div>
+              {renderBackToClinic({ mobile: false })}
+            </>
+          ) : (
+            <>
+              {navigationGroups.map((group) => (
+                <div key={group.groupTitle} className="space-y-1">
+                  <span className="px-3 text-[11px] font-bold uppercase tracking-wider text-teal-300/60 block">
+                    {group.groupTitle}
+                  </span>
+                  {group.items.map((item) => renderNavItem(item, { mobile: false }))}
+                </div>
+              ))}
+              {renderSaasToggle({ mobile: false })}
+            </>
+          )}
         </div>
 
         {/* Rodapé do Usuário */}
@@ -633,14 +761,29 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
-              {navigationGroups.map((group) => (
-                <div key={group.groupTitle} className="space-y-1">
-                  <span className="px-3 text-[10px] font-bold uppercase tracking-wider text-teal-300/60 block">
-                    {group.groupTitle}
-                  </span>
-                  {group.items.map((item) => renderNavItem(item, { mobile: true }))}
-                </div>
-              ))}
+              {saasMode ? (
+                <>
+                  <div className="space-y-1">
+                    <span className="px-3 text-[10px] font-bold uppercase tracking-wider text-amber-300/70 block">
+                      Gestão SaaS
+                    </span>
+                    {renderSaasNav({ mobile: true })}
+                  </div>
+                  {renderBackToClinic({ mobile: true })}
+                </>
+              ) : (
+                <>
+                  {navigationGroups.map((group) => (
+                    <div key={group.groupTitle} className="space-y-1">
+                      <span className="px-3 text-[10px] font-bold uppercase tracking-wider text-teal-300/60 block">
+                        {group.groupTitle}
+                      </span>
+                      {group.items.map((item) => renderNavItem(item, { mobile: true }))}
+                    </div>
+                  ))}
+                  {renderSaasToggle({ mobile: true })}
+                </>
+              )}
             </div>
 
             <div className="p-4 border-t border-white/10 bg-navy-900/60">

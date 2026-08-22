@@ -54,6 +54,10 @@ import ExamReportTemplateNovo from '@/pages/laudos/ExamReportTemplateNovo'
 import ExamReportTemplateEditor from '@/pages/laudos/ExamReportTemplateEditor'
 import ExamReportTemplatePreview from '@/pages/laudos/ExamReportTemplatePreview'
 import ExamReportTemplateVersions from '@/pages/laudos/ExamReportTemplateVersions'
+import SaasDashboard from '@/pages/saas/SaasDashboard'
+import SaasClinicas from '@/pages/saas/SaasClinicas'
+import SaasPlanos from '@/pages/saas/SaasPlanos'
+import SaasPagamentos from '@/pages/saas/SaasPagamentos'
 import { Toaster } from '@/components/ui/toaster'
 import { useToast } from '@/hooks/use-toast'
 
@@ -128,6 +132,33 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return <Navigate to="/" replace />
   }
   return <>{children}</>
+}
+
+// Rota restrita ao Super Admin (dono do SaaS): se o usuário não for
+// isSuperAdmin, exibe toast e redireciona para o Painel. Usada para as rotas
+// /saas/* do painel de gestão multi-clínicas.
+const SuperAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentUser } = useApp()
+  const { toast } = useToast()
+
+  React.useEffect(() => {
+    if (currentUser && !currentUser.isSuperAdmin) {
+      toast({
+        title: 'Acesso restrito',
+        description: 'Apenas o Super Admin (dono do SaaS) pode acessar o painel de gestão.',
+        variant: 'destructive',
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id])
+
+  if (!currentUser) {
+    return <Navigate to="/login" replace />
+  }
+  if (!currentUser.isSuperAdmin) {
+    return <Navigate to="/" replace />
+  }
+  return <Layout>{children}</Layout>
 }
 
 export function App() {
@@ -591,6 +622,40 @@ export function App() {
                 <AdminRoute>
                   <Auditoria />
                 </AdminRoute>
+              }
+            />
+
+            {/* ===== Painel SaaS (Super Admin) — Gestão Multi-clínicas ===== */}
+            <Route
+              path="/saas"
+              element={
+                <SuperAdminRoute>
+                  <SaasDashboard />
+                </SuperAdminRoute>
+              }
+            />
+            <Route
+              path="/saas/clinicas"
+              element={
+                <SuperAdminRoute>
+                  <SaasClinicas />
+                </SuperAdminRoute>
+              }
+            />
+            <Route
+              path="/saas/planos"
+              element={
+                <SuperAdminRoute>
+                  <SaasPlanos />
+                </SuperAdminRoute>
+              }
+            />
+            <Route
+              path="/saas/pagamentos"
+              element={
+                <SuperAdminRoute>
+                  <SaasPagamentos />
+                </SuperAdminRoute>
               }
             />
 

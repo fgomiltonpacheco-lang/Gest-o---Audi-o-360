@@ -1339,6 +1339,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 : 'admin',
           avatar: r.avatar || undefined,
           crmCrfa: r.crmCrfa || undefined,
+          isSuperAdmin: !!r.is_super_admin,
         })
         setTwoFactorEnabled(!!r.two_factor_enabled)
       }
@@ -1511,6 +1512,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             : 'admin',
       avatar: r.avatar || undefined,
       crmCrfa: r.crmCrfa || undefined,
+      isSuperAdmin: !!r.is_super_admin,
     }
   }, [])
 

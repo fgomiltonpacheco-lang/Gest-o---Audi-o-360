@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-22T17:53:51.755Z",
+  "generatedAt": "2026-08-22T18:34:17.623Z",
   "collections": [
     {
       "name": "users",
@@ -114,6 +114,12 @@
         {
           "name": "clinica_id",
           "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "is_super_admin",
+          "type": "bool",
           "required": false,
           "system": false
         }
@@ -6185,9 +6191,9 @@
       "apiRules": {
         "list": "@request.auth.id != ''",
         "view": "@request.auth.id != ''",
-        "create": null,
-        "update": null,
-        "delete": null
+        "create": "@request.auth.is_super_admin = true",
+        "update": "@request.auth.is_super_admin = true",
+        "delete": "@request.auth.is_super_admin = true"
       },
       "fields": [
         {
@@ -6233,6 +6239,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "max_pacientes",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX idx_planos_ativo ON planos (ativo)"]
@@ -6241,11 +6253,11 @@
       "name": "clinicas",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (id = @request.auth.clinica_id || @request.auth.role = 'admin')",
-        "view": "@request.auth.id != '' && (id = @request.auth.clinica_id || @request.auth.role = 'admin')",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != '' && id = @request.auth.clinica_id",
-        "delete": null
+        "list": "@request.auth.id != '' && (@request.auth.is_super_admin = true || id = @request.auth.clinica_id)",
+        "view": "@request.auth.id != '' && (@request.auth.is_super_admin = true || id = @request.auth.clinica_id)",
+        "create": "@request.auth.is_super_admin = true",
+        "update": "@request.auth.id != '' && (@request.auth.is_super_admin = true || id = @request.auth.clinica_id)",
+        "delete": "@request.auth.is_super_admin = true"
       },
       "fields": [
         {
@@ -6344,6 +6356,96 @@
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_clinicas_slug ON clinicas (slug)"]
+    },
+    {
+      "name": "pagamentos_saas",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.is_super_admin = true",
+        "view": "@request.auth.id != '' && @request.auth.is_super_admin = true",
+        "create": "@request.auth.is_super_admin = true",
+        "update": "@request.auth.is_super_admin = true",
+        "delete": "@request.auth.is_super_admin = true"
+      },
+      "fields": [
+        {
+          "name": "clinica_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "clinicas"
+        },
+        {
+          "name": "plano_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "planos"
+        },
+        {
+          "name": "valor",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "data_vencimento",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "data_pagamento",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "forma_pagamento",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["pix", "boleto", "cartao", "transferencia", "dinheiro"]
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["pago", "pendente", "atrasado"]
+        },
+        {
+          "name": "referencia",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_pagamentos_saas_clinica ON pagamentos_saas (clinica_id)",
+        "CREATE INDEX idx_pagamentos_saas_status ON pagamentos_saas (status)",
+        "CREATE INDEX idx_pagamentos_saas_vencimento ON pagamentos_saas (data_vencimento)"
+      ]
     }
   ]
 }
