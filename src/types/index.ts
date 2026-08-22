@@ -9,6 +9,10 @@ export interface User {
   crmCrfa?: string
   /** Marca o dono do SaaS (Super Admin) — vê o painel de gestão multi-clínicas. */
   isSuperAdmin?: boolean
+  /** ID da clínica (tenant) à qual o usuário pertence. */
+  clinicaId?: string
+  /** Indica se a clínica já concluiu o wizard de onboarding. */
+  onboardingCompleted?: boolean
 }
 
 // ============================================================

@@ -61,6 +61,7 @@ import SaasPagamentos from '@/pages/saas/SaasPagamentos'
 import Landing from '@/pages/Landing'
 import Cadastro from '@/pages/Cadastro'
 import BoasVindas from '@/pages/BoasVindas'
+import Onboarding from '@/pages/Onboarding'
 import { Toaster } from '@/components/ui/toaster'
 import { useToast } from '@/hooks/use-toast'
 
@@ -145,7 +146,32 @@ const RootRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   if (!currentUser) {
     return <Navigate to="/landing" replace />
   }
+  // Fase 4: admin com onboarding pendente -> wizard de onboarding.
+  if (currentUser.role === 'admin' && currentUser.onboardingCompleted === false) {
+    return <Navigate to="/onboarding" replace />
+  }
   return <Layout>{children}</Layout>
+}
+
+// Rota protegida do wizard de onboarding (Fase 4). Só acessível por um admin
+// cuja clínica ainda não concluiu o onboarding (onboarding_completed === false).
+// Qualquer outro caso (não-admin, onboarding já concluído, não autenticado) é
+// redirecionado para a raiz.
+const OnboardingRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentUser } = useApp()
+  if (!currentUser) {
+    return <Navigate to="/login" replace />
+  }
+  // Não-admin não faz onboarding.
+  if (currentUser.role !== 'admin') {
+    return <Navigate to="/" replace />
+  }
+  // onboardingCompleted undefined => ainda hidratando: deixa passar (o
+  // próprio componente redireciona ao concluir/confirmar). Já true => raiz.
+  if (currentUser.onboardingCompleted === true) {
+    return <Navigate to="/" replace />
+  }
+  return <>{children}</>
 }
 
 // Rota restrita ao Super Admin (dono do SaaS): se o usuário não for
@@ -196,13 +222,24 @@ export function App() {
               }
             />
 
-            {/* Rota raiz: autenticado -> Painel; não autenticado -> /landing */}
+            {/* Rota raiz: autenticado -> Painel; não autenticado -> /landing.
+                Admin com onboarding pendente é desviado para /onboarding. */}
             <Route
               path="/"
               element={
                 <RootRoute>
                   <Index />
                 </RootRoute>
+              }
+            />
+
+            {/* Wizard de onboarding (Fase 4) — admin com clínica nova */}
+            <Route
+              path="/onboarding"
+              element={
+                <OnboardingRoute>
+                  <Onboarding />
+                </OnboardingRoute>
               }
             />
 

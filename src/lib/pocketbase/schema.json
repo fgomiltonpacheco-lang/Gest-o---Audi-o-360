@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-22T19:05:58.825Z",
+  "generatedAt": "2026-08-22T19:21:11.968Z",
   "collections": [
     {
       "name": "users",
@@ -6353,6 +6353,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "onboarding_completed",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_clinicas_slug ON clinicas (slug)"]

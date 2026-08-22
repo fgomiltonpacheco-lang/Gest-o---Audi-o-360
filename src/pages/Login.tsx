@@ -110,7 +110,9 @@ export default function Login() {
         )
         return
       }
-      // Sucesso (boolean true)
+      // Sucesso (boolean true). O redirecionamento para o wizard de
+      // onboarding (quando aplicável) é tratado pelo guard RootRoute em
+      // App.tsx, que desvia admin com onboarding pendente para /onboarding.
       if (result === true) {
         navigate('/')
         return

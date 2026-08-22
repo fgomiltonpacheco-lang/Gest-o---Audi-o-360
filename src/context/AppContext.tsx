@@ -770,6 +770,14 @@ interface AppContextType {
   twoFactorEnabled: boolean
   uploadAvatar: (file: File) => Promise<{ success: boolean; message?: string }>
   dataLoading: boolean
+  /**
+   * Marca o onboarding da clínica do usuário atual como concluído no estado
+   * local (currentUser.onboardingCompleted = true). Usado pelo wizard de
+   * onboarding ao finalizar, para que o redirecionamento pós-login não o
+   * recapture. O campo `onboarding_completed` já foi persistido como true no
+   * registro da clínica pelo próprio wizard.
+   */
+  markOnboardingCompleted: () => void
 
   // Segurança — configurações globais (settings)
   securitySettings: SecuritySettings | null
@@ -1327,7 +1335,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const rec: any = storeAny.model || storeAny.record
       if (pb.authStore.isValid && rec) {
         const r: any = rec
-        setCurrentUser({
+        const restoredUser: User = {
           id: r.id,
           name: r.name || r.email || 'Usuário',
           email: r.email || '',
@@ -1340,12 +1348,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           avatar: r.avatar || undefined,
           crmCrfa: r.crmCrfa || undefined,
           isSuperAdmin: !!r.is_super_admin,
-        })
+          clinicaId: r.clinica_id || undefined,
+          onboardingCompleted: undefined,
+        }
+        setCurrentUser(restoredUser)
         setTwoFactorEnabled(!!r.two_factor_enabled)
+        // Hidrata o flag de onboarding da clínica em segundo plano.
+        if (r.role === 'admin' && r.clinica_id) {
+          fetchUserOnboarding(r.clinica_id).then((done) => {
+            setCurrentUser((prev) =>
+              prev && prev.id === restoredUser.id ? { ...prev, onboardingCompleted: done } : prev,
+            )
+          })
+        } else {
+          // Não-admin ou sem clínica: onboarding irrelevante => concluído.
+          setCurrentUser((prev) =>
+            prev && prev.id === restoredUser.id ? { ...prev, onboardingCompleted: true } : prev,
+          )
+        }
       }
     } catch (_) {
       // sessão inválida — ignora
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ---------- Carregar dados e assinar Realtime quando autenticado ----------
@@ -1513,7 +1538,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       avatar: r.avatar || undefined,
       crmCrfa: r.crmCrfa || undefined,
       isSuperAdmin: !!r.is_super_admin,
+      clinicaId: r.clinica_id || undefined,
+      // onboardingCompleted é preenchido depois (ver fetchUserOnboarding),
+      // porque o flag vive na coleção `clinicas`, não no `users`.
+      onboardingCompleted: undefined,
     }
+  }, [])
+
+  /**
+   * Busca o flag `onboarding_completed` da clínica vinculada ao usuário.
+   * Retorna true se a clínica não existir ou se o campo estiver ausente
+   * (preserva o comportamento de clínicas legadas, que não passam pelo
+   * wizard). Chamado após login bem-sucedido e na restauração de sessão.
+   */
+  const fetchUserOnboarding = useCallback(
+    async (clinicaId: string | undefined): Promise<boolean> => {
+      if (!clinicaId) return true
+      try {
+        const clinica: any = await pb.collection('clinicas').getOne(clinicaId)
+        return clinica?.onboarding_completed === true
+      } catch (_) {
+        // clínica não encontrada ou sem permissão: assume concluído.
+        return true
+      }
+    },
+    [],
+  )
+
+  /**
+   * Marca o onboarding da clínica do usuário atual como concluído no estado
+   * local (currentUser.onboardingCompleted = true). O wizard persistiu o
+   * flag na clínica antes de chamar; aqui só sincronizamos o cache local.
+   */
+  const markOnboardingCompleted = useCallback(() => {
+    setCurrentUser((prev) => (prev ? { ...prev, onboardingCompleted: true } : prev))
   }, [])
 
   /**
@@ -1564,6 +1622,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // 5) Sem 2FA — loga normalmente.
       const user = loginUserRecord(r)
+      // Resolve o flag de onboarding da clínica antes de consolidar o login,
+      // para que o redirecionamento pós-login (Dashboard vs /onboarding)
+      // decida com base no estado já hidratado — sem flash de tela.
+      if (user.role === 'admin' && user.clinicaId) {
+        user.onboardingCompleted = await fetchUserOnboarding(user.clinicaId)
+      } else {
+        user.onboardingCompleted = true
+      }
       setCurrentUser(user)
       setTwoFactorEnabled(false)
       toast({
@@ -1680,6 +1746,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         const user = loginUserRecord(authRec)
+        // Resolve o flag de onboarding da clínica para o admin (2FA).
+        if (user.role === 'admin' && user.clinicaId) {
+          user.onboardingCompleted = await fetchUserOnboarding(user.clinicaId)
+        } else {
+          user.onboardingCompleted = true
+        }
         setCurrentUser(user)
         setTwoFactorEnabled(true)
         toast({
@@ -1692,7 +1764,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { success: false, message: 'Não foi possível verificar o 2FA.' }
       }
     },
-    [loginUserRecord],
+    [loginUserRecord, fetchUserOnboarding],
   )
 
   /**
@@ -5752,6 +5824,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         twoFactorEnabled,
         uploadAvatar,
         dataLoading,
+        markOnboardingCompleted,
         // Segurança
         securitySettings,
         fetchSecuritySettings,
