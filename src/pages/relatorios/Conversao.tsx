@@ -124,7 +124,7 @@ export default function RelatorioConversao() {
   const b2bById = useMemo(() => {
     const m: Record<string, { valor: number; numero: string }> = {}
     vendasB2B.forEach((v) => {
-      m[v.id] = { valor: v.valor_total || 0, numero: v.numero_venda || 'B2B' }
+      m[v.id] = { valor: v.valor_total || 0, numero: String(v.numero_venda || 'B2B') }
     })
     return m
   }, [vendasB2B])

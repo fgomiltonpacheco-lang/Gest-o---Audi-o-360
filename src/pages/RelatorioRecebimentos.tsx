@@ -307,7 +307,10 @@ export default function RelatorioRecebimentos() {
           <div className="p-8 text-center text-sm text-slate-500">Carregando recebimentos...</div>
         ) : filteredRows.length === 0 ? (
           <div className="p-8 text-center">
-            <EmptyState message="Nenhum recebimento encontrado para o período e filtros selecionados." icon={DollarSign} />
+            <EmptyState
+              message="Nenhum recebimento encontrado para o período e filtros selecionados."
+              icon={DollarSign}
+            />
           </div>
         ) : (
           <div className="overflow-x-auto">

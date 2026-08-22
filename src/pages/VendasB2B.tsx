@@ -51,17 +51,23 @@ const PAGE_SIZE = 10
 
 const statusLabel: Record<VendaB2BStatus, string> = {
   pendente: 'Pendente',
+  aprovado: 'Aprovada',
   aprovada: 'Aprovada',
   nf_emitida: 'NF Emitida',
   concluida: 'Concluída',
+  entregue: 'Entregue',
+  cancelado: 'Cancelada',
   cancelada: 'Cancelada',
 }
 
 const statusColors: Record<VendaB2BStatus, string> = {
   pendente: 'bg-amber-50 text-amber-700 border-amber-200',
+  aprovado: 'bg-blue-50 text-blue-700 border-blue-200',
   aprovada: 'bg-blue-50 text-blue-700 border-blue-200',
   nf_emitida: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   concluida: 'bg-green-50 text-green-800 border-green-300',
+  entregue: 'bg-green-50 text-green-800 border-green-300',
+  cancelado: 'bg-red-50 text-red-700 border-red-200',
   cancelada: 'bg-red-50 text-red-700 border-red-200',
 }
 

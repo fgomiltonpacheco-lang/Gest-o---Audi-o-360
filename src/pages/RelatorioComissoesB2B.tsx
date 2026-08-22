@@ -149,7 +149,13 @@ export default function RelatorioComissoesB2B() {
         if (filterStatus === 'recebidas' && v.status_repasse !== 'recebido') return false
         if (filterNfse !== 'todas' && nfseFiltroDe(v.nf?.status) !== filterNfse) return false
         if (filterEmpresa !== 'all' && v.cliente_empresa_id !== filterEmpresa) return false
-        if (busca && !String(v.numero_venda || '').toLowerCase().includes(busca)) return false
+        if (
+          busca &&
+          !String(v.numero_venda || '')
+            .toLowerCase()
+            .includes(busca)
+        )
+          return false
         return true
       })
       .sort((a, b) => (a.data_venda < b.data_venda ? 1 : -1))

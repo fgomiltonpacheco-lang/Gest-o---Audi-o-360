@@ -116,10 +116,13 @@ export default function RelatorioFaturamento() {
       origem: 'Direta',
     }))
     const b2b: Row[] = b2bSales.map((v) => ({
-      data: v.data_venda,
-      venda: v.numero_venda || 'B2B',
+      data: v.data_venda || '',
+      venda: String(v.numero_venda || 'B2B'),
       cliente: v.cliente_empresa_nome || '—',
-      itens: v.itens?.map((i) => `${i.produto_nome} x${i.quantidade}`).join(', ') || '',
+      itens:
+        v.itens
+          ?.map((i) => `${'produto_nome' in i ? i.produto_nome : 'Item'} x${i.quantidade}`)
+          .join(', ') || '',
       valor: v.valor_total || 0,
       forma: 'Boleto',
       profissional: v.especialista_nome || '—',
