@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-22T18:46:04.639Z",
+  "generatedAt": "2026-08-22T19:05:58.825Z",
   "collections": [
     {
       "name": "users",
@@ -6255,7 +6255,7 @@
       "apiRules": {
         "list": "@request.auth.id != '' && (@request.auth.is_super_admin = true || id = @request.auth.clinica_id)",
         "view": "@request.auth.id != '' && (@request.auth.is_super_admin = true || id = @request.auth.clinica_id)",
-        "create": "@request.auth.is_super_admin = true",
+        "create": "",
         "update": "@request.auth.id != '' && (@request.auth.is_super_admin = true || id = @request.auth.clinica_id)",
         "delete": "@request.auth.is_super_admin = true"
       },
@@ -6412,7 +6412,7 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["pago", "pendente", "atrasado"]
+          "selectValues": ["pago", "pendente", "atrasado", "trial"]
         },
         {
           "name": "referencia",

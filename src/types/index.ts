@@ -97,18 +97,20 @@ export interface SaaSStats {
 }
 
 /** Status de um pagamento de mensalidade no SaaS. */
-export type PagamentoSaaSStatus = 'pago' | 'pendente' | 'atrasado'
+export type PagamentoSaaSStatus = 'pago' | 'pendente' | 'atrasado' | 'trial'
 
 export const PAGAMENTO_SAAS_STATUS_LABELS: Record<PagamentoSaaSStatus, string> = {
   pago: 'Pago',
   pendente: 'Pendente',
   atrasado: 'Atrasado',
+  trial: 'Trial',
 }
 
 export const PAGAMENTO_SAAS_STATUS_CLASS: Record<PagamentoSaaSStatus, string> = {
   pago: 'bg-emerald-100 text-emerald-700 border-emerald-300',
   pendente: 'bg-amber-100 text-amber-700 border-amber-300',
   atrasado: 'bg-red-100 text-red-700 border-red-300',
+  trial: 'bg-blue-100 text-blue-700 border-blue-300',
 }
 
 export type PagamentoSaaSForma = 'pix' | 'boleto' | 'cartao' | 'transferencia' | 'dinheiro'

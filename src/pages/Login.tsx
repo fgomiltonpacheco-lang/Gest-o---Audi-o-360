@@ -10,7 +10,9 @@ import {
   ShieldCheck,
   KeyRound,
   AlertTriangle,
+  Building2,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -395,9 +397,16 @@ export default function Login() {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-xs text-slate-500">
-          Não tem uma conta? Solicite ao administrador do sistema.
-        </p>
+        <div className="mt-6 pt-6 border-t border-slate-100 text-center">
+          <p className="text-xs text-slate-500">Não tem uma conta?</p>
+          <Link
+            to="/cadastro"
+            className="mt-1 inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-[#1e3a8a] hover:text-[#1e40af] transition-colors"
+          >
+            <Building2 className="w-4 h-4" />
+            Cadastre sua clínica
+          </Link>
+        </div>
       </div>
 
       {/* Modal de Recuperação de Senha */}

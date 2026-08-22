@@ -58,6 +58,9 @@ import SaasDashboard from '@/pages/saas/SaasDashboard'
 import SaasClinicas from '@/pages/saas/SaasClinicas'
 import SaasPlanos from '@/pages/saas/SaasPlanos'
 import SaasPagamentos from '@/pages/saas/SaasPagamentos'
+import Landing from '@/pages/Landing'
+import Cadastro from '@/pages/Cadastro'
+import BoasVindas from '@/pages/BoasVindas'
 import { Toaster } from '@/components/ui/toaster'
 import { useToast } from '@/hooks/use-toast'
 
@@ -134,6 +137,17 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>
 }
 
+// Rota raiz (Fase 3): se não autenticado, redireciona para a landing page
+// pública; se autenticado, exibe o Painel dentro do Layout. O fluxo público
+// fica: Landing -> Cadastro -> Boas-vindas -> Login -> Dashboard.
+const RootRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentUser } = useApp()
+  if (!currentUser) {
+    return <Navigate to="/landing" replace />
+  }
+  return <Layout>{children}</Layout>
+}
+
 // Rota restrita ao Super Admin (dono do SaaS): se o usuário não for
 // isSuperAdmin, exibe toast e redireciona para o Painel. Usada para as rotas
 // /saas/* do painel de gestão multi-clínicas.
@@ -167,7 +181,12 @@ export function App() {
       <PrintProvider>
         <Router>
           <Routes>
-            {/* Rota Pública */}
+            {/* ===== Rotas Públicas (Fase 3 — sem autenticação) ===== */}
+            <Route path="/landing" element={<Landing />} />
+            <Route path="/cadastro" element={<Cadastro />} />
+            <Route path="/boas-vindas" element={<BoasVindas />} />
+
+            {/* Rota Pública de login */}
             <Route
               path="/login"
               element={
@@ -177,13 +196,13 @@ export function App() {
               }
             />
 
-            {/* Rotas Autenticadas com Layout Global */}
+            {/* Rota raiz: autenticado -> Painel; não autenticado -> /landing */}
             <Route
               path="/"
               element={
-                <ProtectedRoute>
+                <RootRoute>
                   <Index />
-                </ProtectedRoute>
+                </RootRoute>
               }
             />
 
