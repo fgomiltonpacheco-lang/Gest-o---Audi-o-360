@@ -18,7 +18,7 @@ migrate(
 
     if (!col.fields.getByName('coordenadas_audiometria')) {
       col.fields.add(
-        new JsonField({
+        new JSONField({
           name: 'coordenadas_audiometria',
           required: false,
         }),
@@ -27,7 +27,7 @@ migrate(
 
     if (!col.fields.getByName('coordenadas_imitanciometria')) {
       col.fields.add(
-        new JsonField({
+        new JSONField({
           name: 'coordenadas_imitanciometria',
           required: false,
         }),
