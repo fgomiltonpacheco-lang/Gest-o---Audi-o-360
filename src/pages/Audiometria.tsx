@@ -520,6 +520,7 @@ export default function Audiometria() {
       patient: patient.id,
       patientName: patient.name,
       created_by: currentUser?.id || '',
+      clinica_id: ((pb.authStore as any).model || (pb.authStore as any).record)?.clinica_id || '',
       date: exam.date,
       cpf: exam.cpf,
       dob: exam.dob,
