@@ -21,6 +21,101 @@ export interface ProfessionalData {
   crmCrfa?: string
 }
 
+/** Posição X,Y (em pontos) de um campo de preenchimento no template PDF. */
+export interface PdfCoordPoint {
+  x: number
+  y: number
+}
+
+/** Caixa de um gráfico de audiometria no template PDF. */
+export interface PdfChartBox {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+/** Linha da tabela IPRF (Índice de Reconhecimento de Fala). */
+export interface PdfIprfRow {
+  intensidadeX: number
+  dissilabosX: number
+  monossilabosX: number
+  mascaramentoX: number
+  y: number
+}
+
+/** Linha de reflexos estapédicos (ipsi e contralateral). */
+export interface PdfReflexosRow {
+  ipsiX: number
+  contraX: number
+  y: number
+}
+
+/** Resumo de timpanometria: tipo da curva + medidas. */
+export interface PdfTimpanometriaCoords {
+  tipoCurva: PdfCoordPoint
+  volumeMeato: PdfCoordPoint
+  complacencia: PdfCoordPoint
+  pressaoPico: PdfCoordPoint
+}
+
+/**
+ * Coordenadas de preenchimento do template de AUDIOMETRIA.
+ *
+ * Todos os valores são em pontos (pt) com origem no canto inferior esquerdo
+ * da página (padrão pdf-lib). Quando `coordinates` for omitido, a função
+ * utiliza os valores padrão calibrados para um template A4 (595 x 842 pt).
+ * Forneça `coordinates` para ajustar as posições a um template personalizado.
+ */
+export interface AudiometriaCoordinates {
+  nome: PdfCoordPoint
+  data: PdfCoordPoint
+  cpf: PdfCoordPoint
+  nascimento: PdfCoordPoint
+  sexoF: PdfCoordPoint
+  sexoM: PdfCoordPoint
+  convenio: PdfCoordPoint
+  audiometro: PdfCoordPoint
+  calibracao: PdfCoordPoint
+  graficoOD: PdfChartBox
+  graficoOE: PdfChartBox
+  mtOD: PdfCoordPoint
+  lrfOD: PdfCoordPoint
+  ldvOD: PdfCoordPoint
+  mtOE: PdfCoordPoint
+  lrfOE: PdfCoordPoint
+  ldvOE: PdfCoordPoint
+  iprfOD: PdfIprfRow
+  iprfOE: PdfIprfRow
+  parecer: PdfCoordPoint
+  assinaturaNome: PdfCoordPoint
+  assinaturaCrfa: PdfCoordPoint
+  rodape: PdfCoordPoint
+}
+
+/**
+ * Coordenadas de preenchimento do template de IMITANCIOMETRIA.
+ *
+ * Mesma convenção de `AudiometriaCoordinates`: valores em pontos (pt), origem
+ * no canto inferior esquerdo. Quando omitido, utiliza os valores padrão
+ * calibrados para um template A4 (595 x 842 pt).
+ */
+export interface ImitanciometriaCoordinates {
+  nome: PdfCoordPoint
+  data: PdfCoordPoint
+  cpf: PdfCoordPoint
+  nascimento: PdfCoordPoint
+  equipamento: PdfCoordPoint
+  timpanometriaOD: PdfTimpanometriaCoords
+  timpanometriaOE: PdfTimpanometriaCoords
+  reflexosOD: PdfReflexosRow
+  reflexosOE: PdfReflexosRow
+  parecer: PdfCoordPoint
+  assinaturaNome: PdfCoordPoint
+  assinaturaCrfa: PdfCoordPoint
+  rodape: PdfCoordPoint
+}
+
 /**
  * Funções auxiliares de desenho em PDF para audiometria
  */
@@ -258,6 +353,12 @@ export async function fillAudiometriaTemplatePdf(
     patient?: Patient | null
     clinicSettings?: ClinicSettings | null
     professional?: ProfessionalData | null
+    /**
+     * Coordenadas de preenchimento opcionais. Quando fornecidas, sobrescrevem
+     * os valores padrão calibrados para um template A4 (595 x 842 pt),
+     * permitindo ajustar as posições a um template personalizado.
+     */
+    coordinates?: AudiometriaCoordinates
   },
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(templatePdfBytes)
@@ -315,73 +416,102 @@ export async function fillAudiometriaTemplatePdf(
     mascaramento: '',
   }
 
-  // Coordenadas calibradas baseadas no template padrão A4 (595 x 842 pt)
+  // Coordenadas de preenchimento — valores padrão calibrados para um template
+  // A4 (595 x 842 pt). Podem ser sobrescritos via `data.coordinates` para
+  // ajustar as posições a um template personalizado.
+  const c = data.coordinates
+  const cNome = c?.nome ?? { x: 80, y: height - 128 }
+  const cData = c?.data ?? { x: 480, y: height - 128 }
+  const cCpf = c?.cpf ?? { x: 75, y: height - 146 }
+  const cNasc = c?.nascimento ?? { x: 235, y: height - 146 }
+  const cSexoF = c?.sexoF ?? { x: 370, y: height - 146 }
+  const cSexoM = c?.sexoM ?? { x: 403, y: height - 146 }
+  const cConvenio = c?.convenio ?? { x: 495, y: height - 146 }
+  const cAudiometro = c?.audiometro ?? { x: 105, y: height - 165 }
+  const cCalibracao = c?.calibracao ?? { x: 470, y: height - 165 }
+  const cGraficoOD = c?.graficoOD ?? { left: 58, top: height - 208, width: 220, height: 155 }
+  const cGraficoOE = c?.graficoOE ?? { left: 328, top: height - 208, width: 220, height: 155 }
+  const cMtOD = c?.mtOD ?? { x: 78, y: height - 390 }
+  const cLrfOD = c?.lrfOD ?? { x: 153, y: height - 390 }
+  const cLdvOD = c?.ldvOD ?? { x: 232, y: height - 390 }
+  const cMtOE = c?.mtOE ?? { x: 348, y: height - 390 }
+  const cLrfOE = c?.lrfOE ?? { x: 423, y: height - 390 }
+  const cLdvOE = c?.ldvOE ?? { x: 502, y: height - 390 }
+  const cIprfOD = c?.iprfOD ?? {
+    intensidadeX: 98,
+    dissilabosX: 148,
+    monossilabosX: 198,
+    mascaramentoX: 248,
+    y: height - 440,
+  }
+  const cIprfOE = c?.iprfOE ?? {
+    intensidadeX: 98,
+    dissilabosX: 148,
+    monossilabosX: 198,
+    mascaramentoX: 248,
+    y: height - 456,
+  }
+  const cParecer = c?.parecer ?? { x: 50, y: height - 520 }
+
   // 1. Dados do Cabeçalho
-  drawText(page, patientName, 80, height - 128, helveticaBold, 9)
-  drawText(page, examDate, 480, height - 128, helvetica, 9)
-  drawText(page, patientCpf, 75, height - 146, helvetica, 9)
-  drawText(page, patientDob, 235, height - 146, helvetica, 9)
+  drawText(page, patientName, cNome.x, cNome.y, helveticaBold, 9)
+  drawText(page, examDate, cData.x, cData.y, helvetica, 9)
+  drawText(page, patientCpf, cCpf.x, cCpf.y, helvetica, 9)
+  drawText(page, patientDob, cNasc.x, cNasc.y, helvetica, 9)
 
   // Sexo (marcação F / M)
-  if (isFemale) drawText(page, 'X', 370, height - 146, helveticaBold, 9)
-  if (isMale) drawText(page, 'X', 403, height - 146, helveticaBold, 9)
+  if (isFemale) drawText(page, 'X', cSexoF.x, cSexoF.y, helveticaBold, 9)
+  if (isMale) drawText(page, 'X', cSexoM.x, cSexoM.y, helveticaBold, 9)
 
-  drawText(page, patientConvenio, 495, height - 146, helvetica, 9)
+  drawText(page, patientConvenio, cConvenio.x, cConvenio.y, helvetica, 9)
 
   // Audiômetro e Calibração
-  drawText(page, audiometer, 105, height - 165, helvetica, 8.5)
-  drawText(page, calibration, 470, height - 165, helvetica, 8.5)
+  drawText(page, audiometer, cAudiometro.x, cAudiometro.y, helvetica, 8.5)
+  drawText(page, calibration, cCalibracao.x, cCalibracao.y, helvetica, 8.5)
 
   // 2. Gráficos de Audiometria (OD e OE)
   // Gráfico OD: X aprox 52 a 280, Y topo aprox height - 205 a height - 370 (altura ~165 pt, largura ~230 pt)
-  const chartWidth = 220
-  const chartHeight = 155
-  const chartODLeft = 58
-  const chartODTop = height - 208
-
   drawAudiogramCurve(
     page,
     helvetica,
     exam.air_od,
     exam.bone_od,
-    chartODLeft,
-    chartODTop,
-    chartWidth,
-    chartHeight,
+    cGraficoOD.left,
+    cGraficoOD.top,
+    cGraficoOD.width,
+    cGraficoOD.height,
     'OD',
   )
 
   // Gráfico OE: X aprox 325 a 555
-  const chartOELeft = 328
-  const chartOETop = height - 208
   drawAudiogramCurve(
     page,
     helvetica,
     exam.air_oe,
     exam.bone_oe,
-    chartOELeft,
-    chartOETop,
-    chartWidth,
-    chartHeight,
+    cGraficoOE.left,
+    cGraficoOE.top,
+    cGraficoOE.width,
+    cGraficoOE.height,
     'OE',
   )
 
   // 3. Indicadores MT, LRF, LDV abaixo dos gráficos
-  drawText(page, formatDb(mtOD), 78, height - 390, helveticaBold, 8.5, COLOR_RED)
-  drawText(page, formatDb(lrfOD), 153, height - 390, helveticaBold, 8.5, COLOR_RED)
-  drawText(page, formatDb(exam.ldv_od), 232, height - 390, helveticaBold, 8.5, COLOR_RED)
+  drawText(page, formatDb(mtOD), cMtOD.x, cMtOD.y, helveticaBold, 8.5, COLOR_RED)
+  drawText(page, formatDb(lrfOD), cLrfOD.x, cLrfOD.y, helveticaBold, 8.5, COLOR_RED)
+  drawText(page, formatDb(exam.ldv_od), cLdvOD.x, cLdvOD.y, helveticaBold, 8.5, COLOR_RED)
 
-  drawText(page, formatDb(mtOE), 348, height - 390, helveticaBold, 8.5, COLOR_BLUE)
-  drawText(page, formatDb(lrfOE), 423, height - 390, helveticaBold, 8.5, COLOR_BLUE)
-  drawText(page, formatDb(exam.ldv_oe), 502, height - 390, helveticaBold, 8.5, COLOR_BLUE)
+  drawText(page, formatDb(mtOE), cMtOE.x, cMtOE.y, helveticaBold, 8.5, COLOR_BLUE)
+  drawText(page, formatDb(lrfOE), cLrfOE.x, cLrfOE.y, helveticaBold, 8.5, COLOR_BLUE)
+  drawText(page, formatDb(exam.ldv_oe), cLdvOE.x, cLdvOE.y, helveticaBold, 8.5, COLOR_BLUE)
 
   // 4. Tabela IPRF (Índice de Reconhecimento de Fala)
   // Linha OD
   drawText(
     page,
     odVocal.intensidade ? `${odVocal.intensidade} dB` : '',
-    98,
-    height - 440,
+    cIprfOD.intensidadeX,
+    cIprfOD.y,
     helveticaBold,
     8,
     COLOR_RED,
@@ -389,8 +519,8 @@ export async function fillAudiometriaTemplatePdf(
   drawText(
     page,
     odVocal.dissilabos ? `${odVocal.dissilabos} %` : '',
-    148,
-    height - 440,
+    cIprfOD.dissilabosX,
+    cIprfOD.y,
     helveticaBold,
     8,
     COLOR_RED,
@@ -398,8 +528,8 @@ export async function fillAudiometriaTemplatePdf(
   drawText(
     page,
     odVocal.monossilabos ? `${odVocal.monossilabos} %` : '',
-    198,
-    height - 440,
+    cIprfOD.monossilabosX,
+    cIprfOD.y,
     helveticaBold,
     8,
     COLOR_RED,
@@ -407,8 +537,8 @@ export async function fillAudiometriaTemplatePdf(
   drawText(
     page,
     odVocal.mascaramento ? `${odVocal.mascaramento} dB` : '',
-    248,
-    height - 440,
+    cIprfOD.mascaramentoX,
+    cIprfOD.y,
     helveticaBold,
     8,
     COLOR_BLUE,
@@ -418,8 +548,8 @@ export async function fillAudiometriaTemplatePdf(
   drawText(
     page,
     oeVocal.intensidade ? `${oeVocal.intensidade} dB` : '',
-    98,
-    height - 456,
+    cIprfOE.intensidadeX,
+    cIprfOE.y,
     helveticaBold,
     8,
     COLOR_BLUE,
@@ -427,8 +557,8 @@ export async function fillAudiometriaTemplatePdf(
   drawText(
     page,
     oeVocal.dissilabos ? `${oeVocal.dissilabos} %` : '',
-    148,
-    height - 456,
+    cIprfOE.dissilabosX,
+    cIprfOE.y,
     helveticaBold,
     8,
     COLOR_BLUE,
@@ -436,8 +566,8 @@ export async function fillAudiometriaTemplatePdf(
   drawText(
     page,
     oeVocal.monossilabos ? `${oeVocal.monossilabos} %` : '',
-    198,
-    height - 456,
+    cIprfOE.monossilabosX,
+    cIprfOE.y,
     helveticaBold,
     8,
     COLOR_BLUE,
@@ -445,8 +575,8 @@ export async function fillAudiometriaTemplatePdf(
   drawText(
     page,
     oeVocal.mascaramento ? `${oeVocal.mascaramento} dB` : '',
-    248,
-    height - 456,
+    cIprfOE.mascaramentoX,
+    cIprfOE.y,
     helveticaBold,
     8,
     COLOR_RED,
@@ -455,10 +585,10 @@ export async function fillAudiometriaTemplatePdf(
   // 5. Parecer Audiológico
   if (exam.report) {
     const lines = exam.report.split('\n')
-    let currentY = height - 520
+    let currentY = cParecer.y
     for (const line of lines) {
-      if (currentY < height - 600) break
-      drawText(page, line, 50, currentY, helvetica, 8)
+      if (currentY < cParecer.y - 80) break
+      drawText(page, line, cParecer.x, currentY, helvetica, 8)
       currentY -= 11
     }
   }
@@ -466,11 +596,17 @@ export async function fillAudiometriaTemplatePdf(
   // 6. Assinatura do Especialista
   if (specialistName) {
     const nameWidth = helveticaBold.widthOfTextAtSize(specialistName, 9)
-    drawText(page, specialistName, (width - nameWidth) / 2, height - 690, helveticaBold, 9)
+    const sigNome = c?.assinaturaNome
+    const nameX = sigNome ? sigNome.x : (width - nameWidth) / 2
+    const nameY = sigNome ? sigNome.y : height - 690
+    drawText(page, specialistName, nameX, nameY, helveticaBold, 9)
     if (specialistCrfa) {
       const crfaText = `(CRFa ${specialistCrfa})`
       const crfaWidth = helvetica.widthOfTextAtSize(crfaText, 8)
-      drawText(page, crfaText, (width - crfaWidth) / 2, height - 716, helvetica, 8)
+      const sigCrfa = c?.assinaturaCrfa
+      const crfaX = sigCrfa ? sigCrfa.x : (width - crfaWidth) / 2
+      const crfaY = sigCrfa ? sigCrfa.y : height - 716
+      drawText(page, crfaText, crfaX, crfaY, helvetica, 8)
     }
   }
 
@@ -478,7 +614,10 @@ export async function fillAudiometriaTemplatePdf(
   const clinicAddress = clinic?.endereco || ''
   if (clinicAddress) {
     const addrWidth = helvetica.widthOfTextAtSize(clinicAddress, 7.5)
-    drawText(page, clinicAddress, (width - addrWidth) / 2, 35, helvetica, 7.5, COLOR_SLATE)
+    const rodape = c?.rodape
+    const addrX = rodape ? rodape.x : (width - addrWidth) / 2
+    const addrY = rodape ? rodape.y : 35
+    drawText(page, clinicAddress, addrX, addrY, helvetica, 7.5, COLOR_SLATE)
   }
 
   return await pdfDoc.save()
@@ -494,6 +633,12 @@ export async function fillImitanciometriaTemplatePdf(
     patient?: Patient | null
     clinicSettings?: ClinicSettings | null
     professional?: ProfessionalData | null
+    /**
+     * Coordenadas de preenchimento opcionais. Quando fornecidas, sobrescrevem
+     * os valores padrão calibrados para um template A4 (595 x 842 pt),
+     * permitindo ajustar as posições a um template personalizado.
+     */
+    coordinates?: ImitanciometriaCoordinates
   },
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(templatePdfBytes)
@@ -520,12 +665,37 @@ export async function fillImitanciometriaTemplatePdf(
   const specialistCrfa = (prof?.crmCrfa || clinic?.especialista_crfa || '').replace(/^crfa\s*/i, '')
   const equipment = d.equipment_nome || clinic?.audiometro || 'Não informado'
 
+  // Coordenadas de preenchimento — valores padrão calibrados para um template
+  // A4 (595 x 842 pt). Podem ser sobrescritos via `data.coordinates` para
+  // ajustar as posições a um template personalizado.
+  const c = data.coordinates
+  const cNome = c?.nome ?? { x: 80, y: height - 128 }
+  const cData = c?.data ?? { x: 480, y: height - 128 }
+  const cCpf = c?.cpf ?? { x: 75, y: height - 146 }
+  const cNasc = c?.nascimento ?? { x: 235, y: height - 146 }
+  const cEquip = c?.equipamento ?? { x: 105, y: height - 165 }
+  const cTimpOD = c?.timpanometriaOD ?? {
+    tipoCurva: { x: 140, y: height - 220 },
+    volumeMeato: { x: 140, y: height - 245 },
+    complacencia: { x: 140, y: height - 262 },
+    pressaoPico: { x: 140, y: height - 279 },
+  }
+  const cTimpOE = c?.timpanometriaOE ?? {
+    tipoCurva: { x: 410, y: height - 220 },
+    volumeMeato: { x: 410, y: height - 245 },
+    complacencia: { x: 410, y: height - 262 },
+    pressaoPico: { x: 410, y: height - 279 },
+  }
+  const cReflOD = c?.reflexosOD ?? { ipsiX: 130, contraX: 190, y: height - 340 }
+  const cReflOE = c?.reflexosOE ?? { ipsiX: 400, contraX: 460, y: height - 340 }
+  const cParecer = c?.parecer ?? { x: 50, y: height - 440 }
+
   // Cabeçalho
-  drawText(page, patientName, 80, height - 128, helveticaBold, 9)
-  drawText(page, examDate, 480, height - 128, helvetica, 9)
-  drawText(page, patientCpf, 75, height - 146, helvetica, 9)
-  drawText(page, patientDob, 235, height - 146, helvetica, 9)
-  drawText(page, equipment, 105, height - 165, helvetica, 8.5)
+  drawText(page, patientName, cNome.x, cNome.y, helveticaBold, 9)
+  drawText(page, examDate, cData.x, cData.y, helvetica, 9)
+  drawText(page, patientCpf, cCpf.x, cCpf.y, helvetica, 9)
+  drawText(page, patientDob, cNasc.x, cNasc.y, helvetica, 9)
+  drawText(page, equipment, cEquip.x, cEquip.y, helvetica, 8.5)
 
   // Resumos de Timpanometria
   const timpOD = d.timpanometria?.od
@@ -534,8 +704,8 @@ export async function fillImitanciometriaTemplatePdf(
   drawText(
     page,
     d.tipo_curva_od || timpOD?.tipo_curva || 'A',
-    140,
-    height - 220,
+    cTimpOD.tipoCurva.x,
+    cTimpOD.tipoCurva.y,
     helveticaBold,
     11,
     COLOR_RED,
@@ -543,8 +713,8 @@ export async function fillImitanciometriaTemplatePdf(
   drawText(
     page,
     d.tipo_curva_oe || timpOE?.tipo_curva || 'A',
-    410,
-    height - 220,
+    cTimpOE.tipoCurva.x,
+    cTimpOE.tipoCurva.y,
     helveticaBold,
     11,
     COLOR_BLUE,
@@ -554,24 +724,24 @@ export async function fillImitanciometriaTemplatePdf(
     drawText(
       page,
       timpOD.volume_meato ? `${timpOD.volume_meato} ml` : '—',
-      140,
-      height - 245,
+      cTimpOD.volumeMeato.x,
+      cTimpOD.volumeMeato.y,
       helvetica,
       8.5,
     )
     drawText(
       page,
       timpOD.complacencia ? `${timpOD.complacencia} ml` : '—',
-      140,
-      height - 262,
+      cTimpOD.complacencia.x,
+      cTimpOD.complacencia.y,
       helvetica,
       8.5,
     )
     drawText(
       page,
       timpOD.pressao_pico ? `${timpOD.pressao_pico} daPa` : '—',
-      140,
-      height - 279,
+      cTimpOD.pressaoPico.x,
+      cTimpOD.pressaoPico.y,
       helvetica,
       8.5,
     )
@@ -581,24 +751,24 @@ export async function fillImitanciometriaTemplatePdf(
     drawText(
       page,
       timpOE.volume_meato ? `${timpOE.volume_meato} ml` : '—',
-      410,
-      height - 245,
+      cTimpOE.volumeMeato.x,
+      cTimpOE.volumeMeato.y,
       helvetica,
       8.5,
     )
     drawText(
       page,
       timpOE.complacencia ? `${timpOE.complacencia} ml` : '—',
-      410,
-      height - 262,
+      cTimpOE.complacencia.x,
+      cTimpOE.complacencia.y,
       helvetica,
       8.5,
     )
     drawText(
       page,
       timpOE.pressao_pico ? `${timpOE.pressao_pico} daPa` : '—',
-      410,
-      height - 279,
+      cTimpOE.pressaoPico.x,
+      cTimpOE.pressaoPico.y,
       helvetica,
       8.5,
     )
@@ -608,23 +778,37 @@ export async function fillImitanciometriaTemplatePdf(
   const reflOD = d.reflexos?.od
   const reflOE = d.reflexos?.oe
   if (reflOD) {
-    drawText(page, reflOD.ipsi_1000 ? `${reflOD.ipsi_1000}` : '—', 130, height - 340, helvetica, 8)
+    drawText(
+      page,
+      reflOD.ipsi_1000 ? `${reflOD.ipsi_1000}` : '—',
+      cReflOD.ipsiX,
+      cReflOD.y,
+      helvetica,
+      8,
+    )
     drawText(
       page,
       reflOD.contra_1000 ? `${reflOD.contra_1000}` : '—',
-      190,
-      height - 340,
+      cReflOD.contraX,
+      cReflOD.y,
       helvetica,
       8,
     )
   }
   if (reflOE) {
-    drawText(page, reflOE.ipsi_1000 ? `${reflOE.ipsi_1000}` : '—', 400, height - 340, helvetica, 8)
+    drawText(
+      page,
+      reflOE.ipsi_1000 ? `${reflOE.ipsi_1000}` : '—',
+      cReflOE.ipsiX,
+      cReflOE.y,
+      helvetica,
+      8,
+    )
     drawText(
       page,
       reflOE.contra_1000 ? `${reflOE.contra_1000}` : '—',
-      460,
-      height - 340,
+      cReflOE.contraX,
+      cReflOE.y,
       helvetica,
       8,
     )
@@ -634,10 +818,10 @@ export async function fillImitanciometriaTemplatePdf(
   const laudo = d.laudo || d.observacoes || ''
   if (laudo) {
     const lines = laudo.split('\n')
-    let currentY = height - 440
+    let currentY = cParecer.y
     for (const line of lines) {
-      if (currentY < height - 550) break
-      drawText(page, line, 50, currentY, helvetica, 8)
+      if (currentY < cParecer.y - 110) break
+      drawText(page, line, cParecer.x, currentY, helvetica, 8)
       currentY -= 11
     }
   }
@@ -645,11 +829,17 @@ export async function fillImitanciometriaTemplatePdf(
   // Assinatura
   if (specialistName) {
     const nameWidth = helveticaBold.widthOfTextAtSize(specialistName, 9)
-    drawText(page, specialistName, (width - nameWidth) / 2, height - 690, helveticaBold, 9)
+    const sigNome = c?.assinaturaNome
+    const nameX = sigNome ? sigNome.x : (width - nameWidth) / 2
+    const nameY = sigNome ? sigNome.y : height - 690
+    drawText(page, specialistName, nameX, nameY, helveticaBold, 9)
     if (specialistCrfa) {
       const crfaText = `(CRFa ${specialistCrfa})`
       const crfaWidth = helvetica.widthOfTextAtSize(crfaText, 8)
-      drawText(page, crfaText, (width - crfaWidth) / 2, height - 716, helvetica, 8)
+      const sigCrfa = c?.assinaturaCrfa
+      const crfaX = sigCrfa ? sigCrfa.x : (width - crfaWidth) / 2
+      const crfaY = sigCrfa ? sigCrfa.y : height - 716
+      drawText(page, crfaText, crfaX, crfaY, helvetica, 8)
     }
   }
 
@@ -657,7 +847,10 @@ export async function fillImitanciometriaTemplatePdf(
   const clinicAddress = clinic?.endereco || ''
   if (clinicAddress) {
     const addrWidth = helvetica.widthOfTextAtSize(clinicAddress, 7.5)
-    drawText(page, clinicAddress, (width - addrWidth) / 2, 35, helvetica, 7.5, COLOR_SLATE)
+    const rodape = c?.rodape
+    const addrX = rodape ? rodape.x : (width - addrWidth) / 2
+    const addrY = rodape ? rodape.y : 35
+    drawText(page, clinicAddress, addrX, addrY, helvetica, 7.5, COLOR_SLATE)
   }
 
   return await pdfDoc.save()
