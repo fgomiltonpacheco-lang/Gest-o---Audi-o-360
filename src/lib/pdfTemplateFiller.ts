@@ -706,8 +706,8 @@ export async function fillImitanciometriaTemplatePdf(
   drawText(page, equipment, cEquip.x, cEquip.y, helvetica, 8.5)
 
   // Resumos de Timpanometria
-  const timpOD = d.timpanometria?.od
-  const timpOE = d.timpanometria?.oe
+  const timpOD = (d.timpanometria as any)?.od || (d.timpanometria as any)?.OD
+  const timpOE = (d.timpanometria as any)?.oe || (d.timpanometria as any)?.OE
 
   drawText(
     page,
@@ -783,8 +783,8 @@ export async function fillImitanciometriaTemplatePdf(
   }
 
   // Reflexos Estapédicos
-  const reflOD = d.reflexos?.od
-  const reflOE = d.reflexos?.oe
+  const reflOD = (d.reflexos as any)?.od || (d.reflexos as any)?.OD
+  const reflOE = (d.reflexos as any)?.oe || (d.reflexos as any)?.OE
   if (reflOD) {
     drawText(
       page,
@@ -868,7 +868,7 @@ export async function fillImitanciometriaTemplatePdf(
  * Abre o buffer PDF gerado em uma nova aba para visualização e impressão direta
  */
 export function openPdfInNewTab(pdfBytes: Uint8Array, filename = 'laudo.pdf') {
-  const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+  const blob = new Blob([pdfBytes as any], { type: 'application/pdf' })
   const url = URL.createObjectURL(blob)
   const win = window.open(url, '_blank')
   if (!win) {

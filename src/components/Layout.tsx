@@ -50,6 +50,7 @@ import { useSessionTimeout } from '@/lib/sessionTimeout'
 import { SessionTimeoutModal } from '@/components/SessionTimeoutModal'
 import { ChatWidget } from '@/components/ChatWidget'
 import { Switch } from '@/components/ui/switch'
+import { getLandingUrl, isAppSubdomain } from '@/lib/domain'
 
 interface LayoutProps {
   children?: React.ReactNode
@@ -641,7 +642,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <aside className="hidden lg:flex flex-col fixed top-0 left-0 bottom-0 w-[260px] bg-navy-700 text-white z-40 border-r border-navy-900/40 shadow-xl select-none transform-none">
         {/* Topo / Logo */}
         <div className="h-20 px-4 flex items-center justify-center border-b border-white/10 bg-white overflow-hidden">
-          <Link to="/" className="flex items-center justify-center w-full h-full py-2">
+          <Link
+            to="/"
+            className="flex items-center justify-center w-full h-full py-2"
+            title={isAppSubdomain() ? 'Painel Audição360' : 'Voltar para Landing Page'}
+          >
             <img
               src={logoImg}
               alt="Audição360 Centro Auditivo"

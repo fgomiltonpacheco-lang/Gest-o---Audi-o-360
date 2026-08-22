@@ -24,10 +24,11 @@ import {
 } from '@/components/ui/accordion'
 import { formatCurrency } from '@/lib/formatters'
 import { PLANO_FUNCIONALIDADE_LABELS, type Plano } from '@/types'
+import { getAppUrl, isPreviewOrLocal } from '@/lib/domain'
 
 // ============================================================
 // Landing Page pública do Audição360.
-// Acessível sem autenticação em /landing.
+// Acessível sem autenticação em /landing ou diretamente em audicao360.com.br.
 // ============================================================
 
 const FEATURES = [
@@ -203,17 +204,30 @@ export default function Landing() {
     return n.indexOf('profis') >= 0
   }
 
+  const isPreview = isPreviewOrLocal()
+  const loginUrl = getAppUrl('/login')
+  const cadastroUrl = getAppUrl('/cadastro')
+
   return (
     <div className="min-h-screen bg-white text-slate-800 font-sans antialiased">
       {/* ===== NAVBAR ===== */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-100">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link to="/landing" className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-[#1e3a8a] to-[#2563eb] text-white font-bold">
-              A
-            </div>
-            <span className="font-bold text-lg text-[#1e3a8a]">Audição360</span>
-          </Link>
+          {isPreview ? (
+            <Link to="/landing" className="flex items-center gap-2">
+              <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-[#1e3a8a] to-[#2563eb] text-white font-bold">
+                A
+              </div>
+              <span className="font-bold text-lg text-[#1e3a8a]">Audição360</span>
+            </Link>
+          ) : (
+            <a href="/" className="flex items-center gap-2">
+              <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-[#1e3a8a] to-[#2563eb] text-white font-bold">
+                A
+              </div>
+              <span className="font-bold text-lg text-[#1e3a8a]">Audição360</span>
+            </a>
+          )}
           <nav className="hidden sm:flex items-center gap-6 text-sm font-medium text-slate-600">
             <a href="#funcionalidades" className="hover:text-[#1e3a8a] transition-colors">
               Funcionalidades
@@ -226,19 +240,38 @@ export default function Landing() {
             </a>
           </nav>
           <div className="flex items-center gap-2">
-            <Link to="/login">
-              <Button
-                variant="ghost"
-                className="text-[#1e3a8a] hover:text-[#1e3a8a] text-sm font-semibold"
-              >
-                Entrar
-              </Button>
-            </Link>
-            <Link to="/cadastro">
-              <Button className="bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl">
-                Começar Grátis
-              </Button>
-            </Link>
+            {isPreview ? (
+              <Link to="/login">
+                <Button
+                  variant="ghost"
+                  className="text-[#1e3a8a] hover:text-[#1e3a8a] text-sm font-semibold"
+                >
+                  Acessar o Sistema
+                </Button>
+              </Link>
+            ) : (
+              <a href={loginUrl}>
+                <Button
+                  variant="ghost"
+                  className="text-[#1e3a8a] hover:text-[#1e3a8a] text-sm font-semibold"
+                >
+                  Acessar o Sistema
+                </Button>
+              </a>
+            )}
+            {isPreview ? (
+              <Link to="/cadastro">
+                <Button className="bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl">
+                  Comece Grátis
+                </Button>
+              </Link>
+            ) : (
+              <a href={cadastroUrl}>
+                <Button className="bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold rounded-xl">
+                  Comece Grátis
+                </Button>
+              </a>
+            )}
           </div>
         </div>
       </header>
@@ -263,12 +296,21 @@ export default function Landing() {
               sem cartão de crédito.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
-              <Link to="/cadastro">
-                <Button className="w-full sm:w-auto h-12 px-7 bg-white text-[#1e3a8a] hover:bg-blue-50 font-bold rounded-xl shadow-lg text-base">
-                  Comece Grátis por 14 Dias
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              </Link>
+              {isPreview ? (
+                <Link to="/cadastro">
+                  <Button className="w-full sm:w-auto h-12 px-7 bg-white text-[#1e3a8a] hover:bg-blue-50 font-bold rounded-xl shadow-lg text-base">
+                    Comece Grátis por 14 Dias
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </Link>
+              ) : (
+                <a href={cadastroUrl}>
+                  <Button className="w-full sm:w-auto h-12 px-7 bg-white text-[#1e3a8a] hover:bg-blue-50 font-bold rounded-xl shadow-lg text-base">
+                    Comece Grátis por 14 Dias
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </a>
+              )}
               <a href="#planos">
                 <Button
                   variant="outline"
@@ -391,17 +433,31 @@ export default function Landing() {
                     ))}
                   </ul>
 
-                  <Link to="/cadastro" className="mt-7">
-                    <Button
-                      className={`w-full h-11 font-semibold rounded-xl ${
-                        destaque
-                          ? 'bg-[#1e3a8a] hover:bg-[#1e40af] text-white'
-                          : 'bg-white border-2 border-[#1e3a8a] text-[#1e3a8a] hover:bg-blue-50'
-                      }`}
-                    >
-                      Começar Grátis
-                    </Button>
-                  </Link>
+                  {isPreview ? (
+                    <Link to="/cadastro" className="mt-7">
+                      <Button
+                        className={`w-full h-11 font-semibold rounded-xl ${
+                          destaque
+                            ? 'bg-[#1e3a8a] hover:bg-[#1e40af] text-white'
+                            : 'bg-white border-2 border-[#1e3a8a] text-[#1e3a8a] hover:bg-blue-50'
+                        }`}
+                      >
+                        Começar Grátis
+                      </Button>
+                    </Link>
+                  ) : (
+                    <a href={cadastroUrl} className="mt-7">
+                      <Button
+                        className={`w-full h-11 font-semibold rounded-xl ${
+                          destaque
+                            ? 'bg-[#1e3a8a] hover:bg-[#1e40af] text-white'
+                            : 'bg-white border-2 border-[#1e3a8a] text-[#1e3a8a] hover:bg-blue-50'
+                        }`}
+                      >
+                        Começar Grátis
+                      </Button>
+                    </a>
+                  )}
                 </div>
               )
             })}
@@ -455,12 +511,21 @@ export default function Landing() {
           <p className="mt-3 text-blue-100 text-lg">
             Comece seu período de teste de 14 dias hoje. Sem cartão de crédito, sem compromisso.
           </p>
-          <Link to="/cadastro" className="inline-block mt-7">
-            <Button className="h-12 px-8 bg-white text-[#1e3a8a] hover:bg-blue-50 font-bold rounded-xl shadow-lg text-base">
-              Cadastrar minha clínica
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-          </Link>
+          {isPreview ? (
+            <Link to="/cadastro" className="inline-block mt-7">
+              <Button className="h-12 px-8 bg-white text-[#1e3a8a] hover:bg-blue-50 font-bold rounded-xl shadow-lg text-base">
+                Cadastrar minha clínica
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </Link>
+          ) : (
+            <a href={cadastroUrl} className="inline-block mt-7">
+              <Button className="h-12 px-8 bg-white text-[#1e3a8a] hover:bg-blue-50 font-bold rounded-xl shadow-lg text-base">
+                Cadastrar minha clínica
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </a>
+          )}
         </div>
       </section>
 
@@ -530,19 +595,37 @@ export default function Landing() {
               <h4 className="text-sm font-semibold text-white mb-3">Acesso</h4>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link to="/login" className="hover:text-white transition-colors">
-                    Entrar no sistema
-                  </Link>
+                  {isPreview ? (
+                    <Link to="/login" className="hover:text-white transition-colors">
+                      Entrar no sistema
+                    </Link>
+                  ) : (
+                    <a href={loginUrl} className="hover:text-white transition-colors">
+                      Entrar no sistema
+                    </a>
+                  )}
                 </li>
                 <li>
-                  <Link to="/cadastro" className="hover:text-white transition-colors">
-                    Cadastrar minha clínica
-                  </Link>
+                  {isPreview ? (
+                    <Link to="/cadastro" className="hover:text-white transition-colors">
+                      Cadastrar minha clínica
+                    </Link>
+                  ) : (
+                    <a href={cadastroUrl} className="hover:text-white transition-colors">
+                      Cadastrar minha clínica
+                    </a>
+                  )}
                 </li>
                 <li>
-                  <Link to="/landing" className="hover:text-white transition-colors">
-                    Página inicial
-                  </Link>
+                  {isPreview ? (
+                    <Link to="/landing" className="hover:text-white transition-colors">
+                      Página inicial
+                    </Link>
+                  ) : (
+                    <a href="/" className="hover:text-white transition-colors">
+                      Página inicial
+                    </a>
+                  )}
                 </li>
               </ul>
             </div>

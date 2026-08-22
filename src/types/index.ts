@@ -962,8 +962,12 @@ export interface Consentimento {
   paciente_id: string
   tipo_consentimento: TipoConsentimento
   texto_consentimento?: string
-  status: 'ativo' | 'revogado'
+  status: 'ativo' | 'revogado' | 'aceito' | string
   data_criacao: string
+  data_aceitacao?: string
+  data_revogacao?: string
+  usuario_nome?: string
+  observacoes?: string
   revogado_em?: string
   motivo_revogacao?: string
   clinic_id?: string
@@ -1006,6 +1010,8 @@ export interface StockItemMovement {
   reason?: string
   supplier?: string
   patient?: string
+  patientName?: string
+  saleId?: string
   createdAt?: string
 }
 
@@ -1583,10 +1589,10 @@ export interface PolicyTexts {
   termos?: string
   consentimento?: string
   politica_privacidade?: string
-  dados_cadastrais?: string
-  dados_saude?: string
-  marketing?: string
-  pesquisa?: string
+  dados_cadastrais?: string | { texto: string; finalidade?: string; base_legal?: string }
+  dados_saude?: string | { texto: string; finalidade?: string; base_legal?: string }
+  marketing?: string | { texto: string; finalidade?: string; base_legal?: string }
+  pesquisa?: string | { texto: string; finalidade?: string; base_legal?: string }
 }
 
 // === NFS-e B2B ===
@@ -1656,7 +1662,7 @@ export interface LayoutElementStyle {
   underline?: boolean
   fontSize?: number
   fontFamily?: string
-  align?: 'left' | 'center' | 'right'
+  align?: 'left' | 'center' | 'right' | 'justify'
   color?: string
   backgroundColor?: string | null
   borderColor?: string
@@ -1794,6 +1800,7 @@ export type VendaB2BStatus =
   | 'entregue'
   | 'cancelado'
   | 'cancelada'
+  | 'nf_emitida'
 
 export interface VendaB2B {
   id: string
@@ -1833,10 +1840,12 @@ export type NFServicoStatus =
   | 'cancelado'
   | 'cancelada'
   | 'cancelada_prefeitura'
+  | 'rascunho'
 
 export interface NFServicoComissao {
   id: string
   venda_id?: string
+  venda_b2b_id?: string
   parceiro_id?: string
   numero_nf?: string
   valor_servico?: number
@@ -1847,7 +1856,9 @@ export interface NFServicoComissao {
   comissao_percentual?: number
   comissao_valor?: number
   profissional_id?: string
-  status: NFServicoStatus
+  status: NFServicoStatus | string
+  pdf_url?: string
+  motivo_cancelamento?: string
   tipo_fiscal?: 'produto' | 'servico'
   tomador_razao_social?: string
   tomador_cnpj?: string
@@ -1882,6 +1893,7 @@ export interface EmpresaParceira {
   cep?: string
   inscricao_estadual?: string
   inscricao_municipal?: string
+  status?: string | boolean
   clinic_id?: string
   created: string
   updated: string

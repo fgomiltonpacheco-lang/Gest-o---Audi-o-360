@@ -346,7 +346,7 @@ export default function Vendas() {
           key: crypto.randomUUID(),
           stockItemId: item.id,
           name: item.name,
-          categoria: item.categoria,
+          categoria: (item.categoria as any) || 'outro',
           quantity: 1,
           unitPrice: item.salePrice,
           currentQuantity: item.currentQuantity,

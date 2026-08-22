@@ -52,7 +52,7 @@ function maskCNPJ(value: string): string {
   return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`
 }
 
-const emptyForm: Omit<EmpresaParceira, 'id' | 'created' | 'updated'> = {
+const emptyForm: any = {
   razao_social: '',
   nome_fantasia: '',
   cnpj: '',
@@ -149,7 +149,7 @@ export default function EmpresasParceiras() {
 
   const toggleStatus = async (e: EmpresaParceira) => {
     const novo = e.status === 'ativo' ? 'inativo' : 'ativo'
-    const res = await updateEmpresaParceira(e.id, { status: novo })
+    const res = await updateEmpresaParceira(e.id, { status: novo } as any)
     if (res.success) {
       toast({
         title: novo === 'ativo' ? 'Empresa reativada' : 'Empresa inativada',

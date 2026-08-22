@@ -139,7 +139,8 @@ export default function Index() {
     // Vendas aprovadas/concluídas (não canceladas) do mês
     const vendasMes = doMes
       .filter(
-        (v) => v.status === 'aprovada' || v.status === 'concluida' || v.status === 'nf_emitida',
+        (v) =>
+          v.status === 'aprovada' || v.status === 'concluida' || (v.status as any) === 'nf_emitida',
       )
       .reduce((acc, v) => acc + (v.valor_total || 0), 0)
     const comissaoMes = doMes.reduce((acc, v) => acc + (v.valor_comissao || 0), 0)

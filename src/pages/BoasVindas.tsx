@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CheckCircle2, ArrowRight, Sparkles, Calendar, ShieldCheck, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { getLandingUrl, getAppUrl, isPreviewOrLocal } from '@/lib/domain'
 
 // ============================================================
 // Página de boas-vindas pós-cadastro (Fase 3 do SaaS).
@@ -20,7 +21,11 @@ export default function BoasVindas() {
   useEffect(() => {
     if (countdown === null) return
     if (countdown <= 0) {
-      navigate('/login', { replace: true })
+      if (isPreviewOrLocal()) {
+        navigate('/login', { replace: true })
+      } else {
+        window.location.href = getAppUrl('/login')
+      }
       return
     }
     const t = setTimeout(() => setCountdown((c) => (c ?? 1) - 1), 1000)
@@ -95,20 +100,38 @@ export default function BoasVindas() {
           </div>
 
           {/* CTA principal */}
-          <Link to="/login" className="block mt-7">
-            <Button className="w-full h-12 bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2">
-              Acessar o Sistema
-              <ArrowRight className="w-5 h-5" />
-            </Button>
-          </Link>
+          {isPreviewOrLocal() ? (
+            <Link to="/login" className="block mt-7">
+              <Button className="w-full h-12 bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2">
+                Acessar o Sistema
+                <ArrowRight className="w-5 h-5" />
+              </Button>
+            </Link>
+          ) : (
+            <a href={getAppUrl('/login')} className="block mt-7">
+              <Button className="w-full h-12 bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center gap-2">
+                Acessar o Sistema
+                <ArrowRight className="w-5 h-5" />
+              </Button>
+            </a>
+          )}
 
           {/* Link secundário */}
-          <Link
-            to="/landing"
-            className="block mt-4 text-xs font-medium text-slate-500 hover:text-[#1e3a8a] transition-colors"
-          >
-            Voltar para a página inicial
-          </Link>
+          {isPreviewOrLocal() ? (
+            <Link
+              to="/landing"
+              className="block mt-4 text-xs font-medium text-slate-500 hover:text-[#1e3a8a] transition-colors"
+            >
+              Voltar para a página inicial
+            </Link>
+          ) : (
+            <a
+              href={getLandingUrl('/')}
+              className="block mt-4 text-xs font-medium text-slate-500 hover:text-[#1e3a8a] transition-colors"
+            >
+              Voltar para a página inicial
+            </a>
+          )}
         </div>
 
         {/* Selo de segurança */}

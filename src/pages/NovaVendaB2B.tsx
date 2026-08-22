@@ -77,7 +77,7 @@ export default function NovaVendaB2B() {
   }, [fetchEmpresasParceiras])
 
   const empresasAtivas = useMemo(
-    () => empresasParceiras.filter((e) => e.status === 'ativo'),
+    () => empresasParceiras.filter((e) => (e.status as any) === 'ativo'),
     [empresasParceiras],
   )
 

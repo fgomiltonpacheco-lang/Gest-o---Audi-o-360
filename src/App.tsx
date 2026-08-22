@@ -62,6 +62,7 @@ import Landing from '@/pages/Landing'
 import Cadastro from '@/pages/Cadastro'
 import BoasVindas from '@/pages/BoasVindas'
 import Onboarding from '@/pages/Onboarding'
+import { isMainDomain } from '@/lib/domain'
 import { Toaster } from '@/components/ui/toaster'
 import { useToast } from '@/hooks/use-toast'
 
@@ -138,13 +139,18 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>
 }
 
-// Rota raiz (Fase 3): se não autenticado, redireciona para a landing page
-// pública; se autenticado, exibe o Painel dentro do Layout. O fluxo público
-// fica: Landing -> Cadastro -> Boas-vindas -> Login -> Dashboard.
+// Rota raiz:
+// - Se NÃO autenticado E está no domínio principal (landing audicao360.com.br) -> renderiza <Landing /> diretamente na raiz /
+// - Se NÃO autenticado E está no subdomínio app (app.audicao360.com.br) ou preview -> redireciona para /login
+// - Se autenticado -> renderiza o Painel dentro do Layout (independente do subdomínio)
+// - Se autenticado e admin com onboarding pendente -> wizard de onboarding
 const RootRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useApp()
   if (!currentUser) {
-    return <Navigate to="/landing" replace />
+    if (isMainDomain()) {
+      return <Landing />
+    }
+    return <Navigate to="/login" replace />
   }
   // Fase 4: admin com onboarding pendente -> wizard de onboarding.
   if (currentUser.role === 'admin' && currentUser.onboardingCompleted === false) {

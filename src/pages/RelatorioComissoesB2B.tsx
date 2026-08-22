@@ -39,16 +39,22 @@ import type { VendaB2B, NFServicoStatus } from '@/types'
 const PAGE_SIZE = 10
 
 /** Rótulo do status de NF exibido na coluna "NFS-e". */
-const nfStatusLabel: Record<NFServicoStatus, string> = {
+const nfStatusLabel: Record<string, string> = {
   rascunho: 'Pendente',
+  pendente: 'Pendente',
+  faturado: 'Faturado',
   emitida: 'Emitida',
+  cancelado: 'Cancelada',
   cancelada: 'Cancelada',
   cancelada_prefeitura: 'Cancelada',
 }
 
-const nfStatusColors: Record<NFServicoStatus, string> = {
+const nfStatusColors: Record<string, string> = {
   rascunho: 'bg-amber-50 text-amber-700 border-amber-200',
+  pendente: 'bg-amber-50 text-amber-700 border-amber-200',
+  faturado: 'bg-blue-50 text-blue-700 border-blue-200',
   emitida: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  cancelado: 'bg-red-50 text-red-700 border-red-200',
   cancelada: 'bg-red-50 text-red-700 border-red-200',
   cancelada_prefeitura: 'bg-red-50 text-red-700 border-red-200',
 }
@@ -57,8 +63,8 @@ type FiltroComissao = 'todas' | 'receber' | 'recebidas'
 type FiltroNfse = 'todas' | 'emitida' | 'pendente' | 'cancelada'
 
 /** Normaliza o status da NFS-e para o valor do filtro. */
-function nfseFiltroDe(status: NFServicoStatus | undefined): FiltroNfse {
-  if (!status || status === 'rascunho') return 'pendente'
+function nfseFiltroDe(status: NFServicoStatus | string | undefined): FiltroNfse {
+  if (!status || status === 'rascunho' || status === 'pendente') return 'pendente'
   if (status === 'emitida') return 'emitida'
   return 'cancelada' // cancelada | cancelada_prefeitura
 }
@@ -143,7 +149,7 @@ export default function RelatorioComissoesB2B() {
         if (filterStatus === 'recebidas' && v.status_repasse !== 'recebido') return false
         if (filterNfse !== 'todas' && nfseFiltroDe(v.nf?.status) !== filterNfse) return false
         if (filterEmpresa !== 'all' && v.cliente_empresa_id !== filterEmpresa) return false
-        if (busca && !(v.numero_venda || '').toLowerCase().includes(busca)) return false
+        if (busca && !String(v.numero_venda || '').toLowerCase().includes(busca)) return false
         return true
       })
       .sort((a, b) => (a.data_venda < b.data_venda ? 1 : -1))

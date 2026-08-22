@@ -57,7 +57,7 @@ import {
 } from '@/lib/nfse-api'
 import type { VendaB2B, VendaB2BStatus, NFServicoStatus } from '@/types'
 
-const statusLabel: Record<VendaB2BStatus, string> = {
+const statusLabel: Record<string, string> = {
   pendente: 'Pendente',
   aprovada: 'Aprovada',
   nf_emitida: 'NF Emitida',
@@ -65,7 +65,7 @@ const statusLabel: Record<VendaB2BStatus, string> = {
   cancelada: 'Cancelada',
 }
 
-const statusColors: Record<VendaB2BStatus, string> = {
+const statusColors: Record<string, string> = {
   pendente: 'bg-amber-50 text-amber-700 border-amber-200',
   aprovada: 'bg-blue-50 text-blue-700 border-blue-200',
   nf_emitida: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -294,7 +294,7 @@ export default function DetalhesVendaB2B() {
             itemListaServico: itemLista,
             discriminacao,
           },
-          numeroVendaB2B: venda.numero_venda,
+          numeroVendaB2B: String(venda.numero_venda || ''),
         }
         const resp = await emitirNfse(nfseApiConfig, dados)
         if (!resp.sucesso) {
@@ -311,6 +311,7 @@ export default function DetalhesVendaB2B() {
       }
 
       const result = await addNFServicoComissao({
+        venda_id: venda.id,
         venda_b2b_id: venda.id,
         numero_nfse: numeroNfse,
         codigo_verificacao: codigoVerificacao,
@@ -330,7 +331,7 @@ export default function DetalhesVendaB2B() {
         tomador_email: nfForm.tomador_email.trim(),
         pdf_url: pdfUrl,
         status: 'emitida',
-      })
+      } as any)
       if (result) {
         toast({ title: 'NFS-e de Comissão emitida com sucesso' })
       }
@@ -544,7 +545,7 @@ export default function DetalhesVendaB2B() {
               <CheckCircle2 className="w-4 h-4 mr-1" /> Aprovar
             </Button>
           )}
-          {(venda.status === 'aprovada' || venda.status === 'nf_emitida') && (
+          {(venda.status === 'aprovada' || (venda.status as any) === 'nf_emitida') && (
             <Button onClick={handleConcluir} variant="outline" className="rounded-xl text-xs">
               <CheckCircle2 className="w-4 h-4 mr-1" /> Concluir
             </Button>
@@ -661,8 +662,8 @@ export default function DetalhesVendaB2B() {
               /* NFS-e já emitida */
               <div className="space-y-3">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <Badge variant="outline" className={nfStatusColor(nf.status)}>
-                    {nfStatusLabel(nf.status)}
+                  <Badge variant="outline" className={nfStatusColor(nf.status as any)}>
+                    {nfStatusLabel(nf.status as any)}
                   </Badge>
                   <div className="flex gap-2">
                     {nf.status === 'emitida' && (

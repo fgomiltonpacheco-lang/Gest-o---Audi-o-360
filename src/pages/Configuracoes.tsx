@@ -735,7 +735,7 @@ export default function Configuracoes() {
   }, [currentUser?.id, currentUser?.role, loadConfig, loadBlocked])
 
   // ---------- LGPD: textos de política e termos ----------
-  const [lgpdTexts, setLgpdTexts] = useState<PolicyTexts | null>(null)
+  const [lgpdTexts, setLgpdTexts] = useState<any | null>(null)
   const [lgpdLoading, setLgpdLoading] = useState(false)
   const [lgpdSaving, setLgpdSaving] = useState(false)
 

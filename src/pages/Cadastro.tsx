@@ -23,6 +23,7 @@ import { maskCNPJ } from '@/pages/saas/shared'
 import { formatCurrency } from '@/lib/formatters'
 import { PLANO_FUNCIONALIDADE_LABELS, type Plano } from '@/types'
 import { useToast } from '@/hooks/use-toast'
+import { getLandingUrl, getAppUrl, isPreviewOrLocal } from '@/lib/domain'
 
 // ============================================================
 // Cadastro self-service de clínica (Fase 3 do SaaS).
@@ -141,13 +142,23 @@ export default function Cadastro() {
       <div className="relative max-w-3xl mx-auto py-8 sm:py-12">
         {/* Cabeçalho */}
         <div className="text-center mb-8">
-          <Link
-            to="/landing"
-            className="inline-flex items-center gap-2 mb-6 text-blue-100 hover:text-white text-sm font-medium transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Voltar para a página inicial
-          </Link>
+          {isPreviewOrLocal() ? (
+            <Link
+              to="/landing"
+              className="inline-flex items-center gap-2 mb-6 text-blue-100 hover:text-white text-sm font-medium transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Voltar para a página inicial
+            </Link>
+          ) : (
+            <a
+              href={getLandingUrl('/')}
+              className="inline-flex items-center gap-2 mb-6 text-blue-100 hover:text-white text-sm font-medium transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Voltar para a página inicial
+            </a>
+          )}
           <div className="flex justify-center mb-3">
             <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-white text-[#1e3a8a] font-bold text-xl shadow-lg">
               A
@@ -419,9 +430,18 @@ export default function Cadastro() {
 
           <p className="mt-6 text-center text-xs text-slate-500">
             Já tem conta?{' '}
-            <Link to="/login" className="font-semibold text-[#1e3a8a] hover:underline">
-              Entrar no sistema
-            </Link>
+            {isPreviewOrLocal() ? (
+              <Link to="/login" className="font-semibold text-[#1e3a8a] hover:underline">
+                Entrar no sistema
+              </Link>
+            ) : (
+              <a
+                href={getAppUrl('/login')}
+                className="font-semibold text-[#1e3a8a] hover:underline"
+              >
+                Entrar no sistema
+              </a>
+            )}
           </p>
         </div>
 

@@ -180,12 +180,20 @@ export default function Prontuario() {
   React.useEffect(() => {
     if (!policyTextsCache) {
       fetchLgpdPolicyTexts()
-        .then((texts) => {
+        .then((texts: any) => {
           setPolicyTextsCache({
-            dados_cadastrais: texts.dados_cadastrais.texto,
-            dados_saude: texts.dados_saude.texto,
-            marketing: texts.marketing.texto,
-            pesquisa: texts.pesquisa.texto,
+            dados_cadastrais:
+              texts?.dados_cadastrais?.texto ||
+              texts?.dados_cadastrais ||
+              TEXTO_PADRAO_CONSENTIMENTO.dados_cadastrais,
+            dados_saude:
+              texts?.dados_saude?.texto ||
+              texts?.dados_saude ||
+              TEXTO_PADRAO_CONSENTIMENTO.dados_saude,
+            marketing:
+              texts?.marketing?.texto || texts?.marketing || TEXTO_PADRAO_CONSENTIMENTO.marketing,
+            pesquisa:
+              texts?.pesquisa?.texto || texts?.pesquisa || TEXTO_PADRAO_CONSENTIMENTO.pesquisa,
           })
         })
         .catch(() => {
@@ -837,14 +845,14 @@ export default function Prontuario() {
                             <Badge
                               variant="outline"
                               className={
-                                c.status === 'aceito'
+                                (c.status as any) === 'aceito'
                                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-semibold'
                                   : c.status === 'revogado'
                                     ? 'bg-red-50 text-red-700 border-red-200 text-[10px] font-semibold'
                                     : 'bg-slate-100 text-slate-600 border-slate-200 text-[10px] font-semibold'
                               }
                             >
-                              {c.status === 'aceito'
+                              {(c.status as any) === 'aceito'
                                 ? 'Aceito'
                                 : c.status === 'revogado'
                                   ? 'Revogado'
@@ -852,19 +860,22 @@ export default function Prontuario() {
                             </Badge>
                           </div>
                           <p className="text-[11px] text-slate-500 mt-0.5">
-                            Aceito em: {formatConsentDate(c.data_aceitacao)}
-                            {c.status === 'revogado' && c.data_revogacao
-                              ? ` • Revogado em: ${formatConsentDate(c.data_revogacao)}`
+                            Aceito em:{' '}
+                            {formatConsentDate(
+                              (c as any).data_aceitacao || (c as any).data_criacao,
+                            )}
+                            {c.status === 'revogado' && (c as any).data_revogacao
+                              ? ` • Revogado em: ${formatConsentDate((c as any).data_revogacao)}`
                               : ''}
-                            {c.usuario_nome ? ` • Por: ${c.usuario_nome}` : ''}
+                            {(c as any).usuario_nome ? ` • Por: ${(c as any).usuario_nome}` : ''}
                           </p>
-                          {c.status === 'revogado' && c.observacoes && (
+                          {c.status === 'revogado' && (c as any).observacoes && (
                             <p className="text-[11px] text-red-600 mt-0.5 italic">
-                              Motivo: {c.observacoes}
+                              Motivo: {(c as any).observacoes}
                             </p>
                           )}
                         </div>
-                        {c.status === 'aceito' && (
+                        {(c.status as any) === 'aceito' && (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -1760,11 +1771,11 @@ function TesteAparelhoSection({ patient }: { patient: Patient }) {
       earMold: false,
       status: 'Em uso',
       notes: `Venda realizada via teste com aparelho em ${today}`,
-    })
+    } as any)
     return warrantyEndDate
   }
 
-  const [tests, setTests] = useState<HearingAidTest[]>([])
+  const [tests, setTests] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
 
   // Form de novo teste
@@ -1799,7 +1810,7 @@ function TesteAparelhoSection({ patient }: { patient: Patient }) {
 
   // Empresas ativas
   const empresasAtivas = useMemo(
-    () => empresasParceiras.filter((e) => e.status === 'ativo'),
+    () => empresasParceiras.filter((e) => (e.status as any) === 'ativo'),
     [empresasParceiras],
   )
 
