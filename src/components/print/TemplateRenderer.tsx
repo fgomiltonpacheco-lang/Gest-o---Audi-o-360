@@ -3,11 +3,7 @@
 import React from 'react'
 import type { ExamReportTemplate, LayoutElement, LayoutElementStyle } from '@/types'
 import { AudiogramaSVG } from './AudiogramaSVG'
-import {
-  TimpanogramChart,
-  type TimpanogramPoint,
-  type TimpanogramTimpHint,
-} from './TimpanogramChart'
+import { TimpanogramChart, type TimpanogramPoint } from './TimpanogramChart'
 import type { AudiogramMap } from '@/types'
 
 export interface TemplateDataContext {
@@ -482,13 +478,11 @@ function TemplateTimpanogram({ el, ctx }: { el: LayoutElement; ctx: TemplateData
   //  - exame.timpanometria.OD / .OE  (estrutura da imitanciometria)
   //  - exame.curva_timpanometrica_od / _oe  (arrays de pontos reais)
   const timpRoot = (exame.timpanometria as Record<string, Record<string, unknown>>) || {}
-  const odTimp = (timpRoot.OD as TimpanogramTimpHint | undefined) ?? null
-  const oeTimp = (timpRoot.OE as TimpanogramTimpHint | undefined) ?? null
+  const odTimpRaw = (timpRoot.OD as Record<string, unknown> | undefined) ?? null
+  const oeTimpRaw = (timpRoot.OE as Record<string, unknown> | undefined) ?? null
 
   // Pontos reais da curva (curva_timpanometrica_od/oe) — quando disponíveis.
   // Também aceita pontos embutidos no objeto de timpanometria (timpanometria.OD.curva_timpanometrica).
-  const odTimpRaw = odTimp as unknown as Record<string, unknown> | null
-  const oeTimpRaw = oeTimp as unknown as Record<string, unknown> | null
   const odPoints = Array.isArray(exame.curva_timpanometrica_od)
     ? (exame.curva_timpanometrica_od as TimpanogramPoint[])
     : odTimpRaw && Array.isArray(odTimpRaw.curva_timpanometrica)
@@ -509,9 +503,7 @@ function TemplateTimpanogram({ el, ctx }: { el: LayoutElement; ctx: TemplateData
       <div style={{ width: '100%', height: '100%' }}>
         <TimpanogramChart
           odPoints={odPoints}
-          odTimp={odTimp}
           oePoints={null}
-          oeTimp={null}
           width={W}
           height={H}
           showTitle
@@ -525,9 +517,7 @@ function TemplateTimpanogram({ el, ctx }: { el: LayoutElement; ctx: TemplateData
       <div style={{ width: '100%', height: '100%' }}>
         <TimpanogramChart
           odPoints={null}
-          odTimp={null}
           oePoints={oePoints}
-          oeTimp={oeTimp}
           width={W}
           height={H}
           showTitle
@@ -542,9 +532,7 @@ function TemplateTimpanogram({ el, ctx }: { el: LayoutElement; ctx: TemplateData
         <div style={{ flex: 1 }}>
           <TimpanogramChart
             odPoints={odPoints}
-            odTimp={odTimp}
             oePoints={null}
-            oeTimp={null}
             width={W}
             height={H}
             showTitle
@@ -554,9 +542,7 @@ function TemplateTimpanogram({ el, ctx }: { el: LayoutElement; ctx: TemplateData
         <div style={{ flex: 1 }}>
           <TimpanogramChart
             odPoints={null}
-            odTimp={null}
             oePoints={oePoints}
-            oeTimp={oeTimp}
             width={W}
             height={H}
             showTitle
@@ -571,9 +557,7 @@ function TemplateTimpanogram({ el, ctx }: { el: LayoutElement; ctx: TemplateData
     <div style={{ width: '100%', height: '100%' }}>
       <TimpanogramChart
         odPoints={odPoints}
-        odTimp={odTimp}
         oePoints={oePoints}
-        oeTimp={oeTimp}
         width={W}
         height={H}
         showTitle

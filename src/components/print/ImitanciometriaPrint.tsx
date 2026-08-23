@@ -412,11 +412,6 @@ export function ImitanciometriaPrint({
               width={340}
               height={180}
               odPoints={odTimp?.curva_timpanometrica ?? null}
-              odTimp={{
-                tipo_curva: data.tipo_curva_od || odTimp?.tipo_curva,
-                pressao_pico: odTimp?.pressao_pico,
-                complacencia: odTimp?.complacencia,
-              }}
               showLegend={false}
               showTitle={false}
             />
@@ -457,15 +452,10 @@ export function ImitanciometriaPrint({
               width={340}
               height={180}
               oePoints={oeTimp?.curva_timpanometrica ?? null}
-              oeTimp={{
-                tipo_curva: data.tipo_curva_oe || oeTimp?.tipo_curva,
-                pressao_pico: oeTimp?.pressao_pico,
-                complacencia: oeTimp?.complacencia,
-              }}
               showLegend={false}
               showTitle={false}
             />
-          </div>
+          </div>{' '}
           <div
             style={{
               width: '100%',

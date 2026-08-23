@@ -183,6 +183,68 @@ function numOr(v: unknown): number | null {
 }
 
 /**
+ * Gera os pontos da curva timpanométrica dinâmica a partir dos valores digitados
+ * de pressão e compliância (e tipo de curva).
+ * Retorna null se nenhum dado numérico foi digitado, deixando o gráfico vazio.
+ * Produz uma curva pontual, bem definida e precisa com resolução suave de 120 pontos.
+ */
+function generateDynamicCurve(
+  pressaoPico: number | null,
+  complacencia: number | null,
+  tipoCurva?: string | null,
+): { pressao: number; complacencia: number }[] | null {
+  // Se nem pressão nem complacência foram informadas, não exibe curva
+  if (pressaoPico === null && complacencia === null) {
+    return null
+  }
+
+  const pMin = -400
+  const pMax = 200
+  const cMax = 2.5
+
+  const normTipo = (tipoCurva || '').toUpperCase().trim()
+  const isTypeB =
+    normTipo === 'B' || (complacencia !== null && complacencia <= 0.1 && pressaoPico === null)
+
+  const peakP = pressaoPico !== null ? pressaoPico : normTipo === 'C' ? -180 : 0
+  const peakC = complacencia !== null ? complacencia : 0.8
+
+  // Curva tipo B (plana)
+  if (isTypeB) {
+    const flatC = Math.max(0.05, Math.min(0.2, peakC))
+    const pts: { pressao: number; complacencia: number }[] = []
+    const N = 60
+    for (let i = 0; i <= N; i++) {
+      const p = pMin + ((pMax - pMin) * i) / N
+      pts.push({ pressao: Math.round(p), complacencia: Number(flatC.toFixed(3)) })
+    }
+    return pts
+  }
+
+  // Largura da curva (sigma) mais precisa e pontual conforme o tipo de curva
+  let sigma = 50 // Curva bem pontual e definida (padrão Jerger Tipo A)
+  if (normTipo.startsWith('AD')) {
+    sigma = 65
+  } else if (normTipo.startsWith('AS')) {
+    sigma = 35
+  } else if (normTipo.startsWith('C')) {
+    sigma = 50
+  }
+
+  const amp = Math.max(0, Math.min(cMax, peakC))
+  const N = 120
+  const pts: { pressao: number; complacencia: number }[] = []
+
+  for (let i = 0; i <= N; i++) {
+    const p = pMin + ((pMax - pMin) * i) / N
+    const c = amp * Math.exp(-((p - peakP) ** 2) / (2 * sigma * sigma))
+    pts.push({ pressao: Math.round(p), complacencia: Number(Math.max(0, c).toFixed(3)) })
+  }
+
+  return pts
+}
+
+/**
  * Classifica automaticamente o tipo da curva com base em compliância e pressão:
  * - Tipo A: compliância entre 0.3 e 1.6 + pressão entre -100 e +50
  * - Tipo As: compliância menor que 0.3 (quando maior que limiar plano)
@@ -509,16 +571,13 @@ export default function Imitanciometria() {
       // Atualiza estado timpOD / timpOE
       if (side === 'OD') {
         const pressaoVal = field === 'pressao_om_od' ? value : nextSummary.pressao_om_od
-        const complVal =
-          field === 'max_relax_od'
-            ? value
-            : field === 'compl_estatica_od'
-              ? value
-              : nextSummary.max_relax_od || nextSummary.compl_estatica_od
+        const complVal = field === 'max_relax_od' ? value : nextSummary.max_relax_od
+        const gradVal = field === 'compl_estatica_od' ? value : nextSummary.compl_estatica_od
         const volumeVal = field === 'compl_200_od' ? value : nextSummary.compl_200_od
 
         const pressaoNum = numOr(pressaoVal)
         const complNum = numOr(complVal)
+        const gradNum = numOr(gradVal)
         const volumeNum = numOr(volumeVal)
 
         // Sincroniza rawData
@@ -528,15 +587,24 @@ export default function Imitanciometria() {
           setRawData((r) => ({ ...r, od_volume_media: value }))
         }
 
-        // Determinação automática do tipo de curva
+        // Determinação automática do tipo de curva baseada em complacência e pressão (gradiente não interfere)
         const autoTipo = determineCurveType(complVal, pressaoVal)
+
+        // Gera pontos da curva timpanométrica dinâmica quando houver valores
+        const dynamicCurve = generateDynamicCurve(
+          pressaoNum,
+          complNum,
+          autoTipo || timpOD.tipo_curva || exam.tipo_curva_od,
+        )
 
         setTimpOD((prev) => ({
           ...prev,
           pressao_pico: pressaoNum,
           complacencia: complNum,
+          gradiente_curva: gradNum,
           volume_meato: volumeNum,
           tipo_curva: autoTipo || prev.tipo_curva,
+          curva_timpanometrica: dynamicCurve,
         }))
 
         if (autoTipo) {
@@ -544,16 +612,13 @@ export default function Imitanciometria() {
         }
       } else {
         const pressaoVal = field === 'pressao_om_oe' ? value : nextSummary.pressao_om_oe
-        const complVal =
-          field === 'max_relax_oe'
-            ? value
-            : field === 'compl_estatica_oe'
-              ? value
-              : nextSummary.max_relax_oe || nextSummary.compl_estatica_oe
+        const complVal = field === 'max_relax_oe' ? value : nextSummary.max_relax_oe
+        const gradVal = field === 'compl_estatica_oe' ? value : nextSummary.compl_estatica_oe
         const volumeVal = field === 'compl_200_oe' ? value : nextSummary.compl_200_oe
 
         const pressaoNum = numOr(pressaoVal)
         const complNum = numOr(complVal)
+        const gradNum = numOr(gradVal)
         const volumeNum = numOr(volumeVal)
 
         // Sincroniza rawData
@@ -563,15 +628,24 @@ export default function Imitanciometria() {
           setRawData((r) => ({ ...r, oe_volume_media: value }))
         }
 
-        // Determinação automática do tipo de curva
+        // Determinação automática do tipo de curva baseada em complacência e pressão (gradiente não interfere)
         const autoTipo = determineCurveType(complVal, pressaoVal)
+
+        // Gera pontos da curva timpanométrica dinâmica quando houver valores
+        const dynamicCurve = generateDynamicCurve(
+          pressaoNum,
+          complNum,
+          autoTipo || timpOE.tipo_curva || exam.tipo_curva_oe,
+        )
 
         setTimpOE((prev) => ({
           ...prev,
           pressao_pico: pressaoNum,
           complacencia: complNum,
+          gradiente_curva: gradNum,
           volume_meato: volumeNum,
           tipo_curva: autoTipo || prev.tipo_curva,
+          curva_timpanometrica: dynamicCurve,
         }))
 
         if (autoTipo) {
@@ -1133,15 +1207,6 @@ export default function Imitanciometria() {
                   width={340}
                   height={190}
                   odPoints={timpOD.curva_timpanometrica}
-                  odTimp={{
-                    tipo_curva: exam.tipo_curva_od || timpOD.tipo_curva,
-                    pressao_pico: rawData.od_pressao_media
-                      ? Number(rawData.od_pressao_media)
-                      : timpOD.pressao_pico,
-                    complacencia: summaryData.compl_estatica_od
-                      ? Number(summaryData.compl_estatica_od)
-                      : timpOD.complacencia,
-                  }}
                   showLegend={false}
                   showTitle={false}
                 />
@@ -1159,15 +1224,6 @@ export default function Imitanciometria() {
                   width={340}
                   height={190}
                   oePoints={timpOE.curva_timpanometrica}
-                  oeTimp={{
-                    tipo_curva: exam.tipo_curva_oe || timpOE.tipo_curva,
-                    pressao_pico: rawData.oe_pressao_media
-                      ? Number(rawData.oe_pressao_media)
-                      : timpOE.pressao_pico,
-                    complacencia: summaryData.compl_estatica_oe
-                      ? Number(summaryData.compl_estatica_oe)
-                      : timpOE.complacencia,
-                  }}
                   showLegend={false}
                   showTitle={false}
                 />

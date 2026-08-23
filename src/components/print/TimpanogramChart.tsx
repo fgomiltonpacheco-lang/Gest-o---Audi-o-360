@@ -138,8 +138,6 @@ function hasRealPoints(pts: TimpanogramPoint[] | null | undefined): pts is Timpa
 export const TimpanogramChart: React.FC<TimpanogramChartProps> = ({
   odPoints,
   oePoints,
-  odTimp,
-  oeTimp,
   width = 320,
   height = 180,
   showTitle = true,
@@ -165,27 +163,22 @@ export const TimpanogramChart: React.FC<TimpanogramChartProps> = ({
   const ticksY = [0, 0.5, 1, 1.5, 2, 2.5]
   const zeroX = xOf(0)
 
-  const odCurve = hasRealPoints(odPoints) ? odPoints : synthCurve(odTimp)
-  const oeCurve = hasRealPoints(oePoints) ? oePoints : synthCurve(oeTimp)
+  const odCurve = hasRealPoints(odPoints) ? odPoints : null
+  const oeCurve = hasRealPoints(oePoints) ? oePoints : null
 
-  const pathFromPoints = (pts: TimpanogramPoint[]): string =>
-    pts
+  const pathFromPoints = (pts: TimpanogramPoint[] | null): string => {
+    if (!pts || pts.length < 2) return ''
+    return pts
       .map((pt, i) => {
         const x = xOf(pt.pressao)
         const y = yOf(pt.complacencia)
         return `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`
       })
       .join(' ')
+  }
 
   const odPath = pathFromPoints(odCurve)
   const oePath = pathFromPoints(oeCurve)
-
-  const odFill = `${odPath} L ${xOf(P_MAX).toFixed(2)} ${yOf(0).toFixed(2)} L ${xOf(P_MIN).toFixed(
-    2,
-  )} ${yOf(0).toFixed(2)} Z`
-  const oeFill = `${oePath} L ${xOf(P_MAX).toFixed(2)} ${yOf(0).toFixed(2)} L ${xOf(P_MIN).toFixed(
-    2,
-  )} ${yOf(0).toFixed(2)} Z`
 
   return (
     <svg
@@ -291,26 +284,29 @@ export const TimpanogramChart: React.FC<TimpanogramChartProps> = ({
       </text>
 
       {/* Curvas */}
-
-      <path
-        d={oePath}
-        fill="none"
-        stroke={COLOR_OE}
-        strokeWidth={1.5}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-      <path
-        d={odPath}
-        fill="none"
-        stroke={COLOR_OD}
-        strokeWidth={1.5}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
+      {oePath && (
+        <path
+          d={oePath}
+          fill="none"
+          stroke={COLOR_OE}
+          strokeWidth={2}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      )}
+      {odPath && (
+        <path
+          d={odPath}
+          fill="none"
+          stroke={COLOR_OD}
+          strokeWidth={2}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      )}
 
       {/* Legenda */}
-      {showLegend && (
+      {showLegend && (odPath || oePath) && (
         <g>
           <rect
             x={W - padR - 58}
@@ -321,36 +317,44 @@ export const TimpanogramChart: React.FC<TimpanogramChartProps> = ({
             opacity={0.85}
             rx={2}
           />
-          <line
-            x1={W - padR - 54}
-            x2={W - padR - 42}
-            y1={padT + 9}
-            y2={padT + 9}
-            stroke={COLOR_OD}
-            strokeWidth={1.6}
-          />
-          <text
-            x={W - padR - 39}
-            y={padT + 12}
-            style={{ fontSize: 8, fontWeight: 700, fill: COLOR_OD }}
-          >
-            OD
-          </text>
-          <line
-            x1={W - padR - 54}
-            x2={W - padR - 42}
-            y1={padT + 19}
-            y2={padT + 19}
-            stroke={COLOR_OE}
-            strokeWidth={1.6}
-          />
-          <text
-            x={W - padR - 39}
-            y={padT + 22}
-            style={{ fontSize: 8, fontWeight: 700, fill: COLOR_OE }}
-          >
-            OE
-          </text>
+          {odPath && (
+            <>
+              <line
+                x1={W - padR - 54}
+                x2={W - padR - 42}
+                y1={padT + 9}
+                y2={padT + 9}
+                stroke={COLOR_OD}
+                strokeWidth={1.6}
+              />
+              <text
+                x={W - padR - 39}
+                y={padT + 12}
+                style={{ fontSize: 8, fontWeight: 700, fill: COLOR_OD }}
+              >
+                OD
+              </text>
+            </>
+          )}
+          {oePath && (
+            <>
+              <line
+                x1={W - padR - 54}
+                x2={W - padR - 42}
+                y1={padT + (odPath ? 19 : 9)}
+                y2={padT + (odPath ? 19 : 9)}
+                stroke={COLOR_OE}
+                strokeWidth={1.6}
+              />
+              <text
+                x={W - padR - 39}
+                y={padT + (odPath ? 22 : 12)}
+                style={{ fontSize: 8, fontWeight: 700, fill: COLOR_OE }}
+              >
+                OE
+              </text>
+            </>
+          )}
         </g>
       )}
     </svg>
