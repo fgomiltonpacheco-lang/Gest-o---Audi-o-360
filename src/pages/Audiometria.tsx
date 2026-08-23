@@ -652,11 +652,36 @@ export default function Audiometria() {
       const response = await fetch(fetchUrl)
       if (!response.ok) throw new Error(`Falha ao baixar template PDF: status ${response.status}`)
       const templateBytes = await response.arrayBuffer()
+      // Tentar carregar logo da clínica (URL pública ou asset local)
+      let logoArrayBuffer: ArrayBuffer | null = null
+      const logoFileName = freshSettings?.logo || clinicSettings?.logo
+      const logoCustomUrl = freshSettings?.logo_url || clinicSettings?.logo_url
+      let logoFetchUrl = ''
+      if (freshSettings && logoFileName) {
+        logoFetchUrl = pb.files.getUrl(freshSettings, logoFileName)
+      } else if (logoCustomUrl) {
+        logoFetchUrl = logoCustomUrl
+      } else if (logoImg) {
+        logoFetchUrl = logoImg
+      }
+
+      if (logoFetchUrl) {
+        try {
+          const logoRes = await fetch(logoFetchUrl)
+          if (logoRes.ok) {
+            logoArrayBuffer = await logoRes.arrayBuffer()
+          }
+        } catch (logoErr) {
+          console.warn('Erro ao carregar imagem da logo para o PDF:', logoErr)
+        }
+      }
+
       const filledBytes = await fillAudiometriaTemplatePdf(templateBytes, {
         exam: fullExam,
         patient,
         clinicSettings: freshSettings || clinicSettings,
         professional: currentUser ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa } : null,
+        logoBytes: logoArrayBuffer,
       })
       openPdfInNewTab(filledBytes, `Laudo_Audiometria_${patient?.name || 'paciente'}.pdf`)
     } catch (err) {

@@ -91,6 +91,7 @@ export interface AudiometriaCoordinates {
   assinaturaNome: PdfCoordPoint
   assinaturaCrfa: PdfCoordPoint
   rodape: PdfCoordPoint
+  logo?: PdfChartBox
 }
 
 /**
@@ -359,6 +360,10 @@ export async function fillAudiometriaTemplatePdf(
      * permitindo ajustar as posições a um template personalizado.
      */
     coordinates?: AudiometriaCoordinates
+    /**
+     * Bytes opcionais da imagem da logo (PNG ou JPG) para embutir no cabeçalho do PDF.
+     */
+    logoBytes?: ArrayBuffer | Uint8Array | null
   },
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(templatePdfBytes)
@@ -416,46 +421,97 @@ export async function fillAudiometriaTemplatePdf(
     mascaramento: '',
   }
 
-  // Coordenadas de preenchimento — valores padrão calibrados para um template
+  // Coordenadas de preenchimento — valores padrão calibrados para o template real
   // A4 (595 x 842 pt). Podem ser sobrescritas via `data.coordinates` para
   // ajustar as posições a um template personalizado. Quando `data.coordinates`
   // não for fornecido, utiliza as coordenadas calibradas salvas em
-  // `clinicSettings.coordenadas_audiometria` (definidas via tela de Calibração).
+  // `clinicSettings.coordenadas_audiometria`.
   const c =
     data.coordinates ??
     (clinic?.coordenadas_audiometria as unknown as AudiometriaCoordinates | undefined)
-  const cNome = c?.nome ?? { x: 80, y: height - 128 }
-  const cData = c?.data ?? { x: 480, y: height - 128 }
-  const cCpf = c?.cpf ?? { x: 75, y: height - 146 }
-  const cNasc = c?.nascimento ?? { x: 235, y: height - 146 }
-  const cSexoF = c?.sexoF ?? { x: 370, y: height - 146 }
-  const cSexoM = c?.sexoM ?? { x: 403, y: height - 146 }
-  const cConvenio = c?.convenio ?? { x: 495, y: height - 146 }
-  const cAudiometro = c?.audiometro ?? { x: 105, y: height - 165 }
-  const cCalibracao = c?.calibracao ?? { x: 470, y: height - 165 }
-  const cGraficoOD = c?.graficoOD ?? { left: 58, top: height - 208, width: 220, height: 155 }
-  const cGraficoOE = c?.graficoOE ?? { left: 328, top: height - 208, width: 220, height: 155 }
-  const cMtOD = c?.mtOD ?? { x: 78, y: height - 390 }
-  const cLrfOD = c?.lrfOD ?? { x: 153, y: height - 390 }
-  const cLdvOD = c?.ldvOD ?? { x: 232, y: height - 390 }
-  const cMtOE = c?.mtOE ?? { x: 348, y: height - 390 }
-  const cLrfOE = c?.lrfOE ?? { x: 423, y: height - 390 }
-  const cLdvOE = c?.ldvOE ?? { x: 502, y: height - 390 }
+  const cNome = c?.nome ?? { x: 78, y: 730 }
+  const cData = c?.data ?? { x: 468, y: 730 }
+  const cCpf = c?.cpf ?? { x: 72, y: 708 }
+  const cNasc = c?.nascimento ?? { x: 230, y: 708 }
+  const cSexoF = c?.sexoF ?? { x: 372, y: 708 }
+  const cSexoM = c?.sexoM ?? { x: 400, y: 708 }
+  const cConvenio = c?.convenio ?? { x: 488, y: 708 }
+  const cAudiometro = c?.audiometro ?? { x: 108, y: 686 }
+  const cCalibracao = c?.calibracao ?? { x: 450, y: 686 }
+  const cGraficoOD = c?.graficoOD ?? { left: 52, top: 642, width: 220, height: 148 }
+  const cGraficoOE = c?.graficoOE ?? { left: 326, top: 642, width: 220, height: 148 }
+  const cMtOD = c?.mtOD ?? { x: 80, y: 460 }
+  const cLrfOD = c?.lrfOD ?? { x: 154, y: 460 }
+  const cLdvOD = c?.ldvOD ?? { x: 232, y: 460 }
+  const cMtOE = c?.mtOE ?? { x: 348, y: 460 }
+  const cLrfOE = c?.lrfOE ?? { x: 422, y: 460 }
+  const cLdvOE = c?.ldvOE ?? { x: 500, y: 460 }
   const cIprfOD = c?.iprfOD ?? {
     intensidadeX: 98,
-    dissilabosX: 148,
-    monossilabosX: 198,
-    mascaramentoX: 248,
-    y: height - 440,
+    dissilabosX: 160,
+    monossilabosX: 225,
+    mascaramentoX: 258,
+    y: 408,
   }
   const cIprfOE = c?.iprfOE ?? {
     intensidadeX: 98,
-    dissilabosX: 148,
-    monossilabosX: 198,
-    mascaramentoX: 248,
-    y: height - 456,
+    dissilabosX: 160,
+    monossilabosX: 225,
+    mascaramentoX: 258,
+    y: 392,
   }
-  const cParecer = c?.parecer ?? { x: 50, y: height - 520 }
+  const cParecer = c?.parecer ?? { x: 45, y: 195 }
+  const cLogo = c?.logo ?? { left: 45, top: 805, width: 120, height: 42 }
+
+  // 0. Logo da Clínica (canto superior esquerdo)
+  let logoBytes = data.logoBytes
+  if (!logoBytes && clinic) {
+    const logoUrl =
+      (clinic as any).logo_url ||
+      (clinic.logo ? `/api/files/clinic_settings/${clinic.id}/${clinic.logo}` : '')
+    if (logoUrl) {
+      try {
+        const logoRes = await fetch(logoUrl)
+        if (logoRes.ok) {
+          logoBytes = await logoRes.arrayBuffer()
+        }
+      } catch {
+        /* fallback silencioso caso não consiga buscar no momento */
+      }
+    }
+  }
+
+  if (logoBytes) {
+    try {
+      let embeddedLogo
+      const bytesArr = logoBytes instanceof Uint8Array ? logoBytes : new Uint8Array(logoBytes)
+      // Detecção de formato básico: PNG começa com 0x89 0x50 0x4E 0x47, JPG com 0xFF 0xD8
+      const isPng =
+        bytesArr[0] === 0x89 && bytesArr[1] === 0x50 && bytesArr[2] === 0x4e && bytesArr[3] === 0x47
+      if (isPng) {
+        embeddedLogo = await pdfDoc.embedPng(bytesArr)
+      } else {
+        try {
+          embeddedLogo = await pdfDoc.embedJpg(bytesArr)
+        } catch {
+          embeddedLogo = await pdfDoc.embedPng(bytesArr)
+        }
+      }
+
+      if (embeddedLogo) {
+        // Posiciona a logo no PDF: cLogo.left e cLogo.top (onde top é a coordenada Y do topo da imagem com origem inferior)
+        const logoY = cLogo.top - cLogo.height
+        page.drawImage(embeddedLogo, {
+          x: cLogo.left,
+          y: logoY,
+          width: cLogo.width,
+          height: cLogo.height,
+        })
+      }
+    } catch (logoErr) {
+      console.warn('Não foi possível embutir a logo no PDF:', logoErr)
+    }
+  }
 
   // 1. Dados do Cabeçalho
   drawText(page, patientName, cNome.x, cNome.y, helveticaBold, 9)
@@ -602,14 +658,14 @@ export async function fillAudiometriaTemplatePdf(
     const nameWidth = helveticaBold.widthOfTextAtSize(specialistName, 9)
     const sigNome = c?.assinaturaNome
     const nameX = sigNome ? sigNome.x : (width - nameWidth) / 2
-    const nameY = sigNome ? sigNome.y : height - 690
+    const nameY = sigNome ? sigNome.y : 90
     drawText(page, specialistName, nameX, nameY, helveticaBold, 9)
     if (specialistCrfa) {
       const crfaText = `(CRFa ${specialistCrfa})`
       const crfaWidth = helvetica.widthOfTextAtSize(crfaText, 8)
       const sigCrfa = c?.assinaturaCrfa
       const crfaX = sigCrfa ? sigCrfa.x : (width - crfaWidth) / 2
-      const crfaY = sigCrfa ? sigCrfa.y : height - 716
+      const crfaY = sigCrfa ? sigCrfa.y : 76
       drawText(page, crfaText, crfaX, crfaY, helvetica, 8)
     }
   }
@@ -620,7 +676,7 @@ export async function fillAudiometriaTemplatePdf(
     const addrWidth = helvetica.widthOfTextAtSize(clinicAddress, 7.5)
     const rodape = c?.rodape
     const addrX = rodape ? rodape.x : (width - addrWidth) / 2
-    const addrY = rodape ? rodape.y : 35
+    const addrY = rodape ? rodape.y : 32
     drawText(page, clinicAddress, addrX, addrY, helvetica, 7.5, COLOR_SLATE)
   }
 
