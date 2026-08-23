@@ -443,6 +443,7 @@ interface DualAudiogramChartProps {
   width?: number | string
   compact?: boolean
   hideLegend?: boolean
+  hideSrtLdvSummary?: boolean
 }
 
 export const AudiogramChart: React.FC<DualAudiogramChartProps> = ({
@@ -458,6 +459,7 @@ export const AudiogramChart: React.FC<DualAudiogramChartProps> = ({
   ldvOE,
   compact = false,
   hideLegend = false,
+  hideSrtLdvSummary = false,
 }) => {
   const fmtDb = (v: number | null | undefined) => (v === null || v === undefined ? '—' : `${v} dB`)
   return (
@@ -474,17 +476,19 @@ export const AudiogramChart: React.FC<DualAudiogramChartProps> = ({
           compact={compact}
           hideLegend={hideLegend}
         />
-        <div
-          style={{
-            textAlign: 'center',
-            fontSize: compact ? '7pt' : '11px',
-            marginTop: '2px',
-            fontWeight: 700,
-            color: COLOR_OD,
-          }}
-        >
-          ORELHA DIREITA &nbsp;—&nbsp; SRT: {fmtDb(srtOD)} &nbsp;|&nbsp; LDV: {fmtDb(ldvOD)}
-        </div>
+        {!hideSrtLdvSummary && (
+          <div
+            style={{
+              textAlign: 'center',
+              fontSize: compact ? '7pt' : '11px',
+              marginTop: '2px',
+              fontWeight: 700,
+              color: COLOR_OD,
+            }}
+          >
+            ORELHA DIREITA &nbsp;—&nbsp; SRT: {fmtDb(srtOD)} &nbsp;|&nbsp; LDV: {fmtDb(ldvOD)}
+          </div>
+        )}
       </div>
       <div className={compact ? '' : 'border border-blue-100 bg-blue-50/20 p-2 rounded-xl'}>
         <SingleEarAudiogramChart
@@ -496,17 +500,19 @@ export const AudiogramChart: React.FC<DualAudiogramChartProps> = ({
           compact={compact}
           hideLegend={hideLegend}
         />
-        <div
-          style={{
-            textAlign: 'center',
-            fontSize: compact ? '7pt' : '11px',
-            marginTop: '2px',
-            fontWeight: 700,
-            color: COLOR_OE,
-          }}
-        >
-          ORELHA ESQUERDA &nbsp;—&nbsp; SRT: {fmtDb(srtOE)} &nbsp;|&nbsp; LDV: {fmtDb(ldvOE)}
-        </div>
+        {!hideSrtLdvSummary && (
+          <div
+            style={{
+              textAlign: 'center',
+              fontSize: compact ? '7pt' : '11px',
+              marginTop: '2px',
+              fontWeight: 700,
+              color: COLOR_OE,
+            }}
+          >
+            ORELHA ESQUERDA &nbsp;—&nbsp; SRT: {fmtDb(srtOE)} &nbsp;|&nbsp; LDV: {fmtDb(ldvOE)}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -1694,6 +1694,7 @@ function ExamPreview({
             ldvOE={exam.ldv_oe}
             hideLegend
             compact
+            hideSrtLdvSummary
           />
         </div>
 
