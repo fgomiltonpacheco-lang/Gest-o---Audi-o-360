@@ -697,7 +697,7 @@ export function CalibracaoTemplate({
 
             // 3. Gerar URL com token usando pb.files.getUrl
             if (freshSettings && fileName) {
-              fetchUrl = pb.files.getUrl(freshSettings, fileName)
+              fetchUrl = pb.files.getUrl(freshSettings, fileName).split('?')[0]
             }
           } catch (fetchErr) {
             console.warn('Não foi possível obter registro atualizado de clinic_settings:', fetchErr)
