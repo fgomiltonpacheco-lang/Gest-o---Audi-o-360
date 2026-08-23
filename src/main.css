@@ -338,7 +338,7 @@
     margin-top: 0 !important;
     margin-bottom: 0 !important;
     margin-left: 2.5cm !important;
-    margin-right: 2.5cm !important;
+    margin-right: 2cm !important;
     padding: 0 !important;
     page-break-inside: avoid;
   }
@@ -386,7 +386,7 @@
   .audiometry-print {
     font-size: 7.5pt;
     margin-left: 2.5cm !important;
-    margin-right: 2.5cm !important;
+    margin-right: 2cm !important;
   }
 
   /* Garante que cores (OD vermelho / OE azul, faixa verde) apareçam na impressão */
