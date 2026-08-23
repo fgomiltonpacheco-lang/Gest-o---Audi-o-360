@@ -9,6 +9,7 @@ import type {
 import { formatDate, maskCPF } from '@/lib/formatters'
 import { mediaTritonal } from '@/lib/audiogram'
 import logoImg from '@/assets/audicao-360-logo-para-papel-timbrado-da364.png'
+import { AudiogramChart } from '@/components/AudiogramChart'
 
 export interface ProfessionalInfo {
   name: string
@@ -30,8 +31,8 @@ const FREQUENCIES = ['250', '500', '1000', '2000', '3000', '4000', '6000', '8000
 const BONE_FREQUENCIES = ['500', '1000', '2000', '3000', '4000'] as const
 const BONE_FREQ_SET = new Set<string>(BONE_FREQUENCIES)
 
-const DEFAULT_SPECIALIST = 'Dr. Milton Cesar de Oliveira'
-const DEFAULT_CRFA = '19.294'
+const DEFAULT_SPECIALIST = 'Milton Soares Pacheco'
+const DEFAULT_CRFA = '3-11981-5'
 
 function formatVal(val: number | null | undefined): string {
   if (val === null || val === undefined || isNaN(val)) return '—'
@@ -189,7 +190,7 @@ export const LaudoAudiometricoHTML: React.FC<LaudoAudiometricoHTMLProps> = ({
       </header>
 
       {/* ==================== 2. DADOS DO PACIENTE ==================== */}
-      <section className="border border-black rounded-none p-2.5 mb-4 text-[12px] bg-neutral-50/30">
+      <section className="border border-black rounded-none p-2.5 mb-3 text-[12px] bg-neutral-50/30">
         <div className="grid grid-cols-12 gap-y-1.5 gap-x-2">
           {/* Linha 1: Nome (col-8) e Data (col-4) */}
           <div className="col-span-8 flex items-baseline">
@@ -227,6 +228,24 @@ export const LaudoAudiometricoHTML: React.FC<LaudoAudiometricoHTMLProps> = ({
             <span className="border-b border-dotted border-black flex-1 pl-1">{patientDob}</span>
           </div>
         </div>
+      </section>
+
+      {/* ==================== GRÁFICO DO AUDIOGRAMA (OD & OE) ==================== */}
+      <section className="mb-3">
+        <AudiogramChart
+          airOD={exam.air_od || {}}
+          airOE={exam.air_oe || {}}
+          boneOD={exam.bone_od || {}}
+          boneOE={exam.bone_oe || {}}
+          ldlOD={exam.ldl_od}
+          ldlOE={exam.ldl_oe}
+          srtOD={exam.srt_od}
+          srtOE={exam.srt_oe}
+          ldvOD={exam.ldv_od}
+          ldvOE={exam.ldv_oe}
+          compact
+          hideLegend
+        />
       </section>
 
       {/* ==================== 3. TABELA DE AUDIOMETRIA TONAL ==================== */}
