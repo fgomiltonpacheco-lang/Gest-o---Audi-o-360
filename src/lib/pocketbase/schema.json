@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-22T22:51:16.828Z",
+  "generatedAt": "2026-08-23T00:06:55.231Z",
   "collections": [
     {
       "name": "users",
@@ -6189,8 +6189,8 @@
       "name": "planos",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
+        "list": "",
+        "view": "",
         "create": "@request.auth.is_super_admin = true",
         "update": "@request.auth.is_super_admin = true",
         "delete": "@request.auth.is_super_admin = true"
