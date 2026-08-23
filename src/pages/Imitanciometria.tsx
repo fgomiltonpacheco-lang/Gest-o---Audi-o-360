@@ -1264,16 +1264,6 @@ export default function Imitanciometria() {
             PDF
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.print()}
-            className="h-8 text-xs font-semibold rounded-lg"
-          >
-            <Printer className="w-3.5 h-3.5 mr-1" />
-            Imprimir
-          </Button>
-
           {!isSecretaria && (
             <>
               <Button

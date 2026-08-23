@@ -360,6 +360,35 @@
     display: block !important;
   }
 
+  .imitanciometria-print {
+    font-size: 6pt !important;
+    line-height: 1.1;
+    padding: 0;
+    max-width: 100%;
+  }
+
+  .imitanciometria-print h2 {
+    font-size: 9pt;
+    margin: 0 0 2px 0;
+  }
+
+  .imitanciometria-print img {
+    max-height: 32px !important;
+  }
+
+  .imitanciometria-print table {
+    font-size: 5.5pt;
+  }
+
+  .imitanciometria-print th,
+  .imitanciometria-print td {
+    padding: 1px 2px;
+  }
+
+  .imitanciometria-print .print\:hidden {
+    display: none !important;
+  }
+
   /* Mostra apenas a área de impressão */
   #print-root {
     display: block !important;
