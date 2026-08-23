@@ -29,6 +29,7 @@ import { getAppUrl, isPreviewOrLocal } from '@/lib/domain'
 // ============================================================
 // Landing Page pública do Audição360.
 // Acessível sem autenticação em /landing ou diretamente em audicao360.com.br.
+// Forçado rebuild para sincronização de cache de domínio de produção.
 // ============================================================
 
 const FEATURES = [
