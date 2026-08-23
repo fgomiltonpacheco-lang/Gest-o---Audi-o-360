@@ -35,6 +35,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { CompareAudiometriesModal } from '@/components/CompareAudiometriesModal'
 import { usePrint } from '@/components/print/PrintProvider'
+import { LaudoAudiometricoHTML } from '@/components/laudos/LaudoAudiometricoHTML'
 
 // Importação lazy dos componentes de impressão para que um erro de runtime
 // em PrintDocuments.tsx (ex.: durante a avaliação do módulo) não quebre a
@@ -126,6 +127,7 @@ export default function Prontuario() {
     installments,
     addAppointment,
     currentUser,
+    clinicSettings,
     fetchConsentimentos,
     registrarConsentimento,
     revogarConsentimento,
@@ -1022,6 +1024,32 @@ export default function Prontuario() {
                             )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() =>
+                                print({
+                                  title: 'Laudo Audiológico',
+                                  subtitle: `${patient.name} — ${date}`,
+                                  body: (
+                                    <LaudoAudiometricoHTML
+                                      exam={exam}
+                                      patient={patient}
+                                      clinicSettings={clinicSettings}
+                                      professional={
+                                        currentUser
+                                          ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa }
+                                          : null
+                                      }
+                                    />
+                                  ),
+                                })
+                              }
+                              className="h-7 w-7 p-0 text-teal-700 hover:bg-teal-50 rounded-lg"
+                              title="Imprimir Laudo Audiológico (HTML)"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                            </Button>
                             <Button
                               size="sm"
                               onClick={() =>
