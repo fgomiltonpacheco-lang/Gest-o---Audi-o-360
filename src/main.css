@@ -335,10 +335,7 @@
   /* ExamPreview visível e ocupando a página na impressão */
   body:has(.clinic-audiometry) .clinic-audiometry {
     display: block !important;
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-    margin-left: 2.5cm !important;
-    margin-right: 2cm !important;
+    margin: 0 !important;
     padding: 0 !important;
     page-break-inside: avoid;
   }
@@ -385,8 +382,6 @@
   /* Audiometria: layout ultra-compacto para caber em 1 página A4 */
   .audiometry-print {
     font-size: 7.5pt;
-    margin-left: 2.5cm !important;
-    margin-right: 2cm !important;
   }
 
   /* Garante que cores (OD vermelho / OE azul, faixa verde) apareçam na impressão */
