@@ -759,9 +759,13 @@ export default function Audiometria() {
           professional={
             currentUser ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa } : null
           }
+          patientConvenio={
+            patient?.planType === 'Convênio'
+              ? patient.planName || 'Convênio'
+              : patient?.planType || 'Particular'
+          }
         />
       </div>
-
       {/* ===================== Entrada de Dados e Visualização ===================== */}
       <div className="no-print space-y-4">
         {/* 1. Visualização em Tempo Real (Gráficos dos audiogramas no topo) */}
@@ -1534,360 +1538,424 @@ function EarAudiometrySection({
   )
 }
 
-/* ---------- Subcomponentes da prévia clínica ---------- */
+/* ---------- Subcomponentes da prévia clínica (Layout de Impressão Exato) ---------- */
 function ExamPreview({
   exam,
-  patientAgeDetailed,
-  clinicSettings,
-  professional,
+  patientAgeDetailed: _patientAgeDetailed,
+  clinicSettings: _clinicSettings,
+  professional: _professional,
+  patientConvenio,
 }: {
   exam: AudiometryExamFull
-  patientAgeDetailed: string
+  patientAgeDetailed?: string
   clinicSettings?: ClinicSettings | null
   professional?: { name: string; crmCrfa?: string } | null
+  patientConvenio?: string
 }) {
-  const profName = (professional?.name?.trim() || SPECIALIST_NAME).toUpperCase()
-  const profCrfaRaw = professional?.crmCrfa?.trim() || SPECIALIST_CRFA
-  const profCrfa = profCrfaRaw.replace(/^crfa\s*/i, '')
-  const profSubtitle = profCrfa ? `Fonoaudiólogo — CRFa ${profCrfa}` : 'Fonoaudiólogo'
-
   const odTrito = mediaTritonal(exam.air_od)
-  const odQuadri = mediaQuadritonal(exam.air_od)
   const oeTrito = mediaTritonal(exam.air_oe)
-  const oeQuadri = mediaQuadritonal(exam.air_oe)
 
-  const clinicName = clinicSettings?.nome?.trim() || 'Audição360'
-  const clinicAddress = clinicSettings?.endereco?.trim() || CLINIC_ADDRESS
-  const clinicPhone = clinicSettings?.telefone?.trim() || CLINIC_PHONE
+  const srtOdVal =
+    exam.srt_od === -1
+      ? 'AUS'
+      : exam.srt_od !== null && exam.srt_od !== undefined
+        ? `${exam.srt_od}`
+        : '-'
+  const srtOeVal =
+    exam.srt_oe === -1
+      ? 'AUS'
+      : exam.srt_oe !== null && exam.srt_oe !== undefined
+        ? `${exam.srt_oe}`
+        : '-'
+  const ldvOdVal =
+    exam.ldv_od === -1
+      ? 'AUS'
+      : exam.ldv_od !== null && exam.ldv_od !== undefined
+        ? `${exam.ldv_od}`
+        : '-'
+  const ldvOeVal =
+    exam.ldv_oe === -1
+      ? 'AUS'
+      : exam.ldv_oe !== null && exam.ldv_oe !== undefined
+        ? `${exam.ldv_oe}`
+        : '-'
+
+  const tritoOdVal = odTrito !== null ? `${odTrito.toFixed(0)}` : '-'
+  const tritoOeVal = oeTrito !== null ? `${oeTrito.toFixed(0)}` : '-'
+
+  const convText = patientConvenio || 'Particular'
+  const audiometerText = exam.audiometer || DEFAULT_AUDIOMETER
+  const calibText = exam.calibration ? formatDate(exam.calibration) : '-'
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 clinic-audiometry">
-      <div className="space-y-4">
-        {/* Cabeçalho da clínica com logo */}
-        <div className="flex items-start justify-between border-b-2 border-navy-700 pb-3">
-          <div className="flex items-center gap-3">
-            <img src={logoImg} alt={clinicName} className="max-h-12 max-w-[140px] object-contain" />
-            <div>
-              <h2 className="text-lg font-extrabold tracking-tight" style={{ color: '#0F2B5C' }}>
-                {clinicName}
-              </h2>
-              <p className="text-[11px] text-slate-500 leading-tight">
-                {clinicAddress}
-                <br />
-                Telefone: {clinicPhone}
-              </p>
+    <div
+      className="bg-white text-slate-900 mx-auto p-4 sm:p-6 print:p-0 print:m-0 w-full font-sans clinic-audiometry"
+      style={{ maxWidth: '210mm', fontFamily: 'Arial, Helvetica, sans-serif' }}
+    >
+      <div className="space-y-3 print:space-y-2">
+        {/* 1. Header: Título "AUDIOMETRIA" centralizado com linhas azuis horizontais */}
+        <div className="py-1">
+          <div className="w-full border-t-2 border-[#0F2B5C] mb-2" />
+          <h1
+            className="text-center text-xl font-bold tracking-widest uppercase my-1"
+            style={{ color: '#0F2B5C' }}
+          >
+            AUDIOMETRIA
+          </h1>
+          <div className="w-full border-b-2 border-[#0F2B5C] mt-2" />
+        </div>
+
+        {/* 2. Patient Data: Caixa com borda azul e 3 colunas com sublinhados pontilhados */}
+        <div className="border border-[#0F2B5C] rounded-md p-2.5 text-[11px] leading-tight text-slate-800">
+          <div className="grid grid-cols-12 gap-x-4 gap-y-1.5">
+            {/* Coluna 1 (NOME, CONVÊNIO, AUDIÔMETRO) */}
+            <div className="col-span-6 space-y-1.5">
+              <div className="flex items-baseline gap-1">
+                <span className="font-bold text-[#0F2B5C] whitespace-nowrap">NOME:</span>
+                <span className="flex-1 border-b border-dotted border-slate-400 font-medium px-1 text-slate-900 truncate">
+                  {exam.patientName || '—'}
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="font-bold text-[#0F2B5C] whitespace-nowrap">CONVÊNIO:</span>
+                <span className="flex-1 border-b border-dotted border-slate-400 font-medium px-1 text-slate-900 truncate">
+                  {convText}
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="font-bold text-[#0F2B5C] whitespace-nowrap">AUDIÔMETRO:</span>
+                <span className="flex-1 border-b border-dotted border-slate-400 font-medium px-1 text-slate-900 truncate">
+                  {audiometerText}
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="text-right text-[11px] text-slate-700">
-            <div>
-              <strong>DATA DO EXAME</strong>
+
+            {/* Coluna 2 (DATA, DN) */}
+            <div className="col-span-3 space-y-1.5">
+              <div className="flex items-baseline gap-1">
+                <span className="font-bold text-[#0F2B5C] whitespace-nowrap">DATA:</span>
+                <span className="flex-1 border-b border-dotted border-slate-400 font-medium px-1 text-slate-900 text-center">
+                  {formatDate(exam.date) || '—'}
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="font-bold text-[#0F2B5C] whitespace-nowrap">DN:</span>
+                <span className="flex-1 border-b border-dotted border-slate-400 font-medium px-1 text-slate-900 text-center">
+                  {formatDate(exam.dob) || '—'}
+                </span>
+              </div>
             </div>
-            <div className="font-semibold">{formatDate(exam.date)}</div>
+
+            {/* Coluna 3 (CPF, SEXO, CALIBRAÇÃO) */}
+            <div className="col-span-3 space-y-1.5">
+              <div className="flex items-baseline gap-1">
+                <span className="font-bold text-[#0F2B5C] whitespace-nowrap">CPF:</span>
+                <span className="flex-1 border-b border-dotted border-slate-400 font-medium px-1 text-slate-900 text-center truncate">
+                  {maskCPF(exam.cpf) || '—'}
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="font-bold text-[#0F2B5C] whitespace-nowrap">SEXO:</span>
+                <span className="flex-1 border-b border-dotted border-slate-400 font-medium px-1 text-slate-900 text-center">
+                  {exam.sex || '—'}
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="font-bold text-[#0F2B5C] whitespace-nowrap">CALIBRAÇÃO:</span>
+                <span className="flex-1 border-b border-dotted border-slate-400 font-medium px-1 text-slate-900 text-center truncate">
+                  {calibText}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Bloco de identificação do paciente */}
-        <div className="border border-slate-300 rounded-md p-3 text-[11px] text-slate-800">
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-y-1 gap-x-3">
-            <IdentField label="NOME COMPLETO" value={exam.patientName} className="sm:col-span-12" />
-            <IdentField label="CPF" value={maskCPF(exam.cpf)} className="sm:col-span-4" />
-            <IdentField label="GÊNERO" value={exam.sex} className="sm:col-span-4" />
-            <IdentField
-              label="DATA DE NASC."
-              value={formatDate(exam.dob)}
-              className="sm:col-span-4"
-            />
-            <IdentField label="IDADE" value={patientAgeDetailed} className="sm:col-span-4" />
-            <IdentField
-              label="ESTADO CIVIL"
-              value={exam.marital_status}
-              className="sm:col-span-4"
-            />
-            <IdentField label="ESPECIALISTA" value={profName} className="sm:col-span-4" />
-            <IdentField
-              label="APARELHO AUDIÔMETRO"
-              value={exam.audiometer || DEFAULT_AUDIOMETER}
-              className="sm:col-span-6"
-            />
-            <IdentField
-              label="DATA DA CALIBRAÇÃO"
-              value={formatDate(exam.calibration)}
-              className="sm:col-span-6"
-            />
-          </div>
-        </div>
-
-        {/* Título AUDIOMETRIA */}
-        <h3
-          className="text-center text-base font-extrabold tracking-wide"
-          style={{ color: '#1e293b' }}
-        >
-          AUDIOMETRIA
-        </h3>
-
-        {/* Legenda */}
-        <Legend />
-
-        {/* Audiogramas lado a lado */}
-        <AudiogramChart
-          airOD={exam.air_od}
-          airOE={exam.air_oe}
-          boneOD={exam.bone_od}
-          boneOE={exam.bone_oe}
-          srtOD={exam.srt_od}
-          srtOE={exam.srt_oe}
-          ldvOD={exam.ldv_od}
-          ldvOE={exam.ldv_oe}
-          hideLegend
-          compact
-        />
-
-        {/* Médias */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <MediaTable
-            title="MÉDIA TRITONAL"
-            airOd={odTrito}
-            airOe={oeTrito}
-            boneOd={mediaTritonal(exam.bone_od)}
-            boneOe={mediaTritonal(exam.bone_oe)}
+        {/* 3. Audiogram Charts lado a lado */}
+        <div className="pt-1">
+          <AudiogramChart
+            airOD={exam.air_od}
+            airOE={exam.air_oe}
+            boneOD={exam.bone_od}
+            boneOE={exam.bone_oe}
+            srtOD={exam.srt_od}
+            srtOE={exam.srt_oe}
+            ldvOD={exam.ldv_od}
+            ldvOE={exam.ldv_oe}
+            hideLegend
+            compact
           />
-          <MediaTable
-            title="MÉDIA QUADRITONAL"
-            airOd={odQuadri}
-            airOe={oeQuadri}
-            boneOd={mediaQuadritonal(exam.bone_od)}
-            boneOe={mediaQuadritonal(exam.bone_oe)}
-          />
         </div>
 
-        {/* IPRF */}
-        <IprfTable exam={exam} />
-
-        {/* Grau / Tipo / Configuração */}
-        {(exam.loss_degree || exam.loss_type || exam.loss_configuration) && (
-          <div className="text-[11px] text-slate-800">
-            <strong>Grau:</strong> {exam.loss_degree || '—'} &nbsp;|&nbsp; <strong>Tipo:</strong>{' '}
-            {exam.loss_type || '—'} &nbsp;|&nbsp; <strong>Configuração:</strong>{' '}
-            {exam.loss_configuration || '—'}
-          </div>
-        )}
-
-        {/* Parecer */}
-        <div>
-          <SectionLabel>PARECER AUDIOLÓGICO</SectionLabel>
-          <div className="border border-slate-300 rounded-md p-2 text-[11px] text-slate-800 whitespace-pre-wrap min-h-[60px]">
-            {exam.report || '—'}
-          </div>
-          <p className="text-[9px] text-slate-500 italic mt-1 text-justify">{REPORT_REFERENCE}</p>
-        </div>
-
-        {/* Assinatura */}
-        <div className="pt-4">
-          <div className="mx-auto text-center" style={{ maxWidth: 320 }}>
-            <div className="border-t border-slate-500 pt-1 text-[12px] font-bold text-slate-800">
-              {profName}
+        {/* 4. Results Layout (Side-by-Side): Esquerda (Tabelas MT/LRF/LDV e IRF) | Direita (Legenda) */}
+        <div className="grid grid-cols-12 gap-3 items-start pt-1">
+          {/* Coluna Esquerda: Tabelas MT/LRF/LDV e IRF */}
+          <div className="col-span-7 space-y-3">
+            {/* Tabela MT / LRF / LDV */}
+            <div className="overflow-hidden rounded border border-[#0F2B5C]">
+              <table className="w-full border-collapse text-[10px] text-center">
+                <thead>
+                  <tr className="bg-slate-50 text-[#0F2B5C] font-bold border-b border-[#0F2B5C]">
+                    <th className="py-1 px-2 border-r border-[#0F2B5C] w-1/4">ORELHA</th>
+                    <th className="py-1 px-2 border-r border-[#0F2B5C] w-1/4">MT</th>
+                    <th className="py-1 px-2 border-r border-[#0F2B5C] w-1/4">LRF</th>
+                    <th className="py-1 px-2 w-1/4">LDV</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#0F2B5C]">
+                  <tr>
+                    <td className="py-1 px-2 font-bold text-red-600 border-r border-[#0F2B5C]">
+                      OD
+                    </td>
+                    <td className="py-1 px-2 font-semibold text-red-600 border-r border-[#0F2B5C]">
+                      {tritoOdVal !== '-' ? `${tritoOdVal} dB` : 'dB'}
+                    </td>
+                    <td className="py-1 px-2 font-semibold text-red-600 border-r border-[#0F2B5C]">
+                      {srtOdVal !== '-' ? (srtOdVal === 'AUS' ? 'AUS' : `${srtOdVal} dB`) : 'dB'}
+                    </td>
+                    <td className="py-1 px-2 font-semibold text-red-600">
+                      {ldvOdVal !== '-' ? (ldvOdVal === 'AUS' ? 'AUS' : `${ldvOdVal} dB`) : 'dB'}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 px-2 font-bold text-blue-600 border-r border-[#0F2B5C]">
+                      OE
+                    </td>
+                    <td className="py-1 px-2 font-semibold text-blue-600 border-r border-[#0F2B5C]">
+                      {tritoOeVal !== '-' ? `${tritoOeVal} dB` : 'dB'}
+                    </td>
+                    <td className="py-1 px-2 font-semibold text-blue-600 border-r border-[#0F2B5C]">
+                      {srtOeVal !== '-' ? (srtOeVal === 'AUS' ? 'AUS' : `${srtOeVal} dB`) : 'dB'}
+                    </td>
+                    <td className="py-1 px-2 font-semibold text-blue-600">
+                      {ldvOeVal !== '-' ? (ldvOeVal === 'AUS' ? 'AUS' : `${ldvOeVal} dB`) : 'dB'}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <div className="text-[10px] text-slate-500">{profSubtitle}</div>
+
+            {/* Tabela IRF */}
+            <div>
+              <div className="text-center font-bold text-[11px] text-[#0F2B5C] mb-1">
+                ÍNDICE DE RECONHECIMENTO DE FALA (IRF)
+              </div>
+              <div className="overflow-hidden rounded border border-[#0F2B5C]">
+                <table className="w-full border-collapse text-[10px] text-center">
+                  <thead>
+                    <tr className="bg-slate-50 text-[#0F2B5C] font-bold border-b border-[#0F2B5C]">
+                      <th className="py-1 px-1.5 border-r border-[#0F2B5C]">ORELHA</th>
+                      <th className="py-1 px-1.5 border-r border-[#0F2B5C]">INTENSIDADE</th>
+                      <th className="py-1 px-1.5 border-r border-[#0F2B5C]">DISSÍLABOS</th>
+                      <th className="py-1 px-1.5 border-r border-[#0F2B5C]">MONOSSÍLABOS</th>
+                      <th className="py-1 px-1.5">MASC</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#0F2B5C]">
+                    <tr>
+                      <td className="py-1 px-1.5 font-bold text-red-600 border-r border-[#0F2B5C]">
+                        OD
+                      </td>
+                      <td className="py-1 px-1.5 font-semibold text-red-600 border-r border-[#0F2B5C]">
+                        {exam.iprf_vocal.od.intensidade
+                          ? `${exam.iprf_vocal.od.intensidade} dB`
+                          : 'dB'}
+                      </td>
+                      <td className="py-1 px-1.5 font-semibold text-red-600 border-r border-[#0F2B5C]">
+                        {exam.iprf_vocal.od.dissilabos ? `${exam.iprf_vocal.od.dissilabos} %` : '%'}
+                      </td>
+                      <td className="py-1 px-1.5 font-semibold text-red-600 border-r border-[#0F2B5C]">
+                        {exam.iprf_vocal.od.monossilabos
+                          ? `${exam.iprf_vocal.od.monossilabos} %`
+                          : '%'}
+                      </td>
+                      <td className="py-1 px-1.5 font-semibold text-red-600">
+                        {exam.iprf_vocal.od.mascaramento
+                          ? `${exam.iprf_vocal.od.mascaramento} dB`
+                          : 'dB'}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 px-1.5 font-bold text-blue-600 border-r border-[#0F2B5C]">
+                        OE
+                      </td>
+                      <td className="py-1 px-1.5 font-semibold text-blue-600 border-r border-[#0F2B5C]">
+                        {exam.iprf_vocal.oe.intensidade
+                          ? `${exam.iprf_vocal.oe.intensidade} dB`
+                          : 'dB'}
+                      </td>
+                      <td className="py-1 px-1.5 font-semibold text-blue-600 border-r border-[#0F2B5C]">
+                        {exam.iprf_vocal.oe.dissilabos ? `${exam.iprf_vocal.oe.dissilabos} %` : '%'}
+                      </td>
+                      <td className="py-1 px-1.5 font-semibold text-blue-600 border-r border-[#0F2B5C]">
+                        {exam.iprf_vocal.oe.monossilabos
+                          ? `${exam.iprf_vocal.oe.monossilabos} %`
+                          : '%'}
+                      </td>
+                      <td className="py-1 px-1.5 font-semibold text-blue-600">
+                        {exam.iprf_vocal.oe.mascaramento
+                          ? `${exam.iprf_vocal.oe.mascaramento} dB`
+                          : 'dB'}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Coluna Direita: Tabela LEGENDA */}
+          <div className="col-span-5">
+            <div className="text-center font-bold text-[11px] text-[#0F2B5C] mb-1">LEGENDA</div>
+            <div className="overflow-hidden rounded border border-[#0F2B5C]">
+              <table className="w-full border-collapse text-[9px]">
+                <thead>
+                  <tr className="bg-slate-50 text-[#0F2B5C] font-bold border-b border-[#0F2B5C] text-center">
+                    <th className="py-1 px-1 border-r border-[#0F2B5C] text-[8.5px] leading-tight">
+                      POSICIONAMENTO DO FONE
+                    </th>
+                    <th className="py-1 px-1 border-r border-[#0F2B5C] text-red-600 text-[8.5px] w-16">
+                      ORELHA DIREITA
+                    </th>
+                    <th className="py-1 px-1 text-blue-600 text-[8.5px] w-16">ORELHA ESQUERDA</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#0F2B5C]">
+                  {/* VIA AÉREA (FONE) - 4 linhas */}
+                  <tr>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-[8px] leading-tight text-slate-700">
+                      <div className="font-bold text-[7.5px] text-[#0F2B5C] uppercase">
+                        VIA AÉREA (FONE)
+                      </div>
+                      Presença de resposta não mascarada
+                    </td>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-red-600 text-sm">
+                      ○
+                    </td>
+                    <td className="py-0.5 px-1 text-center font-bold text-blue-600 text-sm">✕</td>
+                  </tr>
+                  <tr>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-[8px] leading-tight text-slate-700">
+                      Presença de resposta mascarada
+                    </td>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-red-600 text-xs">
+                      △
+                    </td>
+                    <td className="py-0.5 px-1 text-center font-bold text-blue-600 text-xs">□</td>
+                  </tr>
+                  <tr>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-[8px] leading-tight text-slate-700">
+                      Ausência de resposta não mascarada
+                    </td>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-red-600 text-xs">
+                      <span className="inline-flex items-center">
+                        ○<span className="text-[9px] -ml-0.5">↓</span>
+                      </span>
+                    </td>
+                    <td className="py-0.5 px-1 text-center font-bold text-blue-600 text-xs">
+                      <span className="inline-flex items-center">
+                        ✕<span className="text-[9px] -ml-0.5">↓</span>
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-[8px] leading-tight text-slate-700">
+                      Ausência de resposta mascarada
+                    </td>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-red-600 text-xs">
+                      <span className="inline-flex items-center">
+                        △<span className="text-[9px] -ml-0.5">↓</span>
+                      </span>
+                    </td>
+                    <td className="py-0.5 px-1 text-center font-bold text-blue-600 text-xs">
+                      <span className="inline-flex items-center">
+                        □<span className="text-[9px] -ml-0.5">↓</span>
+                      </span>
+                    </td>
+                  </tr>
+
+                  {/* VIA ÓSSEA (MASTÓIDE) - 3 linhas */}
+                  <tr>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-[8px] leading-tight text-slate-700">
+                      <div className="font-bold text-[7.5px] text-[#0F2B5C] uppercase">
+                        VIA ÓSSEA (MASTÓIDE)
+                      </div>
+                      Presença de resposta mascarada
+                    </td>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-red-600 text-xs">
+                      &lt;
+                    </td>
+                    <td className="py-0.5 px-1 text-center font-bold text-blue-600 text-xs">
+                      &gt;
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-[8px] leading-tight text-slate-700">
+                      Ausência de resposta não mascarada
+                    </td>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-red-600 text-xs">
+                      ]
+                    </td>
+                    <td className="py-0.5 px-1 text-center font-bold text-blue-600 text-xs">[</td>
+                  </tr>
+                  <tr>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-[8px] leading-tight text-slate-700">
+                      Ausência de resposta mascarada
+                    </td>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-red-600 text-xs">
+                      ↓
+                    </td>
+                    <td className="py-0.5 px-1 text-center font-bold text-blue-600 text-xs">
+                      <span className="inline-flex items-center">
+                        ↓<span className="text-[8px]">ₛ</span>
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. Parecer Audiológico: Título e caixa com borda azul arredondada + nota de referência */}
+        <div className="pt-1">
+          <div
+            className="font-bold text-[11px] uppercase tracking-wide mb-1"
+            style={{ color: '#0F2B5C' }}
+          >
+            PARECER AUDIOLÓGICO
+          </div>
+          <div className="border border-[#0F2B5C] rounded-lg p-2.5 text-[10.5px] leading-relaxed text-slate-800 min-h-[55px] whitespace-pre-wrap">
+            {exam.report || 'Audiometria dentro dos padrões de normalidade bilateralmente.'}
+          </div>
+          <p className="text-[8px] text-slate-500 italic mt-1 leading-tight text-left">
+            * Baseado nas classificações de Lloyd e Kaplan (1978); Silman e Silverman (1997)
+            adaptada de Carhart (1945) e Lloyd e Kaplan (1978); Jerger, Speaks e Trammell (1968).
+          </p>
+        </div>
+
+        {/* 6. Footer: Espaço para Carimbo centralizado + Assinatura */}
+        <div className="pt-2 space-y-3">
+          {/* Caixa pontilhada de Carimbo */}
+          <div className="flex justify-center">
+            <div className="w-56 h-14 border-2 border-dashed border-slate-400 rounded-lg flex items-center justify-center text-[10px] text-slate-400 select-none">
+              Espaço para Carimbo
+            </div>
+          </div>
+
+          {/* Assinatura com linha azul */}
+          <div className="mx-auto text-center" style={{ maxWidth: 300 }}>
+            <div className="w-full border-t border-[#0F2B5C] pt-1.5">
+              <div className="text-[11px] font-bold text-slate-900">Milton Soares Pacheco</div>
+              <div className="text-[9.5px] text-slate-600 leading-tight">
+                Fonoaudiólogo – CRFa 3-11981-5
+              </div>
+              <div className="text-[9.5px] text-slate-600 leading-tight">
+                Especialista em Audiologia
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-function IdentField({
-  label,
-  value,
-  className,
-}: {
-  label: string
-  value: string
-  className?: string
-}) {
-  return (
-    <div className={className}>
-      <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-wide">
-        {label}:
-      </span>{' '}
-      <span className="font-semibold">{value || '—'}</span>
-    </div>
-  )
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="text-[12px] font-extrabold tracking-wide mb-1" style={{ color: '#0F2B5C' }}>
-      {children}
-    </div>
-  )
-}
-
-function Legend() {
-  const cellTh =
-    'border border-slate-400 bg-slate-100 text-[10px] font-bold text-center px-1 py-0.5'
-  const cellTd = 'border border-slate-400 text-[10px] text-center px-1 py-0.5'
-  const od = (s: string) => (
-    <span style={{ color: '#dc2626' }} className="font-bold">
-      {s}
-    </span>
-  )
-  const oe = (s: string) => (
-    <span style={{ color: '#2563eb' }} className="font-bold">
-      {s}
-    </span>
-  )
-  return (
-    <div>
-      <SectionLabel>LEGENDA</SectionLabel>
-      <table className="w-full border-collapse" style={{ maxWidth: 640 }}>
-        <thead>
-          <tr>
-            <th className={cellTh}></th>
-            <th colSpan={2} className={cellTh}>
-              Normal
-            </th>
-            <th colSpan={2} className={cellTh}>
-              Ausente
-            </th>
-          </tr>
-          <tr>
-            <th className={cellTh}></th>
-            <th className={cellTh}>OD</th>
-            <th className={cellTh}>OE</th>
-            <th className={cellTh}>OD</th>
-            <th className={cellTh}>OE</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td className={`${cellTd} text-left font-semibold`}>Via Aérea s/ masc.</td>
-            <td className={cellTd}>{od('○')}</td>
-            <td className={cellTd}>{oe('✕')}</td>
-            <td className={cellTd}>{od('○↓')}</td>
-            <td className={cellTd}>{oe('✕↓')}</td>
-          </tr>
-          <tr>
-            <td className={`${cellTd} text-left font-semibold`}>Via Aérea c/ masc.</td>
-            <td className={cellTd}>{od('△')}</td>
-            <td className={cellTd}>{oe('□')}</td>
-            <td className={cellTd}>{od('△↓')}</td>
-            <td className={cellTd}>{oe('□↓')}</td>
-          </tr>
-          <tr>
-            <td className={`${cellTd} text-left font-semibold`}>Via Óssea s/ masc.</td>
-            <td className={cellTd}>{od('<')}</td>
-            <td className={cellTd}>{oe('>')}</td>
-            <td className={cellTd}>{od('<↓')}</td>
-            <td className={cellTd}>{oe('>↓')}</td>
-          </tr>
-          <tr>
-            <td className={`${cellTd} text-left font-semibold`}>Via Óssea c/ masc.</td>
-            <td className={cellTd}>{od('[')}</td>
-            <td className={cellTd}>{oe(']')}</td>
-            <td className={cellTd}>{od('[↓')}</td>
-            <td className={cellTd}>{oe(']↓')}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function MediaTable({
-  title,
-  airOd,
-  airOe,
-  boneOd,
-  boneOe,
-}: {
-  title: string
-  airOd: number | null
-  airOe: number | null
-  boneOd: number | null
-  boneOe: number | null
-}) {
-  const th = 'border border-slate-400 bg-slate-100 text-[10px] font-bold text-center px-1 py-0.5'
-  const td = 'border border-slate-400 text-[10px] text-center px-1 py-0.5'
-  const fmt = (v: number | null) => (v === null ? '-' : v)
-  return (
-    <div>
-      <SectionLabel>{title}</SectionLabel>
-      <table className="w-full border-collapse">
-        <thead>
-          <tr>
-            <th className={th}></th>
-            <th className={th} style={{ color: '#dc2626' }}>
-              OD
-            </th>
-            <th className={th} style={{ color: '#2563eb' }}>
-              OE
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td className={`${td} text-left font-semibold`}>Via Aérea</td>
-            <td className={td}>{fmt(airOd)}</td>
-            <td className={td}>{fmt(airOe)}</td>
-          </tr>
-          <tr>
-            <td className={`${td} text-left font-semibold`}>Via Óssea</td>
-            <td className={td}>{fmt(boneOd)}</td>
-            <td className={td}>{fmt(boneOe)}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function IprfTable({ exam }: { exam: AudiometryExamFull }) {
-  const th = 'border border-slate-400 bg-slate-100 text-[10px] font-bold text-center px-1 py-0.5'
-  const td = 'border border-slate-400 text-[10px] text-center px-1 py-0.5'
-  const odRow = exam.iprf_vocal.od
-  const oeRow = exam.iprf_vocal.oe
-  const fmtIprf = (r: { intensidade: string; monossilabos: string; dissilabos: string }) => {
-    const intens = r.intensidade ? `${r.intensidade} dB` : '- dB'
-    const monoPct = r.monossilabos ? `${r.monossilabos}%` : '-'
-    const dissiPct = r.dissilabos ? `${r.dissilabos}%` : '-'
-    return `${intens} — ${monoPct} Monossílabos / ${dissiPct} Dissílabos`
-  }
-  const fmtMasc = (r: { mascaramento?: string }) => (r.mascaramento ? `${r.mascaramento} dB` : '—')
-  const fmtPalavras = (r: { palavras_faladas?: string }) =>
-    r.palavras_faladas ? r.palavras_faladas : '—'
-  return (
-    <div>
-      <SectionLabel>I.P.R.F</SectionLabel>
-      <table className="w-full border-collapse">
-        <thead>
-          <tr>
-            <th className={th}></th>
-            <th className={th} style={{ color: '#dc2626' }}>
-              OD
-            </th>
-            <th className={th} style={{ color: '#2563eb' }}>
-              OE
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td className={`${td} text-left font-semibold`}>Monossílabos / Dissílabos</td>
-            <td className={td}>{fmtIprf(odRow)}</td>
-            <td className={td}>{fmtIprf(oeRow)}</td>
-          </tr>
-          <tr>
-            <td className={`${td} text-left font-semibold`}>Mascaramento (dB)</td>
-            <td className={td}>{fmtMasc(odRow)}</td>
-            <td className={td}>{fmtMasc(oeRow)}</td>
-          </tr>
-          <tr>
-            <td className={`${td} text-left font-semibold`}>Palavras Faladas</td>
-            <td className={td}>{fmtPalavras(odRow)}</td>
-            <td className={td}>{fmtPalavras(oeRow)}</td>
-          </tr>
-        </tbody>
-      </table>
     </div>
   )
 }
