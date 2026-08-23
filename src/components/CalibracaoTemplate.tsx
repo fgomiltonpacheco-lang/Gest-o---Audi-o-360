@@ -651,73 +651,42 @@ export function CalibracaoTemplate({
       }
       setRendering(true)
       try {
-        let arrayBuffer: ArrayBuffer
+        let pdfSourceUrl = url
 
-        // Se já for uma URL data: ou blob: local criada no navegador, podemos buscar diretamente ou usar fetch simples
+        // Se for URL local (data: ou blob: recém-selecionada no input file), usa diretamente
         if (url.startsWith('data:') || url.startsWith('blob:')) {
-          const res = await fetch(url)
-          if (!res.ok) {
-            throw new Error(`Falha ao obter dados locais do PDF (HTTP ${res.status})`)
-          }
-          arrayBuffer = await res.arrayBuffer()
+          pdfSourceUrl = url
         } else {
-          // Download autenticado usando o token do PocketBase
-          const headers: HeadersInit = {}
-          if (pb.authStore.token) {
-            headers['Authorization'] = pb.authStore.token
-          }
+          // Busca registro FRESCO de clinic_settings no PocketBase para gerar token válido
+          try {
+            const authUser = (pb.authStore as any).model || (pb.authStore as any).record
+            const filter =
+              pb.authStore.isValid && authUser?.clinica_id
+                ? `clinica_id = "${authUser.clinica_id}"`
+                : ''
+            const freshSettings = await pb
+              .collection('clinic_settings')
+              .getFirstListItem(filter, { sort: '-created' })
 
-          const cleanUrl = url.replace(/[?&]token=[^&]*/g, '')
-          let res = await fetch(cleanUrl, {
-            headers,
-          })
+            const fileName =
+              tipo === 'audiometria'
+                ? freshSettings.template_audiometria
+                : freshSettings.template_imitanciometria
 
-          // Se der 404, faz fallback buscando o registro atualizado de clinic_settings
-          if (res.status === 404) {
-            try {
-              const authUser = (pb.authStore as any).model || (pb.authStore as any).record
-              const filter =
-                pb.authStore.isValid && authUser?.clinica_id
-                  ? `clinica_id = "${authUser.clinica_id}"`
-                  : ''
-              const freshSettings = await pb
-                .collection('clinic_settings')
-                .getFirstListItem(filter, { sort: '-created' })
-
-              const fileName =
-                tipo === 'audiometria'
-                  ? freshSettings.template_audiometria
-                  : freshSettings.template_imitanciometria
-
-              if (fileName) {
-                const freshUrl = pb.files.getUrl(freshSettings, fileName)
-                const freshCleanUrl = freshUrl.replace(/[?&]token=[^&]*/g, '')
-                res = await fetch(freshCleanUrl, {
-                  headers,
-                })
-              }
-            } catch (fallbackErr) {
-              console.warn('Falha no fallback de busca do template atualizado:', fallbackErr)
+            if (fileName) {
+              // Gera URL fresca com token recém-criado
+              pdfSourceUrl = pb.files.getUrl(freshSettings, fileName)
             }
+          } catch (fetchErr) {
+            console.warn('Não foi possível obter registro atualizado de clinic_settings:', fetchErr)
+            // Fallback 404 / erro: tenta usar a URL fornecida (removendo tokens expirados se aplicável como segurança extra)
+            pdfSourceUrl = url
           }
-
-          if (!res.ok) {
-            throw new Error(
-              `Falha ao baixar o PDF do servidor (HTTP ${res.status}: ${res.statusText})`,
-            )
-          }
-
-          const blob = await res.blob()
-          cleanupBlobUrl()
-          const objectUrl = URL.createObjectURL(blob)
-          activeBlobUrlRef.current = objectUrl
-
-          arrayBuffer = await blob.arrayBuffer()
         }
 
-        // Passamos os dados binários (ArrayBuffer / Uint8Array) diretamente para o pdfjsLib
+        // Passa a URL fresca diretamente para o pdfjsLib
         const loadingTask = pdfjsLib.getDocument({
-          data: new Uint8Array(arrayBuffer),
+          url: pdfSourceUrl,
         })
         const pdf = await loadingTask.promise
         const page = await pdf.getPage(1)
@@ -752,7 +721,7 @@ export function CalibracaoTemplate({
         setRendering(false)
       }
     },
-    [toast, cleanupBlobUrl, tipo],
+    [toast, tipo],
   )
 
   useEffect(() => {
