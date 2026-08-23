@@ -312,7 +312,9 @@
   }
 
   /* Esconde toda a chrome da aplicação, exceto quando é a página de audiometria */
-  body:not(:has(.clinic-audiometry)) > #root > *:not(#print-root) {
+  body:not(:has(.clinic-audiometry)):not(:has(.imitanciometria-print))
+    > #root
+    > *:not(#print-root) {
     display: none !important;
   }
 
@@ -338,6 +340,24 @@
     margin: 0 !important;
     padding: 0 !important;
     page-break-inside: avoid;
+  }
+
+  /* Imitanciometria: esconder sidebar/header na impressão */
+  body:has(.imitanciometria-print) .sidebar,
+  body:has(.imitanciometria-print) aside,
+  body:has(.imitanciometria-print) header,
+  body:has(.imitanciometria-print) footer,
+  body:has(.imitanciometria-print) .print\:hidden {
+    display: none !important;
+  }
+
+  body:has(.imitanciometria-print) main {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
+  body:has(.imitanciometria-print) .imitanciometria-print {
+    display: block !important;
   }
 
   /* Mostra apenas a área de impressão */

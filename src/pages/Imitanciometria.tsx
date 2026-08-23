@@ -5,7 +5,6 @@ import { useToast } from '@/hooks/use-toast'
 import { usePrint } from '@/components/print/PrintProvider'
 import { ImitanciometriaPrint, type ImitPrintData } from '@/components/print/ImitanciometriaPrint'
 import { renderExamReport, buildImitanciometriaContext } from '@/components/print/PrintDocuments'
-import { fillImitanciometriaTemplatePdf, openPdfInNewTab } from '@/lib/pdfTemplateFiller'
 import pb from '@/lib/pocketbase/client'
 import { ClientResponseError } from 'pocketbase'
 import { Button } from '@/components/ui/button'
@@ -1200,43 +1199,6 @@ export default function Imitanciometria() {
 
   const [previewOpen, setPreviewOpen] = useState(false)
 
-  const handlePrint = async () => {
-    const printData = buildPrintData()
-
-    // Sempre exige um template PDF cadastrado nas configurações da clínica.
-    // Não há mais fallback de impressão HTML gerada automaticamente.
-    const templatePdfUrl = clinicSettings?.template_imitanciometria_url
-    if (!templatePdfUrl) {
-      toast({
-        title: 'Nenhum template configurado',
-        description:
-          'Nenhum template configurado. Acesse Configurações > Templates de Laudo para fazer upload.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    try {
-      const res = await fetch(templatePdfUrl)
-      if (!res.ok) throw new Error('Falha ao baixar template PDF')
-      const templateBytes = await res.arrayBuffer()
-      const filledBytes = await fillImitanciometriaTemplatePdf(templateBytes, {
-        data: printData,
-        patient,
-        clinicSettings,
-        professional: professionalData,
-      })
-      openPdfInNewTab(filledBytes, `Laudo_Imitanciometria_${patient?.name || 'paciente'}.pdf`)
-    } catch (err) {
-      console.error('Erro ao preencher PDF template:', err)
-      toast({
-        title: 'Erro ao gerar laudo',
-        description: 'Não foi possível carregar o template PDF. Verifique o arquivo configurado.',
-        variant: 'destructive',
-      })
-    }
-  }
-
   if (!patient) {
     return (
       <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-4">
@@ -1305,7 +1267,7 @@ export default function Imitanciometria() {
           <Button
             variant="outline"
             size="sm"
-            onClick={handlePrint}
+            onClick={() => window.print()}
             className="h-8 text-xs font-semibold rounded-lg"
           >
             <Printer className="w-3.5 h-3.5 mr-1" />
@@ -1910,7 +1872,7 @@ export default function Imitanciometria() {
             <Button
               onClick={() => {
                 setPreviewOpen(false)
-                handlePrint()
+                setTimeout(() => window.print(), 100)
               }}
               className="rounded-lg text-xs bg-blue-600 hover:bg-blue-700 text-white"
             >
@@ -1920,6 +1882,16 @@ export default function Imitanciometria() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Bloco oculto de laudo para impressão via window.print() */}
+      <div className="hidden print:block">
+        <ImitanciometriaPrint
+          data={buildPrintData()}
+          patient={patient}
+          clinicSettings={clinicSettings}
+          professional={professionalData}
+        />
+      </div>
     </div>
   )
 }
