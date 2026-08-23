@@ -753,7 +753,10 @@ export default function Audiometria() {
       {/* Prévia do exame (formato clínico compacto — visível na impressão) */}
       <div className="hidden print:block">
         <ExamPreview
-          exam={exam as AudiometryExamFull}
+          exam={{
+            ...(exam as AudiometryExamFull),
+            patientName: patient?.name || exam.patientName || '',
+          }}
           patientAgeDetailed={patientAgeDetailed}
           clinicSettings={clinicSettings}
           professional={
@@ -764,6 +767,7 @@ export default function Audiometria() {
               ? patient.planName || 'Convênio'
               : patient?.planType || 'Particular'
           }
+          patientName={patient?.name}
         />
       </div>
       {/* ===================== Entrada de Dados e Visualização ===================== */}
@@ -1545,12 +1549,14 @@ function ExamPreview({
   clinicSettings: _clinicSettings,
   professional: _professional,
   patientConvenio,
+  patientName,
 }: {
   exam: AudiometryExamFull
   patientAgeDetailed?: string
   clinicSettings?: ClinicSettings | null
   professional?: { name: string; crmCrfa?: string } | null
   patientConvenio?: string
+  patientName?: string
 }) {
   const odTrito = mediaTritonal(exam.air_od)
   const oeTrito = mediaTritonal(exam.air_oe)
@@ -1613,7 +1619,7 @@ function ExamPreview({
               <div className="flex items-baseline gap-1">
                 <span className="font-bold text-[#0F2B5C] whitespace-nowrap">NOME:</span>
                 <span className="flex-1 border-b border-dotted border-slate-400 font-medium px-1 text-slate-900 truncate">
-                  {exam.patientName || '—'}
+                  {patientName || exam.patientName || '—'}
                 </span>
               </div>
               <div className="flex items-baseline gap-1">

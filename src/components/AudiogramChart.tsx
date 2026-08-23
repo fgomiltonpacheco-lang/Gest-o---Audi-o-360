@@ -462,8 +462,7 @@ export const AudiogramChart: React.FC<DualAudiogramChartProps> = ({
   const fmtDb = (v: number | null | undefined) => (v === null || v === undefined ? '—' : `${v} dB`)
   return (
     <div
-      className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full"
-      style={compact ? { gap: '4px' } : undefined}
+      className={`w-full ${compact ? 'grid grid-cols-2 gap-1' : 'grid grid-cols-1 md:grid-cols-2 gap-4'}`}
     >
       <div className={compact ? '' : 'border border-red-100 bg-red-50/20 p-2 rounded-xl'}>
         <SingleEarAudiogramChart
