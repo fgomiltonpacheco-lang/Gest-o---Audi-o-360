@@ -311,9 +311,23 @@
     color: #1e293b !important;
   }
 
-  /* Esconde toda a chrome da aplicação (sidebar, header, conteúdo, rodapé) */
-  body > #root > *:not(#print-root) {
+  /* Esconde toda a chrome da aplicação, exceto quando é a página de audiometria */
+  body:not(:has(.clinic-audiometry)) > #root > *:not(#print-root) {
     display: none !important;
+  }
+
+  /* Na página de audiometria: esconder sidebar, header e controles */
+  body:has(.clinic-audiometry) .sidebar,
+  body:has(.clinic-audiometry) header,
+  body:has(.clinic-audiometry) .print\:hidden {
+    display: none !important;
+  }
+
+  /* ExamPreview visível e ocupando a página na impressão */
+  body:has(.clinic-audiometry) .clinic-audiometry {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   /* Mostra apenas a área de impressão */
