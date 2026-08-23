@@ -1609,7 +1609,7 @@ function ExamPreview({
           <img
             src={clinicSettings?.logo_url || (clinicSettings as any)?.logo || logoImg}
             alt="Logo da Clínica"
-            className="h-16 md:h-20 max-w-[280px] object-contain"
+            className="h-20 md:h-24 max-w-[280px] object-contain"
           />
         </div>
 
@@ -1976,7 +1976,7 @@ function ExamPreview({
         </div>
 
         {/* 6. Footer: Assinatura com espaço para carimbo/assinatura manual */}
-        <div className="pt-14 print:pt-16">
+        <div className="pt-20 print:pt-24">
           {/* Assinatura com linha azul */}
           <div className="mx-auto text-center" style={{ maxWidth: 300 }}>
             <div className="w-full border-t border-[#0F2B5C] pt-1.5">

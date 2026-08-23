@@ -301,7 +301,7 @@
 @media print {
   @page {
     size: A4;
-    margin: 14mm 14mm 16mm 14mm;
+    margin: 6mm;
   }
 
   html,
@@ -328,6 +328,15 @@
     display: block !important;
     margin: 0 !important;
     padding: 0 !important;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+
+  body:has(.clinic-audiometry) .clinic-audiometry > div,
+  .clinic-audiometry,
+  .clinic-audiometry > div {
+    page-break-after: avoid;
+    page-break-inside: avoid;
   }
 
   /* Mostra apenas a área de impressão */
