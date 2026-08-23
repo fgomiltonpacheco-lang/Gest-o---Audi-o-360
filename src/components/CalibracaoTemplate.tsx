@@ -551,7 +551,7 @@ export function CalibracaoTemplate({
   templateUrl,
 }: CalibracaoTemplateProps) {
   const { toast } = useToast()
-  const { clinicSettings, saveClinicSettings } = useApp()
+  const { clinicSettings, saveClinicSettings, currentUser } = useApp()
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const dragStateRef = useRef<DragState | null>(null)
@@ -658,17 +658,45 @@ export function CalibracaoTemplate({
         // Se for URL local (data: ou blob: recém-selecionada no input file), usa diretamente
         if (!url.startsWith('data:') && !url.startsWith('blob:')) {
           try {
-            // 1. Buscar registro fresco de clinic_settings
-            const freshSettings = await pb.collection('clinic_settings').getFirstListItem('')
+            // 1. Buscar registro fresco de clinic_settings para a clínica do usuário logado
+            let freshSettings: any = null
+            const clinicaId = currentUser?.clinicaId
+            const knownSettingsId = clinicSettings?.id
+
+            if (clinicaId) {
+              try {
+                freshSettings = await pb
+                  .collection('clinic_settings')
+                  .getFirstListItem(`clinica_id = "${clinicaId}"`)
+              } catch {
+                /* tenta fallback por id ou primeiro */
+              }
+            }
+
+            if (!freshSettings && knownSettingsId) {
+              try {
+                freshSettings = await pb.collection('clinic_settings').getOne(knownSettingsId)
+              } catch {
+                /* tenta fallback */
+              }
+            }
+
+            if (!freshSettings) {
+              try {
+                freshSettings = await pb.collection('clinic_settings').getFirstListItem('')
+              } catch {
+                /* fallback para url passada */
+              }
+            }
 
             // 2. Obter o nome do arquivo conforme o tipo
             const fileName =
               tipo === 'audiometria'
-                ? freshSettings.template_audiometria
-                : freshSettings.template_imitanciometria
+                ? freshSettings?.template_audiometria
+                : freshSettings?.template_imitanciometria
 
             // 3. Gerar URL com token usando pb.files.getUrl
-            if (fileName) {
+            if (freshSettings && fileName) {
               fetchUrl = pb.files.getUrl(freshSettings, fileName)
             }
           } catch (fetchErr) {
@@ -734,7 +762,7 @@ export function CalibracaoTemplate({
         setRendering(false)
       }
     },
-    [toast, tipo, cleanupBlobUrl],
+    [toast, tipo, cleanupBlobUrl, currentUser?.clinicaId, clinicSettings?.id],
   )
 
   useEffect(() => {

@@ -1197,8 +1197,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         pb.collection('audiometries').getFullList({ sort: '-created' }),
         pb.collection('tympanometries').getFullList({ sort: '-created' }),
         pb.collection('beras').getFullList({ sort: '-created' }),
-        // Configurações: lista paginada (1) — singleton; cria automaticamente se vazio.
-        pb.collection('clinic_settings').getList(1, 1, { sort: '-created' }),
+        // Configurações: busca filtrando pela clínica do usuário autenticado ou primeira disponível
+        (() => {
+          const storeAny = pb.authStore as any
+          const authModel = storeAny?.model || storeAny?.record
+          const userClinicaId = currentUser?.clinicaId || authModel?.clinica_id
+          if (userClinicaId) {
+            return pb
+              .collection('clinic_settings')
+              .getList(1, 1, { filter: `clinica_id = "${userClinicaId}"`, sort: '-created' })
+              .catch(() => pb.collection('clinic_settings').getList(1, 1, { sort: '-created' }))
+          }
+          return pb.collection('clinic_settings').getList(1, 1, { sort: '-created' })
+        })(),
         pb.collection('equipments').getFullList({ sort: 'nome' }),
         pb.collection('contas_receber').getFullList({ sort: '-data_vencimento' }),
       ])
@@ -1232,12 +1243,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setTympanometries(tymp.map(mapTympanometry))
       setBeras(bera.map(mapBera))
 
-      // ---- Configurações da clínica (singleton) ----
-      // Se ainda não existir, cria automaticamente com campos vazios.
+      // ---- Configurações da clínica (singleton por clínica) ----
+      // Se ainda não existir, cria automaticamente com campos vazios vinculados ao clinica_id.
       let clinicRec: any = clinicSet?.items?.[0] || null
-      if (!clinicRec) {
+      const activeClinicaId =
+        currentUser?.clinicaId ||
+        (pb.authStore as any)?.model?.clinica_id ||
+        (pb.authStore as any)?.record?.clinica_id ||
+        ''
+      if (!clinicRec && activeClinicaId) {
         try {
           clinicRec = await pb.collection('clinic_settings').create({
+            clinica_id: activeClinicaId,
             nome: '',
             endereco: '',
             telefone: '',
@@ -2059,9 +2076,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       // Garante que exista um registro singleton carregado.
       let current = clinicSettings
+      const userClinicaId =
+        currentUser?.clinicaId ||
+        (pb.authStore as any)?.model?.clinica_id ||
+        (pb.authStore as any)?.record?.clinica_id ||
+        ''
+
       if (!current) {
         try {
-          const list = await pb.collection('clinic_settings').getList(1, 1, { sort: '-created' })
+          const list = userClinicaId
+            ? await pb
+                .collection('clinic_settings')
+                .getList(1, 1, { filter: `clinica_id = "${userClinicaId}"`, sort: '-created' })
+                .catch(() => pb.collection('clinic_settings').getList(1, 1, { sort: '-created' }))
+            : await pb.collection('clinic_settings').getList(1, 1, { sort: '-created' })
           if (list.items.length > 0) {
             const r = list.items[0] as any
             const logoUrl = r.logo ? pb.files.getUrl(r, r.logo) : r.logo_url || ''
@@ -2144,6 +2172,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (data.templateImitanciometriaFile) {
           formData.append('template_imitanciometria', data.templateImitanciometriaFile)
         }
+        if (userClinicaId) {
+          formData.append('clinica_id', userClinicaId)
+        }
 
         if (!current) {
           updated = await pb.collection('clinic_settings').create(formData)
@@ -2152,6 +2183,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       } else {
         const payload: Record<string, any> = {}
+        if (userClinicaId) payload.clinica_id = userClinicaId
         if (data.nome !== undefined) payload.nome = data.nome
         if (data.cnpj !== undefined) payload.cnpj = data.cnpj
         if (data.inscricao_estadual !== undefined)
