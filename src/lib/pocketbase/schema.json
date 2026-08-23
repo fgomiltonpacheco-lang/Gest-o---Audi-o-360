@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-23T20:33:07.690Z",
+  "generatedAt": "2026-08-23T20:50:03.891Z",
   "collections": [
     {
       "name": "users",
@@ -4248,6 +4248,12 @@
         {
           "name": "clinica_id",
           "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reflex_grid",
+          "type": "json",
           "required": false,
           "system": false
         }

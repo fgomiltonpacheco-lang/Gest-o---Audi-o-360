@@ -75,8 +75,8 @@ function normalizeTipo(tipo: string | null | undefined): 'A' | 'Ad' | 'As' | 'B'
  * Sintetiza uma curva gaussiana a partir dos parâmetros da timpanometria.
  * Retorna pontos {pressao, complacencia} de -400 a +200 daPa.
  */
-function synthCurve(timp: TimpanogramTimpHint | null | undefined): TimpanogramPoint[] {
-  const normTipo = normalizeTipo(timp?.tipo_curva)
+function synthCurve(timp: TimpanogramTimpHint | null | undefined): TimpanogramPoint[] | null {
+  if (!timp) return null
 
   const num = (v: unknown): number | null => {
     if (v === null || v === undefined || v === '') return null
@@ -84,49 +84,46 @@ function synthCurve(timp: TimpanogramTimpHint | null | undefined): TimpanogramPo
     return isNaN(n) ? null : n
   }
 
-  const peakP = (() => {
-    const n = num(timp?.pressao_pico)
-    if (n !== null) return n
-    return normTipo === 'C' ? -180 : 0
-  })()
-  const peakC = (() => {
-    const n = num(timp?.complacencia)
-    if (n !== null) return n
-    switch (normTipo) {
-      case 'Ad':
-        return 1.8
-      case 'As':
-        return 0.25
-      case 'B':
-        return 0.15
-      case 'C':
-        return 0.8
-      default:
-        return 0.9
-    }
-  })()
-  const sigma = (() => {
-    switch (normTipo) {
-      case 'Ad':
-        return 110
-      case 'As':
-        return 45
-      case 'B':
-        return 600
-      case 'C':
-        return 75
-      default:
-        return 75
-    }
-  })()
-  const amp = normTipo === 'B' ? Math.min(0.2, peakC) : Math.min(peakC, C_MAX)
+  const pVal = num(timp.pressao_pico)
+  const cVal = num(timp.complacencia)
 
-  const N = 60
+  // Se não foi informada complacência e nem pressão de pico, não renderiza curva (gráfico inicia limpo)
+  if (pVal === null && cVal === null) {
+    return null
+  }
+
+  const normTipo = normalizeTipo(timp.tipo_curva)
+  const isTypeB = normTipo === 'B' || (cVal !== null && cVal <= 0.1 && pVal === null)
+  const peakP = pVal !== null ? pVal : normTipo === 'C' ? -180 : 0
+  const peakC = cVal !== null ? cVal : 0.8
+
+  if (isTypeB) {
+    const flatC = Math.max(0.05, Math.min(0.2, peakC))
+    const pts: TimpanogramPoint[] = []
+    const N = 60
+    for (let i = 0; i <= N; i++) {
+      const p = P_MIN + ((P_MAX - P_MIN) * i) / N
+      pts.push({ pressao: Math.round(p), complacencia: Number(flatC.toFixed(3)) })
+    }
+    return pts
+  }
+
+  let sigma = 50
+  if (normTipo.startsWith('Ad')) {
+    sigma = 65
+  } else if (normTipo.startsWith('As')) {
+    sigma = 35
+  } else if (normTipo.startsWith('C')) {
+    sigma = 50
+  }
+
+  const amp = Math.max(0, Math.min(C_MAX, peakC))
+  const N = 120
   const pts: TimpanogramPoint[] = []
   for (let i = 0; i <= N; i++) {
     const p = P_MIN + ((P_MAX - P_MIN) * i) / N
     const c = amp * Math.exp(-((p - peakP) ** 2) / (2 * sigma * sigma))
-    pts.push({ pressao: p, complacencia: Math.max(0, c) })
+    pts.push({ pressao: Math.round(p), complacencia: Number(Math.max(0, c).toFixed(3)) })
   }
   return pts
 }
@@ -138,6 +135,8 @@ function hasRealPoints(pts: TimpanogramPoint[] | null | undefined): pts is Timpa
 export const TimpanogramChart: React.FC<TimpanogramChartProps> = ({
   odPoints,
   oePoints,
+  odTimp,
+  oeTimp,
   width = 320,
   height = 180,
   showTitle = true,
@@ -163,8 +162,8 @@ export const TimpanogramChart: React.FC<TimpanogramChartProps> = ({
   const ticksY = [0, 0.5, 1, 1.5, 2, 2.5]
   const zeroX = xOf(0)
 
-  const odCurve = hasRealPoints(odPoints) ? odPoints : null
-  const oeCurve = hasRealPoints(oePoints) ? oePoints : null
+  const odCurve = hasRealPoints(odPoints) ? odPoints : synthCurve(odTimp)
+  const oeCurve = hasRealPoints(oePoints) ? oePoints : synthCurve(oeTimp)
 
   const pathFromPoints = (pts: TimpanogramPoint[] | null): string => {
     if (!pts || pts.length < 2) return ''
