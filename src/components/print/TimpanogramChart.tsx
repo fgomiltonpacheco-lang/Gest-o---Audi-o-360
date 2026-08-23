@@ -108,17 +108,18 @@ function synthCurve(timp: TimpanogramTimpHint | null | undefined): TimpanogramPo
     return pts
   }
 
-  let sigma = 50
+  // Largura (sigma) para produzir pico nítido e pontual (padrão Jerger)
+  let sigma = 30 // Curva bem pontual, nítida e com pico bem definido (Tipo A)
   if (normTipo.startsWith('Ad')) {
-    sigma = 65
+    sigma = 38
   } else if (normTipo.startsWith('As')) {
-    sigma = 35
+    sigma = 24
   } else if (normTipo.startsWith('C')) {
-    sigma = 50
+    sigma = 30
   }
 
   const amp = Math.max(0, Math.min(C_MAX, peakC))
-  const N = 120
+  const N = 150
   const pts: TimpanogramPoint[] = []
   for (let i = 0; i <= N; i++) {
     const p = P_MIN + ((P_MAX - P_MIN) * i) / N

@@ -221,18 +221,18 @@ function generateDynamicCurve(
     return pts
   }
 
-  // Largura da curva (sigma) mais precisa e pontual conforme o tipo de curva
-  let sigma = 50 // Curva bem pontual e definida (padrão Jerger Tipo A)
+  // Largura da curva (sigma) nítida e pontual conforme o tipo de curva (padrão Jerger)
+  let sigma = 30 // Curva bem pontual e nítida com pico agudo (padrão Jerger Tipo A)
   if (normTipo.startsWith('AD')) {
-    sigma = 65
+    sigma = 38
   } else if (normTipo.startsWith('AS')) {
-    sigma = 35
+    sigma = 24
   } else if (normTipo.startsWith('C')) {
-    sigma = 50
+    sigma = 30
   }
 
   const amp = Math.max(0, Math.min(cMax, peakC))
-  const N = 120
+  const N = 150
   const pts: { pressao: number; complacencia: number }[] = []
 
   for (let i = 0; i <= N; i++) {
@@ -310,7 +310,7 @@ function determineCurveType(
 export default function Imitanciometria() {
   const { id, examId } = useParams<{ id: string; examId?: string }>()
   const navigate = useNavigate()
-  const { getPatient, currentUser, equipments, clinicSettings } = useApp()
+  const { getPatient, currentUser, equipments, clinicSettings, audiometries } = useApp()
   const { toast } = useToast()
   const { print } = usePrint()
 
@@ -382,6 +382,203 @@ export default function Imitanciometria() {
 
   // Grade de reflexos acústicos
   const [reflexGrid, setReflexGrid] = useState<ReflexGridStore>(emptyReflexGrid())
+
+  // Função auxiliar para carregar limiares da audiometria mais recente do paciente
+  const loadAudiometryThresholds = useCallback(
+    async (patientId: string) => {
+      try {
+        const freqs = [500, 1000, 2000, 4000] as const
+        let foundOdThresholds: Record<number, string> = {}
+        let foundOeThresholds: Record<number, string> = {}
+        let found = false
+
+        // 1. Tentar buscar em audiometry_exams (coleção principal de audiometria completa)
+        try {
+          const fullAudioRecs = await pb.collection('audiometry_exams').getList(1, 1, {
+            filter: `patient = "${patientId}"`,
+            sort: '-date',
+          })
+          if (fullAudioRecs.items.length > 0) {
+            const rec: any = fullAudioRecs.items[0]
+            const extractThreshold = (map: any, f: number): string => {
+              if (!map) return ''
+              const v = map[String(f)] ?? map[f]
+              if (v !== null && v !== undefined) {
+                if (typeof v === 'object' && v.db !== null && v.db !== undefined && v.db !== '') {
+                  return String(v.db)
+                } else if (typeof v === 'number' || (typeof v === 'string' && v.trim() !== '')) {
+                  return String(v)
+                }
+              }
+              return ''
+            }
+
+            freqs.forEach((f) => {
+              foundOdThresholds[f] = extractThreshold(rec.air_od, f)
+              foundOeThresholds[f] = extractThreshold(rec.air_oe, f)
+            })
+            found = true
+          }
+        } catch (err) {
+          console.warn('Busca em audiometry_exams falhou, tentando fallback:', err)
+        }
+
+        // 2. Fallback: tentar buscar na coleção audiometries se não achou em audiometry_exams
+        if (!found) {
+          try {
+            const legAudioRecs = await pb.collection('audiometries').getList(1, 1, {
+              filter: `patient = "${patientId}" || patient_id = "${patientId}"`,
+              sort: '-date',
+            })
+            if (legAudioRecs.items.length > 0) {
+              const rec: any = legAudioRecs.items[0]
+              const extractVal = (map: any, f: number): string => {
+                if (!map) return ''
+                const v = map[String(f)] ?? map[f]
+                if (v !== null && v !== undefined && v !== '') {
+                  return typeof v === 'object' && v.db !== undefined
+                    ? v.db !== null
+                      ? String(v.db)
+                      : ''
+                    : String(v)
+                }
+                return ''
+              }
+              freqs.forEach((f) => {
+                foundOdThresholds[f] = extractVal(rec.airOD || rec.air_od, f)
+                foundOeThresholds[f] = extractVal(rec.airOE || rec.air_oe, f)
+              })
+              found = true
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+
+        // 3. Fallback do AppContext / Memória caso esteja offline ou novo registro
+        if (!found) {
+          const localAudios = audiometries
+            .filter((a) => a.patientId === patientId)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          if (localAudios.length > 0) {
+            const latest = localAudios[0]
+            freqs.forEach((f) => {
+              const odVal = latest.airOD?.[String(f)]
+              const oeVal = latest.airOE?.[String(f)]
+              foundOdThresholds[f] = odVal !== undefined && odVal !== null ? String(odVal) : ''
+              foundOeThresholds[f] = oeVal !== undefined && oeVal !== null ? String(oeVal) : ''
+            })
+            found = true
+          }
+        }
+
+        if (found) {
+          setReflexGrid((prev) => {
+            const nextGrid: ReflexGridStore = {
+              od: { ...prev.od },
+              oe: { ...prev.oe },
+            }
+            freqs.forEach((f) => {
+              const curOd = prev.od[f]
+              const odLim = foundOdThresholds[f] || curOd.limiar
+              const odContra = curOd.refl_contra
+              let odDif = curOd.diferenca
+              if (
+                odContra &&
+                odContra !== 'AUS' &&
+                odLim &&
+                !isNaN(Number(odContra)) &&
+                !isNaN(Number(odLim))
+              ) {
+                odDif = String(Number(odContra) - Number(odLim))
+              }
+              nextGrid.od[f] = {
+                ...curOd,
+                limiar: odLim,
+                diferenca: odDif,
+              }
+
+              const curOe = prev.oe[f]
+              const oeLim = foundOeThresholds[f] || curOe.limiar
+              const oeContra = curOe.refl_contra
+              let oeDif = curOe.diferenca
+              if (
+                oeContra &&
+                oeContra !== 'AUS' &&
+                oeLim &&
+                !isNaN(Number(oeContra)) &&
+                !isNaN(Number(oeLim))
+              ) {
+                oeDif = String(Number(oeContra) - Number(oeLim))
+              }
+              nextGrid.oe[f] = {
+                ...curOe,
+                limiar: oeLim,
+                diferenca: oeDif,
+              }
+            })
+            return nextGrid
+          })
+        }
+      } catch (err) {
+        console.error('Erro ao buscar limiares da audiometria:', err)
+      }
+    },
+    [audiometries],
+  )
+
+  // Helper para recalcular diferença (Diferença = Refl. Contra - Limiar)
+  const calcDifference = (reflContra: string, limiar: string): string => {
+    const rc = reflContra.trim()
+    const lim = limiar.trim()
+    if (!rc || rc.toUpperCase() === 'AUS' || !lim || lim.toUpperCase() === 'AUS') {
+      return ''
+    }
+    const numContra = Number(rc.replace(',', '.'))
+    const numLim = Number(lim.replace(',', '.'))
+    if (isNaN(numContra) || isNaN(numLim)) {
+      return ''
+    }
+    return String(numContra - numLim)
+  }
+
+  // Atualizar limiar e recalcular diferença
+  const handleLimiarChange = (side: 'od' | 'oe', freq: number, newLimiar: string) => {
+    setReflexGrid((prev) => {
+      const curRow = prev[side][freq]
+      const newDif = calcDifference(curRow.refl_contra, newLimiar)
+      return {
+        ...prev,
+        [side]: {
+          ...prev[side],
+          [freq]: {
+            ...curRow,
+            limiar: newLimiar,
+            diferenca: newDif,
+          },
+        },
+      }
+    })
+  }
+
+  // Atualizar reflexo contralateral e recalcular diferença automaticamente
+  const handleReflContraChange = (side: 'od' | 'oe', freq: number, newContra: string) => {
+    setReflexGrid((prev) => {
+      const curRow = prev[side][freq]
+      const newDif = calcDifference(newContra, curRow.limiar)
+      return {
+        ...prev,
+        [side]: {
+          ...prev[side],
+          [freq]: {
+            ...curRow,
+            refl_contra: newContra,
+            diferenca: newDif,
+          },
+        },
+      }
+    })
+  }
 
   // Carregar dados de um exame existente
   const loadExam = useCallback(async () => {
@@ -520,6 +717,11 @@ export default function Imitanciometria() {
       } catch {
         /* ignore */
       }
+
+      // Se paciente existir, busca também os limiares da audiometria mais recente
+      if (rec.paciente_id) {
+        await loadAudiometryThresholds(rec.paciente_id)
+      }
     } catch (err) {
       console.error('Erro ao carregar imitanciometria:', err)
       toast({
@@ -530,13 +732,13 @@ export default function Imitanciometria() {
     } finally {
       setLoading(false)
     }
-  }, [examId, today, toast])
+  }, [examId, today, toast, loadAudiometryThresholds])
 
   useEffect(() => {
     loadExam()
   }, [loadExam])
 
-  // Pré-preenche dados do paciente ao criar novo
+  // Pré-preenche dados do paciente ao criar novo e busca limiares da audiometria mais recente
   useEffect(() => {
     if (isNew && patient) {
       const age = calculateAge(patient.birthDate)
@@ -548,8 +750,9 @@ export default function Imitanciometria() {
         paciente_idade: age !== null ? String(age) : '',
         paciente_sexo: patient.gender || '',
       }))
+      loadAudiometryThresholds(patient.id)
     }
-  }, [patient, isNew])
+  }, [patient, isNew, loadAudiometryThresholds])
 
   // Pré-seleciona equipamento único
   useEffect(() => {
@@ -660,7 +863,14 @@ export default function Imitanciometria() {
   // Preenche "AUS" no campo de reflexo acústico
   const handleSetAus = (side: 'od' | 'oe', freq: number, field: 'refl_contra' | 'ipsi') => {
     setReflexGrid((prev) => {
-      const row = { ...prev[side][freq], [field]: 'AUS' }
+      const curRow = prev[side][freq]
+      const nextVal = 'AUS'
+      const newDif = field === 'refl_contra' ? '' : curRow.diferenca
+      const row: ReflexGridRow = {
+        ...curRow,
+        [field]: nextVal,
+        diferenca: field === 'refl_contra' ? '' : curRow.diferenca,
+      }
       return {
         ...prev,
         [side]: {
@@ -1437,15 +1647,7 @@ export default function Imitanciometria() {
                     {/* Limiar */}
                     <Input
                       value={row.limiar}
-                      onChange={(e) =>
-                        setReflexGrid((prev) => ({
-                          ...prev,
-                          od: {
-                            ...prev.od,
-                            [freq]: { ...prev.od[freq], limiar: e.target.value },
-                          },
-                        }))
-                      }
+                      onChange={(e) => handleLimiarChange('od', freq, e.target.value)}
                       disabled={readOnly}
                       className="h-8 text-center text-xs rounded border-red-300 focus:border-red-500"
                     />
@@ -1455,15 +1657,7 @@ export default function Imitanciometria() {
                       <input
                         type="text"
                         value={row.refl_contra}
-                        onChange={(e) =>
-                          setReflexGrid((prev) => ({
-                            ...prev,
-                            od: {
-                              ...prev.od,
-                              [freq]: { ...prev.od[freq], refl_contra: e.target.value },
-                            },
-                          }))
-                        }
+                        onChange={(e) => handleReflContraChange('od', freq, e.target.value)}
                         disabled={readOnly}
                         className="w-full text-center text-xs font-semibold focus:outline-none bg-transparent"
                       />
@@ -1491,7 +1685,7 @@ export default function Imitanciometria() {
                         }))
                       }
                       disabled={readOnly}
-                      className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
+                      className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100 font-medium text-slate-700"
                     />
 
                     {/* IPSI + Botão AUS */}
@@ -1556,15 +1750,7 @@ export default function Imitanciometria() {
                     {/* Limiar */}
                     <Input
                       value={row.limiar}
-                      onChange={(e) =>
-                        setReflexGrid((prev) => ({
-                          ...prev,
-                          oe: {
-                            ...prev.oe,
-                            [freq]: { ...prev.oe[freq], limiar: e.target.value },
-                          },
-                        }))
-                      }
+                      onChange={(e) => handleLimiarChange('oe', freq, e.target.value)}
                       disabled={readOnly}
                       className="h-8 text-center text-xs rounded border-blue-300 focus:border-blue-500"
                     />
@@ -1574,15 +1760,7 @@ export default function Imitanciometria() {
                       <input
                         type="text"
                         value={row.refl_contra}
-                        onChange={(e) =>
-                          setReflexGrid((prev) => ({
-                            ...prev,
-                            oe: {
-                              ...prev.oe,
-                              [freq]: { ...prev.oe[freq], refl_contra: e.target.value },
-                            },
-                          }))
-                        }
+                        onChange={(e) => handleReflContraChange('oe', freq, e.target.value)}
                         disabled={readOnly}
                         className="w-full text-center text-xs font-semibold focus:outline-none bg-transparent"
                       />
@@ -1610,7 +1788,7 @@ export default function Imitanciometria() {
                         }))
                       }
                       disabled={readOnly}
-                      className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100"
+                      className="h-8 text-center text-xs rounded border-slate-300 bg-slate-100 font-medium text-slate-700"
                     />
 
                     {/* IPSI + Botão AUS */}
