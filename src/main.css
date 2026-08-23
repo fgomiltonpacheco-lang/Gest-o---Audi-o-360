@@ -387,20 +387,71 @@
     max-height: 230px;
   }
 
-  /* O bloco de prévia clínica (.clinic-audiometry) é ocultado em tela quando
-     dentro do portal de impressão — apenas o conteúdo do PrintDocuments é
-     impresso. Mas quando a página é a própria Audiometria, a prévia é exibida
-     normalmente na tela. A ocultação é controlada por .no-print nas seções de
-     entrada de dados. */
+  /* Estilos específicos da prévia de audiometria para caber exatamente em 1 página A4 */
+  .clinic-audiometry {
+    padding: 8px !important;
+    font-size: 6pt !important;
+  }
+
+  .clinic-audiometry .space-y-4 > * + * {
+    margin-top: 4px !important;
+  }
+
+  .clinic-audiometry .space-y-4 {
+    gap: 4px !important;
+  }
+
+  .clinic-audiometry svg {
+    max-height: 180px !important;
+  }
+
   .clinic-audiometry table {
-    font-size: 7pt;
+    font-size: 6pt !important;
   }
 
   .clinic-audiometry th,
   .clinic-audiometry td {
-    padding: 1px 2px;
+    padding: 0.5px 1px !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  .clinic-audiometry h2 {
+    font-size: 13pt !important;
+    line-height: 1.1 !important;
+  }
+
+  .clinic-audiometry h3 {
+    font-size: 10pt !important;
+    line-height: 1.1 !important;
+  }
+
+  .clinic-audiometry img {
+    max-height: 32px !important;
+  }
+
+  .clinic-audiometry .border-b-2 {
+    padding-bottom: 2px !important;
+  }
+
+  .clinic-audiometry .pt-4 {
+    padding-top: 2px !important;
+  }
+
+  .clinic-audiometry .grid {
+    gap: 4px !important;
+  }
+
+  .clinic-audiometry .p-3 {
+    padding: 4px !important;
+  }
+
+  .clinic-audiometry .p-2 {
+    padding: 3px !important;
+  }
+
+  .clinic-audiometry .min-h-\[60px\] {
+    min-height: 36px !important;
   }
 
   /* No modal de impressão, a prévia clínica (clinic-audiometry) é o conteúdo;

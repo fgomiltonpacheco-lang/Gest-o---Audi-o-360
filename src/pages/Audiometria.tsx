@@ -1639,6 +1639,7 @@ function ExamPreview({
           ldvOD={exam.ldv_od}
           ldvOE={exam.ldv_oe}
           hideLegend
+          compact
         />
 
         {/* Médias */}
