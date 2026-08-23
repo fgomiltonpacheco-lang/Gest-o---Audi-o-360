@@ -56,14 +56,12 @@ import {
   UploadCloud,
   FileCheck2,
   Eye,
-  Crosshair,
 } from 'lucide-react'
 import type { Equipment, NfseB2BProvedor, NfseB2BAmbiente, PolicyTexts } from '@/types'
 import { getEquipmentStatus } from '@/types'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Switch } from '@/components/ui/switch'
 import { TwoFactorSetup } from '@/components/TwoFactorSetup'
-import { CalibracaoTemplate } from '@/components/CalibracaoTemplate'
 
 // ============================================================
 // Tipos e constantes
@@ -281,27 +279,6 @@ export default function Configuracoes() {
   const [templatesSaving, setTemplatesSaving] = useState(false)
   const [pdfPreviewModalUrl, setPdfPreviewModalUrl] = useState<string | null>(null)
   const [pdfPreviewModalTitle, setPdfPreviewModalTitle] = useState<string>('')
-
-  // ---- Calibração de Coordenadas ----
-  const [calibracaoOpen, setCalibracaoOpen] = useState(false)
-  const [calibracaoTipo, setCalibracaoTipo] = useState<'audiometria' | 'imitanciometria'>(
-    'audiometria',
-  )
-  const [calibracaoUrl, setCalibracaoUrl] = useState<string>('')
-
-  const openCalibracao = (tipo: 'audiometria' | 'imitanciometria', url: string) => {
-    if (!url) {
-      toast({
-        title: 'Nenhum template cadastrado',
-        description: 'Faça o upload do PDF template antes de calibrar as coordenadas.',
-        variant: 'destructive',
-      })
-      return
-    }
-    setCalibracaoTipo(tipo)
-    setCalibracaoUrl(url)
-    setCalibracaoOpen(true)
-  }
 
   // Sincroniza formulário de dados da clínica quando o singleton é carregado.
   useEffect(() => {
@@ -1208,16 +1185,6 @@ export default function Configuracoes() {
                             <Eye className="w-3.5 h-3.5 mr-1" />
                             Visualizar Template
                           </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openCalibracao('audiometria', tplAudioUrl)}
-                            className="h-7 text-[11px] font-semibold rounded-lg text-blue-700 border-blue-200 hover:bg-blue-50"
-                          >
-                            <Crosshair className="w-3.5 h-3.5 mr-1" />
-                            Calibrar Coordenadas
-                          </Button>
                         </div>
                       )}
                     </div>
@@ -1287,16 +1254,6 @@ export default function Configuracoes() {
                           >
                             <Eye className="w-3.5 h-3.5 mr-1" />
                             Visualizar Template
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openCalibracao('imitanciometria', tplImitUrl)}
-                            className="h-7 text-[11px] font-semibold rounded-lg text-blue-700 border-blue-200 hover:bg-blue-50"
-                          >
-                            <Crosshair className="w-3.5 h-3.5 mr-1" />
-                            Calibrar Coordenadas
                           </Button>
                         </div>
                       )}
@@ -2752,14 +2709,6 @@ export default function Configuracoes() {
         onOpenChange={setTwoFactorOpen}
         email={currentUser?.email || ''}
         onComplete={handle2FAComplete}
-      />
-
-      {/* Modal: Calibração de Coordenadas */}
-      <CalibracaoTemplate
-        open={calibracaoOpen}
-        onOpenChange={setCalibracaoOpen}
-        tipo={calibracaoTipo}
-        templateUrl={calibracaoUrl}
       />
     </div>
   )
