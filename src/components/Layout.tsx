@@ -830,7 +830,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       )}
 
       {/* BOTÃO HAMBÚRGUER MOBILE FLUTUANTE / BARRA MINIMALISTA MOBILE */}
-      <div className="lg:hidden sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+      <div className="no-print lg:hidden sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
         <button
           onClick={() => setMobileMenuOpen(true)}
           className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
@@ -862,7 +862,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* BADGE DE MENSAGENS NO TOPO (desktop) — flutua no canto superior direito */}
       <Link
         to="/mensagens"
-        className="hidden lg:flex fixed top-4 right-6 z-30 items-center justify-center w-11 h-11 rounded-full bg-white border border-slate-200 shadow-sm text-slate-600 hover:text-teal-600 hover:border-teal-300 transition-colors"
+        className="no-print hidden lg:flex fixed top-4 right-6 z-30 items-center justify-center w-11 h-11 rounded-full bg-white border border-slate-200 shadow-sm text-slate-600 hover:text-teal-600 hover:border-teal-300 transition-colors"
         aria-label="Mensagens"
         title="Mensagens"
       >
@@ -908,7 +908,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       />
 
       {/* WIDGET DE CHAT FLUTUANTE (canto inferior direito) */}
-      <ChatWidget />
+      <div className="no-print">
+        <ChatWidget />
+      </div>
     </div>
   )
 }

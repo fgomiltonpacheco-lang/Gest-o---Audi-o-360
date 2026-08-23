@@ -731,7 +731,7 @@ export default function Audiometria() {
   return (
     <div className="space-y-3 animate-in fade-in-50 duration-200 pb-12">
       {/* Cabeçalho da página */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -1604,16 +1604,25 @@ function ExamPreview({
       style={{ maxWidth: '210mm', fontFamily: 'Arial, Helvetica, sans-serif' }}
     >
       <div className="space-y-3 print:space-y-2">
+        {/* Topo com Logo da Clínica Centralizada */}
+        <div className="flex justify-center items-center py-2">
+          <img
+            src={clinicSettings?.logo_url || (clinicSettings as any)?.logo || logoImg}
+            alt="Logo da Clínica"
+            className="h-16 md:h-20 max-w-[280px] object-contain"
+          />
+        </div>
+
         {/* 1. Header: Título "AUDIOMETRIA" centralizado com linhas azuis horizontais */}
-        <div className="py-1">
-          <div className="w-full border-t-2 border-[#0F2B5C] mb-2" />
+        <div className="py-0.5">
+          <div className="w-full border-t-2 border-[#0F2B5C] mb-1.5" />
           <h1
             className="text-center text-xl font-bold tracking-widest uppercase my-1"
             style={{ color: '#0F2B5C' }}
           >
             AUDIOMETRIA
           </h1>
-          <div className="w-full border-b-2 border-[#0F2B5C] mt-2" />
+          <div className="w-full border-b-2 border-[#0F2B5C] mt-1.5" />
         </div>
 
         {/* 2. Patient Data: Caixa com borda azul e 3 colunas com sublinhados pontilhados */}
