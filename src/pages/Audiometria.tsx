@@ -1976,7 +1976,7 @@ function ExamPreview({
         </div>
 
         {/* 6. Footer: Assinatura */}
-        <div className="pt-2 space-y-3">
+        <div className="pt-8 print:pt-10 space-y-3">
           {/* Assinatura com linha azul */}
           <div className="mx-auto text-center" style={{ maxWidth: 300 }}>
             <div className="w-full border-t border-[#0F2B5C] pt-1.5">
