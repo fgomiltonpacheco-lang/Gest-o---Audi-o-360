@@ -15,6 +15,7 @@ import {
 import { Crosshair, Save, RotateCcw, Loader2, Info, Undo2, Redo2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useApp } from '@/context/AppContext'
+import pb from '@/lib/pocketbase/client'
 import type {
   AudiometriaCoordinates,
   ImitanciometriaCoordinates,
@@ -623,6 +624,24 @@ export function CalibracaoTemplate({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, tipo, clinicSettings, fields])
 
+  // Referência para controlar cancelamento de renderização e cleanup do blob URL
+  const activeBlobUrlRef = useRef<string | null>(null)
+
+  // Limpa Object URL anterior se existir
+  const cleanupBlobUrl = useCallback(() => {
+    if (activeBlobUrlRef.current) {
+      URL.revokeObjectURL(activeBlobUrlRef.current)
+      activeBlobUrlRef.current = null
+    }
+  }, [])
+
+  // Cleanup no unmount
+  useEffect(() => {
+    return () => {
+      cleanupBlobUrl()
+    }
+  }, [cleanupBlobUrl])
+
   // Renderiza o PDF como imagem de fundo.
   const renderPdf = useCallback(
     async (url: string) => {
@@ -632,7 +651,44 @@ export function CalibracaoTemplate({
       }
       setRendering(true)
       try {
-        const loadingTask = pdfjsLib.getDocument(url)
+        let arrayBuffer: ArrayBuffer
+
+        // Se já for uma URL data: ou blob: local criada no navegador, podemos buscar diretamente ou usar fetch simples
+        if (url.startsWith('data:') || url.startsWith('blob:')) {
+          const res = await fetch(url)
+          if (!res.ok) {
+            throw new Error(`Falha ao obter dados locais do PDF (HTTP ${res.status})`)
+          }
+          arrayBuffer = await res.arrayBuffer()
+        } else {
+          // Download autenticado usando o token do PocketBase
+          const headers: HeadersInit = {}
+          if (pb.authStore.token) {
+            headers['Authorization'] = pb.authStore.token
+          }
+
+          const res = await fetch(url, {
+            headers,
+          })
+
+          if (!res.ok) {
+            throw new Error(
+              `Falha ao baixar o PDF do servidor (HTTP ${res.status}: ${res.statusText})`,
+            )
+          }
+
+          const blob = await res.blob()
+          cleanupBlobUrl()
+          const objectUrl = URL.createObjectURL(blob)
+          activeBlobUrlRef.current = objectUrl
+
+          arrayBuffer = await blob.arrayBuffer()
+        }
+
+        // Passamos os dados binários (ArrayBuffer / Uint8Array) diretamente para o pdfjsLib
+        const loadingTask = pdfjsLib.getDocument({
+          data: new Uint8Array(arrayBuffer),
+        })
         const pdf = await loadingTask.promise
         const page = await pdf.getPage(1)
 
@@ -666,7 +722,7 @@ export function CalibracaoTemplate({
         setRendering(false)
       }
     },
-    [toast],
+    [toast, cleanupBlobUrl],
   )
 
   useEffect(() => {
@@ -674,6 +730,7 @@ export function CalibracaoTemplate({
       setLoading(true)
       renderPdf(templateUrl)
     } else if (!open) {
+      cleanupBlobUrl()
       setImgSize({ w: 0, h: 0 })
       setPositions({})
       setHistory([])
@@ -681,7 +738,7 @@ export function CalibracaoTemplate({
       setSelectedField(null)
       dragStateRef.current = null
     }
-  }, [open, templateUrl, renderPdf])
+  }, [open, templateUrl, renderPdf, cleanupBlobUrl])
 
   // ── Drag handlers (pointer events) ──
   const onPointerDown = (e: React.PointerEvent, fieldId: string) => {
