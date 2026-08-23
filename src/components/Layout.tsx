@@ -880,7 +880,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </main>
 
       {/* RODAPÉ GLOBAL */}
-      <footer className="lg:ml-[260px] py-4 px-6 border-t border-slate-200 bg-white text-center text-xs text-slate-400">
+      <footer className="no-print lg:ml-[260px] py-4 px-6 border-t border-slate-200 bg-white text-center text-xs text-slate-400">
         © 2025 Audição360 — Sistema de Gestão Clínica Integrada para Centros Auditivos
       </footer>
 

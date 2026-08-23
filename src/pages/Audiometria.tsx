@@ -729,7 +729,7 @@ export default function Audiometria() {
   }
 
   return (
-    <div className="space-y-3 animate-in fade-in-50 duration-200 pb-12">
+    <div className="space-y-3 animate-in fade-in-50 duration-200 pb-12 print:p-0 print:m-0 print:pb-0">
       {/* Cabeçalho da página */}
       <div className="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-3">

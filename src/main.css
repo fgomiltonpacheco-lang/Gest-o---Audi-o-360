@@ -316,11 +316,20 @@
     display: none !important;
   }
 
-  /* Na página de audiometria: esconder sidebar, header e controles */
+  /* Na página de audiometria: esconder sidebar, header, footer e controles */
   body:has(.clinic-audiometry) .sidebar,
+  body:has(.clinic-audiometry) aside,
   body:has(.clinic-audiometry) header,
+  body:has(.clinic-audiometry) footer,
   body:has(.clinic-audiometry) .print\:hidden {
     display: none !important;
+  }
+
+  /* Na impressão de audiometria, anular padding e min-height da área do main */
+  body:has(.clinic-audiometry) main {
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: auto !important;
   }
 
   /* ExamPreview visível e ocupando a página na impressão */
