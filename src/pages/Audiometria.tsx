@@ -1712,49 +1712,54 @@ function ExamPreview({
           {/* Coluna Esquerda: Tabelas MT/LRF/LDV e IRF */}
           <div className="col-span-7 space-y-3">
             {/* Tabela MT / LRF / LDV */}
-            <div className="overflow-hidden rounded border border-[#0F2B5C]">
-              <table className="w-full border-collapse text-[10px] text-center">
-                <thead>
-                  <tr className="bg-slate-50 text-[#0F2B5C] font-bold border-b border-[#0F2B5C]">
-                    <th className="py-1 px-2 border-r border-[#0F2B5C] w-1/4 text-center">
-                      ORELHA
-                    </th>
-                    <th className="py-1 px-2 border-r border-[#0F2B5C] w-1/4 text-center">MT</th>
-                    <th className="py-1 px-2 border-r border-[#0F2B5C] w-1/4 text-center">LRF</th>
-                    <th className="py-1 px-2 w-1/4 text-center">LDV</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#0F2B5C]">
-                  <tr>
-                    <td className="py-1 px-2 font-bold text-red-600 border-r border-[#0F2B5C] text-center">
-                      OD
-                    </td>
-                    <td className="py-1 px-2 font-semibold text-red-600 border-r border-[#0F2B5C] text-center">
-                      {tritoOdVal !== '-' ? `${tritoOdVal} dB` : 'dB'}
-                    </td>
-                    <td className="py-1 px-2 font-semibold text-red-600 border-r border-[#0F2B5C] text-center">
-                      {srtOdVal !== '-' ? (srtOdVal === 'AUS' ? 'AUS' : `${srtOdVal} dB`) : 'dB'}
-                    </td>
-                    <td className="py-1 px-2 font-semibold text-red-600 text-center">
-                      {ldvOdVal !== '-' ? (ldvOdVal === 'AUS' ? 'AUS' : `${ldvOdVal} dB`) : 'dB'}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-1 px-2 font-bold text-blue-600 border-r border-[#0F2B5C] text-center">
-                      OE
-                    </td>
-                    <td className="py-1 px-2 font-semibold text-blue-600 border-r border-[#0F2B5C] text-center">
-                      {tritoOeVal !== '-' ? `${tritoOeVal} dB` : 'dB'}
-                    </td>
-                    <td className="py-1 px-2 font-semibold text-blue-600 border-r border-[#0F2B5C] text-center">
-                      {srtOeVal !== '-' ? (srtOeVal === 'AUS' ? 'AUS' : `${srtOeVal} dB`) : 'dB'}
-                    </td>
-                    <td className="py-1 px-2 font-semibold text-blue-600 text-center">
-                      {ldvOeVal !== '-' ? (ldvOeVal === 'AUS' ? 'AUS' : `${ldvOeVal} dB`) : 'dB'}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            <div>
+              <div className="text-center font-bold text-[11px] text-[#0F2B5C] mb-1">
+                LIMIARES AUDIOMÉTRICOS
+              </div>
+              <div className="overflow-hidden rounded border border-[#0F2B5C]">
+                <table className="w-full border-collapse text-[10px] text-center">
+                  <thead>
+                    <tr className="bg-slate-50 text-[#0F2B5C] font-bold border-b border-[#0F2B5C]">
+                      <th className="py-1 px-2 border-r border-[#0F2B5C] w-1/4 text-center">
+                        ORELHA
+                      </th>
+                      <th className="py-1 px-2 border-r border-[#0F2B5C] w-1/4 text-center">MT</th>
+                      <th className="py-1 px-2 border-r border-[#0F2B5C] w-1/4 text-center">LRF</th>
+                      <th className="py-1 px-2 border-r border-[#0F2B5C] w-1/4 text-center">LDV</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#0F2B5C]">
+                    <tr>
+                      <td className="py-1 px-2 font-bold text-red-600 border-r border-[#0F2B5C] text-center">
+                        OD
+                      </td>
+                      <td className="py-1 px-2 font-semibold text-red-600 border-r border-[#0F2B5C] text-center">
+                        {tritoOdVal !== '-' ? `${tritoOdVal} dB` : 'dB'}
+                      </td>
+                      <td className="py-1 px-2 font-semibold text-red-600 border-r border-[#0F2B5C] text-center">
+                        {srtOdVal !== '-' ? (srtOdVal === 'AUS' ? 'AUS' : `${srtOdVal} dB`) : 'dB'}
+                      </td>
+                      <td className="py-1 px-2 font-semibold text-red-600 border-r border-[#0F2B5C] text-center">
+                        {ldvOdVal !== '-' ? (ldvOdVal === 'AUS' ? 'AUS' : `${ldvOdVal} dB`) : 'dB'}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 px-2 font-bold text-blue-600 border-r border-[#0F2B5C] text-center">
+                        OE
+                      </td>
+                      <td className="py-1 px-2 font-semibold text-blue-600 border-r border-[#0F2B5C] text-center">
+                        {tritoOeVal !== '-' ? `${tritoOeVal} dB` : 'dB'}
+                      </td>
+                      <td className="py-1 px-2 font-semibold text-blue-600 border-r border-[#0F2B5C] text-center">
+                        {srtOeVal !== '-' ? (srtOeVal === 'AUS' ? 'AUS' : `${srtOeVal} dB`) : 'dB'}
+                      </td>
+                      <td className="py-1 px-2 font-semibold text-blue-600 border-r border-[#0F2B5C] text-center">
+                        {ldvOeVal !== '-' ? (ldvOeVal === 'AUS' ? 'AUS' : `${ldvOeVal} dB`) : 'dB'}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Tabela IRF / IPRF */}
@@ -1776,7 +1781,7 @@ function ExamPreview({
                       <th className="py-1 px-1.5 border-r border-[#0F2B5C] text-center">
                         MONOSSÍLABOS
                       </th>
-                      <th className="py-1 px-1.5 text-center">MASC</th>
+                      <th className="py-1 px-1.5 border-r border-[#0F2B5C] text-center">MASC</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#0F2B5C]">
@@ -1797,7 +1802,7 @@ function ExamPreview({
                           ? `${exam.iprf_vocal.od.monossilabos} %`
                           : '%'}
                       </td>
-                      <td className="py-1 px-1.5 font-semibold text-red-600 text-center">
+                      <td className="py-1 px-1.5 font-semibold text-red-600 border-r border-[#0F2B5C] text-center">
                         {exam.iprf_vocal.od.mascaramento
                           ? `${exam.iprf_vocal.od.mascaramento} dB`
                           : 'dB'}
@@ -1820,7 +1825,7 @@ function ExamPreview({
                           ? `${exam.iprf_vocal.oe.monossilabos} %`
                           : '%'}
                       </td>
-                      <td className="py-1 px-1.5 font-semibold text-blue-600 text-center">
+                      <td className="py-1 px-1.5 font-semibold text-blue-600 border-r border-[#0F2B5C] text-center">
                         {exam.iprf_vocal.oe.mascaramento
                           ? `${exam.iprf_vocal.oe.mascaramento} dB`
                           : 'dB'}
@@ -1845,7 +1850,9 @@ function ExamPreview({
                     <th className="py-1 px-1 border-r border-[#0F2B5C] text-red-600 text-[8.5px] w-16">
                       ORELHA DIREITA
                     </th>
-                    <th className="py-1 px-1 text-blue-600 text-[8.5px] w-16">ORELHA ESQUERDA</th>
+                    <th className="py-1 px-1 border-r border-[#0F2B5C] text-blue-600 text-[8.5px] w-16">
+                      ORELHA ESQUERDA
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#0F2B5C]">
@@ -1860,7 +1867,9 @@ function ExamPreview({
                     <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-red-600 text-sm">
                       ○
                     </td>
-                    <td className="py-0.5 px-1 text-center font-bold text-blue-600 text-sm">✕</td>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-blue-600 text-sm">
+                      ✕
+                    </td>
                   </tr>
                   <tr>
                     <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-[8px] leading-tight text-slate-700">
@@ -1869,7 +1878,9 @@ function ExamPreview({
                     <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-red-600 text-xs">
                       △
                     </td>
-                    <td className="py-0.5 px-1 text-center font-bold text-blue-600 text-xs">□</td>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-blue-600 text-xs">
+                      □
+                    </td>
                   </tr>
                   <tr>
                     <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-[8px] leading-tight text-slate-700">
@@ -1880,7 +1891,7 @@ function ExamPreview({
                         ○<span className="text-[9px] -ml-0.5">↓</span>
                       </span>
                     </td>
-                    <td className="py-0.5 px-1 text-center font-bold text-blue-600 text-xs">
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-blue-600 text-xs">
                       <span className="inline-flex items-center">
                         ✕<span className="text-[9px] -ml-0.5">↓</span>
                       </span>
@@ -1895,7 +1906,7 @@ function ExamPreview({
                         △<span className="text-[9px] -ml-0.5">↓</span>
                       </span>
                     </td>
-                    <td className="py-0.5 px-1 text-center font-bold text-blue-600 text-xs">
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-blue-600 text-xs">
                       <span className="inline-flex items-center">
                         □<span className="text-[9px] -ml-0.5">↓</span>
                       </span>
@@ -1913,7 +1924,7 @@ function ExamPreview({
                     <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-red-600 text-xs">
                       &lt;
                     </td>
-                    <td className="py-0.5 px-1 text-center font-bold text-blue-600 text-xs">
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-blue-600 text-xs">
                       &gt;
                     </td>
                   </tr>
@@ -1924,7 +1935,9 @@ function ExamPreview({
                     <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-red-600 text-xs">
                       ]
                     </td>
-                    <td className="py-0.5 px-1 text-center font-bold text-blue-600 text-xs">[</td>
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-blue-600 text-xs">
+                      [
+                    </td>
                   </tr>
                   <tr>
                     <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-[8px] leading-tight text-slate-700">
@@ -1933,7 +1946,7 @@ function ExamPreview({
                     <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-red-600 text-xs">
                       ↓
                     </td>
-                    <td className="py-0.5 px-1 text-center font-bold text-blue-600 text-xs">
+                    <td className="py-0.5 px-1 border-r border-[#0F2B5C] text-center font-bold text-blue-600 text-xs">
                       <span className="inline-flex items-center">
                         ↓<span className="text-[8px]">ₛ</span>
                       </span>
