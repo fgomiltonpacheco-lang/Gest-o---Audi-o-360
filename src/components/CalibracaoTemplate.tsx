@@ -651,40 +651,53 @@ export function CalibracaoTemplate({
       }
       setRendering(true)
       try {
-        let pdfSourceUrl = url
+        cleanupBlobUrl()
+
+        let fetchUrl = url
 
         // Se for URL local (data: ou blob: recém-selecionada no input file), usa diretamente
-        if (url.startsWith('data:') || url.startsWith('blob:')) {
-          pdfSourceUrl = url
-        } else {
-          // Busca registro FRESCO de clinic_settings no PocketBase para gerar token válido
+        if (!url.startsWith('data:') && !url.startsWith('blob:')) {
           try {
-            const authUser = (pb.authStore as any).model || (pb.authStore as any).record
-            const filter =
-              pb.authStore.isValid && authUser?.clinica_id
-                ? `clinica_id = "${authUser.clinica_id}"`
-                : ''
-            const freshSettings = await pb
-              .collection('clinic_settings')
-              .getFirstListItem(filter, { sort: '-created' })
+            // 1. Buscar registro fresco de clinic_settings
+            const freshSettings = await pb.collection('clinic_settings').getFirstListItem('')
 
+            // 2. Obter o nome do arquivo conforme o tipo
             const fileName =
               tipo === 'audiometria'
                 ? freshSettings.template_audiometria
                 : freshSettings.template_imitanciometria
 
+            // 3. Gerar URL com token usando pb.files.getUrl
             if (fileName) {
-              // Gera URL fresca com token recém-criado
-              pdfSourceUrl = pb.files.getUrl(freshSettings, fileName)
+              fetchUrl = pb.files.getUrl(freshSettings, fileName)
             }
           } catch (fetchErr) {
             console.warn('Não foi possível obter registro atualizado de clinic_settings:', fetchErr)
-            // Fallback 404 / erro: tenta usar a URL fornecida (removendo tokens expirados se aplicável como segurança extra)
-            pdfSourceUrl = url
+            fetchUrl = url
           }
         }
 
-        // Passa a URL fresca diretamente para o pdfjsLib
+        let pdfSourceUrl = fetchUrl
+
+        // Se não for já um data/blob local, faz fetch no contexto da página e cria Blob URL
+        if (!fetchUrl.startsWith('data:') && !fetchUrl.startsWith('blob:')) {
+          // 4. Fazer fetch(url) para baixar o PDF como arrayBuffer
+          const response = await fetch(fetchUrl)
+          if (!response.ok) {
+            throw new Error(`Falha ao baixar template PDF: status ${response.status}`)
+          }
+          const arrayBuffer = await response.arrayBuffer()
+
+          // 5. Criar Blob a partir do arrayBuffer
+          const blob = new Blob([arrayBuffer], { type: 'application/pdf' })
+
+          // 6. Criar blob URL
+          const localBlobUrl = URL.createObjectURL(blob)
+          activeBlobUrlRef.current = localBlobUrl
+          pdfSourceUrl = localBlobUrl
+        }
+
+        // 7. Passar a blob URL ao pdfjsLib.getDocument({ url: blobUrl })
         const loadingTask = pdfjsLib.getDocument({
           url: pdfSourceUrl,
         })
@@ -712,7 +725,7 @@ export function CalibracaoTemplate({
       } catch (err) {
         console.error('Erro ao renderizar PDF:', err)
         toast({
-          title: 'Erro ao carregar o template PDF',
+          title: 'Não foi possível carregar o template',
           description: 'Não foi possível renderizar o arquivo. Verifique se é um PDF válido.',
           variant: 'destructive',
         })
@@ -721,7 +734,7 @@ export function CalibracaoTemplate({
         setRendering(false)
       }
     },
-    [toast, tipo],
+    [toast, tipo, cleanupBlobUrl],
   )
 
   useEffect(() => {
