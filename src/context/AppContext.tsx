@@ -2536,6 +2536,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             },
           ]
     const payload: any = {
+      clinica_id: currentUser?.clinicaId || '',
       patientId: appData.patientId || '',
       patientName: appData.patientName,
       patientPhone: appData.patientPhone || '',
