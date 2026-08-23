@@ -695,9 +695,9 @@ export function CalibracaoTemplate({
                 ? freshSettings?.template_audiometria
                 : freshSettings?.template_imitanciometria
 
-            // 3. Gerar URL com token usando pb.files.getUrl (mantendo token de autenticação se houver)
+            // 3. Gerar URL direta SEM token (viewRule do clinic_settings é pública "1=1")
             if (freshSettings && fileName) {
-              fetchUrl = pb.files.getUrl(freshSettings, fileName)
+              fetchUrl = `${pb.baseUrl}/api/files/${freshSettings.collectionId}/${freshSettings.id}/${fileName}`
             }
           } catch (fetchErr) {
             console.warn('Não foi possível obter registro atualizado de clinic_settings:', fetchErr)
