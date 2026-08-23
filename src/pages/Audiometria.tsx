@@ -1546,7 +1546,7 @@ function EarAudiometrySection({
 function ExamPreview({
   exam,
   patientAgeDetailed: _patientAgeDetailed,
-  clinicSettings: _clinicSettings,
+  clinicSettings,
   professional: _professional,
   patientConvenio,
   patientName,
@@ -1591,7 +1591,12 @@ function ExamPreview({
 
   const convText = patientConvenio || 'Particular'
   const audiometerText = exam.audiometer || DEFAULT_AUDIOMETER
-  const calibText = exam.calibration ? formatDate(exam.calibration) : '-'
+  const rawCalib =
+    exam.calibration ||
+    clinicSettings?.calibracao ||
+    (clinicSettings as any)?.audiometro_calibracao ||
+    ''
+  const calibText = rawCalib ? formatDate(rawCalib) : '-'
 
   return (
     <div
@@ -1701,38 +1706,40 @@ function ExamPreview({
               <table className="w-full border-collapse text-[10px] text-center">
                 <thead>
                   <tr className="bg-slate-50 text-[#0F2B5C] font-bold border-b border-[#0F2B5C]">
-                    <th className="py-1 px-2 border-r border-[#0F2B5C] w-1/4">ORELHA</th>
-                    <th className="py-1 px-2 border-r border-[#0F2B5C] w-1/4">MT</th>
-                    <th className="py-1 px-2 border-r border-[#0F2B5C] w-1/4">LRF</th>
-                    <th className="py-1 px-2 w-1/4">LDV</th>
+                    <th className="py-1 px-2 border-r border-[#0F2B5C] w-1/4 text-center">
+                      ORELHA
+                    </th>
+                    <th className="py-1 px-2 border-r border-[#0F2B5C] w-1/4 text-center">MT</th>
+                    <th className="py-1 px-2 border-r border-[#0F2B5C] w-1/4 text-center">LRF</th>
+                    <th className="py-1 px-2 w-1/4 text-center">LDV</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#0F2B5C]">
                   <tr>
-                    <td className="py-1 px-2 font-bold text-red-600 border-r border-[#0F2B5C]">
+                    <td className="py-1 px-2 font-bold text-red-600 border-r border-[#0F2B5C] text-center">
                       OD
                     </td>
-                    <td className="py-1 px-2 font-semibold text-red-600 border-r border-[#0F2B5C]">
+                    <td className="py-1 px-2 font-semibold text-red-600 border-r border-[#0F2B5C] text-center">
                       {tritoOdVal !== '-' ? `${tritoOdVal} dB` : 'dB'}
                     </td>
-                    <td className="py-1 px-2 font-semibold text-red-600 border-r border-[#0F2B5C]">
+                    <td className="py-1 px-2 font-semibold text-red-600 border-r border-[#0F2B5C] text-center">
                       {srtOdVal !== '-' ? (srtOdVal === 'AUS' ? 'AUS' : `${srtOdVal} dB`) : 'dB'}
                     </td>
-                    <td className="py-1 px-2 font-semibold text-red-600">
+                    <td className="py-1 px-2 font-semibold text-red-600 text-center">
                       {ldvOdVal !== '-' ? (ldvOdVal === 'AUS' ? 'AUS' : `${ldvOdVal} dB`) : 'dB'}
                     </td>
                   </tr>
                   <tr>
-                    <td className="py-1 px-2 font-bold text-blue-600 border-r border-[#0F2B5C]">
+                    <td className="py-1 px-2 font-bold text-blue-600 border-r border-[#0F2B5C] text-center">
                       OE
                     </td>
-                    <td className="py-1 px-2 font-semibold text-blue-600 border-r border-[#0F2B5C]">
+                    <td className="py-1 px-2 font-semibold text-blue-600 border-r border-[#0F2B5C] text-center">
                       {tritoOeVal !== '-' ? `${tritoOeVal} dB` : 'dB'}
                     </td>
-                    <td className="py-1 px-2 font-semibold text-blue-600 border-r border-[#0F2B5C]">
+                    <td className="py-1 px-2 font-semibold text-blue-600 border-r border-[#0F2B5C] text-center">
                       {srtOeVal !== '-' ? (srtOeVal === 'AUS' ? 'AUS' : `${srtOeVal} dB`) : 'dB'}
                     </td>
-                    <td className="py-1 px-2 font-semibold text-blue-600">
+                    <td className="py-1 px-2 font-semibold text-blue-600 text-center">
                       {ldvOeVal !== '-' ? (ldvOeVal === 'AUS' ? 'AUS' : `${ldvOeVal} dB`) : 'dB'}
                     </td>
                   </tr>
@@ -1740,7 +1747,7 @@ function ExamPreview({
               </table>
             </div>
 
-            {/* Tabela IRF */}
+            {/* Tabela IRF / IPRF */}
             <div>
               <div className="text-center font-bold text-[11px] text-[#0F2B5C] mb-1">
                 ÍNDICE DE RECONHECIMENTO DE FALA (IRF)
@@ -1749,55 +1756,61 @@ function ExamPreview({
                 <table className="w-full border-collapse text-[10px] text-center">
                   <thead>
                     <tr className="bg-slate-50 text-[#0F2B5C] font-bold border-b border-[#0F2B5C]">
-                      <th className="py-1 px-1.5 border-r border-[#0F2B5C]">ORELHA</th>
-                      <th className="py-1 px-1.5 border-r border-[#0F2B5C]">INTENSIDADE</th>
-                      <th className="py-1 px-1.5 border-r border-[#0F2B5C]">DISSÍLABOS</th>
-                      <th className="py-1 px-1.5 border-r border-[#0F2B5C]">MONOSSÍLABOS</th>
-                      <th className="py-1 px-1.5">MASC</th>
+                      <th className="py-1 px-1.5 border-r border-[#0F2B5C] text-center">ORELHA</th>
+                      <th className="py-1 px-1.5 border-r border-[#0F2B5C] text-center">
+                        INTENSIDADE
+                      </th>
+                      <th className="py-1 px-1.5 border-r border-[#0F2B5C] text-center">
+                        DISSÍLABOS
+                      </th>
+                      <th className="py-1 px-1.5 border-r border-[#0F2B5C] text-center">
+                        MONOSSÍLABOS
+                      </th>
+                      <th className="py-1 px-1.5 text-center">MASC</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#0F2B5C]">
                     <tr>
-                      <td className="py-1 px-1.5 font-bold text-red-600 border-r border-[#0F2B5C]">
+                      <td className="py-1 px-1.5 font-bold text-red-600 border-r border-[#0F2B5C] text-center">
                         OD
                       </td>
-                      <td className="py-1 px-1.5 font-semibold text-red-600 border-r border-[#0F2B5C]">
+                      <td className="py-1 px-1.5 font-semibold text-red-600 border-r border-[#0F2B5C] text-center">
                         {exam.iprf_vocal.od.intensidade
                           ? `${exam.iprf_vocal.od.intensidade} dB`
                           : 'dB'}
                       </td>
-                      <td className="py-1 px-1.5 font-semibold text-red-600 border-r border-[#0F2B5C]">
+                      <td className="py-1 px-1.5 font-semibold text-red-600 border-r border-[#0F2B5C] text-center">
                         {exam.iprf_vocal.od.dissilabos ? `${exam.iprf_vocal.od.dissilabos} %` : '%'}
                       </td>
-                      <td className="py-1 px-1.5 font-semibold text-red-600 border-r border-[#0F2B5C]">
+                      <td className="py-1 px-1.5 font-semibold text-red-600 border-r border-[#0F2B5C] text-center">
                         {exam.iprf_vocal.od.monossilabos
                           ? `${exam.iprf_vocal.od.monossilabos} %`
                           : '%'}
                       </td>
-                      <td className="py-1 px-1.5 font-semibold text-red-600">
+                      <td className="py-1 px-1.5 font-semibold text-red-600 text-center">
                         {exam.iprf_vocal.od.mascaramento
                           ? `${exam.iprf_vocal.od.mascaramento} dB`
                           : 'dB'}
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-1 px-1.5 font-bold text-blue-600 border-r border-[#0F2B5C]">
+                      <td className="py-1 px-1.5 font-bold text-blue-600 border-r border-[#0F2B5C] text-center">
                         OE
                       </td>
-                      <td className="py-1 px-1.5 font-semibold text-blue-600 border-r border-[#0F2B5C]">
+                      <td className="py-1 px-1.5 font-semibold text-blue-600 border-r border-[#0F2B5C] text-center">
                         {exam.iprf_vocal.oe.intensidade
                           ? `${exam.iprf_vocal.oe.intensidade} dB`
                           : 'dB'}
                       </td>
-                      <td className="py-1 px-1.5 font-semibold text-blue-600 border-r border-[#0F2B5C]">
+                      <td className="py-1 px-1.5 font-semibold text-blue-600 border-r border-[#0F2B5C] text-center">
                         {exam.iprf_vocal.oe.dissilabos ? `${exam.iprf_vocal.oe.dissilabos} %` : '%'}
                       </td>
-                      <td className="py-1 px-1.5 font-semibold text-blue-600 border-r border-[#0F2B5C]">
+                      <td className="py-1 px-1.5 font-semibold text-blue-600 border-r border-[#0F2B5C] text-center">
                         {exam.iprf_vocal.oe.monossilabos
                           ? `${exam.iprf_vocal.oe.monossilabos} %`
                           : '%'}
                       </td>
-                      <td className="py-1 px-1.5 font-semibold text-blue-600">
+                      <td className="py-1 px-1.5 font-semibold text-blue-600 text-center">
                         {exam.iprf_vocal.oe.mascaramento
                           ? `${exam.iprf_vocal.oe.mascaramento} dB`
                           : 'dB'}
@@ -1939,15 +1952,8 @@ function ExamPreview({
           </p>
         </div>
 
-        {/* 6. Footer: Espaço para Carimbo centralizado + Assinatura */}
+        {/* 6. Footer: Assinatura */}
         <div className="pt-2 space-y-3">
-          {/* Caixa pontilhada de Carimbo */}
-          <div className="flex justify-center">
-            <div className="w-56 h-14 border-2 border-dashed border-slate-400 rounded-lg flex items-center justify-center text-[10px] text-slate-400 select-none">
-              Espaço para Carimbo
-            </div>
-          </div>
-
           {/* Assinatura com linha azul */}
           <div className="mx-auto text-center" style={{ maxWidth: 300 }}>
             <div className="w-full border-t border-[#0F2B5C] pt-1.5">
