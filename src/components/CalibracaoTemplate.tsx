@@ -667,7 +667,8 @@ export function CalibracaoTemplate({
             headers['Authorization'] = pb.authStore.token
           }
 
-          const res = await fetch(url, {
+          const cleanUrl = url.replace(/[?&]token=[^&]*/g, '')
+          const res = await fetch(cleanUrl, {
             headers,
           })
 
