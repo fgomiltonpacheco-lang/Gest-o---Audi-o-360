@@ -668,9 +668,38 @@ export function CalibracaoTemplate({
           }
 
           const cleanUrl = url.replace(/[?&]token=[^&]*/g, '')
-          const res = await fetch(cleanUrl, {
+          let res = await fetch(cleanUrl, {
             headers,
           })
+
+          // Se der 404, faz fallback buscando o registro atualizado de clinic_settings
+          if (res.status === 404) {
+            try {
+              const authUser = (pb.authStore as any).model || (pb.authStore as any).record
+              const filter =
+                pb.authStore.isValid && authUser?.clinica_id
+                  ? `clinica_id = "${authUser.clinica_id}"`
+                  : ''
+              const freshSettings = await pb
+                .collection('clinic_settings')
+                .getFirstListItem(filter, { sort: '-created' })
+
+              const fileName =
+                tipo === 'audiometria'
+                  ? freshSettings.template_audiometria
+                  : freshSettings.template_imitanciometria
+
+              if (fileName) {
+                const freshUrl = pb.files.getUrl(freshSettings, fileName)
+                const freshCleanUrl = freshUrl.replace(/[?&]token=[^&]*/g, '')
+                res = await fetch(freshCleanUrl, {
+                  headers,
+                })
+              }
+            } catch (fallbackErr) {
+              console.warn('Falha no fallback de busca do template atualizado:', fallbackErr)
+            }
+          }
 
           if (!res.ok) {
             throw new Error(
@@ -723,7 +752,7 @@ export function CalibracaoTemplate({
         setRendering(false)
       }
     },
-    [toast, cleanupBlobUrl],
+    [toast, cleanupBlobUrl, tipo],
   )
 
   useEffect(() => {

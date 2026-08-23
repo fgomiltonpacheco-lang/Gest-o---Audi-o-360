@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-23T01:01:27.711Z",
+  "generatedAt": "2026-08-23T01:15:11.322Z",
   "collections": [
     {
       "name": "users",
@@ -2465,7 +2465,7 @@
       "type": "base",
       "apiRules": {
         "list": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
-        "view": "",
+        "view": "1=1",
         "create": "@request.auth.id != '' && @request.auth.clinica_id != ''",
         "update": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id",
         "delete": "@request.auth.id != '' && clinica_id = @request.auth.clinica_id"
