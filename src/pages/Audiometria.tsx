@@ -1975,8 +1975,8 @@ function ExamPreview({
           </p>
         </div>
 
-        {/* 6. Footer: Assinatura */}
-        <div className="pt-8 print:pt-10 space-y-3">
+        {/* 6. Footer: Assinatura com espaço para carimbo/assinatura manual */}
+        <div className="pt-14 print:pt-16">
           {/* Assinatura com linha azul */}
           <div className="mx-auto text-center" style={{ maxWidth: 300 }}>
             <div className="w-full border-t border-[#0F2B5C] pt-1.5">
@@ -1990,6 +1990,19 @@ function ExamPreview({
             </div>
           </div>
         </div>
+
+        {/* 7. Rodapé com Endereço e Telefone da Clínica */}
+        {(() => {
+          const address = clinicSettings?.endereco?.trim() || CLINIC_ADDRESS
+          const phone = clinicSettings?.telefone?.trim() || CLINIC_PHONE
+          const footerInfo = [address, phone ? `Tel: ${phone}` : ''].filter(Boolean).join(' • ')
+
+          return footerInfo ? (
+            <div className="pt-2 text-center text-[8.5px] text-slate-500 font-normal leading-tight">
+              {footerInfo}
+            </div>
+          ) : null
+        })()}
       </div>
     </div>
   )
