@@ -695,9 +695,9 @@ export function CalibracaoTemplate({
                 ? freshSettings?.template_audiometria
                 : freshSettings?.template_imitanciometria
 
-            // 3. Gerar URL com token usando pb.files.getUrl
+            // 3. Gerar URL com token usando pb.files.getUrl (mantendo token de autenticação se houver)
             if (freshSettings && fileName) {
-              fetchUrl = pb.files.getUrl(freshSettings, fileName).split('?')[0]
+              fetchUrl = pb.files.getUrl(freshSettings, fileName)
             }
           } catch (fetchErr) {
             console.warn('Não foi possível obter registro atualizado de clinic_settings:', fetchErr)
@@ -705,29 +705,16 @@ export function CalibracaoTemplate({
           }
         }
 
-        let pdfSourceUrl = fetchUrl
-
-        // Se não for já um data/blob local, faz fetch no contexto da página e cria Blob URL
-        if (!fetchUrl.startsWith('data:') && !fetchUrl.startsWith('blob:')) {
-          // 4. Fazer fetch(url) para baixar o PDF como arrayBuffer
-          const response = await fetch(fetchUrl)
-          if (!response.ok) {
-            throw new Error(`Falha ao baixar template PDF: status ${response.status}`)
-          }
-          const arrayBuffer = await response.arrayBuffer()
-
-          // 5. Criar Blob a partir do arrayBuffer
-          const blob = new Blob([arrayBuffer], { type: 'application/pdf' })
-
-          // 6. Criar blob URL
-          const localBlobUrl = URL.createObjectURL(blob)
-          activeBlobUrlRef.current = localBlobUrl
-          pdfSourceUrl = localBlobUrl
+        // 4. Fazer fetch(url) para baixar o PDF como arrayBuffer no contexto da página
+        const response = await fetch(fetchUrl)
+        if (!response.ok) {
+          throw new Error(`Falha ao baixar template PDF: status ${response.status}`)
         }
+        const arrayBuffer = await response.arrayBuffer()
 
-        // 7. Passar a blob URL ao pdfjsLib.getDocument({ url: blobUrl })
+        // 5. Passar o arrayBuffer diretamente ao pdfjsLib
         const loadingTask = pdfjsLib.getDocument({
-          url: pdfSourceUrl,
+          data: arrayBuffer,
         })
         const pdf = await loadingTask.promise
         const page = await pdf.getPage(1)

@@ -2,16 +2,8 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import { useToast } from '@/hooks/use-toast'
-import { usePrint } from '@/components/print/PrintProvider'
-import {
-  AudiometriaFullPrint,
-  renderExamReport,
-  buildAudiometryContext,
-} from '@/components/print/PrintDocuments'
 import { fillAudiometriaTemplatePdf, openPdfInNewTab } from '@/lib/pdfTemplateFiller'
 import { AudiogramChart } from '@/components/AudiogramChart'
-import { LaudoAudiometricoHTML } from '@/components/laudos/LaudoAudiometricoHTML'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import pb from '@/lib/pocketbase/client'
 import { ClientResponseError } from 'pocketbase'
 import { Button } from '@/components/ui/button'
@@ -325,7 +317,6 @@ export default function Audiometria() {
   const navigate = useNavigate()
   const { getPatient, currentUser, equipments, clinicSettings } = useApp()
   const { toast } = useToast()
-  const { print } = usePrint()
 
   const patient = getPatient(id || '')
   const isSecretaria = currentUser?.role === 'secretaria'
@@ -333,7 +324,6 @@ export default function Audiometria() {
 
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
-  const [htmlLaudoModalOpen, setHtmlLaudoModalOpen] = useState(false)
   const [exam, setExam] = useState<ExamState>(() => {
     const base = emptyAudiometryExamFull(id || '', patient?.name || '')
     return { ...base, audiometer: DEFAULT_AUDIOMETER }
@@ -610,25 +600,62 @@ export default function Audiometria() {
       updated: '',
     }
 
-    const templatePdfUrl = clinicSettings?.template_audiometria_url
-    if (!templatePdfUrl) {
-      toast({
-        title: 'Template PDF não configurado',
-        description:
-          'Nenhum template PDF configurado nas Configurações. Usando o Laudo HTML oficial.',
-      })
-      setHtmlLaudoModalOpen(true)
-      return
-    }
+    let fetchUrl = clinicSettings?.template_audiometria_url || ''
 
     try {
-      const response = await fetch(templatePdfUrl)
-      if (!response.ok) throw new Error('Falha ao baixar template PDF')
+      // 1. Buscar registro fresco de clinic_settings para obter o template e URL atualizada
+      let freshSettings: any = null
+      const clinicaId = currentUser?.clinicaId
+      const knownSettingsId = clinicSettings?.id
+
+      if (clinicaId) {
+        try {
+          freshSettings = await pb
+            .collection('clinic_settings')
+            .getFirstListItem(`clinica_id = "${clinicaId}"`)
+        } catch {
+          /* fallback */
+        }
+      }
+
+      if (!freshSettings && knownSettingsId) {
+        try {
+          freshSettings = await pb.collection('clinic_settings').getOne(knownSettingsId)
+        } catch {
+          /* fallback */
+        }
+      }
+
+      if (!freshSettings) {
+        try {
+          freshSettings = await pb.collection('clinic_settings').getFirstListItem('')
+        } catch {
+          /* fallback */
+        }
+      }
+
+      const fileName = freshSettings?.template_audiometria
+      if (freshSettings && fileName) {
+        fetchUrl = pb.files.getUrl(freshSettings, fileName)
+      }
+
+      if (!fetchUrl) {
+        toast({
+          title: 'Template PDF não configurado',
+          description:
+            'Cadastre o arquivo de template PDF de audiometria nas Configurações da clínica.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      const response = await fetch(fetchUrl)
+      if (!response.ok) throw new Error(`Falha ao baixar template PDF: status ${response.status}`)
       const templateBytes = await response.arrayBuffer()
       const filledBytes = await fillAudiometriaTemplatePdf(templateBytes, {
         exam: fullExam,
         patient,
-        clinicSettings,
+        clinicSettings: freshSettings || clinicSettings,
         professional: currentUser ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa } : null,
       })
       openPdfInNewTab(filledBytes, `Laudo_Audiometria_${patient?.name || 'paciente'}.pdf`)
@@ -636,35 +663,10 @@ export default function Audiometria() {
       console.error('Erro ao preencher PDF template:', err)
       toast({
         title: 'Erro ao gerar laudo em PDF',
-        description: 'Não foi possível carregar o template PDF. Abrindo Laudo HTML.',
+        description: 'Não foi possível carregar ou preencher o template PDF.',
         variant: 'destructive',
       })
-      setHtmlLaudoModalOpen(true)
     }
-  }
-
-  const handlePrintHtml = () => {
-    const fullExam: AudiometryExamFull = {
-      ...(exam as AudiometryExamFull),
-      id: exam.id || 'novo',
-      created: '',
-      updated: '',
-    }
-
-    print({
-      title: 'Laudo Audiológico',
-      subtitle: `${patient?.name || 'Paciente'} — ${formatDate(exam.date)}`,
-      body: (
-        <LaudoAudiometricoHTML
-          exam={fullExam}
-          patient={patient}
-          clinicSettings={clinicSettings}
-          professional={
-            currentUser ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa } : null
-          }
-        />
-      ),
-    })
   }
 
   const handleSuggestedReport = () => {
@@ -1073,15 +1075,7 @@ export default function Audiometria() {
       <div className="no-print flex flex-col sm:flex-row items-center justify-end gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
         <Button
           variant="outline"
-          onClick={() => setHtmlLaudoModalOpen(true)}
-          className="rounded-xl border-teal-500 text-teal-700 hover:bg-teal-50 text-xs font-semibold h-10 w-full sm:w-auto"
-        >
-          <FileText className="w-4 h-4 mr-1.5 text-teal-600" />
-          Visualizar Laudo HTML
-        </Button>
-        <Button
-          variant="outline"
-          onClick={handlePrintHtml}
+          onClick={handlePrintPdfTemplate}
           className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10 w-full sm:w-auto"
         >
           <Printer className="w-4 h-4 mr-1.5" />
@@ -1102,49 +1096,6 @@ export default function Audiometria() {
           </Button>
         )}
       </div>
-
-      {/* Modal de Prévia e Impressão do Laudo Audiológico HTML */}
-      <Dialog open={htmlLaudoModalOpen} onOpenChange={setHtmlLaudoModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto p-0 bg-neutral-100 rounded-2xl border border-slate-300 shadow-2xl">
-          <DialogHeader className="no-print p-4 bg-white border-b border-slate-200 sticky top-0 z-20 flex flex-row items-center justify-between">
-            <div>
-              <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-teal-600" />
-                Laudo Audiológico — Template HTML
-              </DialogTitle>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Paciente: <strong>{patient?.name}</strong> • Data: {formatDate(exam.date)}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handlePrintHtml}
-                className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold h-9 px-4 rounded-xl shadow-sm"
-              >
-                <Printer className="w-4 h-4 mr-1.5" />
-                Imprimir Laudo
-              </Button>
-            </div>
-          </DialogHeader>
-          <div className="p-4 sm:p-6 flex justify-center bg-neutral-200/50">
-            <div className="bg-white shadow-xl border border-neutral-300 rounded-sm w-full max-w-[210mm]">
-              <LaudoAudiometricoHTML
-                exam={{
-                  ...(exam as AudiometryExamFull),
-                  id: exam.id || 'novo',
-                  created: '',
-                  updated: '',
-                }}
-                patient={patient}
-                clinicSettings={clinicSettings}
-                professional={
-                  currentUser ? { name: currentUser.name, crmCrfa: currentUser.crmCrfa } : null
-                }
-              />
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
