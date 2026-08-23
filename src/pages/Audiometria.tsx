@@ -1100,7 +1100,7 @@ export default function Audiometria() {
       <div className="no-print flex flex-col sm:flex-row items-center justify-end gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
         <Button
           variant="outline"
-          onClick={handlePrintPdfTemplate}
+          onClick={() => window.print()}
           className="rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-10 w-full sm:w-auto"
         >
           <Printer className="w-4 h-4 mr-1.5" />
