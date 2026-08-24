@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   FileEdit,
   Eye,
+  Pencil,
   Download,
   ChevronLeft,
   ChevronRight,
@@ -1269,33 +1270,42 @@ export default function Imitanciometria() {
 
           {!isSecretaria && (
             <>
-              <Button
-                size="sm"
-                onClick={() => handleSave(false)}
-                disabled={saving || exam.status === 'finalizado'}
-                className="bg-slate-700 hover:bg-slate-800 text-white h-8 text-xs font-semibold rounded-lg"
-              >
-                {saving ? (
-                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                ) : (
-                  <Save className="w-3.5 h-3.5 mr-1" />
-                )}
-                Salvar
-              </Button>
+              {exam.status === 'finalizado' ? (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {}}
+                    className="h-8 text-xs font-semibold rounded-lg text-slate-700 border-slate-300"
+                  >
+                    <Eye className="w-3.5 h-3.5 mr-1" />
+                    Visualizar Exame
+                  </Button>
 
-              <Button
-                size="sm"
-                onClick={() => handleSave(true)}
-                disabled={saving || exam.status === 'finalizado'}
-                className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs font-semibold rounded-lg"
-              >
-                {saving ? (
-                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                )}
-                Finalizar
-              </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setField('status', 'rascunho')}
+                    className="bg-amber-600 hover:bg-amber-700 text-white h-8 text-xs font-semibold rounded-lg"
+                  >
+                    <Pencil className="w-3.5 h-3.5 mr-1" />
+                    Editar Exame
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => handleSave(false)}
+                  disabled={saving}
+                  className="bg-slate-700 hover:bg-slate-800 text-white h-8 text-xs font-semibold rounded-lg"
+                >
+                  {saving ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <Save className="w-3.5 h-3.5 mr-1" />
+                  )}
+                  Salvar
+                </Button>
+              )}
             </>
           )}
         </div>
