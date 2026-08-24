@@ -1793,7 +1793,7 @@ export default function Imitanciometria() {
               <div className="grid grid-cols-4 text-center text-[11px] font-bold text-slate-700 gap-1.5 mb-1">
                 <div>Limiar</div>
                 <div className="flex items-center justify-center gap-0.5">
-                  Refl. Contra D <Info className="w-3 h-3 text-slate-400" />
+                  Refl. Contra OD <Info className="w-3 h-3 text-slate-400" />
                 </div>
                 <div>Diferença</div>
                 <div className="flex items-center justify-center gap-0.5">
@@ -1896,7 +1896,7 @@ export default function Imitanciometria() {
               <div className="grid grid-cols-4 text-center text-[11px] font-bold text-slate-700 gap-1.5 mb-1">
                 <div>Limiar</div>
                 <div className="flex items-center justify-center gap-0.5">
-                  Refl. Contra E <Info className="w-3 h-3 text-slate-400" />
+                  Refl. Contra OE <Info className="w-3 h-3 text-slate-400" />
                 </div>
                 <div>Diferença</div>
                 <div className="flex items-center justify-center gap-0.5">
