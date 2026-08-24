@@ -246,7 +246,7 @@ export function ImitanciometriaPrint({
       }}
     >
       {/* 1. Logo centralizada no topo */}
-      <div style={{ textAlign: 'center', marginBottom: '2px', pageBreakInside: 'avoid' }}>
+      <div style={{ textAlign: 'center', marginBottom: '2px' }}>
         <img
           src={logoSrc}
           alt={clinicName}
@@ -261,7 +261,7 @@ export function ImitanciometriaPrint({
       </div>
 
       {/* 2. Cabeçalho com dados do paciente e equipamento */}
-      <div style={{ fontSize: '6pt', marginBottom: '3px', pageBreakInside: 'avoid' }}>
+      <div style={{ fontSize: '6pt', marginBottom: '3px' }}>
         {/* Linha 1: Nome + Data */}
         <div
           style={{
@@ -401,7 +401,6 @@ export function ImitanciometriaPrint({
           justifyContent: 'space-between',
           gap: '4px',
           marginBottom: '2px',
-          pageBreakInside: 'avoid',
         }}
       >
         {/* OD Box (Vermelho) */}
@@ -417,10 +416,10 @@ export function ImitanciometriaPrint({
             alignItems: 'center',
           }}
         >
-          <div style={{ width: '100%', height: '75px' }}>
+          <div style={{ width: '100%', height: '65px' }}>
             <TimpanogramChart
               width={260}
-              height={110}
+              height={95}
               odPoints={odTimp?.curva_timpanometrica ?? null}
               showLegend={false}
               showTitle={false}
@@ -457,10 +456,10 @@ export function ImitanciometriaPrint({
             alignItems: 'center',
           }}
         >
-          <div style={{ width: '100%', height: '75px' }}>
+          <div style={{ width: '100%', height: '65px' }}>
             <TimpanogramChart
               width={260}
-              height={110}
+              height={95}
               oePoints={oeTimp?.curva_timpanometrica ?? null}
               showLegend={false}
               showTitle={false}
@@ -486,7 +485,7 @@ export function ImitanciometriaPrint({
       </div>
 
       {/* 5. Tabela de Resumo Timpanométrico (Pressão Ouvido Médio, Compliância, Volume, Gradiente) */}
-      <div style={{ marginBottom: '2px', pageBreakInside: 'avoid' }}>
+      <div style={{ marginBottom: '2px' }}>
         <table
           style={{
             borderCollapse: 'collapse',
@@ -555,7 +554,7 @@ export function ImitanciometriaPrint({
       </div>
 
       {/* 6. Reflexos Acústicos (OD | Freq | OE) */}
-      <div style={{ marginBottom: '4px', pageBreakInside: 'avoid' }}>
+      <div style={{ marginBottom: '4px' }}>
         <div
           style={{
             textAlign: 'center',
@@ -787,7 +786,7 @@ export function ImitanciometriaPrint({
       </div>
 
       {/* 7. Parecer Imitanciométrico / Observações */}
-      <div style={{ marginTop: '1px', marginBottom: '1px', pageBreakInside: 'avoid' }}>
+      <div style={{ marginTop: '1px', marginBottom: '1px' }}>
         <div
           style={{
             textAlign: 'center',
@@ -801,7 +800,7 @@ export function ImitanciometriaPrint({
         <div
           style={{
             border: '1.2px solid #000',
-            minHeight: '22px',
+            minHeight: '18px',
             padding: '1px 4px',
             fontSize: '5.5pt',
             lineHeight: 1.2,
@@ -858,7 +857,6 @@ export function ImitanciometriaPrint({
           color: '#334155',
           textAlign: 'center',
           marginTop: '1px',
-          pageBreakInside: 'avoid',
         }}
       >
         {clinicAddress}

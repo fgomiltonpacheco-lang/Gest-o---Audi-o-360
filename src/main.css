@@ -301,7 +301,7 @@
 @media print {
   @page {
     size: A4;
-    margin: 6mm;
+    margin: 4mm;
   }
 
   html,
@@ -396,8 +396,7 @@
 
   /* Evita quebras desleixadas dentro de cartões e tabelas */
   .print-card,
-  .print-section,
-  table {
+  .print-section {
     break-inside: avoid;
     page-break-inside: avoid;
   }
