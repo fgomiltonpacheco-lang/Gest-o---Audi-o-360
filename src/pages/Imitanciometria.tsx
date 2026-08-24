@@ -350,6 +350,18 @@ export default function Imitanciometria() {
     paciente_sexo: patient?.gender || '',
   }))
 
+  const [funcaoTubaria, setFuncaoTubaria] = useState<{
+    deg1: string
+    deg2: string
+    deg3: string
+    deg4: string
+  }>({
+    deg1: '',
+    deg2: '',
+    deg3: '',
+    deg4: '',
+  })
+
   const [timpOD, setTimpOD] = useState<TimpData>(emptyTimp('OD'))
   const [timpOE, setTimpOE] = useState<TimpData>(emptyTimp('OE'))
 
@@ -765,6 +777,26 @@ export default function Imitanciometria() {
         const newGrid = emptyReflexGrid()
         const freqs = [500, 1000, 2000, 4000] as const
 
+        // Restaura função tubária
+        if (rec.funcao_tubaria) {
+          let ft = rec.funcao_tubaria
+          if (typeof ft === 'string') {
+            try {
+              ft = JSON.parse(ft)
+            } catch {
+              ft = null
+            }
+          }
+          if (ft && typeof ft === 'object') {
+            setFuncaoTubaria({
+              deg1: ft.deg1 || '',
+              deg2: ft.deg2 || '',
+              deg3: ft.deg3 || '',
+              deg4: ft.deg4 || '',
+            })
+          }
+        }
+
         // Restaura a partir de reflex_grid do registro principal (contém limiar, diferenca, refl_contra, ipsi)
         let parsedGrid: any = null
         if (rec.reflex_grid) {
@@ -1114,8 +1146,8 @@ export default function Imitanciometria() {
       reflex_grid: reflexGrid,
       curva_timpanometrica_od: finalTimpOD.curva_timpanometrica ?? null,
       curva_timpanometrica_oe: finalTimpOE.curva_timpanometrica ?? null,
+      funcao_tubaria: funcaoTubaria,
     }
-
     try {
       let imitId: string
       const isNewExam = !exam.id
@@ -1377,6 +1409,7 @@ export default function Imitanciometria() {
         },
       },
       reflexGrid,
+      funcaoTubaria,
     }
   }
 
@@ -1444,11 +1477,11 @@ export default function Imitanciometria() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setPreviewOpen(true)}
-            className="h-8 text-xs font-semibold rounded-lg"
+            onClick={() => window.print()}
+            className="h-8 text-xs font-semibold rounded-lg border-slate-300 text-slate-700 hover:bg-slate-50"
           >
-            <Eye className="w-3.5 h-3.5 mr-1" />
-            PDF
+            <Printer className="w-3.5 h-3.5 mr-1.5" />
+            Imprimir
           </Button>
 
           {!isSecretaria && exam.status !== 'finalizado' && (
@@ -1485,8 +1518,18 @@ export default function Imitanciometria() {
         </div>
       </div>
 
-      {/* Main Container Layout */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-5 shadow-sm">
+      {/* Visualização de Impressão (visível apenas ao imprimir com window.print) */}
+      <div className="hidden print:block">
+        <ImitanciometriaPrint
+          data={buildPrintData()}
+          patient={patient}
+          clinicSettings={clinicSettings}
+          professional={professionalData}
+        />
+      </div>
+
+      {/* Main Container Layout (oculto ao imprimir) */}
+      <div className="no-print bg-white border border-slate-200 rounded-xl p-4 space-y-5 shadow-sm">
         {/* Header Metadata Info Bar */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pb-3 border-b border-slate-200 text-xs">
           <div>
@@ -1986,39 +2029,84 @@ export default function Imitanciometria() {
           </div>
         </div>
 
-        {/* 6. RODAPÉ (REFERÊNCIA E OBSERVAÇÃO) */}
+        {/* 5.1 PESQUISA DA FUNÇÃO TUBÁRIA */}
+        <div className="space-y-2 pt-2 border-t border-slate-200">
+          <div className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+            Pesquisa da Função Tubária
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <Label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                1ª deglutição
+              </Label>
+              <Input
+                value={funcaoTubaria.deg1}
+                onChange={(e) => setFuncaoTubaria((prev) => ({ ...prev, deg1: e.target.value }))}
+                disabled={readOnly}
+                placeholder="Valor/Obs"
+                className="h-8 text-xs rounded-md border-slate-300"
+              />
+            </div>
+            <div>
+              <Label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                2ª deglutição
+              </Label>
+              <Input
+                value={funcaoTubaria.deg2}
+                onChange={(e) => setFuncaoTubaria((prev) => ({ ...prev, deg2: e.target.value }))}
+                disabled={readOnly}
+                placeholder="Valor/Obs"
+                className="h-8 text-xs rounded-md border-slate-300"
+              />
+            </div>
+            <div>
+              <Label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                3ª deglutição
+              </Label>
+              <Input
+                value={funcaoTubaria.deg3}
+                onChange={(e) => setFuncaoTubaria((prev) => ({ ...prev, deg3: e.target.value }))}
+                disabled={readOnly}
+                placeholder="Valor/Obs"
+                className="h-8 text-xs rounded-md border-slate-300"
+              />
+            </div>
+            <div>
+              <Label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                4ª deglutição
+              </Label>
+              <Input
+                value={funcaoTubaria.deg4}
+                onChange={(e) => setFuncaoTubaria((prev) => ({ ...prev, deg4: e.target.value }))}
+                disabled={readOnly}
+                placeholder="Valor/Obs"
+                className="h-8 text-xs rounded-md border-slate-300"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 6. LAUDO / OBSERVAÇÃO */}
         <div className="space-y-3 pt-2">
           <div>
-            <Label className="text-xs font-bold text-slate-700 block mb-1">Referência</Label>
-            <Select
-              value={exam.referencias || DEFAULT_REFERENCIAS}
-              onValueChange={(v) => setField('referencias', v)}
-              disabled={readOnly}
-            >
-              <SelectTrigger className="h-9 text-xs rounded-md border-slate-300">
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={DEFAULT_REFERENCIAS}>
-                  Jerger (1970); Margolis e Heller (1987); Stach (1998)
-                </SelectItem>
-                <SelectItem value="Avaliação imitanciométrica padronizada conforme protocolos clínicos nacionais.">
-                  Protocolo Nacional Simplificado
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label className="text-xs font-bold text-slate-700 block mb-1">Observação</Label>
+            <Label className="text-xs font-bold text-slate-700 block mb-1">
+              Laudo / Observações
+            </Label>
             <Textarea
-              value={exam.observacoes}
-              onChange={(e) => setField('observacoes', e.target.value)}
+              value={exam.laudo || exam.observacoes}
+              onChange={(e) => {
+                setField('laudo', e.target.value)
+                setField('observacoes', e.target.value)
+              }}
               disabled={readOnly}
               rows={4}
-              placeholder="Digite aqui as observações do exame..."
+              placeholder="Digite aqui o laudo / observações do exame..."
               className="rounded-md text-xs border-slate-300 resize-y"
             />
+            <p className="text-[10px] text-slate-500 italic mt-1 leading-tight">
+              Laudo audiológico baseado em Lloyd e Kaplan (1978); Silman e Silverman (1997) adaptada
+              de Carhart (1945) e Lloyd e Kaplan (1978); Jerger, Speaks, e Trammell (1968).
+            </p>
           </div>
         </div>
 
@@ -2046,72 +2134,52 @@ export default function Imitanciometria() {
             </Button>
           </div>
 
-          {!isSecretaria && exam.status !== 'finalizado' && (
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              <Button
-                size="sm"
-                onClick={() => handleSave(false)}
-                disabled={saving}
-                className="bg-slate-700 hover:bg-slate-800 text-white h-8 text-xs font-semibold rounded-lg"
-              >
-                {saving ? (
-                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                ) : (
-                  <Save className="w-3.5 h-3.5 mr-1" />
-                )}
-                Salvar Rascunho
-              </Button>
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => window.print()}
+              className="border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold h-8 rounded-lg"
+            >
+              <Printer className="w-3.5 h-3.5 mr-1.5" />
+              Imprimir Laudo
+            </Button>
 
-              <Button
-                size="sm"
-                onClick={() => handleSave(true)}
-                disabled={saving}
-                className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs font-semibold rounded-lg shadow-sm"
-              >
-                {saving ? (
-                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                )}
-                Finalizar
-              </Button>
-            </div>
-          )}
+            {!isSecretaria && exam.status !== 'finalizado' && (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => handleSave(false)}
+                  disabled={saving}
+                  className="bg-slate-700 hover:bg-slate-800 text-white h-8 text-xs font-semibold rounded-lg"
+                >
+                  {saving ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <Save className="w-3.5 h-3.5 mr-1" />
+                  )}
+                  Salvar Rascunho
+                </Button>
+
+                <Button
+                  size="sm"
+                  onClick={() => handleSave(true)}
+                  disabled={saving}
+                  className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs font-semibold rounded-lg shadow-sm"
+                >
+                  {saving ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                  )}
+                  Finalizar
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Modal de pré-visualização do PDF */}
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Pré-visualização — Imitanciometria</DialogTitle>
-          </DialogHeader>
-          <div className="border border-slate-200 rounded-lg p-4 bg-white">
-            <ImitanciometriaPrint
-              data={buildPrintData()}
-              patient={patient}
-              clinicSettings={clinicSettings}
-              professional={professionalData}
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              variant="outline"
-              onClick={() => setPreviewOpen(false)}
-              className="rounded-lg text-xs"
-            >
-              Fechar
-            </Button>
-            <Button
-              onClick={() => window.print()}
-              className="rounded-lg text-xs bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Printer className="w-4 h-4 mr-1.5" />
-              Imprimir
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

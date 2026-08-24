@@ -50,6 +50,14 @@ export interface TimpanogramChartProps {
   showTitle?: boolean
   /** Exibir legenda OD/OE. Padrão true. */
   showLegend?: boolean
+  /** Min da pressão X. Padrão -400 (ou -300 no modo clínico de impressão). */
+  pMin?: number
+  /** Max da pressão X. Padrão +200 (ou +300 no modo clínico de impressão). */
+  pMax?: number
+  /** Estilo de grade densa tipo folha milimetrada padrão clínico (como na imagem). */
+  denseGrid?: boolean
+  /** Eixo Y do lado direito (como na imagem). */
+  yAxisRight?: boolean
   /** Classe CSS extra para o <svg>. */
   className?: string
   /** Style inline extra para o <svg>. */
@@ -59,8 +67,8 @@ export interface TimpanogramChartProps {
 const COLOR_OD = '#DC2626'
 const COLOR_OE = '#2563EB'
 
-const P_MIN = -400
-const P_MAX = 200
+const DEFAULT_P_MIN = -400
+const DEFAULT_P_MAX = 200
 const C_MIN = 0
 const C_MAX = 2.5
 
@@ -81,7 +89,11 @@ function normalizeTipo(tipo: string | null | undefined): 'A' | 'Ad' | 'As' | 'B'
  * Sintetiza uma curva gaussiana a partir dos parâmetros da timpanometria.
  * Retorna pontos {pressao, complacencia} de -400 a +200 daPa.
  */
-function synthCurve(timp: TimpanogramTimpHint | null | undefined): TimpanogramPoint[] | null {
+function synthCurve(
+  timp: TimpanogramTimpHint | null | undefined,
+  minP = DEFAULT_P_MIN,
+  maxP = DEFAULT_P_MAX,
+): TimpanogramPoint[] | null {
   if (!timp) return null
 
   const num = (v: unknown): number | null => {
@@ -108,7 +120,7 @@ function synthCurve(timp: TimpanogramTimpHint | null | undefined): TimpanogramPo
     const pts: TimpanogramPoint[] = []
     const N = 60
     for (let i = 0; i <= N; i++) {
-      const p = P_MIN + ((P_MAX - P_MIN) * i) / N
+      const p = minP + ((maxP - minP) * i) / N
       pts.push({ pressao: Math.round(p), complacencia: Number(flatC.toFixed(3)) })
     }
     return pts
@@ -128,7 +140,7 @@ function synthCurve(timp: TimpanogramTimpHint | null | undefined): TimpanogramPo
   const N = 150
   const pts: TimpanogramPoint[] = []
   for (let i = 0; i <= N; i++) {
-    const p = P_MIN + ((P_MAX - P_MIN) * i) / N
+    const p = minP + ((maxP - minP) * i) / N
     const c = amp * Math.exp(-((p - peakP) ** 2) / (2 * sigma * sigma))
     pts.push({ pressao: Math.round(p), complacencia: Number(Math.max(0, c).toFixed(3)) })
   }
@@ -151,29 +163,54 @@ export const TimpanogramChart: React.FC<TimpanogramChartProps> = ({
   preserveAspectRatio = 'xMidYMid meet',
   showTitle = true,
   showLegend = true,
+  pMin = DEFAULT_P_MIN,
+  pMax = DEFAULT_P_MAX,
+  denseGrid = false,
+  yAxisRight = false,
   className,
   style,
 }) => {
   const W = width
   const H = height
-  const padL = W <= 280 ? 28 : 34
-  const padR = W <= 280 ? 8 : 12
+  const padL = denseGrid || yAxisRight ? (W <= 280 ? 12 : 20) : W <= 280 ? 28 : 34
+  const padR = denseGrid || yAxisRight ? (W <= 280 ? 28 : 36) : W <= 280 ? 8 : 12
   const padT = showTitle ? (H <= 120 ? 16 : 22) : H <= 120 ? 6 : 10
-  const padB = H <= 120 ? 20 : 26
+  const padB = H <= 120 ? 16 : 22
   const plotW = W - padL - padR
   const plotH = H - padT - padB
 
+  const P_MIN_VAL = pMin
+  const P_MAX_VAL = pMax
+
   const xOf = (p: number) =>
-    padL + ((Math.max(P_MIN, Math.min(P_MAX, p)) - P_MIN) / (P_MAX - P_MIN)) * plotW
+    padL +
+    ((Math.max(P_MIN_VAL, Math.min(P_MAX_VAL, p)) - P_MIN_VAL) / (P_MAX_VAL - P_MIN_VAL)) * plotW
   const yOf = (c: number) =>
     padT + plotH - ((Math.max(C_MIN, Math.min(C_MAX, c)) - C_MIN) / (C_MAX - C_MIN)) * plotH
 
-  const ticksX = [-400, -300, -200, -100, 0, 100, 200]
-  const ticksY = [0, 0.5, 1, 1.5, 2, 2.5]
+  const ticksX =
+    P_MIN_VAL === -300 && P_MAX_VAL === 300
+      ? [-300, -200, -100, -50, 0, 50, 100, 200, 300]
+      : [-400, -300, -200, -100, 0, 100, 200]
+
+  const ticksY =
+    denseGrid || yAxisRight
+      ? [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5]
+      : [0, 0.5, 1, 1.5, 2, 2.5]
+
   const zeroX = xOf(0)
 
-  const odCurve = hasRealPoints(odPoints) ? odPoints : synthCurve(odTimp)
-  const oeCurve = hasRealPoints(oePoints) ? oePoints : synthCurve(oeTimp)
+  // Grade densa intermediária vertical entre -100 e +100
+  const denseVerticals =
+    denseGrid && P_MIN_VAL === -300 && P_MAX_VAL === 300
+      ? [
+          -100, -90, -80, -70, -60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90,
+          100,
+        ]
+      : []
+
+  const odCurve = hasRealPoints(odPoints) ? odPoints : synthCurve(odTimp, P_MIN_VAL, P_MAX_VAL)
+  const oeCurve = hasRealPoints(oePoints) ? oePoints : synthCurve(oeTimp, P_MIN_VAL, P_MAX_VAL)
 
   const pathFromPoints = (pts: TimpanogramPoint[] | null): string => {
     if (!pts || pts.length < 2) return ''
@@ -221,76 +258,117 @@ export const TimpanogramChart: React.FC<TimpanogramChartProps> = ({
             x2={W - padR}
             y1={yOf(c)}
             y2={yOf(c)}
-            stroke="#cbd5e1"
-            strokeWidth={0.5}
-            strokeDasharray="2 2"
+            stroke={denseGrid ? '#000000' : '#cbd5e1'}
+            strokeWidth={denseGrid ? 0.6 : 0.5}
+            strokeDasharray={denseGrid ? undefined : '2 2'}
           />
-          <text
-            x={padL - 3}
-            y={yOf(c) + 3}
-            textAnchor="end"
-            style={{ fontSize: 7, fill: '#64748b' }}
-          >
-            {Number.isInteger(c) ? c.toFixed(0) : c.toFixed(1)}
-          </text>
+          {yAxisRight ? (
+            <text
+              x={W - padR + 3}
+              y={yOf(c) + 3}
+              textAnchor="start"
+              style={{
+                fontSize: 6.5,
+                fill: '#000000',
+                fontFamily: 'Arial, sans-serif',
+                fontWeight: 500,
+              }}
+            >
+              {c === 0 ? '' : String(c).replace('.', ',')}
+            </text>
+          ) : (
+            <text
+              x={padL - 3}
+              y={yOf(c) + 3}
+              textAnchor="end"
+              style={{ fontSize: 7, fill: '#64748b' }}
+            >
+              {Number.isInteger(c) ? c.toFixed(0) : c.toFixed(1)}
+            </text>
+          )}
         </g>
       ))}
 
-      {/* Grade vertical (pressão) */}
-      {ticksX.map((p) => (
-        <g key={`x-${p}`}>
+      {/* Grade vertical densa tipo folha milimetrada central (-100 a +100) */}
+      {denseVerticals.length > 0 &&
+        denseVerticals.map((p) => (
           <line
+            key={`dense-x-${p}`}
             x1={xOf(p)}
             x2={xOf(p)}
             y1={padT}
             y2={padT + plotH}
-            stroke={p === 0 ? '#94a3b8' : '#e2e8f0'}
-            strokeWidth={p === 0 ? 0.7 : 0.4}
-            strokeDasharray={p === 0 ? undefined : '2 2'}
+            stroke="#000000"
+            strokeWidth={p === 0 || p === -100 || p === 100 || p === -50 || p === 50 ? 0.7 : 0.35}
           />
+        ))}
+
+      {/* Grade vertical principal (pressão) */}
+      {ticksX.map((p) => (
+        <g key={`x-${p}`}>
+          {denseVerticals.length === 0 && (
+            <line
+              x1={xOf(p)}
+              x2={xOf(p)}
+              y1={padT}
+              y2={padT + plotH}
+              stroke={denseGrid ? '#000000' : p === 0 ? '#94a3b8' : '#e2e8f0'}
+              strokeWidth={denseGrid ? (p === 0 ? 0.8 : 0.6) : p === 0 ? 0.7 : 0.4}
+              strokeDasharray={denseGrid ? undefined : p === 0 ? undefined : '2 2'}
+            />
+          )}
           <text
             x={xOf(p)}
-            y={padT + plotH + 10}
+            y={padT + plotH + 9}
             textAnchor="middle"
-            style={{ fontSize: 7, fill: '#64748b' }}
+            style={{
+              fontSize: denseGrid ? 6.5 : 7,
+              fill: denseGrid ? '#000000' : '#64748b',
+              fontFamily: 'Arial, sans-serif',
+              fontWeight: 500,
+            }}
           >
             {p}
           </text>
         </g>
       ))}
 
-      {/* Eixos */}
-      <line
-        x1={padL}
-        x2={W - padR}
-        y1={padT + plotH}
-        y2={padT + plotH}
-        stroke="#475569"
-        strokeWidth={0.8}
+      {/* Moldura da caixa de plotagem */}
+      <rect
+        x={padL}
+        y={padT}
+        width={plotW}
+        height={plotH}
+        fill="none"
+        stroke="#000000"
+        strokeWidth={1}
       />
-      <line x1={padL} x2={padL} y1={padT} y2={padT + plotH} stroke="#475569" strokeWidth={0.8} />
 
       {/* Linha zero (pressão) destacada */}
-      <line x1={zeroX} x2={zeroX} y1={padT} y2={padT + plotH} stroke="#94a3b8" strokeWidth={0.6} />
+      <line x1={zeroX} x2={zeroX} y1={padT} y2={padT + plotH} stroke="#000000" strokeWidth={0.8} />
 
-      {/* Labels dos eixos */}
-      <text
-        x={padL + plotW / 2}
-        y={H - 4}
-        textAnchor="middle"
-        style={{ fontSize: 8, fontWeight: 600, fill: '#475569' }}
-      >
-        Pressão (daPa)
-      </text>
-      <text
-        x={10}
-        y={padT + plotH / 2}
-        textAnchor="middle"
-        style={{ fontSize: 8, fontWeight: 600, fill: '#475569' }}
-        transform={`rotate(-90 10 ${padT + plotH / 2})`}
-      >
-        Complacência (ml)
-      </text>
+      {/* Labels dos eixos (quando não está em modo denseGrid limpo de impressão) */}
+      {!denseGrid && (
+        <>
+          <text
+            x={padL + plotW / 2}
+            y={H - 4}
+            textAnchor="middle"
+            style={{ fontSize: 8, fontWeight: 600, fill: '#475569' }}
+          >
+            Pressão (daPa)
+          </text>
+          <text
+            x={10}
+            y={padT + plotH / 2}
+            textAnchor="middle"
+            style={{ fontSize: 8, fontWeight: 600, fill: '#475569' }}
+            transform={`rotate(-90 10 ${padT + plotH / 2})`}
+          >
+            Complacência (ml)
+          </text>
+        </>
+      )}
 
       {/* Curvas */}
       {oePath && (
