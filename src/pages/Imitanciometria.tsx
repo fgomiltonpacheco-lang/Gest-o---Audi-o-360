@@ -2103,10 +2103,7 @@ export default function Imitanciometria() {
               Fechar
             </Button>
             <Button
-              onClick={() => {
-                setPreviewOpen(false)
-                setTimeout(() => window.print(), 100)
-              }}
+              onClick={() => window.print()}
               className="rounded-lg text-xs bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Printer className="w-4 h-4 mr-1.5" />
@@ -2115,16 +2112,6 @@ export default function Imitanciometria() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Bloco oculto de laudo para impressão via window.print() */}
-      <div className="hidden print:block">
-        <ImitanciometriaPrint
-          data={buildPrintData()}
-          patient={patient}
-          clinicSettings={clinicSettings}
-          professional={professionalData}
-        />
-      </div>
     </div>
   )
 }
