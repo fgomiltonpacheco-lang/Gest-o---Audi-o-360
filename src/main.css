@@ -361,28 +361,40 @@
   }
 
   .imitanciometria-print {
-    font-size: 5pt !important;
-    line-height: 1;
-    padding: 0 !important;
-    max-width: 100% !important;
+    font-size: 8pt !important;
+    line-height: 1.3 !important;
+    padding: 0 8mm !important;
+    max-width: 190mm !important;
+    margin: 0 auto !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
   }
 
   .imitanciometria-print h2 {
-    font-size: 7pt !important;
-    margin: 0 !important;
+    font-size: 11pt !important;
+    margin-bottom: 3mm !important;
   }
 
   .imitanciometria-print img {
-    max-height: 22px !important;
+    max-height: 45px !important;
+    max-width: 180px !important;
+  }
+
+  .imitanciometria-print svg {
+    max-height: 100px !important;
+    max-width: 260px !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .imitanciometria-print .timp-chart-wrapper {
+    height: 75px !important;
+    overflow: hidden !important;
   }
 
   .imitanciometria-print table {
-    font-size: 4.8pt !important;
-  }
-
-  .imitanciometria-print th,
-  .imitanciometria-print td {
-    padding: 0 1px !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
   }
 
   .imitanciometria-print .print\:hidden {
@@ -392,12 +404,6 @@
   /* Mostra apenas a área de impressão */
   #print-root {
     display: block !important;
-  }
-
-  /* Imitanciometria: permitir quebra natural de tabelas para caber em 1 página */
-  .imitanciometria-print table {
-    break-inside: auto !important;
-    page-break-inside: auto !important;
   }
 
   h1,

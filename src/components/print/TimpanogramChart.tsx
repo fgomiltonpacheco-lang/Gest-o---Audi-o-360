@@ -40,6 +40,12 @@ export interface TimpanogramChartProps {
   width?: number
   /** Altura do viewBox (px). Padrão 180. */
   height?: number
+  /** Largura SVG explícita (ex: 260 ou '100%'). Se não definida usa '100%'. */
+  svgWidth?: number | string
+  /** Altura SVG explícita (ex: 100 ou '100%'). Se não definida usa '100%'. */
+  svgHeight?: number | string
+  /** Preserve aspect ratio do SVG. Padrão 'xMidYMid meet'. */
+  preserveAspectRatio?: string
   /** Exibir título "Curva Timpanométrica". Padrão true. */
   showTitle?: boolean
   /** Exibir legenda OD/OE. Padrão true. */
@@ -140,6 +146,9 @@ export const TimpanogramChart: React.FC<TimpanogramChartProps> = ({
   oeTimp,
   width = 320,
   height = 180,
+  svgWidth = '100%',
+  svgHeight = '100%',
+  preserveAspectRatio = 'xMidYMid meet',
   showTitle = true,
   showLegend = true,
   className,
@@ -147,10 +156,10 @@ export const TimpanogramChart: React.FC<TimpanogramChartProps> = ({
 }) => {
   const W = width
   const H = height
-  const padL = 34
-  const padR = 12
-  const padT = showTitle ? 22 : 10
-  const padB = 26
+  const padL = W <= 280 ? 28 : 34
+  const padR = W <= 280 ? 8 : 12
+  const padT = showTitle ? (H <= 120 ? 16 : 22) : H <= 120 ? 6 : 10
+  const padB = H <= 120 ? 20 : 26
   const plotW = W - padL - padR
   const plotH = H - padT - padB
 
@@ -182,10 +191,10 @@ export const TimpanogramChart: React.FC<TimpanogramChartProps> = ({
 
   return (
     <svg
-      width="100%"
-      height="100%"
+      width={svgWidth}
+      height={svgHeight}
       viewBox={`0 0 ${W} ${H}`}
-      preserveAspectRatio="xMidYMid meet"
+      preserveAspectRatio={preserveAspectRatio}
       className={className}
       style={{ display: 'block', ...style }}
       xmlns="http://www.w3.org/2000/svg"
