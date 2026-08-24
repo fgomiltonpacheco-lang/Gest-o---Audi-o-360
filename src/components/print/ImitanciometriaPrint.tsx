@@ -166,9 +166,13 @@ export function ImitanciometriaPrint({
   const odTimp = data.timpanometria.OD
   const oeTimp = data.timpanometria.OE
 
-  const fmtNum = (v: number | null | undefined) => {
-    if (v === null || v === undefined || isNaN(Number(v))) return '—'
-    return String(v)
+  const fmtNum = (v: unknown) => {
+    if (v === null || v === undefined || v === '') return '—'
+    const str = String(v).trim().replace(',', '.')
+    if (str === '' || str === '—' || str === '-') return '—'
+    const num = Number(str)
+    if (isNaN(num)) return str
+    return String(num)
   }
 
   // Reflexos: helper para pegar valor da reflexGrid ou da estrutura clássica
@@ -532,10 +536,18 @@ export function ImitanciometriaPrint({
                 GRADIENTE / COMPLIÂNCIA ESTÁTICA (ml)
               </td>
               <td style={{ ...tdStyle, color: '#dc2626', fontWeight: 700 }}>
-                {fmtNum(odTimp?.gradiente_curva ?? odTimp?.complacencia)}
+                {fmtNum(
+                  odTimp?.gradiente_curva !== null && odTimp?.gradiente_curva !== undefined
+                    ? odTimp.gradiente_curva
+                    : odTimp?.complacencia,
+                )}
               </td>
               <td style={{ ...tdStyle, color: '#2563eb', fontWeight: 700 }}>
-                {fmtNum(oeTimp?.gradiente_curva ?? oeTimp?.complacencia)}
+                {fmtNum(
+                  oeTimp?.gradiente_curva !== null && oeTimp?.gradiente_curva !== undefined
+                    ? oeTimp.gradiente_curva
+                    : oeTimp?.complacencia,
+                )}
               </td>
             </tr>
           </tbody>

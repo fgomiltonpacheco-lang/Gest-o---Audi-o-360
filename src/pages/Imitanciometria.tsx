@@ -1243,8 +1243,8 @@ export default function Imitanciometria() {
       const getFreq = (f: 500 | 1000 | 2000 | 4000) => {
         const val =
           via === 'contra_lateral' ? reflexGrid[side][f].refl_contra : reflexGrid[side][f].ipsi
-        if (val === 'AUS' || val === '' || isNaN(Number(val))) return null
-        return Number(val)
+        if (val === 'AUS' || val === '' || isNaN(Number(String(val).replace(',', '.')))) return null
+        return Number(String(val).replace(',', '.'))
       }
       return {
         orelha,
@@ -1256,6 +1256,48 @@ export default function Imitanciometria() {
         status: '',
       }
     }
+
+    const odPressao =
+      numOr(summaryData.pressao_om_od) !== null
+        ? numOr(summaryData.pressao_om_od)
+        : numOr(rawData.od_pressao_media) !== null
+          ? numOr(rawData.od_pressao_media)
+          : timpOD.pressao_pico
+    const odCompl =
+      numOr(summaryData.max_relax_od) !== null
+        ? numOr(summaryData.max_relax_od)
+        : timpOD.complacencia
+    const odVolume =
+      numOr(summaryData.compl_200_od) !== null
+        ? numOr(summaryData.compl_200_od)
+        : numOr(rawData.od_volume_media) !== null
+          ? numOr(rawData.od_volume_media)
+          : timpOD.volume_meato
+    const odGrad =
+      numOr(summaryData.compl_estatica_od) !== null
+        ? numOr(summaryData.compl_estatica_od)
+        : timpOD.gradiente_curva
+
+    const oePressao =
+      numOr(summaryData.pressao_om_oe) !== null
+        ? numOr(summaryData.pressao_om_oe)
+        : numOr(rawData.oe_pressao_media) !== null
+          ? numOr(rawData.oe_pressao_media)
+          : timpOE.pressao_pico
+    const oeCompl =
+      numOr(summaryData.max_relax_oe) !== null
+        ? numOr(summaryData.max_relax_oe)
+        : timpOE.complacencia
+    const oeVolume =
+      numOr(summaryData.compl_200_oe) !== null
+        ? numOr(summaryData.compl_200_oe)
+        : numOr(rawData.oe_volume_media) !== null
+          ? numOr(rawData.oe_volume_media)
+          : timpOE.volume_meato
+    const oeGrad =
+      numOr(summaryData.compl_estatica_oe) !== null
+        ? numOr(summaryData.compl_estatica_oe)
+        : timpOE.gradiente_curva
 
     return {
       paciente_nome: exam.paciente_nome || patient?.name || '',
@@ -1288,54 +1330,30 @@ export default function Imitanciometria() {
         oe_alterada: exam.meatoscopia_oe_alterada,
         oe_obs: exam.meatoscopia_oe_obs,
       },
-      tipo_curva_od: exam.tipo_curva_od,
-      tipo_curva_oe: exam.tipo_curva_oe,
+      tipo_curva_od: exam.tipo_curva_od || timpOD.tipo_curva,
+      tipo_curva_oe: exam.tipo_curva_oe || timpOE.tipo_curva,
       reflexos_status: exam.reflexos_status,
       laudo: exam.laudo,
       referencias: exam.referencias,
       timpanometria: {
         OD: {
-          volume_meato: summaryData.compl_200_od
-            ? Number(summaryData.compl_200_od)
-            : rawData.od_volume_media
-              ? Number(rawData.od_volume_media)
-              : timpOD.volume_meato,
-          complacencia: summaryData.max_relax_od
-            ? Number(summaryData.max_relax_od)
-            : timpOD.complacencia,
+          volume_meato: odVolume,
+          complacencia: odCompl,
           pressao_maxima: timpOD.pressao_maxima,
           tipo_curva: exam.tipo_curva_od || timpOD.tipo_curva,
-          pressao_pico: summaryData.pressao_om_od
-            ? Number(summaryData.pressao_om_od)
-            : rawData.od_pressao_media
-              ? Number(rawData.od_pressao_media)
-              : timpOD.pressao_pico,
-          gradiente_curva: summaryData.compl_estatica_od
-            ? Number(summaryData.compl_estatica_od)
-            : timpOD.gradiente_curva,
+          pressao_pico: odPressao,
+          gradiente_curva: odGrad,
           curva_descricao: timpOD.curva_descricao,
           observacoes: timpOD.observacoes,
           curva_timpanometrica: timpOD.curva_timpanometrica ?? null,
         },
         OE: {
-          volume_meato: summaryData.compl_200_oe
-            ? Number(summaryData.compl_200_oe)
-            : rawData.oe_volume_media
-              ? Number(rawData.oe_volume_media)
-              : timpOE.volume_meato,
-          complacencia: summaryData.max_relax_oe
-            ? Number(summaryData.max_relax_oe)
-            : timpOE.complacencia,
+          volume_meato: oeVolume,
+          complacencia: oeCompl,
           pressao_maxima: timpOE.pressao_maxima,
           tipo_curva: exam.tipo_curva_oe || timpOE.tipo_curva,
-          pressao_pico: summaryData.pressao_om_oe
-            ? Number(summaryData.pressao_om_oe)
-            : rawData.oe_pressao_media
-              ? Number(rawData.oe_pressao_media)
-              : timpOE.pressao_pico,
-          gradiente_curva: summaryData.compl_estatica_oe
-            ? Number(summaryData.compl_estatica_oe)
-            : timpOE.gradiente_curva,
+          pressao_pico: oePressao,
+          gradiente_curva: oeGrad,
           curva_descricao: timpOE.curva_descricao,
           observacoes: timpOE.observacoes,
           curva_timpanometrica: timpOE.curva_timpanometrica ?? null,
@@ -1426,48 +1444,35 @@ export default function Imitanciometria() {
             PDF
           </Button>
 
-          {!isSecretaria && (
+          {!isSecretaria && exam.status !== 'finalizado' && (
             <>
-              {exam.status === 'finalizado' ? (
-                <Button
-                  size="sm"
-                  onClick={() => setField('status', 'rascunho')}
-                  className="bg-amber-600 hover:bg-amber-700 text-white h-8 text-xs font-semibold rounded-lg"
-                >
-                  <Pencil className="w-3.5 h-3.5 mr-1" />
-                  Editar Exame
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    size="sm"
-                    onClick={() => handleSave(false)}
-                    disabled={saving}
-                    className="bg-slate-700 hover:bg-slate-800 text-white h-8 text-xs font-semibold rounded-lg"
-                  >
-                    {saving ? (
-                      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                    ) : (
-                      <Save className="w-3.5 h-3.5 mr-1" />
-                    )}
-                    Salvar Rascunho
-                  </Button>
+              <Button
+                size="sm"
+                onClick={() => handleSave(false)}
+                disabled={saving}
+                className="bg-slate-700 hover:bg-slate-800 text-white h-8 text-xs font-semibold rounded-lg"
+              >
+                {saving ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                ) : (
+                  <Save className="w-3.5 h-3.5 mr-1" />
+                )}
+                Salvar Rascunho
+              </Button>
 
-                  <Button
-                    size="sm"
-                    onClick={() => handleSave(true)}
-                    disabled={saving}
-                    className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs font-semibold rounded-lg shadow-sm"
-                  >
-                    {saving ? (
-                      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                    )}
-                    Finalizar
-                  </Button>
-                </>
-              )}
+              <Button
+                size="sm"
+                onClick={() => handleSave(true)}
+                disabled={saving}
+                className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs font-semibold rounded-lg shadow-sm"
+              >
+                {saving ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                )}
+                Finalizar
+              </Button>
             </>
           )}
         </div>
@@ -2034,48 +2039,35 @@ export default function Imitanciometria() {
             </Button>
           </div>
 
-          {!isSecretaria && (
+          {!isSecretaria && exam.status !== 'finalizado' && (
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              {exam.status === 'finalizado' ? (
-                <Button
-                  size="sm"
-                  onClick={() => setField('status', 'rascunho')}
-                  className="bg-amber-600 hover:bg-amber-700 text-white h-8 text-xs font-semibold rounded-lg"
-                >
-                  <Pencil className="w-3.5 h-3.5 mr-1" />
-                  Editar Exame
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    size="sm"
-                    onClick={() => handleSave(false)}
-                    disabled={saving}
-                    className="bg-slate-700 hover:bg-slate-800 text-white h-8 text-xs font-semibold rounded-lg"
-                  >
-                    {saving ? (
-                      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                    ) : (
-                      <Save className="w-3.5 h-3.5 mr-1" />
-                    )}
-                    Salvar Rascunho
-                  </Button>
+              <Button
+                size="sm"
+                onClick={() => handleSave(false)}
+                disabled={saving}
+                className="bg-slate-700 hover:bg-slate-800 text-white h-8 text-xs font-semibold rounded-lg"
+              >
+                {saving ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                ) : (
+                  <Save className="w-3.5 h-3.5 mr-1" />
+                )}
+                Salvar Rascunho
+              </Button>
 
-                  <Button
-                    size="sm"
-                    onClick={() => handleSave(true)}
-                    disabled={saving}
-                    className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs font-semibold rounded-lg shadow-sm"
-                  >
-                    {saving ? (
-                      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                    )}
-                    Finalizar
-                  </Button>
-                </>
-              )}
+              <Button
+                size="sm"
+                onClick={() => handleSave(true)}
+                disabled={saving}
+                className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs font-semibold rounded-lg shadow-sm"
+              >
+                {saving ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                )}
+                Finalizar
+              </Button>
             </div>
           )}
         </div>
