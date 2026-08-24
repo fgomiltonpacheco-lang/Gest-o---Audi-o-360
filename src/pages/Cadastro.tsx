@@ -56,10 +56,21 @@ export default function Cadastro() {
   // Carrega planos da API pública e pré-seleciona o Profissional.
   useEffect(() => {
     let active = true
-    pb.send('/api/public/planos', {})
-      .then((res: any) => {
+    pb.collection('planos')
+      .getFullList({ filter: 'ativo = true', sort: 'preco_mensal' })
+      .then((records: any[]) => {
         if (!active) return
-        const list: Plano[] = res?.planos || []
+        const list: Plano[] = (records || []).map((r) => ({
+          id: r.id,
+          nome: r.nome,
+          preco_mensal: r.preco_mensal,
+          funcionalidades: r.funcionalidades || [],
+          max_profissionais: r.max_profissionais,
+          max_pacientes: r.max_pacientes,
+          ativo: r.ativo,
+          created: r.created || '',
+          updated: r.updated || '',
+        }))
         setPlanos(list)
         // Pré-seleciona "Profissional" se existir; senão o primeiro.
         const prof = list.find((p) => p.nome.toLowerCase().indexOf('profis') >= 0)
