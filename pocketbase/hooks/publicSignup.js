@@ -74,13 +74,17 @@ routerAdd('GET', '/api/public/planos', function (c) {
     var out = []
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i]
+      var funcs = r.get('funcionalidades') || []
       out.push({
         id: r.get('id'),
         nome: r.getString('nome') || '',
         preco_mensal: Number(r.get('preco_mensal')) || 0,
-        funcionalidades: r.get('funcionalidades') || [],
+        funcionalidades: funcs,
+        recursos: funcs,
         max_profissionais: Number(r.get('max_profissionais')) || 0,
+        max_usuarios: Number(r.get('max_profissionais')) || 0,
         max_pacientes: Number(r.get('max_pacientes')) || 0,
+        ativo: r.get('ativo') !== false,
       })
     }
     return c.json(200, { planos: out })
