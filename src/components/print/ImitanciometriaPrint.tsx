@@ -203,8 +203,8 @@ export function ImitanciometriaPrint({
   // Estilos compactos para garantir que caiba em 1 página A4
   const thStyle: React.CSSProperties = {
     border: '1px solid #000',
-    padding: '1px 3px',
-    fontSize: '6.5pt',
+    padding: '0.5px 2px',
+    fontSize: '5.5pt',
     fontWeight: 700,
     textAlign: 'center',
     background: '#ffffff',
@@ -213,16 +213,16 @@ export function ImitanciometriaPrint({
 
   const tdStyle: React.CSSProperties = {
     border: '1px solid #000',
-    padding: '1px 3px',
-    fontSize: '6.5pt',
+    padding: '0.5px 2px',
+    fontSize: '5.5pt',
     textAlign: 'center',
     lineHeight: 1.1,
   }
 
   const tdHeaderStyle: React.CSSProperties = {
     border: '1px solid #000',
-    padding: '1px 4px',
-    fontSize: '6.5pt',
+    padding: '0.5px 2px',
+    fontSize: '5.5pt',
     fontWeight: 700,
     textAlign: 'left',
     background: '#ffffff',
@@ -236,23 +236,23 @@ export function ImitanciometriaPrint({
       className="imitanciometria-print audiometry-print"
       style={{
         color: '#000000',
-        fontSize: '7.5pt',
+        fontSize: '6pt',
         fontFamily: 'Arial, sans-serif',
-        lineHeight: 1.15,
+        lineHeight: 1.1,
         maxWidth: '190mm',
         margin: '0 auto',
-        padding: '1mm 2mm',
+        padding: '0',
         boxSizing: 'border-box',
       }}
     >
       {/* 1. Logo centralizada no topo */}
-      <div style={{ textAlign: 'center', marginBottom: '2px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '2px', pageBreakInside: 'avoid' }}>
         <img
           src={logoSrc}
           alt={clinicName}
           style={{
-            maxHeight: '40px',
-            maxWidth: '180px',
+            maxHeight: '28px',
+            maxWidth: '140px',
             width: 'auto',
             display: 'inline-block',
             objectFit: 'contain',
@@ -261,14 +261,14 @@ export function ImitanciometriaPrint({
       </div>
 
       {/* 2. Cabeçalho com dados do paciente e equipamento */}
-      <div style={{ fontSize: '7.5pt', marginBottom: '3px' }}>
+      <div style={{ fontSize: '6pt', marginBottom: '3px', pageBreakInside: 'avoid' }}>
         {/* Linha 1: Nome + Data */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'baseline',
-            marginBottom: '2px',
+            marginBottom: '1px',
           }}
         >
           <div style={{ flex: 1, marginRight: '12px', display: 'flex', alignItems: 'baseline' }}>
@@ -306,7 +306,7 @@ export function ImitanciometriaPrint({
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'baseline',
-            marginBottom: '2px',
+            marginBottom: '1px',
             flexWrap: 'wrap',
             gap: '3px 10px',
           }}
@@ -366,6 +366,7 @@ export function ImitanciometriaPrint({
             justifyContent: 'space-between',
             alignItems: 'baseline',
             marginTop: '1px',
+            marginBottom: '1px',
           }}
         >
           <div style={{ flex: 1, marginRight: '12px' }}>
@@ -378,15 +379,15 @@ export function ImitanciometriaPrint({
       </div>
 
       {/* Linha divisória */}
-      <div style={{ borderTop: '2px solid #000', marginBottom: '3px' }} />
+      <div style={{ borderTop: '2px solid #000', marginBottom: '1px' }} />
 
       {/* 3. Título IMITANCIOMETRIA */}
       <h2
         style={{
           textAlign: 'center',
-          fontSize: '9.5pt',
+          fontSize: '7.5pt',
           fontWeight: 800,
-          margin: '0 0 3px 0',
+          margin: '0 0 1px 0',
           letterSpacing: '0.04em',
         }}
       >
@@ -398,8 +399,9 @@ export function ImitanciometriaPrint({
         style={{
           display: 'flex',
           justifyContent: 'space-between',
-          gap: '8px',
-          marginBottom: '4px',
+          gap: '4px',
+          marginBottom: '2px',
+          pageBreakInside: 'avoid',
         }}
       >
         {/* OD Box (Vermelho) */}
@@ -415,10 +417,10 @@ export function ImitanciometriaPrint({
             alignItems: 'center',
           }}
         >
-          <div style={{ width: '100%', height: '105px' }}>
+          <div style={{ width: '100%', height: '75px' }}>
             <TimpanogramChart
-              width={340}
-              height={150}
+              width={260}
+              height={110}
               odPoints={odTimp?.curva_timpanometrica ?? null}
               showLegend={false}
               showTitle={false}
@@ -430,7 +432,7 @@ export function ImitanciometriaPrint({
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              fontSize: '7pt',
+              fontSize: '6pt',
               fontWeight: 800,
               color: '#dc2626',
               marginTop: '1px',
@@ -455,10 +457,10 @@ export function ImitanciometriaPrint({
             alignItems: 'center',
           }}
         >
-          <div style={{ width: '100%', height: '105px' }}>
+          <div style={{ width: '100%', height: '75px' }}>
             <TimpanogramChart
-              width={340}
-              height={150}
+              width={260}
+              height={110}
               oePoints={oeTimp?.curva_timpanometrica ?? null}
               showLegend={false}
               showTitle={false}
@@ -470,7 +472,7 @@ export function ImitanciometriaPrint({
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              fontSize: '7pt',
+              fontSize: '6pt',
               fontWeight: 800,
               color: '#2563eb',
               marginTop: '1px',
@@ -484,7 +486,7 @@ export function ImitanciometriaPrint({
       </div>
 
       {/* 5. Tabela de Resumo Timpanométrico (Pressão Ouvido Médio, Compliância, Volume, Gradiente) */}
-      <div style={{ marginBottom: '4px' }}>
+      <div style={{ marginBottom: '2px', pageBreakInside: 'avoid' }}>
         <table
           style={{
             borderCollapse: 'collapse',
@@ -553,19 +555,20 @@ export function ImitanciometriaPrint({
       </div>
 
       {/* 6. Reflexos Acústicos (OD | Freq | OE) */}
-      <div style={{ marginBottom: '4px' }}>
+      <div style={{ marginBottom: '4px', pageBreakInside: 'avoid' }}>
         <div
           style={{
             textAlign: 'center',
-            fontSize: '7.5pt',
+            fontSize: '6.5pt',
             fontWeight: 800,
-            marginBottom: '2px',
+            marginBottom: '1px',
+            marginTop: '0',
             letterSpacing: '0.03em',
           }}
         >
           REFLEXOS ACÚSTICOS
         </div>
-        <div style={{ display: 'flex', gap: '4px', alignItems: 'stretch' }}>
+        <div style={{ display: 'flex', gap: '2px', alignItems: 'stretch' }}>
           {/* Tabela OD (Vermelha) */}
           <div style={{ flex: 1 }}>
             <table
@@ -583,23 +586,31 @@ export function ImitanciometriaPrint({
                       ...thStyle,
                       color: '#dc2626',
                       borderColor: '#dc2626',
-                      fontSize: '6.5pt',
+                      fontSize: '5.5pt',
                     }}
                   >
                     ORELHA DIREITA (OD)
                   </th>
                 </tr>
                 <tr>
-                  <th style={{ ...thStyle, borderColor: '#dc2626', fontSize: '6pt', width: '25%' }}>
+                  <th
+                    style={{ ...thStyle, borderColor: '#dc2626', fontSize: '5.5pt', width: '25%' }}
+                  >
                     Limiar
                   </th>
-                  <th style={{ ...thStyle, borderColor: '#dc2626', fontSize: '6pt', width: '25%' }}>
+                  <th
+                    style={{ ...thStyle, borderColor: '#dc2626', fontSize: '5.5pt', width: '25%' }}
+                  >
                     Refl. Contra D
                   </th>
-                  <th style={{ ...thStyle, borderColor: '#dc2626', fontSize: '6pt', width: '25%' }}>
+                  <th
+                    style={{ ...thStyle, borderColor: '#dc2626', fontSize: '5.5pt', width: '25%' }}
+                  >
                     Diferença
                   </th>
-                  <th style={{ ...thStyle, borderColor: '#dc2626', fontSize: '6pt', width: '25%' }}>
+                  <th
+                    style={{ ...thStyle, borderColor: '#dc2626', fontSize: '5.5pt', width: '25%' }}
+                  >
                     IPSI
                   </th>
                 </tr>
@@ -609,28 +620,28 @@ export function ImitanciometriaPrint({
                   const r = getReflexRow('od', f)
                   return (
                     <tr key={`od-${f}`}>
-                      <td style={{ ...tdStyle, borderColor: '#dc2626', fontSize: '6.5pt' }}>
+                      <td style={{ ...tdStyle, borderColor: '#dc2626', fontSize: '5.5pt' }}>
                         {r.limiar}
                       </td>
                       <td
                         style={{
                           ...tdStyle,
                           borderColor: '#dc2626',
-                          fontSize: '6.5pt',
+                          fontSize: '5.5pt',
                           fontWeight: 700,
                           color: '#dc2626',
                         }}
                       >
                         {r.contra}
                       </td>
-                      <td style={{ ...tdStyle, borderColor: '#dc2626', fontSize: '6.5pt' }}>
+                      <td style={{ ...tdStyle, borderColor: '#dc2626', fontSize: '5.5pt' }}>
                         {r.dif}
                       </td>
                       <td
                         style={{
                           ...tdStyle,
                           borderColor: '#dc2626',
-                          fontSize: '6.5pt',
+                          fontSize: '5.5pt',
                           fontWeight: 700,
                           color: '#dc2626',
                         }}
@@ -647,7 +658,7 @@ export function ImitanciometriaPrint({
           {/* Coluna Central de Frequências (Hz) */}
           <div
             style={{
-              width: '54px',
+              width: '40px',
               border: '1.2px solid #000',
               display: 'flex',
               flexDirection: 'column',
@@ -659,7 +670,7 @@ export function ImitanciometriaPrint({
               style={{
                 borderBottom: '1px solid #000',
                 padding: '1px 0',
-                fontSize: '6pt',
+                fontSize: '5.5pt',
                 fontWeight: 700,
                 textAlign: 'center',
                 background: '#f8fafc',
@@ -672,7 +683,7 @@ export function ImitanciometriaPrint({
                 key={`freq-${f}`}
                 style={{
                   textAlign: 'center',
-                  fontSize: '6.5pt',
+                  fontSize: '5.5pt',
                   fontWeight: 800,
                   padding: '1px 0',
                   color: '#1e293b',
@@ -704,23 +715,31 @@ export function ImitanciometriaPrint({
                       ...thStyle,
                       color: '#2563eb',
                       borderColor: '#2563eb',
-                      fontSize: '6.5pt',
+                      fontSize: '5.5pt',
                     }}
                   >
                     ORELHA ESQUERDA (OE)
                   </th>
                 </tr>
                 <tr>
-                  <th style={{ ...thStyle, borderColor: '#2563eb', fontSize: '6pt', width: '25%' }}>
+                  <th
+                    style={{ ...thStyle, borderColor: '#2563eb', fontSize: '5.5pt', width: '25%' }}
+                  >
                     Limiar
                   </th>
-                  <th style={{ ...thStyle, borderColor: '#2563eb', fontSize: '6pt', width: '25%' }}>
+                  <th
+                    style={{ ...thStyle, borderColor: '#2563eb', fontSize: '5.5pt', width: '25%' }}
+                  >
                     Refl. Contra E
                   </th>
-                  <th style={{ ...thStyle, borderColor: '#2563eb', fontSize: '6pt', width: '25%' }}>
+                  <th
+                    style={{ ...thStyle, borderColor: '#2563eb', fontSize: '5.5pt', width: '25%' }}
+                  >
                     Diferença
                   </th>
-                  <th style={{ ...thStyle, borderColor: '#2563eb', fontSize: '6pt', width: '25%' }}>
+                  <th
+                    style={{ ...thStyle, borderColor: '#2563eb', fontSize: '5.5pt', width: '25%' }}
+                  >
                     IPSI
                   </th>
                 </tr>
@@ -730,28 +749,28 @@ export function ImitanciometriaPrint({
                   const r = getReflexRow('oe', f)
                   return (
                     <tr key={`oe-${f}`}>
-                      <td style={{ ...tdStyle, borderColor: '#2563eb', fontSize: '6.5pt' }}>
+                      <td style={{ ...tdStyle, borderColor: '#2563eb', fontSize: '5.5pt' }}>
                         {r.limiar}
                       </td>
                       <td
                         style={{
                           ...tdStyle,
                           borderColor: '#2563eb',
-                          fontSize: '6.5pt',
+                          fontSize: '5.5pt',
                           fontWeight: 700,
                           color: '#2563eb',
                         }}
                       >
                         {r.contra}
                       </td>
-                      <td style={{ ...tdStyle, borderColor: '#2563eb', fontSize: '6.5pt' }}>
+                      <td style={{ ...tdStyle, borderColor: '#2563eb', fontSize: '5.5pt' }}>
                         {r.dif}
                       </td>
                       <td
                         style={{
                           ...tdStyle,
                           borderColor: '#2563eb',
-                          fontSize: '6.5pt',
+                          fontSize: '5.5pt',
                           fontWeight: 700,
                           color: '#2563eb',
                         }}
@@ -768,13 +787,13 @@ export function ImitanciometriaPrint({
       </div>
 
       {/* 7. Parecer Imitanciométrico / Observações */}
-      <div style={{ marginTop: '3px', marginBottom: '3px' }}>
+      <div style={{ marginTop: '1px', marginBottom: '1px', pageBreakInside: 'avoid' }}>
         <div
           style={{
             textAlign: 'center',
-            fontSize: '7.5pt',
+            fontSize: '6.5pt',
             fontWeight: 700,
-            marginBottom: '2px',
+            marginBottom: '1px',
           }}
         >
           Parecer / Observação
@@ -782,9 +801,9 @@ export function ImitanciometriaPrint({
         <div
           style={{
             border: '1.2px solid #000',
-            minHeight: '34px',
-            padding: '3px 6px',
-            fontSize: '7pt',
+            minHeight: '22px',
+            padding: '1px 4px',
+            fontSize: '5.5pt',
             lineHeight: 1.2,
             whiteSpace: 'pre-wrap',
           }}
@@ -802,7 +821,7 @@ export function ImitanciometriaPrint({
         {/* Referência teórica no rodapé da caixa de laudo */}
         <div
           style={{
-            fontSize: '5pt',
+            fontSize: '4.5pt',
             color: '#334155',
             textAlign: 'left',
             fontStyle: 'normal',
@@ -818,26 +837,28 @@ export function ImitanciometriaPrint({
       <div
         style={{
           textAlign: 'center',
-          marginTop: '6px',
-          marginBottom: '4px',
+          marginTop: '2px',
+          marginBottom: '1px',
+          pageBreakInside: 'avoid',
         }}
       >
         <div style={{ display: 'inline-block', minWidth: '220px' }}>
           <div style={{ borderTop: '1px solid #000', marginBottom: '2px' }} />
-          <div style={{ fontSize: '7.5pt', fontWeight: 700 }}>{specialistName}</div>
-          <div style={{ fontSize: '6.5pt', fontWeight: 600 }}>Fonoaudiólogo</div>
-          <div style={{ fontSize: '6.5pt' }}>Especialista em Audiologia</div>
-          <div style={{ fontSize: '6.5pt' }}>(CRFa {specialistCrfa || '—'})</div>
+          <div style={{ fontSize: '6.5pt', fontWeight: 700 }}>{specialistName}</div>
+          <div style={{ fontSize: '5.5pt', fontWeight: 600 }}>Fonoaudiólogo</div>
+          <div style={{ fontSize: '5.5pt' }}>Especialista em Audiologia</div>
+          <div style={{ fontSize: '5.5pt' }}>(CRFa {specialistCrfa || '—'})</div>
         </div>
       </div>
 
       {/* 9. Rodapé com Endereço da Clínica */}
       <div
         style={{
-          fontSize: '6.5pt',
+          fontSize: '5.5pt',
           color: '#334155',
           textAlign: 'center',
-          marginTop: '2px',
+          marginTop: '1px',
+          pageBreakInside: 'avoid',
         }}
       >
         {clinicAddress}

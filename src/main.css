@@ -402,6 +402,12 @@
     page-break-inside: avoid;
   }
 
+  /* Imitanciometria: permitir quebra natural de tabelas para caber em 1 página */
+  .imitanciometria-print table {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
   h1,
   h2,
   h3 {
