@@ -480,7 +480,11 @@ export default function Imitanciometria() {
             }
             freqs.forEach((f) => {
               const curOd = prev.od[f]
-              const odLim = curOd.limiar || foundOdThresholds[f] || ''
+              // PRIORIZA SEMPRE o valor já preenchido/salvo no exame (curOd.limiar)
+              const odLim =
+                curOd.limiar !== '' && curOd.limiar !== undefined && curOd.limiar !== null
+                  ? curOd.limiar
+                  : foundOdThresholds[f] || ''
               const odContra = curOd.refl_contra
               let odDif = curOd.diferenca
               if (
@@ -500,7 +504,11 @@ export default function Imitanciometria() {
               }
 
               const curOe = prev.oe[f]
-              const oeLim = curOe.limiar || foundOeThresholds[f] || ''
+              // PRIORIZA SEMPRE o valor já preenchido/salvo no exame (curOe.limiar)
+              const oeLim =
+                curOe.limiar !== '' && curOe.limiar !== undefined && curOe.limiar !== null
+                  ? curOe.limiar
+                  : foundOeThresholds[f] || ''
               const oeContra = curOe.refl_contra
               let oeDif = curOe.diferenca
               if (
@@ -627,9 +635,35 @@ export default function Imitanciometria() {
       try {
         const timpRecs: any[] = await pb.collection('timpanometria_dados').getFullList({
           filter: `imitanciometria_id = "${examId}"`,
+          sort: '-created',
         })
         const od = timpRecs.find((r) => r.orelha === 'OD')
         const oe = timpRecs.find((r) => r.orelha === 'OE')
+
+        let loadedSummary = {
+          pressao_om_od: '',
+          pressao_om_oe: '',
+          max_relax_od: '',
+          max_relax_oe: '',
+          compl_200_od: '',
+          compl_200_oe: '',
+          compl_estatica_od: '',
+          compl_estatica_oe: '',
+        }
+        let loadedRaw = {
+          od_pressao_inicial: '',
+          od_pressao_media: '',
+          od_pressao_final: '',
+          od_volume_inicial: '',
+          od_volume_media: '',
+          od_volume_final: '',
+          oe_pressao_inicial: '',
+          oe_pressao_media: '',
+          oe_pressao_final: '',
+          oe_volume_inicial: '',
+          oe_volume_media: '',
+          oe_volume_final: '',
+        }
 
         if (od) {
           const odCurve =
@@ -652,21 +686,13 @@ export default function Imitanciometria() {
             observacoes: od.observacoes || '',
             curva_timpanometrica: odCurve,
           })
-          setRawData((prev) => ({
-            ...prev,
-            od_pressao_media:
-              od.pressao_pico != null ? String(od.pressao_pico) : prev.od_pressao_media,
-            od_volume_media:
-              od.volume_meato != null ? String(od.volume_meato) : prev.od_volume_media,
-          }))
-          setSummaryData((prev) => ({
-            ...prev,
-            pressao_om_od: od.pressao_pico != null ? String(od.pressao_pico) : prev.pressao_om_od,
-            max_relax_od: od.complacencia != null ? String(od.complacencia) : prev.max_relax_od,
-            compl_200_od: od.volume_meato != null ? String(od.volume_meato) : prev.compl_200_od,
-            compl_estatica_od:
-              od.gradiente_curva != null ? String(od.gradiente_curva) : prev.compl_estatica_od,
-          }))
+          loadedRaw.od_pressao_media = od.pressao_pico != null ? String(od.pressao_pico) : ''
+          loadedRaw.od_volume_media = od.volume_meato != null ? String(od.volume_meato) : ''
+          loadedSummary.pressao_om_od = od.pressao_pico != null ? String(od.pressao_pico) : ''
+          loadedSummary.max_relax_od = od.complacencia != null ? String(od.complacencia) : ''
+          loadedSummary.compl_200_od = od.volume_meato != null ? String(od.volume_meato) : ''
+          loadedSummary.compl_estatica_od =
+            od.gradiente_curva != null ? String(od.gradiente_curva) : ''
         }
 
         if (oe) {
@@ -690,21 +716,18 @@ export default function Imitanciometria() {
             observacoes: oe.observacoes || '',
             curva_timpanometrica: oeCurve,
           })
-          setRawData((prev) => ({
-            ...prev,
-            oe_pressao_media:
-              oe.pressao_pico != null ? String(oe.pressao_pico) : prev.oe_pressao_media,
-            oe_volume_media:
-              oe.volume_meato != null ? String(oe.volume_meato) : prev.oe_volume_media,
-          }))
-          setSummaryData((prev) => ({
-            ...prev,
-            pressao_om_oe: oe.pressao_pico != null ? String(oe.pressao_pico) : prev.pressao_om_oe,
-            max_relax_oe: oe.complacencia != null ? String(oe.complacencia) : prev.max_relax_oe,
-            compl_200_oe: oe.volume_meato != null ? String(oe.volume_meato) : prev.compl_200_oe,
-            compl_estatica_oe:
-              oe.gradiente_curva != null ? String(oe.gradiente_curva) : prev.compl_estatica_oe,
-          }))
+          loadedRaw.oe_pressao_media = oe.pressao_pico != null ? String(oe.pressao_pico) : ''
+          loadedRaw.oe_volume_media = oe.volume_meato != null ? String(oe.volume_meato) : ''
+          loadedSummary.pressao_om_oe = oe.pressao_pico != null ? String(oe.pressao_pico) : ''
+          loadedSummary.max_relax_oe = oe.complacencia != null ? String(oe.complacencia) : ''
+          loadedSummary.compl_200_oe = oe.volume_meato != null ? String(oe.volume_meato) : ''
+          loadedSummary.compl_estatica_oe =
+            oe.gradiente_curva != null ? String(oe.gradiente_curva) : ''
+        }
+
+        if (od || oe) {
+          setRawData((prev) => ({ ...prev, ...loadedRaw }))
+          setSummaryData((prev) => ({ ...prev, ...loadedSummary }))
         }
       } catch {
         /* ignore */
@@ -787,7 +810,7 @@ export default function Imitanciometria() {
         /* ignore */
       }
 
-      // Se paciente existir, busca também os limiares da audiometria mais recente
+      // Se paciente existir e não houver limiares salvos, busca limiares da audiometria mais recente para pré-preenchimento
       if (rec.paciente_id) {
         await loadAudiometryThresholds(rec.paciente_id)
       }
@@ -1047,10 +1070,13 @@ export default function Imitanciometria() {
       if (exam.id) {
         const rec: any = await pb.collection('imitanciometrias').update(exam.id, payload)
         imitId = rec.id
+        if (finalizar) {
+          setExam((prev) => ({ ...prev, status: 'finalizado' }))
+        }
       } else {
         const rec: any = await pb.collection('imitanciometrias').create(payload)
         imitId = rec.id
-        setExam((prev) => ({ ...prev, id: imitId }))
+        setExam((prev) => ({ ...prev, id: imitId, status: finalizar ? 'finalizado' : prev.status }))
         navigate(`/pacientes/${patient.id}/imitanciometria/${imitId}`, { replace: true })
       }
 
@@ -1356,40 +1382,44 @@ export default function Imitanciometria() {
           {!isSecretaria && (
             <>
               {exam.status === 'finalizado' ? (
+                <Button
+                  size="sm"
+                  onClick={() => setField('status', 'rascunho')}
+                  className="bg-amber-600 hover:bg-amber-700 text-white h-8 text-xs font-semibold rounded-lg"
+                >
+                  <Pencil className="w-3.5 h-3.5 mr-1" />
+                  Editar Exame
+                </Button>
+              ) : (
                 <>
                   <Button
-                    variant="outline"
                     size="sm"
-                    onClick={() => {}}
-                    className="h-8 text-xs font-semibold rounded-lg text-slate-700 border-slate-300"
+                    onClick={() => handleSave(false)}
+                    disabled={saving}
+                    className="bg-slate-700 hover:bg-slate-800 text-white h-8 text-xs font-semibold rounded-lg"
                   >
-                    <Eye className="w-3.5 h-3.5 mr-1" />
-                    Visualizar Exame
+                    {saving ? (
+                      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5 mr-1" />
+                    )}
+                    Salvar Rascunho
                   </Button>
 
                   <Button
                     size="sm"
-                    onClick={() => setField('status', 'rascunho')}
-                    className="bg-amber-600 hover:bg-amber-700 text-white h-8 text-xs font-semibold rounded-lg"
+                    onClick={() => handleSave(true)}
+                    disabled={saving}
+                    className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs font-semibold rounded-lg shadow-sm"
                   >
-                    <Pencil className="w-3.5 h-3.5 mr-1" />
-                    Editar Exame
+                    {saving ? (
+                      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                    )}
+                    Finalizar
                   </Button>
                 </>
-              ) : (
-                <Button
-                  size="sm"
-                  onClick={() => handleSave(false)}
-                  disabled={saving}
-                  className="bg-slate-700 hover:bg-slate-800 text-white h-8 text-xs font-semibold rounded-lg"
-                >
-                  {saving ? (
-                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                  ) : (
-                    <Save className="w-3.5 h-3.5 mr-1" />
-                  )}
-                  Salvar
-                </Button>
               )}
             </>
           )}
@@ -1912,26 +1942,73 @@ export default function Imitanciometria() {
         </div>
 
         {/* 7. NAVEGAÇÃO (ANTERIOR / PRÓXIMO) */}
-        <div className="flex justify-between items-center pt-4 border-t border-slate-200">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate(`/pacientes/${patient.id}/audiometria/novo`)}
-            className="border-slate-300 text-slate-700 text-xs font-semibold h-8 rounded"
-          >
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            Anterior
-          </Button>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-200">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate(`/pacientes/${patient.id}/audiometria/novo`)}
+              className="border-slate-300 text-slate-700 text-xs font-semibold h-8 rounded"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Anterior
+            </Button>
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate(`/pacientes/${patient.id}/prontuario`)}
-            className="border-slate-300 text-slate-700 text-xs font-semibold h-8 rounded"
-          >
-            Próximo
-            <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate(`/pacientes/${patient.id}/prontuario`)}
+              className="border-slate-300 text-slate-700 text-xs font-semibold h-8 rounded"
+            >
+              Próximo
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+
+          {!isSecretaria && (
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              {exam.status === 'finalizado' ? (
+                <Button
+                  size="sm"
+                  onClick={() => setField('status', 'rascunho')}
+                  className="bg-amber-600 hover:bg-amber-700 text-white h-8 text-xs font-semibold rounded-lg"
+                >
+                  <Pencil className="w-3.5 h-3.5 mr-1" />
+                  Editar Exame
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    size="sm"
+                    onClick={() => handleSave(false)}
+                    disabled={saving}
+                    className="bg-slate-700 hover:bg-slate-800 text-white h-8 text-xs font-semibold rounded-lg"
+                  >
+                    {saving ? (
+                      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5 mr-1" />
+                    )}
+                    Salvar Rascunho
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    onClick={() => handleSave(true)}
+                    disabled={saving}
+                    className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs font-semibold rounded-lg shadow-sm"
+                  >
+                    {saving ? (
+                      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                    )}
+                    Finalizar
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
