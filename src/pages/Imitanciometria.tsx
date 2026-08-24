@@ -738,7 +738,7 @@ export default function Imitanciometria() {
         const newGrid = emptyReflexGrid()
         const freqs = [500, 1000, 2000, 4000] as const
 
-        // Restaura a partir de reflex_grid do registro principal (contém limiar, diferenca, etc.)
+        // Restaura a partir de reflex_grid do registro principal (contém limiar, diferenca, refl_contra, ipsi)
         let parsedGrid: any = null
         if (rec.reflex_grid) {
           if (typeof rec.reflex_grid === 'string') {
@@ -770,7 +770,7 @@ export default function Imitanciometria() {
           })
         }
 
-        // Sincroniza / complementa com reflexo_acustico_dados
+        // Sincroniza / complementa com reflexo_acustico_dados apenas preenchendo campos que estejam vazios ou definidos
         try {
           const reflexRecs: any[] = await pb.collection('reflexo_acustico_dados').getFullList({
             filter: `imitanciometria_id = "${examId}"`,
@@ -781,12 +781,16 @@ export default function Imitanciometria() {
             if (!side) return
             freqs.forEach((f) => {
               const val = r[`frequencia_${f}`]
-              if (val != null) {
+              if (val != null && String(val).trim() !== '') {
                 const valStr = String(val)
                 if (r.via === 'contra_lateral') {
-                  newGrid[side][f].refl_contra = valStr
+                  if (!newGrid[side][f].refl_contra) {
+                    newGrid[side][f].refl_contra = valStr
+                  }
                 } else if (r.via === 'ipsi_lateral') {
-                  newGrid[side][f].ipsi = valStr
+                  if (!newGrid[side][f].ipsi) {
+                    newGrid[side][f].ipsi = valStr
+                  }
                 }
               }
             })
