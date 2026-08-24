@@ -243,8 +243,6 @@ export function ImitanciometriaPrint({
         margin: '0 auto',
         padding: '1mm 2mm',
         boxSizing: 'border-box',
-        pageBreakInside: 'avoid',
-        breakInside: 'avoid',
       }}
     >
       {/* 1. Logo centralizada no topo */}
