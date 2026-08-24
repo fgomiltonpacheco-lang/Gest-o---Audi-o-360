@@ -1116,15 +1116,13 @@ export default function Imitanciometria() {
 
     try {
       let imitId: string
+      const isNewExam = !exam.id
       if (exam.id) {
         const rec: any = await pb.collection('imitanciometrias').update(exam.id, payload)
         imitId = rec.id
-        setExam((prev) => ({ ...prev, status: nextStatus }))
       } else {
         const rec: any = await pb.collection('imitanciometrias').create(payload)
         imitId = rec.id
-        setExam((prev) => ({ ...prev, id: imitId, status: nextStatus }))
-        navigate(`/pacientes/${patient.id}/imitanciometria/${imitId}`, { replace: true })
       }
 
       // Persistir Timpanometria Subcollections
@@ -1210,6 +1208,13 @@ export default function Imitanciometria() {
         } catch {
           await pb.collection('reflexo_acustico_dados').create(p)
         }
+      }
+
+      if (isNewExam) {
+        setExam((prev) => ({ ...prev, id: imitId, status: nextStatus }))
+        navigate(`/pacientes/${patient.id}/imitanciometria/${imitId}`, { replace: true })
+      } else {
+        setExam((prev) => ({ ...prev, status: nextStatus }))
       }
 
       if (finalizar) setField('status', 'finalizado')

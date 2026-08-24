@@ -329,6 +329,8 @@ export default function Audiometria() {
     return { ...base, audiometer: DEFAULT_AUDIOMETER }
   })
 
+  const readOnly = exam?.status === 'finalizado'
+
   const loadExam = useCallback(async () => {
     if (!examId || examId === 'novo') return
     setLoading(true)
