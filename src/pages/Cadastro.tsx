@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input'
 import { PasswordChecklist } from '@/components/PasswordChecklist'
 import { validatePassword } from '@/lib/passwordPolicy'
 import { maskPhone } from '@/lib/formatters'
-import { maskCNPJ } from '@/pages/saas/shared'
+import { maskCNPJ, slugify } from '@/pages/saas/shared'
 import { formatCurrency } from '@/lib/formatters'
 import { PLANO_FUNCIONALIDADE_LABELS, type Plano } from '@/types'
 import { useToast } from '@/hooks/use-toast'
@@ -110,33 +110,99 @@ export default function Cadastro() {
 
     setSubmitting(true)
     try {
-      const res: any = await pb.send('/api/public/cadastro', {
-        method: 'POST',
-        body: {
-          nome: nomeClinica.trim(),
-          cnpj: cnpj.replace(/\D/g, ''),
-          responsavel: responsavel.trim(),
-          email: email.trim().toLowerCase(),
-          telefone: telefone.trim(),
-          senha,
-          plano_id: planoSelecionado,
-        },
+      const cleanNome = nomeClinica.trim()
+      const cleanCnpj = cnpj.replace(/\D/g, '')
+      const cleanResponsavel = responsavel.trim()
+      const cleanEmail = email.trim().toLowerCase()
+      const cleanTelefone = telefone.trim()
+
+      // 1. Gera data de término do trial (14 dias a partir de hoje)
+      const dataTrialEnds = new Date()
+      dataTrialEnds.setDate(dataTrialEnds.getDate() + 14)
+      const trialEndsStr = dataTrialEnds.toISOString().split('T')[0]
+
+      // 2. Gera slug único para a clínica
+      const baseSlug = slugify(cleanNome) || 'clinica'
+      const uniqueSlug = `${baseSlug}-${Date.now().toString(36)}`
+
+      // 3. Cria o registro na coleção `clinicas`
+      const clinica = await pb.collection('clinicas').create({
+        nome: cleanNome,
+        slug: uniqueSlug,
+        email: cleanEmail,
+        cnpj: cleanCnpj,
+        telefone: cleanTelefone,
+        status: 'trial',
+        trial_ends: trialEndsStr,
+        plano_id: planoSelecionado || null,
+        onboarding_completed: false,
       })
-      if (res?.success) {
-        toast({
-          title: 'Cadastro realizado!',
-          description: 'Sua clínica foi criada. Comece seu período de teste de 14 dias.',
+
+      // 4. Cria o usuário admin na coleção `users`
+      await pb.collection('users').create({
+        email: cleanEmail,
+        password: senha,
+        passwordConfirm: senhaConfirm,
+        name: cleanResponsavel,
+        role: 'admin',
+        clinica_id: clinica.id,
+        is_super_admin: false,
+        force_password_change: false,
+      })
+
+      // 5. Busca valor do plano selecionado para registrar em pagamentos_saas
+      const planoEscolhido = planos.find((p) => p.id === planoSelecionado)
+      const valorPlano = planoEscolhido?.preco_mensal || 0
+
+      // 6. Cria o registro de trial na coleção `pagamentos_saas`
+      try {
+        await pb.collection('pagamentos_saas').create({
+          clinica_id: clinica.id,
+          plano_id: planoSelecionado || null,
+          valor: valorPlano,
+          data_vencimento: trialEndsStr,
+          status: 'trial',
+          referencia: 'trial-14dias',
+          observacoes: 'Período de teste de 14 dias (cadastro self-service).',
         })
-        navigate('/boas-vindas', { replace: true })
-      } else {
-        setErro(res?.error || 'Não foi possível concluir o cadastro.')
+      } catch (trialErr) {
+        // Não interrompe o fluxo caso o registro opcional falhe
+        console.warn('Registro de trial em pagamentos_saas:', trialErr)
       }
+
+      // 7. Autentica o usuário recém-criado
+      try {
+        await pb.collection('users').authWithPassword(cleanEmail, senha)
+      } catch (authErr) {
+        console.warn('Auto-login após cadastro:', authErr)
+      }
+
+      toast({
+        title: 'Cadastro realizado com sucesso!',
+        description: 'Sua clínica foi criada. Comece seu período de teste de 14 dias.',
+      })
+
+      // 8. Redireciona para /boas-vindas
+      navigate('/boas-vindas', { replace: true })
     } catch (err: any) {
+      console.error('Erro no cadastro:', err)
       const apiErr = err?.response?.data
-      const msg =
-        (apiErr && typeof apiErr === 'object' && (apiErr as any).error) ||
-        err?.message ||
-        'Não foi possível concluir o cadastro. Tente novamente.'
+      let msg = 'Não foi possível concluir o cadastro. Tente novamente.'
+
+      if (apiErr && typeof apiErr === 'object') {
+        if (apiErr.email?.message) {
+          msg = `E-mail: ${apiErr.email.message}`
+        } else if (apiErr.password?.message) {
+          msg = `Senha: ${apiErr.password.message}`
+        } else if (apiErr.message) {
+          msg = apiErr.message
+        } else if ((apiErr as any).error) {
+          msg = (apiErr as any).error
+        }
+      } else if (err?.message) {
+        msg = err.message
+      }
+
       setErro(msg)
     } finally {
       setSubmitting(false)

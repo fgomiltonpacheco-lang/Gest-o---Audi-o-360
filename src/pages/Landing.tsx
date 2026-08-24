@@ -117,21 +117,21 @@ export default function Landing() {
 
   useEffect(() => {
     let active = true
-    Promise.all([
-      pb
-        .collection('planos')
-        .getFullList<Plano>({
-          filter: 'ativo = true',
-          sort: 'preco_mensal',
-        })
-        .catch(() => []),
-      pb.send('/api/public/stats', {}).catch(() => ({ total_clinicas: 0 })),
-    ]).then(([planosList, statsRes]) => {
-      if (!active) return
-      setPlanos(Array.isArray(planosList) ? planosList : [])
-      setTotalClinicas((statsRes as any)?.total_clinicas ?? 0)
-      setLoading(false)
-    })
+    pb.collection('planos')
+      .getFullList<Plano>({
+        filter: 'ativo = true',
+        sort: 'preco_mensal',
+      })
+      .then((planosList) => {
+        if (!active) return
+        setPlanos(Array.isArray(planosList) ? planosList : [])
+        setTotalClinicas(null)
+        setLoading(false)
+      })
+      .catch(() => {
+        if (!active) return
+        setLoading(false)
+      })
     return () => {
       active = false
     }

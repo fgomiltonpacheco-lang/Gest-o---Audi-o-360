@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T23:03:56.673Z",
+  "generatedAt": "2026-08-24T23:23:54.710Z",
   "collections": [
     {
       "name": "users",
@@ -7,7 +7,7 @@
       "apiRules": {
         "list": "@request.auth.id != \"\"",
         "view": "@request.auth.id != \"\"",
-        "create": "@request.auth.role = \"admin\"",
+        "create": "",
         "update": "@request.auth.role = \"admin\" || id = @request.auth.id",
         "delete": "@request.auth.role = \"admin\" && id != @request.auth.id"
       },
@@ -6381,7 +6381,7 @@
       "apiRules": {
         "list": "@request.auth.id != '' && @request.auth.is_super_admin = true",
         "view": "@request.auth.id != '' && @request.auth.is_super_admin = true",
-        "create": "@request.auth.is_super_admin = true",
+        "create": "",
         "update": "@request.auth.is_super_admin = true",
         "delete": "@request.auth.is_super_admin = true"
       },
