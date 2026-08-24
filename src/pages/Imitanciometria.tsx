@@ -480,10 +480,11 @@ export default function Imitanciometria() {
             }
             freqs.forEach((f) => {
               const curOd = prev.od[f]
-              const odLim = foundOdThresholds[f] || curOd.limiar
+              const odLim = curOd.limiar || foundOdThresholds[f] || ''
               const odContra = curOd.refl_contra
               let odDif = curOd.diferenca
               if (
+                !odDif &&
                 odContra &&
                 odContra !== 'AUS' &&
                 odLim &&
@@ -499,10 +500,11 @@ export default function Imitanciometria() {
               }
 
               const curOe = prev.oe[f]
-              const oeLim = foundOeThresholds[f] || curOe.limiar
+              const oeLim = curOe.limiar || foundOeThresholds[f] || ''
               const oeContra = curOe.refl_contra
               let oeDif = curOe.diferenca
               if (
+                !oeDif &&
                 oeContra &&
                 oeContra !== 'AUS' &&
                 oeLim &&
@@ -630,6 +632,13 @@ export default function Imitanciometria() {
         const oe = timpRecs.find((r) => r.orelha === 'OE')
 
         if (od) {
+          const odCurve =
+            odCurvePts ||
+            generateDynamicCurve(
+              numOr(od.pressao_pico),
+              numOr(od.complacencia),
+              od.tipo_curva || rec.tipo_curva_od,
+            )
           setTimpOD({
             id: od.id,
             orelha: 'OD',
@@ -641,7 +650,7 @@ export default function Imitanciometria() {
             gradiente_curva: numOr(od.gradiente_curva),
             curva_descricao: od.curva_descricao || '',
             observacoes: od.observacoes || '',
-            curva_timpanometrica: odCurvePts,
+            curva_timpanometrica: odCurve,
           })
           setRawData((prev) => ({
             ...prev,
@@ -653,12 +662,21 @@ export default function Imitanciometria() {
           setSummaryData((prev) => ({
             ...prev,
             pressao_om_od: od.pressao_pico != null ? String(od.pressao_pico) : prev.pressao_om_od,
+            max_relax_od: od.complacencia != null ? String(od.complacencia) : prev.max_relax_od,
+            compl_200_od: od.volume_meato != null ? String(od.volume_meato) : prev.compl_200_od,
             compl_estatica_od:
-              od.complacencia != null ? String(od.complacencia) : prev.compl_estatica_od,
+              od.gradiente_curva != null ? String(od.gradiente_curva) : prev.compl_estatica_od,
           }))
         }
 
         if (oe) {
+          const oeCurve =
+            oeCurvePts ||
+            generateDynamicCurve(
+              numOr(oe.pressao_pico),
+              numOr(oe.complacencia),
+              oe.tipo_curva || rec.tipo_curva_oe,
+            )
           setTimpOE({
             id: oe.id,
             orelha: 'OE',
@@ -670,7 +688,7 @@ export default function Imitanciometria() {
             gradiente_curva: numOr(oe.gradiente_curva),
             curva_descricao: oe.curva_descricao || '',
             observacoes: oe.observacoes || '',
-            curva_timpanometrica: oeCurvePts,
+            curva_timpanometrica: oeCurve,
           })
           setRawData((prev) => ({
             ...prev,
@@ -682,37 +700,88 @@ export default function Imitanciometria() {
           setSummaryData((prev) => ({
             ...prev,
             pressao_om_oe: oe.pressao_pico != null ? String(oe.pressao_pico) : prev.pressao_om_oe,
+            max_relax_oe: oe.complacencia != null ? String(oe.complacencia) : prev.max_relax_oe,
+            compl_200_oe: oe.volume_meato != null ? String(oe.volume_meato) : prev.compl_200_oe,
             compl_estatica_oe:
-              oe.complacencia != null ? String(oe.complacencia) : prev.compl_estatica_oe,
+              oe.gradiente_curva != null ? String(oe.gradiente_curva) : prev.compl_estatica_oe,
           }))
         }
       } catch {
         /* ignore */
       }
 
-      // Carrega reflexos do PocketBase
+      // Carrega reflexos do PocketBase e reflex_grid do registro principal
       try {
-        const reflexRecs: any[] = await pb.collection('reflexo_acustico_dados').getFullList({
-          filter: `imitanciometria_id = "${examId}"`,
-        })
         const newGrid = emptyReflexGrid()
         const freqs = [500, 1000, 2000, 4000] as const
 
-        reflexRecs.forEach((r) => {
-          const side = r.orelha === 'OD' ? 'od' : r.orelha === 'OE' ? 'oe' : null
-          if (!side) return
-          freqs.forEach((f) => {
-            const val = r[`frequencia_${f}`]
-            if (val != null) {
-              const valStr = String(val)
-              if (r.via === 'contra_lateral') {
-                newGrid[side][f].refl_contra = valStr
-              } else if (r.via === 'ipsi_lateral') {
-                newGrid[side][f].ipsi = valStr
+        // Restaura a partir de reflex_grid do registro principal (contém limiar, diferenca, etc.)
+        let parsedGrid: any = null
+        if (rec.reflex_grid) {
+          if (typeof rec.reflex_grid === 'string') {
+            try {
+              parsedGrid = JSON.parse(rec.reflex_grid)
+            } catch {
+              parsedGrid = null
+            }
+          } else if (typeof rec.reflex_grid === 'object') {
+            parsedGrid = rec.reflex_grid
+          }
+        }
+
+        if (parsedGrid) {
+          ;(['od', 'oe'] as const).forEach((side) => {
+            if (parsedGrid[side]) {
+              freqs.forEach((f) => {
+                const cell = parsedGrid[side][f] || parsedGrid[side][String(f)]
+                if (cell) {
+                  newGrid[side][f] = {
+                    limiar: cell.limiar != null ? String(cell.limiar) : '',
+                    refl_contra: cell.refl_contra != null ? String(cell.refl_contra) : '',
+                    diferenca: cell.diferenca != null ? String(cell.diferenca) : '',
+                    ipsi: cell.ipsi != null ? String(cell.ipsi) : '',
+                  }
+                }
+              })
+            }
+          })
+        }
+
+        // Sincroniza / complementa com reflexo_acustico_dados
+        try {
+          const reflexRecs: any[] = await pb.collection('reflexo_acustico_dados').getFullList({
+            filter: `imitanciometria_id = "${examId}"`,
+          })
+
+          reflexRecs.forEach((r) => {
+            const side = r.orelha === 'OD' ? 'od' : r.orelha === 'OE' ? 'oe' : null
+            if (!side) return
+            freqs.forEach((f) => {
+              const val = r[`frequencia_${f}`]
+              if (val != null) {
+                const valStr = String(val)
+                if (r.via === 'contra_lateral') {
+                  newGrid[side][f].refl_contra = valStr
+                } else if (r.via === 'ipsi_lateral') {
+                  newGrid[side][f].ipsi = valStr
+                }
               }
+            })
+          })
+        } catch {
+          /* ignore */
+        }
+
+        // Recalcula diferença se faltar
+        freqs.forEach((f) => {
+          ;(['od', 'oe'] as const).forEach((side) => {
+            const row = newGrid[side][f]
+            if (!row.diferenca && row.refl_contra && row.limiar) {
+              row.diferenca = calcDifference(row.refl_contra, row.limiar)
             }
           })
         })
+
         setReflexGrid(newGrid)
       } catch {
         /* ignore */
@@ -894,30 +963,50 @@ export default function Imitanciometria() {
       ...timpOD,
       tipo_curva: exam.tipo_curva_od || timpOD.tipo_curva,
       pressao_pico:
-        rawData.od_pressao_media !== ''
-          ? parseFloat(rawData.od_pressao_media)
-          : timpOD.pressao_pico,
+        summaryData.pressao_om_od !== ''
+          ? parseFloat(summaryData.pressao_om_od)
+          : rawData.od_pressao_media !== ''
+            ? parseFloat(rawData.od_pressao_media)
+            : timpOD.pressao_pico,
       volume_meato:
-        rawData.od_volume_media !== '' ? parseFloat(rawData.od_volume_media) : timpOD.volume_meato,
+        summaryData.compl_200_od !== ''
+          ? parseFloat(summaryData.compl_200_od)
+          : rawData.od_volume_media !== ''
+            ? parseFloat(rawData.od_volume_media)
+            : timpOD.volume_meato,
       complacencia:
+        summaryData.max_relax_od !== ''
+          ? parseFloat(summaryData.max_relax_od)
+          : timpOD.complacencia,
+      gradiente_curva:
         summaryData.compl_estatica_od !== ''
           ? parseFloat(summaryData.compl_estatica_od)
-          : timpOD.complacencia,
+          : timpOD.gradiente_curva,
     }
 
     const finalTimpOE: TimpData = {
       ...timpOE,
       tipo_curva: exam.tipo_curva_oe || timpOE.tipo_curva,
       pressao_pico:
-        rawData.oe_pressao_media !== ''
-          ? parseFloat(rawData.oe_pressao_media)
-          : timpOE.pressao_pico,
+        summaryData.pressao_om_oe !== ''
+          ? parseFloat(summaryData.pressao_om_oe)
+          : rawData.oe_pressao_media !== ''
+            ? parseFloat(rawData.oe_pressao_media)
+            : timpOE.pressao_pico,
       volume_meato:
-        rawData.oe_volume_media !== '' ? parseFloat(rawData.oe_volume_media) : timpOE.volume_meato,
+        summaryData.compl_200_oe !== ''
+          ? parseFloat(summaryData.compl_200_oe)
+          : rawData.oe_volume_media !== ''
+            ? parseFloat(rawData.oe_volume_media)
+            : timpOE.volume_meato,
       complacencia:
+        summaryData.max_relax_oe !== ''
+          ? parseFloat(summaryData.max_relax_oe)
+          : timpOE.complacencia,
+      gradiente_curva:
         summaryData.compl_estatica_oe !== ''
           ? parseFloat(summaryData.compl_estatica_oe)
-          : timpOE.complacencia,
+          : timpOE.gradiente_curva,
     }
 
     const payload: Record<string, any> = {
@@ -1140,9 +1229,7 @@ export default function Imitanciometria() {
               : timpOD.volume_meato,
           complacencia: summaryData.max_relax_od
             ? Number(summaryData.max_relax_od)
-            : summaryData.compl_estatica_od
-              ? Number(summaryData.compl_estatica_od)
-              : timpOD.complacencia,
+            : timpOD.complacencia,
           pressao_maxima: timpOD.pressao_maxima,
           tipo_curva: exam.tipo_curva_od || timpOD.tipo_curva,
           pressao_pico: summaryData.pressao_om_od
@@ -1165,9 +1252,7 @@ export default function Imitanciometria() {
               : timpOE.volume_meato,
           complacencia: summaryData.max_relax_oe
             ? Number(summaryData.max_relax_oe)
-            : summaryData.compl_estatica_oe
-              ? Number(summaryData.compl_estatica_oe)
-              : timpOE.complacencia,
+            : timpOE.complacencia,
           pressao_maxima: timpOE.pressao_maxima,
           tipo_curva: exam.tipo_curva_oe || timpOE.tipo_curva,
           pressao_pico: summaryData.pressao_om_oe
