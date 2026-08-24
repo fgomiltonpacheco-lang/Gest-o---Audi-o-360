@@ -624,12 +624,43 @@ export default function Imitanciometria() {
         paciente_sexo: rec.paciente_sexo || '',
       })
 
-      const odCurvePts = Array.isArray(rec.curva_timpanometrica_od)
-        ? rec.curva_timpanometrica_od
-        : null
-      const oeCurvePts = Array.isArray(rec.curva_timpanometrica_oe)
-        ? rec.curva_timpanometrica_oe
-        : null
+      const odCurvePts =
+        Array.isArray(rec.curva_timpanometrica_od) && rec.curva_timpanometrica_od.length > 0
+          ? rec.curva_timpanometrica_od
+          : null
+      const oeCurvePts =
+        Array.isArray(rec.curva_timpanometrica_oe) && rec.curva_timpanometrica_oe.length > 0
+          ? rec.curva_timpanometrica_oe
+          : null
+
+      // Inicializa estado timpOD/timpOE imediatamente a partir dos dados do registro principal (fallback imediato)
+      setTimpOD({
+        id: undefined,
+        orelha: 'OD',
+        volume_meato: null,
+        complacencia: null,
+        pressao_maxima: null,
+        tipo_curva: rec.tipo_curva_od || '',
+        pressao_pico: null,
+        gradiente_curva: null,
+        curva_descricao: '',
+        observacoes: '',
+        curva_timpanometrica: odCurvePts,
+      })
+
+      setTimpOE({
+        id: undefined,
+        orelha: 'OE',
+        volume_meato: null,
+        complacencia: null,
+        pressao_maxima: null,
+        tipo_curva: rec.tipo_curva_oe || '',
+        pressao_pico: null,
+        gradiente_curva: null,
+        curva_descricao: '',
+        observacoes: '',
+        curva_timpanometrica: oeCurvePts,
+      })
 
       // Carrega timpanometria do PocketBase
       try {
@@ -666,21 +697,18 @@ export default function Imitanciometria() {
         }
 
         if (od) {
-          const odCurve =
-            odCurvePts ||
-            generateDynamicCurve(
-              numOr(od.pressao_pico),
-              numOr(od.complacencia),
-              od.tipo_curva || rec.tipo_curva_od,
-            )
+          const odPico = numOr(od.pressao_pico)
+          const odCompl = numOr(od.complacencia)
+          const odTipo = od.tipo_curva || rec.tipo_curva_od || ''
+          const odCurve = odCurvePts || generateDynamicCurve(odPico, odCompl, odTipo)
           setTimpOD({
             id: od.id,
             orelha: 'OD',
             volume_meato: numOr(od.volume_meato),
-            complacencia: numOr(od.complacencia),
+            complacencia: odCompl,
             pressao_maxima: numOr(od.pressao_maxima),
-            tipo_curva: od.tipo_curva || '',
-            pressao_pico: numOr(od.pressao_pico),
+            tipo_curva: odTipo,
+            pressao_pico: odPico,
             gradiente_curva: numOr(od.gradiente_curva),
             curva_descricao: od.curva_descricao || '',
             observacoes: od.observacoes || '',
@@ -696,21 +724,18 @@ export default function Imitanciometria() {
         }
 
         if (oe) {
-          const oeCurve =
-            oeCurvePts ||
-            generateDynamicCurve(
-              numOr(oe.pressao_pico),
-              numOr(oe.complacencia),
-              oe.tipo_curva || rec.tipo_curva_oe,
-            )
+          const oePico = numOr(oe.pressao_pico)
+          const oeCompl = numOr(oe.complacencia)
+          const oeTipo = oe.tipo_curva || rec.tipo_curva_oe || ''
+          const oeCurve = oeCurvePts || generateDynamicCurve(oePico, oeCompl, oeTipo)
           setTimpOE({
             id: oe.id,
             orelha: 'OE',
             volume_meato: numOr(oe.volume_meato),
-            complacencia: numOr(oe.complacencia),
+            complacencia: oeCompl,
             pressao_maxima: numOr(oe.pressao_maxima),
-            tipo_curva: oe.tipo_curva || '',
-            pressao_pico: numOr(oe.pressao_pico),
+            tipo_curva: oeTipo,
+            pressao_pico: oePico,
             gradiente_curva: numOr(oe.gradiente_curva),
             curva_descricao: oe.curva_descricao || '',
             observacoes: oe.observacoes || '',
@@ -986,55 +1011,75 @@ export default function Imitanciometria() {
     setSaving(true)
 
     // Ajusta timpOD e timpOE com valores das tabelas
+    const odPressao =
+      summaryData.pressao_om_od !== ''
+        ? parseFloat(summaryData.pressao_om_od)
+        : rawData.od_pressao_media !== ''
+          ? parseFloat(rawData.od_pressao_media)
+          : timpOD.pressao_pico
+    const odCompl =
+      summaryData.max_relax_od !== '' ? parseFloat(summaryData.max_relax_od) : timpOD.complacencia
+    const odTipo = exam.tipo_curva_od || timpOD.tipo_curva
+    const odCurve =
+      timpOD.curva_timpanometrica && timpOD.curva_timpanometrica.length > 0
+        ? timpOD.curva_timpanometrica
+        : generateDynamicCurve(odPressao, odCompl, odTipo)
+
+    const oePressao =
+      summaryData.pressao_om_oe !== ''
+        ? parseFloat(summaryData.pressao_om_oe)
+        : rawData.oe_pressao_media !== ''
+          ? parseFloat(rawData.oe_pressao_media)
+          : timpOE.pressao_pico
+    const oeCompl =
+      summaryData.max_relax_oe !== '' ? parseFloat(summaryData.max_relax_oe) : timpOE.complacencia
+    const oeTipo = exam.tipo_curva_oe || timpOE.tipo_curva
+    const oeCurve =
+      timpOE.curva_timpanometrica && timpOE.curva_timpanometrica.length > 0
+        ? timpOE.curva_timpanometrica
+        : generateDynamicCurve(oePressao, oeCompl, oeTipo)
+
     const finalTimpOD: TimpData = {
       ...timpOD,
-      tipo_curva: exam.tipo_curva_od || timpOD.tipo_curva,
-      pressao_pico:
-        summaryData.pressao_om_od !== ''
-          ? parseFloat(summaryData.pressao_om_od)
-          : rawData.od_pressao_media !== ''
-            ? parseFloat(rawData.od_pressao_media)
-            : timpOD.pressao_pico,
+      tipo_curva: odTipo,
+      pressao_pico: odPressao,
       volume_meato:
         summaryData.compl_200_od !== ''
           ? parseFloat(summaryData.compl_200_od)
           : rawData.od_volume_media !== ''
             ? parseFloat(rawData.od_volume_media)
             : timpOD.volume_meato,
-      complacencia:
-        summaryData.max_relax_od !== ''
-          ? parseFloat(summaryData.max_relax_od)
-          : timpOD.complacencia,
+      complacencia: odCompl,
       gradiente_curva:
         summaryData.compl_estatica_od !== ''
           ? parseFloat(summaryData.compl_estatica_od)
           : timpOD.gradiente_curva,
+      curva_timpanometrica: odCurve,
     }
 
     const finalTimpOE: TimpData = {
       ...timpOE,
-      tipo_curva: exam.tipo_curva_oe || timpOE.tipo_curva,
-      pressao_pico:
-        summaryData.pressao_om_oe !== ''
-          ? parseFloat(summaryData.pressao_om_oe)
-          : rawData.oe_pressao_media !== ''
-            ? parseFloat(rawData.oe_pressao_media)
-            : timpOE.pressao_pico,
+      tipo_curva: oeTipo,
+      pressao_pico: oePressao,
       volume_meato:
         summaryData.compl_200_oe !== ''
           ? parseFloat(summaryData.compl_200_oe)
           : rawData.oe_volume_media !== ''
             ? parseFloat(rawData.oe_volume_media)
             : timpOE.volume_meato,
-      complacencia:
-        summaryData.max_relax_oe !== ''
-          ? parseFloat(summaryData.max_relax_oe)
-          : timpOE.complacencia,
+      complacencia: oeCompl,
       gradiente_curva:
         summaryData.compl_estatica_oe !== ''
           ? parseFloat(summaryData.compl_estatica_oe)
           : timpOE.gradiente_curva,
+      curva_timpanometrica: oeCurve,
     }
+
+    // Atualiza o estado local para manter a curva sincronizada na UI
+    setTimpOD(finalTimpOD)
+    setTimpOE(finalTimpOE)
+
+    const nextStatus = finalizar ? 'finalizado' : exam.status || 'rascunho'
 
     const payload: Record<string, any> = {
       paciente_id: patient.id,
@@ -1046,7 +1091,7 @@ export default function Imitanciometria() {
       equipment_id: exam.equipment_id || '',
       equipment_nome: exam.equipment_nome || '',
       observacoes: exam.observacoes,
-      status: finalizar ? 'finalizado' : exam.status,
+      status: nextStatus,
       tipo_curva_od: exam.tipo_curva_od,
       tipo_curva_oe: exam.tipo_curva_oe,
       reflexos_status: exam.reflexos_status,
@@ -1074,13 +1119,11 @@ export default function Imitanciometria() {
       if (exam.id) {
         const rec: any = await pb.collection('imitanciometrias').update(exam.id, payload)
         imitId = rec.id
-        if (finalizar) {
-          setExam((prev) => ({ ...prev, status: 'finalizado' }))
-        }
+        setExam((prev) => ({ ...prev, status: nextStatus }))
       } else {
         const rec: any = await pb.collection('imitanciometrias').create(payload)
         imitId = rec.id
-        setExam((prev) => ({ ...prev, id: imitId, status: finalizar ? 'finalizado' : prev.status }))
+        setExam((prev) => ({ ...prev, id: imitId, status: nextStatus }))
         navigate(`/pacientes/${patient.id}/imitanciometria/${imitId}`, { replace: true })
       }
 
@@ -1539,7 +1582,18 @@ export default function Imitanciometria() {
               onValueChange={(v) => {
                 const val = v === '__none' ? '' : v
                 setField('tipo_curva_od', val)
-                setTimpOD((prev) => ({ ...prev, tipo_curva: val }))
+                setTimpOD((prev) => {
+                  const dynamicCurve = generateDynamicCurve(
+                    prev.pressao_pico,
+                    prev.complacencia,
+                    val,
+                  )
+                  return {
+                    ...prev,
+                    tipo_curva: val,
+                    curva_timpanometrica: dynamicCurve,
+                  }
+                })
               }}
               disabled={readOnly}
             >
@@ -1564,7 +1618,18 @@ export default function Imitanciometria() {
               onValueChange={(v) => {
                 const val = v === '__none' ? '' : v
                 setField('tipo_curva_oe', val)
-                setTimpOE((prev) => ({ ...prev, tipo_curva: val }))
+                setTimpOE((prev) => {
+                  const dynamicCurve = generateDynamicCurve(
+                    prev.pressao_pico,
+                    prev.complacencia,
+                    val,
+                  )
+                  return {
+                    ...prev,
+                    tipo_curva: val,
+                    curva_timpanometrica: dynamicCurve,
+                  }
+                })
               }}
               disabled={readOnly}
             >

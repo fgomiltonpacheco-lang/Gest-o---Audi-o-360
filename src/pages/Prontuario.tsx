@@ -1030,9 +1030,9 @@ export default function Prontuario() {
                               }
                               className="bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-semibold h-7 px-3 rounded-lg"
                             >
-                              Ver / Editar
+                              {exam.status === 'finalizado' ? 'Visualizar' : 'Ver / Editar'}
                             </Button>
-                            {!isSecretaria && (
+                            {!isSecretaria && exam.status !== 'finalizado' && (
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -1108,9 +1108,9 @@ export default function Prontuario() {
                               }
                               className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold h-7 px-3 rounded-lg"
                             >
-                              Ver / Editar
+                              {exam.status === 'finalizado' ? 'Visualizar' : 'Ver / Editar'}
                             </Button>
-                            {!isSecretaria && (
+                            {!isSecretaria && exam.status !== 'finalizado' && (
                               <Button
                                 size="sm"
                                 variant="ghost"
