@@ -197,33 +197,33 @@ export function ImitanciometriaPrint({
 
   const tableHeaderStyle: React.CSSProperties = {
     border: '1px solid #000000',
-    padding: '3px 4px',
-    fontSize: '8.5pt',
+    padding: '2px 3px',
+    fontSize: '8pt',
     fontWeight: 700,
     textAlign: 'center',
     background: '#ffffff',
     color: '#000000',
-    lineHeight: 1.2,
+    lineHeight: 1.15,
   }
 
   const tableCellStyle: React.CSSProperties = {
     border: '1px solid #000000',
-    padding: '3px 4px',
-    fontSize: '8.5pt',
+    padding: '2px 3px',
+    fontSize: '8pt',
     textAlign: 'center',
     color: '#000000',
-    lineHeight: 1.2,
-    height: '20px',
+    lineHeight: 1.15,
+    height: '18px',
   }
 
   const tableLabelCellStyle: React.CSSProperties = {
     border: '1px solid #000000',
-    padding: '3px 6px',
-    fontSize: '8.5pt',
+    padding: '2px 4px',
+    fontSize: '8pt',
     fontWeight: 500,
     textAlign: 'left',
     color: '#000000',
-    lineHeight: 1.2,
+    lineHeight: 1.15,
     background: '#ffffff',
   }
 
@@ -232,24 +232,25 @@ export function ImitanciometriaPrint({
       className="imitanciometria-print clinic-imitanciometria"
       style={{
         color: '#000000',
-        fontSize: '9pt',
+        fontSize: '8.5pt',
         fontFamily: 'Arial, sans-serif',
-        lineHeight: 1.3,
-        maxWidth: '200mm',
+        lineHeight: 1.2,
+        width: '170mm',
+        maxWidth: '170mm',
         margin: '0 auto',
-        padding: '0 4mm',
+        padding: '0',
         boxSizing: 'border-box',
         backgroundColor: '#ffffff',
       }}
     >
       {/* 1. Cabeçalho com Logo da Clínica */}
-      <div style={{ textAlign: 'center', marginBottom: '4mm' }}>
+      <div style={{ textAlign: 'center', marginBottom: '2.5mm' }}>
         <img
           src={logoSrc}
           alt="Logo da Clínica"
           style={{
-            maxHeight: '65px',
-            maxWidth: '240px',
+            maxHeight: '52px',
+            maxWidth: '220px',
             width: 'auto',
             display: 'inline-block',
             objectFit: 'contain',
@@ -258,13 +259,13 @@ export function ImitanciometriaPrint({
       </div>
 
       {/* 2. Dados do Paciente e Equipamento */}
-      <div style={{ fontSize: '8.5pt', marginBottom: '3.5mm' }}>
+      <div style={{ fontSize: '8pt', marginBottom: '2.5mm' }}>
         {/* Linha 1: Nome + Data + CPF */}
         <div
           style={{
             display: 'flex',
             alignItems: 'baseline',
-            marginBottom: '2mm',
+            marginBottom: '1.5mm',
             gap: '8px',
           }}
         >
@@ -276,14 +277,14 @@ export function ImitanciometriaPrint({
                 borderBottom: '1px solid #000000',
                 flex: 1,
                 paddingBottom: '1px',
-                minHeight: '14px',
+                minHeight: '13px',
               }}
             >
               {patientName}
             </span>
           </div>
 
-          <div style={{ width: '130px', display: 'flex', alignItems: 'baseline' }}>
+          <div style={{ width: '120px', display: 'flex', alignItems: 'baseline' }}>
             <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Data</span>
             <span
               style={{
@@ -292,14 +293,14 @@ export function ImitanciometriaPrint({
                 flex: 1,
                 textAlign: 'center',
                 paddingBottom: '1px',
-                minHeight: '14px',
+                minHeight: '13px',
               }}
             >
               {formatDate(data.data_exame) || ''}
             </span>
           </div>
 
-          <div style={{ width: '150px', display: 'flex', alignItems: 'baseline' }}>
+          <div style={{ width: '140px', display: 'flex', alignItems: 'baseline' }}>
             <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>CPF:</span>
             <span
               style={{
@@ -307,7 +308,7 @@ export function ImitanciometriaPrint({
                 borderBottom: '1px solid #000000',
                 flex: 1,
                 paddingBottom: '1px',
-                minHeight: '14px',
+                minHeight: '13px',
               }}
             >
               {patientCpf ? maskCPF(patientCpf) : ''}
@@ -320,11 +321,11 @@ export function ImitanciometriaPrint({
           style={{
             display: 'flex',
             alignItems: 'baseline',
-            marginBottom: '2mm',
+            marginBottom: '1.5mm',
             gap: '8px',
           }}
         >
-          <div style={{ width: '170px', display: 'flex', alignItems: 'baseline' }}>
+          <div style={{ width: '150px', display: 'flex', alignItems: 'baseline' }}>
             <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>DN:</span>
             <span
               style={{
@@ -333,14 +334,14 @@ export function ImitanciometriaPrint({
                 flex: 1,
                 textAlign: 'center',
                 paddingBottom: '1px',
-                minHeight: '14px',
+                minHeight: '13px',
               }}
             >
               {formatDate(patientDob) || ''}
             </span>
           </div>
 
-          <div style={{ width: '170px', display: 'flex', alignItems: 'baseline' }}>
+          <div style={{ width: '150px', display: 'flex', alignItems: 'baseline' }}>
             <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Sexo:</span>
             <span
               style={{
@@ -348,7 +349,7 @@ export function ImitanciometriaPrint({
                 borderBottom: '1px solid #000000',
                 flex: 1,
                 paddingBottom: '1px',
-                minHeight: '14px',
+                minHeight: '13px',
               }}
             >
               {patientSex || ''}
@@ -363,7 +364,7 @@ export function ImitanciometriaPrint({
                 borderBottom: '1px solid #000000',
                 flex: 1,
                 paddingBottom: '1px',
-                minHeight: '14px',
+                minHeight: '13px',
               }}
             >
               {patientConvenio}
@@ -387,14 +388,14 @@ export function ImitanciometriaPrint({
                 borderBottom: '1px solid #000000',
                 flex: 1,
                 paddingBottom: '1px',
-                minHeight: '14px',
+                minHeight: '13px',
               }}
             >
               {audiometer}
             </span>
           </div>
 
-          <div style={{ width: '240px', display: 'flex', alignItems: 'baseline' }}>
+          <div style={{ width: '220px', display: 'flex', alignItems: 'baseline' }}>
             <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Calibração:</span>
             <span
               style={{
@@ -403,7 +404,7 @@ export function ImitanciometriaPrint({
                 flex: 1,
                 textAlign: 'center',
                 paddingBottom: '1px',
-                minHeight: '14px',
+                minHeight: '13px',
               }}
             >
               {calibration}
@@ -416,9 +417,9 @@ export function ImitanciometriaPrint({
       <div
         style={{
           textAlign: 'left',
-          fontSize: '9.5pt',
+          fontSize: '9pt',
           fontWeight: 700,
-          margin: '1.5mm 0 1mm 0',
+          margin: '1mm 0 0.8mm 0',
           letterSpacing: '0.02em',
           textTransform: 'uppercase',
         }}
@@ -432,7 +433,7 @@ export function ImitanciometriaPrint({
           width: '100%',
           display: 'flex',
           gap: '8px',
-          marginBottom: '2.5mm',
+          marginBottom: '2mm',
         }}
       >
         {/* OD Box (Vermelho) */}
@@ -440,18 +441,18 @@ export function ImitanciometriaPrint({
           style={{
             flex: '1 1 50%',
             border: '1.5px solid #dc2626',
-            borderRadius: '6px',
-            padding: '4px 6px 3px 6px',
+            borderRadius: '5px',
+            padding: '3px 4px 2px 4px',
             backgroundColor: '#ffffff',
             boxSizing: 'border-box',
           }}
         >
-          <div style={{ width: '100%', height: '125px' }}>
+          <div style={{ width: '100%', height: '110px' }}>
             <TimpanogramChart
               width={320}
-              height={125}
+              height={110}
               svgWidth="100%"
-              svgHeight={125}
+              svgHeight={110}
               pMin={-400}
               pMax={200}
               odPoints={odTimp?.curva_timpanometrica ?? null}
@@ -465,7 +466,7 @@ export function ImitanciometriaPrint({
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              fontSize: '7.5pt',
+              fontSize: '7pt',
               fontWeight: 700,
               color: '#dc2626',
               marginTop: '1px',
@@ -482,18 +483,18 @@ export function ImitanciometriaPrint({
           style={{
             flex: '1 1 50%',
             border: '1.5px solid #2563eb',
-            borderRadius: '6px',
-            padding: '4px 6px 3px 6px',
+            borderRadius: '5px',
+            padding: '3px 4px 2px 4px',
             backgroundColor: '#ffffff',
             boxSizing: 'border-box',
           }}
         >
-          <div style={{ width: '100%', height: '125px' }}>
+          <div style={{ width: '100%', height: '110px' }}>
             <TimpanogramChart
               width={320}
-              height={125}
+              height={110}
               svgWidth="100%"
-              svgHeight={125}
+              svgHeight={110}
               pMin={-400}
               pMax={200}
               odPoints={null}
@@ -507,7 +508,7 @@ export function ImitanciometriaPrint({
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              fontSize: '7.5pt',
+              fontSize: '7pt',
               fontWeight: 700,
               color: '#2563eb',
               marginTop: '1px',
@@ -526,7 +527,7 @@ export function ImitanciometriaPrint({
           display: 'flex',
           gap: '8px',
           alignItems: 'flex-start',
-          marginBottom: '3mm',
+          marginBottom: '2mm',
         }}
       >
         {/* Tabela de Timpanometria */}
@@ -622,7 +623,7 @@ export function ImitanciometriaPrint({
                   style={{
                     ...tableHeaderStyle,
                     fontWeight: 700,
-                    fontSize: '8.5pt',
+                    fontSize: '8pt',
                   }}
                 >
                   Pesquisa da Função Tubária
@@ -657,9 +658,9 @@ export function ImitanciometriaPrint({
       <h3
         style={{
           textAlign: 'center',
-          fontSize: '10pt',
+          fontSize: '9.5pt',
           fontWeight: 700,
-          margin: '2.5mm 0 1.5mm 0',
+          margin: '1.5mm 0 1mm 0',
           letterSpacing: '0.02em',
         }}
       >
@@ -667,7 +668,7 @@ export function ImitanciometriaPrint({
       </h3>
 
       {/* Tabela de Reflexos Acústico Estapedianos */}
-      <div style={{ marginBottom: '3mm' }}>
+      <div style={{ marginBottom: '2mm' }}>
         <table
           style={{
             width: '100%',
@@ -725,12 +726,12 @@ export function ImitanciometriaPrint({
       </div>
 
       {/* 7. Seção de Laudo */}
-      <div style={{ marginBottom: '2.5mm' }}>
+      <div style={{ marginBottom: '0mm' }}>
         <div
           style={{
-            fontSize: '9.5pt',
+            fontSize: '9pt',
             fontWeight: 700,
-            marginBottom: '1mm',
+            marginBottom: '0.8mm',
             textAlign: 'left',
           }}
         >
@@ -739,12 +740,12 @@ export function ImitanciometriaPrint({
         <div
           style={{
             border: '1px solid #000000',
-            minHeight: '48px',
-            padding: '2mm 3mm',
-            fontSize: '8.5pt',
-            lineHeight: 1.3,
+            minHeight: '40px',
+            padding: '1.5mm 2.5mm',
+            fontSize: '8pt',
+            lineHeight: 1.25,
             whiteSpace: 'pre-wrap',
-            marginBottom: '1.5mm',
+            marginBottom: '1mm',
           }}
         >
           {data.laudo ||
@@ -770,19 +771,29 @@ export function ImitanciometriaPrint({
         </div>
       </div>
 
-      {/* 8. Assinatura do Profissional */}
+      {/* 8. Espaçador exato de 5 espaços de 1,5 entrelinhas (~25mm) entre a referência e a assinatura */}
+      <div
+        style={{
+          height: '25mm',
+          minHeight: '25mm',
+        }}
+        aria-hidden="true"
+      />
+
+      {/* 9. Assinatura do Profissional */}
       <div
         style={{
           textAlign: 'center',
-          marginTop: '6mm',
-          marginBottom: '3mm',
+          marginBottom: '2mm',
           breakInside: 'avoid',
           pageBreakInside: 'avoid',
         }}
       >
-        <div style={{ display: 'inline-block', minWidth: '240px' }}>
+        <div style={{ display: 'inline-block', minWidth: '260px' }}>
           <div style={{ borderTop: '1px solid #000000', marginBottom: '3px' }} />
-          <div style={{ fontSize: '9pt', fontWeight: 700, color: '#000000' }}>{specialistName}</div>
+          <div style={{ fontSize: '9pt', fontWeight: 700, color: '#000000' }}>
+            Dr. {specialistName.replace(/^dr\.?\s*/i, '')}
+          </div>
           <div style={{ fontSize: '8pt', color: '#000000' }}>Fonoaudiólogo</div>
           <div style={{ fontSize: '8pt', color: '#000000' }}>Especialista em Audiologia</div>
           <div style={{ fontSize: '8pt', color: '#000000' }}>
@@ -791,14 +802,14 @@ export function ImitanciometriaPrint({
         </div>
       </div>
 
-      {/* 9. Rodapé com Endereço da Clínica */}
+      {/* 10. Rodapé com Endereço da Clínica */}
       {clinicAddress && (
         <div
           style={{
             fontSize: '7.5pt',
             color: '#000000',
             textAlign: 'center',
-            marginTop: '2mm',
+            marginTop: '1.5mm',
           }}
         >
           {clinicAddress}

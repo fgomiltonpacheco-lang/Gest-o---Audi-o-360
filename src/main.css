@@ -298,12 +298,20 @@
   display: none;
 }
 
-@media print {
-  @page {
-    size: A4;
-    margin: 4mm;
-  }
+@page {
+  size: A4;
+  margin: 4mm;
+}
 
+@page imitanciometria-page {
+  size: A4 portrait;
+  margin-top: 10mm;
+  margin-bottom: 10mm;
+  margin-left: 20mm;
+  margin-right: 20mm;
+}
+
+@media print {
   html,
   body {
     background: #ffffff !important;
@@ -359,15 +367,20 @@
 
   body:has(.imitanciometria-print) .imitanciometria-print {
     display: block !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     padding: 0 !important;
+    width: 170mm !important;
+    max-width: 170mm !important;
     page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .imitanciometria-print {
-    font-size: 8.5pt !important;
-    line-height: 1.25 !important;
-    max-width: 195mm !important;
+    page: imitanciometria-page;
+    font-size: 8pt !important;
+    line-height: 1.2 !important;
+    width: 170mm !important;
+    max-width: 170mm !important;
     margin: 0 auto !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
