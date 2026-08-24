@@ -1441,9 +1441,9 @@ export default function Imitanciometria() {
   const readOnly = isSecretaria || exam.status === 'finalizado'
 
   return (
-    <div className="space-y-4 animate-in fade-in-50 duration-200 pb-16 text-slate-800">
-      {/* Top Header / Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+    <div className="space-y-4 animate-in fade-in-50 duration-200 pb-16 text-slate-800 print:p-0 print:m-0 print:pb-0">
+      {/* Top Header / Actions (oculto ao imprimir com no-print e print:hidden) */}
+      <div className="no-print print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -1529,7 +1529,7 @@ export default function Imitanciometria() {
       </div>
 
       {/* Main Container Layout (oculto ao imprimir) */}
-      <div className="no-print bg-white border border-slate-200 rounded-xl p-4 space-y-5 shadow-sm">
+      <div className="no-print print:hidden bg-white border border-slate-200 rounded-xl p-4 space-y-5 shadow-sm">
         {/* Header Metadata Info Bar */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pb-3 border-b border-slate-200 text-xs">
           <div>

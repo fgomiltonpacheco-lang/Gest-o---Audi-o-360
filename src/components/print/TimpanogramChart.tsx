@@ -172,10 +172,10 @@ export const TimpanogramChart: React.FC<TimpanogramChartProps> = ({
 }) => {
   const W = width
   const H = height
-  const padL = denseGrid || yAxisRight ? (W <= 280 ? 12 : 20) : W <= 280 ? 28 : 34
-  const padR = denseGrid || yAxisRight ? (W <= 280 ? 28 : 36) : W <= 280 ? 8 : 12
-  const padT = showTitle ? (H <= 120 ? 16 : 22) : H <= 120 ? 6 : 10
-  const padB = H <= 120 ? 16 : 22
+  const padL = denseGrid || yAxisRight ? (W <= 280 ? 12 : 20) : W <= 350 ? 30 : 34
+  const padR = denseGrid || yAxisRight ? (W <= 280 ? 28 : 36) : W <= 350 ? 10 : 12
+  const padT = showTitle ? (H <= 120 ? 16 : 22) : H <= 150 ? 8 : 10
+  const padB = H <= 120 ? 16 : H <= 150 ? 18 : 22
   const plotW = W - padL - padR
   const plotH = H - padT - padB
 
@@ -352,18 +352,28 @@ export const TimpanogramChart: React.FC<TimpanogramChartProps> = ({
         <>
           <text
             x={padL + plotW / 2}
-            y={H - 4}
+            y={H - 2}
             textAnchor="middle"
-            style={{ fontSize: 8, fontWeight: 600, fill: '#475569' }}
+            style={{
+              fontSize: W <= 350 ? 7 : 8,
+              fontWeight: 600,
+              fill: '#475569',
+              fontFamily: 'Arial, sans-serif',
+            }}
           >
             Pressão (daPa)
           </text>
           <text
-            x={10}
+            x={8}
             y={padT + plotH / 2}
             textAnchor="middle"
-            style={{ fontSize: 8, fontWeight: 600, fill: '#475569' }}
-            transform={`rotate(-90 10 ${padT + plotH / 2})`}
+            style={{
+              fontSize: W <= 350 ? 7 : 8,
+              fontWeight: 600,
+              fill: '#475569',
+              fontFamily: 'Arial, sans-serif',
+            }}
+            transform={`rotate(-90 8 ${padT + plotH / 2})`}
           >
             Complacência (ml)
           </text>

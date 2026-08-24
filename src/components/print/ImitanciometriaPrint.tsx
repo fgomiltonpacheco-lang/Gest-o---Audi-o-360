@@ -413,42 +413,110 @@ export function ImitanciometriaPrint({
       </div>
 
       {/* 3. Título TIMPANOMETRIA */}
-      <h3
+      <div
         style={{
-          textAlign: 'center',
-          fontSize: '11pt',
+          textAlign: 'left',
+          fontSize: '9.5pt',
           fontWeight: 700,
-          margin: '2mm 0 1.5mm 0',
+          margin: '1.5mm 0 1mm 0',
           letterSpacing: '0.02em',
+          textTransform: 'uppercase',
         }}
       >
         Timpanometria
-      </h3>
+      </div>
 
-      {/* 4. Gráfico de Timpanometria (Eixo Y 0 a 2.5, Eixo X -300 a 300) */}
+      {/* 4. Dois Gráficos de Timpanometria Lado a Lado (OD Vermelho / OE Azul) conforme referência */}
       <div
         style={{
           width: '100%',
           display: 'flex',
-          justifyContent: 'center',
-          marginBottom: '3mm',
+          gap: '8px',
+          marginBottom: '2.5mm',
         }}
       >
-        <div style={{ width: '100%', maxWidth: '720px' }}>
-          <TimpanogramChart
-            width={580}
-            height={155}
-            svgWidth="100%"
-            svgHeight={155}
-            pMin={-300}
-            pMax={300}
-            denseGrid={true}
-            yAxisRight={true}
-            showLegend={false}
-            showTitle={false}
-            odPoints={odTimp?.curva_timpanometrica ?? null}
-            oePoints={oeTimp?.curva_timpanometrica ?? null}
-          />
+        {/* OD Box (Vermelho) */}
+        <div
+          style={{
+            flex: '1 1 50%',
+            border: '1.5px solid #dc2626',
+            borderRadius: '6px',
+            padding: '4px 6px 3px 6px',
+            backgroundColor: '#ffffff',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div style={{ width: '100%', height: '125px' }}>
+            <TimpanogramChart
+              width={320}
+              height={125}
+              svgWidth="100%"
+              svgHeight={125}
+              pMin={-400}
+              pMax={200}
+              odPoints={odTimp?.curva_timpanometrica ?? null}
+              oePoints={null}
+              showLegend={false}
+              showTitle={false}
+            />
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: '7.5pt',
+              fontWeight: 700,
+              color: '#dc2626',
+              marginTop: '1px',
+              padding: '0 2px',
+            }}
+          >
+            <span>DIREITA</span>
+            <span>CURVA TIPO</span>
+          </div>
+        </div>
+
+        {/* OE Box (Azul) */}
+        <div
+          style={{
+            flex: '1 1 50%',
+            border: '1.5px solid #2563eb',
+            borderRadius: '6px',
+            padding: '4px 6px 3px 6px',
+            backgroundColor: '#ffffff',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div style={{ width: '100%', height: '125px' }}>
+            <TimpanogramChart
+              width={320}
+              height={125}
+              svgWidth="100%"
+              svgHeight={125}
+              pMin={-400}
+              pMax={200}
+              odPoints={null}
+              oePoints={oeTimp?.curva_timpanometrica ?? null}
+              showLegend={false}
+              showTitle={false}
+            />
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: '7.5pt',
+              fontWeight: 700,
+              color: '#2563eb',
+              marginTop: '1px',
+              padding: '0 2px',
+            }}
+          >
+            <span>ESQUERDA</span>
+            <span>CURVA TIPO</span>
+          </div>
         </div>
       </div>
 
