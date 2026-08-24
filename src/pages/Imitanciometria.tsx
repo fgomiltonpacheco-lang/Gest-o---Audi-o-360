@@ -947,6 +947,9 @@ export default function Imitanciometria() {
       paciente_nascimento: patient.birthDate || '',
       paciente_idade: String(calculateAge(patient.birthDate) ?? ''),
       paciente_sexo: patient.gender || '',
+      reflex_grid: reflexGrid,
+      curva_timpanometrica_od: finalTimpOD.curva_timpanometrica ?? null,
+      curva_timpanometrica_oe: finalTimpOE.curva_timpanometrica ?? null,
     }
 
     try {
