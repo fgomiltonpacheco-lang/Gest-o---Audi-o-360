@@ -698,56 +698,58 @@ export default function Imitanciometria() {
 
         if (od) {
           const odPico = numOr(od.pressao_pico)
-          const odCompl = numOr(od.complacencia)
-          const odTipo = od.tipo_curva || rec.tipo_curva_od || ''
+          const odCompl = numOr(od.max_relax ?? od.complacencia)
+          const odVolMeato = numOr(od.volume_meato)
+          const odGrad = numOr(od.compl_estatica ?? od.gradiente_curva)
+          const odTipo = rec.tipo_curva_od || od.tipo_curva || ''
           const odCurve = odCurvePts || generateDynamicCurve(odPico, odCompl, odTipo)
           setTimpOD({
             id: od.id,
             orelha: 'OD',
-            volume_meato: numOr(od.volume_meato),
+            volume_meato: odVolMeato,
             complacencia: odCompl,
             pressao_maxima: numOr(od.pressao_maxima),
             tipo_curva: odTipo,
             pressao_pico: odPico,
-            gradiente_curva: numOr(od.gradiente_curva),
+            gradiente_curva: odGrad,
             curva_descricao: od.curva_descricao || '',
             observacoes: od.observacoes || '',
             curva_timpanometrica: odCurve,
           })
-          loadedRaw.od_pressao_media = od.pressao_pico != null ? String(od.pressao_pico) : ''
-          loadedRaw.od_volume_media = od.volume_meato != null ? String(od.volume_meato) : ''
-          loadedSummary.pressao_om_od = od.pressao_pico != null ? String(od.pressao_pico) : ''
-          loadedSummary.max_relax_od = od.complacencia != null ? String(od.complacencia) : ''
-          loadedSummary.compl_200_od = od.volume_meato != null ? String(od.volume_meato) : ''
-          loadedSummary.compl_estatica_od =
-            od.gradiente_curva != null ? String(od.gradiente_curva) : ''
+          loadedRaw.od_pressao_media = odPico != null ? String(odPico) : ''
+          loadedRaw.od_volume_media = odVolMeato != null ? String(odVolMeato) : ''
+          loadedSummary.pressao_om_od = odPico != null ? String(odPico) : ''
+          loadedSummary.max_relax_od = odCompl != null ? String(odCompl) : ''
+          loadedSummary.compl_200_od = odVolMeato != null ? String(odVolMeato) : ''
+          loadedSummary.compl_estatica_od = odGrad != null ? String(odGrad) : ''
         }
 
         if (oe) {
           const oePico = numOr(oe.pressao_pico)
-          const oeCompl = numOr(oe.complacencia)
-          const oeTipo = oe.tipo_curva || rec.tipo_curva_oe || ''
+          const oeCompl = numOr(oe.max_relax ?? oe.complacencia)
+          const oeVolMeato = numOr(oe.volume_meato)
+          const oeGrad = numOr(oe.compl_estatica ?? oe.gradiente_curva)
+          const oeTipo = rec.tipo_curva_oe || oe.tipo_curva || ''
           const oeCurve = oeCurvePts || generateDynamicCurve(oePico, oeCompl, oeTipo)
           setTimpOE({
             id: oe.id,
             orelha: 'OE',
-            volume_meato: numOr(oe.volume_meato),
+            volume_meato: oeVolMeato,
             complacencia: oeCompl,
             pressao_maxima: numOr(oe.pressao_maxima),
             tipo_curva: oeTipo,
             pressao_pico: oePico,
-            gradiente_curva: numOr(oe.gradiente_curva),
+            gradiente_curva: oeGrad,
             curva_descricao: oe.curva_descricao || '',
             observacoes: oe.observacoes || '',
             curva_timpanometrica: oeCurve,
           })
-          loadedRaw.oe_pressao_media = oe.pressao_pico != null ? String(oe.pressao_pico) : ''
-          loadedRaw.oe_volume_media = oe.volume_meato != null ? String(oe.volume_meato) : ''
-          loadedSummary.pressao_om_oe = oe.pressao_pico != null ? String(oe.pressao_pico) : ''
-          loadedSummary.max_relax_oe = oe.complacencia != null ? String(oe.complacencia) : ''
-          loadedSummary.compl_200_oe = oe.volume_meato != null ? String(oe.volume_meato) : ''
-          loadedSummary.compl_estatica_oe =
-            oe.gradiente_curva != null ? String(oe.gradiente_curva) : ''
+          loadedRaw.oe_pressao_media = oePico != null ? String(oePico) : ''
+          loadedRaw.oe_volume_media = oeVolMeato != null ? String(oeVolMeato) : ''
+          loadedSummary.pressao_om_oe = oePico != null ? String(oePico) : ''
+          loadedSummary.max_relax_oe = oeCompl != null ? String(oeCompl) : ''
+          loadedSummary.compl_200_oe = oeVolMeato != null ? String(oeVolMeato) : ''
+          loadedSummary.compl_estatica_oe = oeGrad != null ? String(oeGrad) : ''
         }
 
         if (od || oe) {

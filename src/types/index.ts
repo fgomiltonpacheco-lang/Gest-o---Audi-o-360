@@ -415,6 +415,7 @@ export interface AudiometryExamFull {
   patientId: string
   patientName: string
   created_by?: string
+  status?: 'rascunho' | 'finalizado' | string
   date: string // YYYY-MM-DD
   cpf: string
   dob: string
@@ -552,6 +553,7 @@ export function emptyAudiometryExamFull(
     patientId,
     patientName,
     created_by: '',
+    status: 'rascunho',
     date: new Date().toISOString().split('T')[0],
     cpf: '',
     dob: '',

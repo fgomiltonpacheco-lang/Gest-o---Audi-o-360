@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T02:34:59.875Z",
+  "generatedAt": "2026-08-24T03:01:25.104Z",
   "collections": [
     {
       "name": "users",
@@ -2449,6 +2449,12 @@
         },
         {
           "name": "clinica_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
           "type": "text",
           "required": false,
           "system": false

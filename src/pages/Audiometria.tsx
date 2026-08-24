@@ -29,6 +29,8 @@ import {
   AlertTriangle,
   Copy,
   Info,
+  CheckCircle2,
+  FileEdit,
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { getEquipmentStatus } from '@/types'
@@ -119,6 +121,7 @@ function mapExam(r: any): AudiometryExamFull {
     patientId: r.patient || r.patientId || '',
     patientName: r.patientName || '',
     created_by: r.created_by || '',
+    status: r.status || 'rascunho',
     date: r.date || '',
     cpf: r.cpf || '',
     dob: r.dob || '',
@@ -326,10 +329,10 @@ export default function Audiometria() {
   const [saving, setSaving] = useState(false)
   const [exam, setExam] = useState<ExamState>(() => {
     const base = emptyAudiometryExamFull(id || '', patient?.name || '')
-    return { ...base, audiometer: DEFAULT_AUDIOMETER }
+    return { ...base, status: 'rascunho', audiometer: DEFAULT_AUDIOMETER }
   })
 
-  const readOnly = exam?.status === 'finalizado'
+  const readOnly = isSecretaria || exam?.status === 'finalizado'
 
   const loadExam = useCallback(async () => {
     if (!examId || examId === 'novo') return
@@ -476,12 +479,13 @@ export default function Audiometria() {
     return n
   }
 
-  const handleSave = async () => {
+  const handleSave = async (finalizar = false) => {
     if (!patient) {
       toast({ title: 'Paciente não encontrado', variant: 'destructive' })
       return
     }
     setSaving(true)
+    const nextStatus = finalizar ? 'finalizado' : exam.status || 'rascunho'
     // MT (Média Tritonal) calculada automaticamente a partir do mapa aéreo
     // quando não estiver explicitamente preenchida. LRF usa srt como fallback.
     //
@@ -516,6 +520,7 @@ export default function Audiometria() {
       patientName: patient.name,
       created_by: currentUser?.id || '',
       clinica_id: ((pb.authStore as any).model || (pb.authStore as any).record)?.clinica_id || '',
+      status: nextStatus,
       date: exam.date,
       cpf: exam.cpf,
       dob: exam.dob,
@@ -569,8 +574,11 @@ export default function Audiometria() {
         void _id
         void _c
         void _u
-        setExam({ ...rest, id: mapped.id })
-        toast({ title: 'Exame atualizado', description: 'Audiometria salva com sucesso.' })
+        setExam({ ...rest, id: mapped.id, status: nextStatus })
+        toast({
+          title: finalizar ? 'Exame finalizado' : 'Exame atualizado',
+          description: 'Audiometria salva com sucesso.',
+        })
       } else {
         const rec: any = await pb.collection('audiometry_exams').create(payload)
         const mapped = mapExam(rec)
@@ -578,8 +586,11 @@ export default function Audiometria() {
         void _id
         void _c
         void _u
-        setExam({ ...rest, id: mapped.id })
-        toast({ title: 'Exame criado', description: 'Audiometria salva com sucesso.' })
+        setExam({ ...rest, id: mapped.id, status: nextStatus })
+        toast({
+          title: finalizar ? 'Exame finalizado' : 'Exame criado',
+          description: 'Audiometria salva com sucesso.',
+        })
         navigate(`/pacientes/${patient.id}/audiometria/${mapped.id}`, { replace: true })
       }
     } catch (err) {
@@ -749,6 +760,18 @@ export default function Audiometria() {
               Audiometria
             </h1>
           </div>
+          {exam.status === 'finalizado' && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-0.5">
+              <CheckCircle2 className="w-3 h-3" />
+              Finalizado
+            </span>
+          )}
+          {exam.status === 'rascunho' && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+              <FileEdit className="w-3 h-3" />
+              Rascunho
+            </span>
+          )}
         </div>
       </div>
 
@@ -831,7 +854,8 @@ export default function Audiometria() {
                     value={exam.audiometer || ''}
                     onChange={(e) => setField('audiometer', e.target.value)}
                     placeholder="Nenhum equipamento cadastrado — digite o nome"
-                    disabled={isSecretaria}
+                    disabled={readOnly}
+                    readOnly={readOnly}
                     className="h-9 rounded-xl text-xs font-medium border-slate-300 bg-white"
                   />
                 ) : (
@@ -845,7 +869,7 @@ export default function Audiometria() {
                         calibration: eq?.data_calibracao || prev.calibration,
                       }))
                     }}
-                    disabled={isSecretaria}
+                    disabled={readOnly}
                   >
                     <SelectTrigger className="h-9 rounded-xl text-xs font-medium border-slate-300 bg-white">
                       <SelectValue placeholder="Selecione o equipamento" />
@@ -868,7 +892,8 @@ export default function Audiometria() {
                   type="date"
                   value={exam.calibration || ''}
                   onChange={(e) => setField('calibration', e.target.value)}
-                  disabled={isSecretaria}
+                  disabled={readOnly}
+                  readOnly={readOnly}
                   className="h-9 rounded-xl text-xs font-medium border-slate-300 bg-white"
                 />
               </Field>
@@ -923,7 +948,7 @@ export default function Audiometria() {
                   </div>
                   <h3 className="text-sm font-bold text-slate-800">Audiometria Orelha Direita</h3>
                 </div>
-                {!isSecretaria && (
+                {!readOnly && (
                   <Button
                     type="button"
                     variant="outline"
@@ -949,7 +974,7 @@ export default function Audiometria() {
                 onBoneSym={(f, sym) => setPoint('bone_od', f, { symbol: sym })}
                 onLdlDb={(f, raw) => setPoint('ldl_od', f, { db: handleDbInput(raw) })}
                 onLdlSym={(f, sym) => setPoint('ldl_od', f, { symbol: sym })}
-                disabled={isSecretaria}
+                disabled={readOnly}
               />
 
               {/* Seção Audiometria Vocal & IPRF OD (conforme imagem 3) */}
@@ -957,6 +982,7 @@ export default function Audiometria() {
                 side="OD"
                 exam={exam}
                 setField={setField}
+                disabled={readOnly}
                 isSecretaria={isSecretaria}
               />
             </div>
@@ -973,7 +999,7 @@ export default function Audiometria() {
                   </div>
                   <h3 className="text-sm font-bold text-slate-800">Audiometria Orelha Esquerda</h3>
                 </div>
-                {!isSecretaria && (
+                {!readOnly && (
                   <Button
                     type="button"
                     variant="outline"
@@ -999,7 +1025,7 @@ export default function Audiometria() {
                 onBoneSym={(f, sym) => setPoint('bone_oe', f, { symbol: sym })}
                 onLdlDb={(f, raw) => setPoint('ldl_oe', f, { db: handleDbInput(raw) })}
                 onLdlSym={(f, sym) => setPoint('ldl_oe', f, { symbol: sym })}
-                disabled={isSecretaria}
+                disabled={readOnly}
               />
 
               {/* Seção Audiometria Vocal & IPRF OE */}
@@ -1007,6 +1033,7 @@ export default function Audiometria() {
                 side="OE"
                 exam={exam}
                 setField={setField}
+                disabled={readOnly}
                 isSecretaria={isSecretaria}
               />
             </div>
@@ -1021,7 +1048,7 @@ export default function Audiometria() {
                 <Select
                   value={exam.loss_degree || '__none'}
                   onValueChange={(v) => setField('loss_degree', v === '__none' ? '' : v)}
-                  disabled={isSecretaria}
+                  disabled={readOnly}
                 >
                   <SelectTrigger className="h-8 rounded-xl text-[11px]">
                     <SelectValue placeholder="Selecione o grau" />
@@ -1040,7 +1067,7 @@ export default function Audiometria() {
                 <Select
                   value={exam.loss_type || '__none'}
                   onValueChange={(v) => setField('loss_type', v === '__none' ? '' : v)}
-                  disabled={isSecretaria}
+                  disabled={readOnly}
                 >
                   <SelectTrigger className="h-8 rounded-xl text-[11px]">
                     <SelectValue placeholder="Selecione o tipo" />
@@ -1059,7 +1086,7 @@ export default function Audiometria() {
                 <Select
                   value={exam.loss_configuration || '__none'}
                   onValueChange={(v) => setField('loss_configuration', v === '__none' ? '' : v)}
-                  disabled={isSecretaria}
+                  disabled={readOnly}
                 >
                   <SelectTrigger className="h-8 rounded-xl text-[11px]">
                     <SelectValue placeholder="Selecione a configuração" />
@@ -1080,7 +1107,7 @@ export default function Audiometria() {
               <Label className="text-xs font-semibold text-slate-700">
                 Parecer / Laudo Audiológico
               </Label>
-              {!isSecretaria && (
+              {!readOnly && (
                 <Button
                   type="button"
                   variant="outline"
@@ -1096,7 +1123,8 @@ export default function Audiometria() {
             <Textarea
               value={exam.report}
               onChange={(e) => setField('report', e.target.value)}
-              disabled={isSecretaria}
+              disabled={readOnly}
+              readOnly={readOnly}
               placeholder="Descreva o parecer audiológico..."
               rows={6}
               className="rounded-xl text-xs border-slate-300 resize-y"
@@ -1116,19 +1144,33 @@ export default function Audiometria() {
           <Printer className="w-4 h-4 mr-1.5" />
           Imprimir Laudo
         </Button>
-        {!isSecretaria && (
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold h-10 shadow-sm w-full sm:w-auto"
-          >
-            {saving ? (
-              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4 mr-1.5" />
-            )}
-            Salvar
-          </Button>
+        {!readOnly && (
+          <>
+            <Button
+              onClick={() => handleSave(false)}
+              disabled={saving}
+              className="bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold h-10 shadow-sm w-full sm:w-auto"
+            >
+              {saving ? (
+                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-1.5" />
+              )}
+              Salvar
+            </Button>
+            <Button
+              onClick={() => handleSave(true)}
+              disabled={saving}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold h-10 shadow-sm w-full sm:w-auto"
+            >
+              {saving ? (
+                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 mr-1.5" />
+              )}
+              Finalizar
+            </Button>
+          </>
         )}
       </div>
     </div>
@@ -1233,6 +1275,7 @@ function EarAudiometrySection({
                       value={dbVal ?? ''}
                       onChange={(e) => onAirDb(f, e.target.value)}
                       disabled={disabled}
+                      readOnly={disabled}
                       placeholder=""
                       className={`w-full h-6 px-0 text-center text-[10px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 ${
                         isOd ? 'focus:ring-red-400' : 'focus:ring-blue-400'
@@ -1362,6 +1405,7 @@ function EarAudiometrySection({
                       value={dbVal ?? ''}
                       onChange={(e) => onBoneDb(f, e.target.value)}
                       disabled={disabled}
+                      readOnly={disabled}
                       placeholder=""
                       className={`w-full h-6 px-0 text-center text-[10px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 ${
                         isOd ? 'focus:ring-red-400' : 'focus:ring-blue-400'
@@ -1488,6 +1532,7 @@ function EarAudiometrySection({
                       value={dbVal ?? ''}
                       onChange={(e) => onLdlDb(f, e.target.value)}
                       disabled={disabled}
+                      readOnly={disabled}
                       placeholder=""
                       className={`w-full h-6 px-0 text-center text-[10px] font-semibold rounded bg-slate-100 border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 ${
                         isOd ? 'focus:ring-red-400' : 'focus:ring-blue-400'
@@ -2018,6 +2063,7 @@ interface EarVocalAndIprfSectionProps {
   side: 'OD' | 'OE'
   exam: ExamState
   setField: <K extends keyof ExamState>(key: K, value: ExamState[K]) => void
+  disabled?: boolean
   isSecretaria?: boolean
 }
 
@@ -2025,8 +2071,10 @@ function EarVocalAndIprfSection({
   side,
   exam,
   setField,
+  disabled,
   isSecretaria,
 }: EarVocalAndIprfSectionProps) {
+  const isInputDisabled = disabled || isSecretaria
   const isOd = side === 'OD'
   const sideKey = isOd ? 'od' : 'oe'
   const vocalRow = exam.iprf_vocal[sideKey]
@@ -2094,7 +2142,8 @@ function EarVocalAndIprfSection({
                         updateVocalField('monossilabos_erros', err)
                         updateVocalField('monossilabos', acerto)
                       }}
-                      disabled={isSecretaria}
+                      disabled={isInputDisabled}
+                      readOnly={isInputDisabled}
                       className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
                     />
                     <span className="text-[10px] text-slate-500 font-bold">#</span>
@@ -2106,7 +2155,8 @@ function EarVocalAndIprfSection({
                       type="number"
                       value={vocalRow.monossilabos}
                       onChange={(e) => updateVocalField('monossilabos', e.target.value)}
-                      disabled={isSecretaria}
+                      disabled={isInputDisabled}
+                      readOnly={isInputDisabled}
                       className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
                     />
                     <span className="text-[10px] text-slate-500 font-bold">%</span>
@@ -2118,7 +2168,8 @@ function EarVocalAndIprfSection({
                       type="number"
                       value={vocalRow.intensidade}
                       onChange={(e) => updateVocalField('intensidade', e.target.value)}
-                      disabled={isSecretaria}
+                      disabled={isInputDisabled}
+                      readOnly={isInputDisabled}
                       className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
                     />
                     <span className="text-[10px] text-slate-500 font-bold">dB</span>
@@ -2130,7 +2181,7 @@ function EarVocalAndIprfSection({
                     onValueChange={(v) =>
                       updateVocalField('tipo_mascaramento', v === '__none' ? '' : v)
                     }
-                    disabled={isSecretaria}
+                    disabled={isInputDisabled}
                   >
                     <SelectTrigger className="h-7 text-xs font-semibold border-slate-300 bg-white mx-auto max-w-[120px]">
                       <SelectValue placeholder="Selecione..." />
@@ -2149,7 +2200,8 @@ function EarVocalAndIprfSection({
                       type="number"
                       value={vocalRow.mascaramento}
                       onChange={(e) => updateVocalField('mascaramento', e.target.value)}
-                      disabled={isSecretaria}
+                      disabled={isInputDisabled}
+                      readOnly={isInputDisabled}
                       className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
                     />
                   </div>
@@ -2175,7 +2227,8 @@ function EarVocalAndIprfSection({
                         updateVocalField('dissilabos_erros', err)
                         updateVocalField('dissilabos', acerto)
                       }}
-                      disabled={isSecretaria}
+                      disabled={isInputDisabled}
+                      readOnly={isInputDisabled}
                       className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
                     />
                     <span className="text-[10px] text-slate-500 font-bold">#</span>
@@ -2187,7 +2240,8 @@ function EarVocalAndIprfSection({
                       type="number"
                       value={vocalRow.dissilabos}
                       onChange={(e) => updateVocalField('dissilabos', e.target.value)}
-                      disabled={isSecretaria}
+                      disabled={isInputDisabled}
+                      readOnly={isInputDisabled}
                       className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
                     />
                     <span className="text-[10px] text-slate-500 font-bold">%</span>
@@ -2199,7 +2253,8 @@ function EarVocalAndIprfSection({
                       type="number"
                       value={vocalRow.intensidade_dissilabos ?? vocalRow.intensidade}
                       onChange={(e) => updateVocalField('intensidade_dissilabos', e.target.value)}
-                      disabled={isSecretaria}
+                      disabled={isInputDisabled}
+                      readOnly={isInputDisabled}
                       className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
                     />
                     <span className="text-[10px] text-slate-500 font-bold">dB</span>
@@ -2215,7 +2270,7 @@ function EarVocalAndIprfSection({
                     onValueChange={(v) =>
                       updateVocalField('tipo_mascaramento_dissilabos', v === '__none' ? '' : v)
                     }
-                    disabled={isSecretaria}
+                    disabled={isInputDisabled}
                   >
                     <SelectTrigger className="h-7 text-xs font-semibold border-slate-300 bg-white mx-auto max-w-[120px]">
                       <SelectValue placeholder="Selecione..." />
@@ -2234,7 +2289,8 @@ function EarVocalAndIprfSection({
                       type="number"
                       value={vocalRow.mascaramento_dissilabos ?? vocalRow.mascaramento}
                       onChange={(e) => updateVocalField('mascaramento_dissilabos', e.target.value)}
-                      disabled={isSecretaria}
+                      disabled={isInputDisabled}
+                      readOnly={isInputDisabled}
                       className="h-7 text-center text-xs font-semibold rounded border-slate-300 bg-white"
                     />
                   </div>
@@ -2270,7 +2326,7 @@ function EarVocalAndIprfSection({
               <button
                 type="button"
                 onClick={() => setField(srtKey as any, exam[srtKey] === -1 ? null : -1)}
-                disabled={isSecretaria}
+                disabled={isInputDisabled}
                 className={`text-[10px] font-bold px-2 py-0.5 rounded transition-all ${
                   exam[srtKey] === -1
                     ? 'bg-slate-700 text-white'
@@ -2296,7 +2352,8 @@ function EarVocalAndIprfSection({
                   onChange={(e) =>
                     setField(srtKey as any, e.target.value === '' ? null : Number(e.target.value))
                   }
-                  disabled={isSecretaria || exam[srtKey] === -1}
+                  disabled={isInputDisabled || exam[srtKey] === -1}
+                  readOnly={isInputDisabled}
                   className="h-8 text-xs font-semibold border-slate-300 bg-white"
                 />
                 <span className="text-xs font-bold text-slate-500">dB</span>
@@ -2311,7 +2368,7 @@ function EarVocalAndIprfSection({
                 onValueChange={(v) =>
                   updateVocalField('mascaramento_srt_tipo', v === '__none' ? '' : v)
                 }
-                disabled={isSecretaria}
+                disabled={isInputDisabled}
               >
                 <SelectTrigger className="h-8 text-xs border-slate-300 bg-white">
                   <SelectValue placeholder="Selecione..." />
@@ -2335,7 +2392,7 @@ function EarVocalAndIprfSection({
               <button
                 type="button"
                 onClick={() => setField(ldvKey as any, exam[ldvKey] === -1 ? null : -1)}
-                disabled={isSecretaria}
+                disabled={isInputDisabled}
                 className={`text-[10px] font-bold px-2 py-0.5 rounded transition-all ${
                   exam[ldvKey] === -1
                     ? 'bg-slate-700 text-white'
@@ -2361,7 +2418,8 @@ function EarVocalAndIprfSection({
                   onChange={(e) =>
                     setField(ldvKey as any, e.target.value === '' ? null : Number(e.target.value))
                   }
-                  disabled={isSecretaria || exam[ldvKey] === -1}
+                  disabled={isInputDisabled || exam[ldvKey] === -1}
+                  readOnly={isInputDisabled}
                   className="h-8 text-xs font-semibold border-slate-300 bg-white"
                 />
                 <span className="text-xs font-bold text-slate-500">dB</span>
@@ -2376,7 +2434,7 @@ function EarVocalAndIprfSection({
                 onValueChange={(v) =>
                   updateVocalField('mascaramento_ldv_tipo', v === '__none' ? '' : v)
                 }
-                disabled={isSecretaria}
+                disabled={isInputDisabled}
               >
                 <SelectTrigger className="h-8 text-xs border-slate-300 bg-white">
                   <SelectValue placeholder="Selecione..." />
