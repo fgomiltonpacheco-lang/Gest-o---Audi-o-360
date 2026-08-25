@@ -645,8 +645,33 @@ export default function Imitanciometria() {
           ? rec.curva_timpanometrica_oe
           : null
 
-      // Inicializa estado timpOD/timpOE imediatamente a partir dos dados do registro principal (fallback imediato)
-      setTimpOD({
+      // Valores padrão / acumulados para summaryData e rawData
+      let loadedSummary: SummaryDataStore = {
+        pressao_om_od: '',
+        pressao_om_oe: '',
+        max_relax_od: '',
+        max_relax_oe: '',
+        compl_200_od: '',
+        compl_200_oe: '',
+        compl_estatica_od: '',
+        compl_estatica_oe: '',
+      }
+      let loadedRaw: RawDataStore = {
+        od_pressao_inicial: '',
+        od_pressao_media: '',
+        od_pressao_final: '',
+        od_volume_inicial: '',
+        od_volume_media: '',
+        od_volume_final: '',
+        oe_pressao_inicial: '',
+        oe_pressao_media: '',
+        oe_pressao_final: '',
+        oe_volume_inicial: '',
+        oe_volume_media: '',
+        oe_volume_final: '',
+      }
+
+      let currentTimpOD: TimpData = {
         id: undefined,
         orelha: 'OD',
         volume_meato: null,
@@ -658,9 +683,9 @@ export default function Imitanciometria() {
         curva_descricao: '',
         observacoes: '',
         curva_timpanometrica: odCurvePts,
-      })
+      }
 
-      setTimpOE({
+      let currentTimpOE: TimpData = {
         id: undefined,
         orelha: 'OE',
         volume_meato: null,
@@ -672,7 +697,7 @@ export default function Imitanciometria() {
         curva_descricao: '',
         observacoes: '',
         curva_timpanometrica: oeCurvePts,
-      })
+      }
 
       // Carrega timpanometria do PocketBase
       try {
@@ -683,31 +708,6 @@ export default function Imitanciometria() {
         const od = timpRecs.find((r) => r.orelha === 'OD')
         const oe = timpRecs.find((r) => r.orelha === 'OE')
 
-        let loadedSummary = {
-          pressao_om_od: '',
-          pressao_om_oe: '',
-          max_relax_od: '',
-          max_relax_oe: '',
-          compl_200_od: '',
-          compl_200_oe: '',
-          compl_estatica_od: '',
-          compl_estatica_oe: '',
-        }
-        let loadedRaw = {
-          od_pressao_inicial: '',
-          od_pressao_media: '',
-          od_pressao_final: '',
-          od_volume_inicial: '',
-          od_volume_media: '',
-          od_volume_final: '',
-          oe_pressao_inicial: '',
-          oe_pressao_media: '',
-          oe_pressao_final: '',
-          oe_volume_inicial: '',
-          oe_volume_media: '',
-          oe_volume_final: '',
-        }
-
         if (od) {
           const odPico = numOr(od.pressao_pico)
           const odCompl = numOr(od.max_relax ?? od.complacencia)
@@ -715,7 +715,7 @@ export default function Imitanciometria() {
           const odGrad = numOr(od.compl_estatica ?? od.gradiente_curva)
           const odTipo = rec.tipo_curva_od || od.tipo_curva || ''
           const odCurve = odCurvePts || generateDynamicCurve(odPico, odCompl, odTipo)
-          setTimpOD({
+          currentTimpOD = {
             id: od.id,
             orelha: 'OD',
             volume_meato: odVolMeato,
@@ -727,7 +727,7 @@ export default function Imitanciometria() {
             curva_descricao: od.curva_descricao || '',
             observacoes: od.observacoes || '',
             curva_timpanometrica: odCurve,
-          })
+          }
           loadedRaw.od_pressao_media = odPico != null ? String(odPico) : ''
           loadedRaw.od_volume_media = odVolMeato != null ? String(odVolMeato) : ''
           loadedSummary.pressao_om_od = odPico != null ? String(odPico) : ''
@@ -743,7 +743,7 @@ export default function Imitanciometria() {
           const oeGrad = numOr(oe.compl_estatica ?? oe.gradiente_curva)
           const oeTipo = rec.tipo_curva_oe || oe.tipo_curva || ''
           const oeCurve = oeCurvePts || generateDynamicCurve(oePico, oeCompl, oeTipo)
-          setTimpOE({
+          currentTimpOE = {
             id: oe.id,
             orelha: 'OE',
             volume_meato: oeVolMeato,
@@ -755,7 +755,7 @@ export default function Imitanciometria() {
             curva_descricao: oe.curva_descricao || '',
             observacoes: oe.observacoes || '',
             curva_timpanometrica: oeCurve,
-          })
+          }
           loadedRaw.oe_pressao_media = oePico != null ? String(oePico) : ''
           loadedRaw.oe_volume_media = oeVolMeato != null ? String(oeVolMeato) : ''
           loadedSummary.pressao_om_oe = oePico != null ? String(oePico) : ''
@@ -763,14 +763,15 @@ export default function Imitanciometria() {
           loadedSummary.compl_200_oe = oeVolMeato != null ? String(oeVolMeato) : ''
           loadedSummary.compl_estatica_oe = oeGrad != null ? String(oeGrad) : ''
         }
-
-        if (od || oe) {
-          setRawData((prev) => ({ ...prev, ...loadedRaw }))
-          setSummaryData((prev) => ({ ...prev, ...loadedSummary }))
-        }
       } catch {
         /* ignore */
       }
+
+      // Aplica dados de timpanometria
+      setTimpOD(currentTimpOD)
+      setTimpOE(currentTimpOE)
+      setRawData((prev) => ({ ...prev, ...loadedRaw }))
+      setSummaryData((prev) => ({ ...prev, ...loadedSummary }))
 
       // Carrega reflexos do PocketBase e reflex_grid do registro principal
       try {
