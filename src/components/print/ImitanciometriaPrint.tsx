@@ -785,8 +785,6 @@ export function ImitanciometriaPrint({
         style={{
           textAlign: 'center',
           marginBottom: '2mm',
-          breakInside: 'avoid',
-          pageBreakInside: 'avoid',
         }}
       >
         <div style={{ display: 'inline-block', minWidth: '260px' }}>

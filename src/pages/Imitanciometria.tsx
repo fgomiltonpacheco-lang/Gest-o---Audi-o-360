@@ -1116,9 +1116,12 @@ export default function Imitanciometria() {
 
     const nextStatus = finalizar ? 'finalizado' : exam.status || 'rascunho'
 
+    const clinicaId =
+      ((pb.authStore as any).model || (pb.authStore as any).record)?.clinica_id || ''
+
     const payload: Record<string, any> = {
       paciente_id: patient.id,
-      clinica_id: ((pb.authStore as any).model || (pb.authStore as any).record)?.clinica_id || '',
+      clinica_id: clinicaId,
       medical_record_id: '',
       data_exame: exam.data_exame,
       especialista_id: exam.especialista_id || currentUser?.id || '',
@@ -1164,6 +1167,7 @@ export default function Imitanciometria() {
       const timpUpsert = async (t: TimpData) => {
         const p = {
           imitanciometria_id: imitId,
+          clinica_id: clinicaId,
           orelha: t.orelha,
           volume_meato: t.volume_meato,
           complacencia: t.complacencia,
@@ -1221,6 +1225,7 @@ export default function Imitanciometria() {
         const rData = buildReflexPayload(item.orelha, item.via)
         const p = {
           imitanciometria_id: imitId,
+          clinica_id: clinicaId,
           orelha: rData.orelha,
           via: rData.via,
           frequencia_500: rData.frequencia_500,

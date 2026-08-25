@@ -411,12 +411,6 @@
     display: block !important;
   }
 
-  h1,
-  h2,
-  h3 {
-    break-after: avoid;
-  }
-
   /* Tabelas com bordas limpas para impressão */
   table {
     width: 100%;
