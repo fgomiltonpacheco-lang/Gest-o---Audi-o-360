@@ -21,7 +21,7 @@ export function formatCurrency(value: number | undefined | null): string {
 // Formatador de Data: YYYY-MM-DD para DD/MM/AAAA
 export function formatDate(dateString: string | undefined | null): string {
   if (!dateString) return '—'
-  const cleanDate = dateString.split('T')[0]
+  const cleanDate = dateString.split(/[T ]/)[0]
   const parts = cleanDate.split('-')
   if (parts.length === 3) {
     const [year, month, day] = parts

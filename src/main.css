@@ -371,8 +371,6 @@
     padding: 0 !important;
     width: 170mm !important;
     max-width: 170mm !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
   }
 
   .imitanciometria-print {
@@ -382,8 +380,6 @@
     width: 170mm !important;
     max-width: 170mm !important;
     margin: 0 auto !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
   }
 
   .imitanciometria-print img {

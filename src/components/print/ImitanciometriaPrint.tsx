@@ -381,7 +381,7 @@ export function ImitanciometriaPrint({
           }}
         >
           <div style={{ flex: 1, display: 'flex', alignItems: 'baseline' }}>
-            <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Audiometro:</span>
+            <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Imitanciômetro:</span>
             <span
               style={{
                 marginLeft: '4px',
