@@ -393,8 +393,6 @@
   }
 
   .imitanciometria-print table {
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
     border-collapse: collapse !important;
   }
 
