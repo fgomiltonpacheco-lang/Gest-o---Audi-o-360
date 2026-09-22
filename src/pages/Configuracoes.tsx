@@ -427,6 +427,7 @@ export default function Configuracoes() {
   const [eqOpen, setEqOpen] = useState(false)
   const [eqEditing, setEqEditing] = useState<Equipment | null>(null)
   const [eqNome, setEqNome] = useState('')
+  const [eqTipo, setEqTipo] = useState<'Audiômetro' | 'Imitanciômetro'>('Audiômetro')
   const [eqDataCalib, setEqDataCalib] = useState('')
   const [eqSaving, setEqSaving] = useState(false)
   const [eqDelete, setEqDelete] = useState<Equipment | null>(null)
@@ -435,6 +436,7 @@ export default function Configuracoes() {
   const openNewEquipment = () => {
     setEqEditing(null)
     setEqNome('')
+    setEqTipo('Audiômetro')
     setEqDataCalib(new Date().toISOString().split('T')[0])
     setEqOpen(true)
   }
@@ -442,6 +444,7 @@ export default function Configuracoes() {
   const openEditEquipment = (eq: Equipment) => {
     setEqEditing(eq)
     setEqNome(eq.nome)
+    setEqTipo((eq.tipo as 'Audiômetro' | 'Imitanciômetro') || 'Audiômetro')
     setEqDataCalib(eq.data_calibracao)
     setEqOpen(true)
   }
@@ -451,14 +454,22 @@ export default function Configuracoes() {
       toast({ title: 'Informe o nome do equipamento.', variant: 'destructive' })
       return
     }
+    if (!eqTipo) {
+      toast({ title: 'Selecione o tipo do equipamento.', variant: 'destructive' })
+      return
+    }
     if (!eqDataCalib) {
       toast({ title: 'Informe a data da última calibração.', variant: 'destructive' })
       return
     }
     setEqSaving(true)
     const res = eqEditing
-      ? await updateEquipment(eqEditing.id, { nome: eqNome, data_calibracao: eqDataCalib })
-      : await addEquipment({ nome: eqNome, data_calibracao: eqDataCalib })
+      ? await updateEquipment(eqEditing.id, {
+          nome: eqNome,
+          tipo: eqTipo,
+          data_calibracao: eqDataCalib,
+        })
+      : await addEquipment({ nome: eqNome, tipo: eqTipo, data_calibracao: eqDataCalib })
     setEqSaving(false)
     if (res.success) {
       setEqOpen(false)
@@ -1454,6 +1465,9 @@ export default function Configuracoes() {
                         Nome
                       </TableHead>
                       <TableHead className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                        Tipo
+                      </TableHead>
+                      <TableHead className="text-xs font-bold text-slate-600 uppercase tracking-wider">
                         Data de Calibração
                       </TableHead>
                       <TableHead className="text-xs font-bold text-slate-600 uppercase tracking-wider">
@@ -1470,7 +1484,7 @@ export default function Configuracoes() {
                   <TableBody>
                     {equipments.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-sm text-slate-400 py-10">
+                        <TableCell colSpan={6} className="text-center text-sm text-slate-400 py-10">
                           Nenhum equipamento cadastrado. Clique em "Novo Equipamento".
                         </TableCell>
                       </TableRow>
@@ -1481,6 +1495,18 @@ export default function Configuracoes() {
                           <TableRow key={eq.id} className="group">
                             <TableCell className="text-sm font-semibold text-slate-800">
                               {eq.nome}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={`text-[11px] font-semibold ${
+                                  eq.tipo === 'Imitanciômetro'
+                                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                    : 'bg-teal-50 text-teal-700 border-teal-200'
+                                }`}
+                              >
+                                {eq.tipo || 'Audiômetro'}
+                              </Badge>
                             </TableCell>
                             <TableCell className="text-sm text-slate-600 font-mono">
                               {eq.data_calibracao ? formatDate(eq.data_calibracao) : '—'}
@@ -2629,6 +2655,23 @@ export default function Configuracoes() {
                 placeholder="Ex.: AD229b, AT235..."
                 className="h-10 rounded-xl mt-1 text-sm border-slate-300"
               />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">
+                Tipo <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={eqTipo}
+                onValueChange={(v) => setEqTipo(v as 'Audiômetro' | 'Imitanciômetro')}
+              >
+                <SelectTrigger className="h-10 rounded-xl mt-1 text-sm border-slate-300">
+                  <SelectValue placeholder="Selecione o tipo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Audiômetro">Audiômetro</SelectItem>
+                  <SelectItem value="Imitanciômetro">Imitanciômetro</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="text-xs font-semibold text-slate-700">

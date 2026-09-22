@@ -1311,6 +1311,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         equips.map((e: any) => ({
           id: e.id,
           nome: e.nome || '',
+          tipo: e.tipo || '',
           data_calibracao: e.data_calibracao || '',
           proxima_calibracao: e.proxima_calibracao || '',
         })),
@@ -2267,6 +2268,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const proxima = computeNextCalibration(eq.data_calibracao)
       const rec: any = await pb.collection('equipments').create({
         nome: eq.nome.trim(),
+        tipo: eq.tipo || '',
         data_calibracao: eq.data_calibracao,
         proxima_calibracao: proxima,
       })
@@ -2276,6 +2278,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           {
             id: rec.id,
             nome: rec.nome || '',
+            tipo: rec.tipo || '',
             data_calibracao: rec.data_calibracao || '',
             proxima_calibracao: rec.proxima_calibracao || '',
           },
@@ -2299,6 +2302,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const patch: Record<string, any> = {}
       if (eq.nome !== undefined) patch.nome = eq.nome.trim()
+      if (eq.tipo !== undefined) patch.tipo = eq.tipo
       if (eq.data_calibracao !== undefined) {
         patch.data_calibracao = eq.data_calibracao
         patch.proxima_calibracao = computeNextCalibration(eq.data_calibracao)
@@ -2311,6 +2315,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               ? {
                   id: rec.id,
                   nome: rec.nome || '',
+                  tipo: rec.tipo || '',
                   data_calibracao: rec.data_calibracao || '',
                   proxima_calibracao: rec.proxima_calibracao || '',
                 }

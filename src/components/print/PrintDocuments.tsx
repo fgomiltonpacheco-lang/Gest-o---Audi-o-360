@@ -387,11 +387,10 @@ export function AudiometriaFullPrint({
     CLINIC_ADDRESS
 
   // 3. Equipamento (Audiômetro e Calibração)
-  const audiometer =
-    exam.audiometer?.trim() || clinicSettings?.audiometro?.trim() || 'Não informado'
+  const audiometer = exam.audiometer?.trim() || clinicSettings?.audiometro?.trim() || ''
   const calibration = exam.calibration?.trim()
     ? formatDate(exam.calibration)
-    : clinicSettings?.calibracao?.trim() || 'Não informada'
+    : clinicSettings?.calibracao?.trim() || ''
 
   // 4. Especialista
   const specialistName =

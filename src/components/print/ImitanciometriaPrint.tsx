@@ -119,12 +119,8 @@ export function ImitanciometriaPrint({
     CLINIC_ADDRESS
 
   // 3. Equipamento e calibração
-  const audiometer = data.equipment_nome?.trim() || clinicSettings?.audiometro?.trim() || ''
-  const calibration = data.equipment_calibracao?.trim()
-    ? formatDate(data.equipment_calibracao)
-    : clinicSettings?.calibracao?.trim()
-      ? formatDate(clinicSettings.calibracao)
-      : ''
+  const audiometer = data.equipment_nome?.trim() || ''
+  const calibration = data.equipment_calibracao?.trim() ? formatDate(data.equipment_calibracao) : ''
 
   // 4. Especialista, Especialidade e CRFa (puxar do cadastro do profissional)
   const specialistName =

@@ -910,13 +910,30 @@ export default function Imitanciometria() {
     }
   }, [patient, isNew, loadAudiometryThresholds])
 
-  // Pré-seleciona equipamento único
+  // Filtra equipamentos do tipo Imitanciômetro
+  const imitanciometros = useMemo(
+    () =>
+      equipments.filter(
+        (e) =>
+          (e.tipo || '').toLowerCase() === 'imitanciômetro' ||
+          (e.tipo || '').toLowerCase() === 'imitanciometro',
+      ),
+    [equipments],
+  )
+
+  // Pré-seleciona imitanciômetro quando houver ou novo exame
   useEffect(() => {
-    if (equipments.length === 1 && !exam.equipment_id) {
-      const eq = equipments[0]
+    if (!exam.equipment_id && imitanciometros.length > 0) {
+      // Ordena pelo mais recente por próxima calibração ou ordem
+      const sorted = [...imitanciometros].sort((a, b) => {
+        const da = a.proxima_calibracao || a.data_calibracao || ''
+        const db = b.proxima_calibracao || b.data_calibracao || ''
+        return db.localeCompare(da)
+      })
+      const eq = sorted[0]
       setExam((prev) => ({ ...prev, equipment_id: eq.id, equipment_nome: eq.nome }))
     }
-  }, [equipments, exam.equipment_id])
+  }, [imitanciometros, exam.equipment_id])
 
   const setField = <K extends keyof ExamState>(key: K, value: ExamState[K]) => {
     setExam((prev) => ({ ...prev, [key]: value }))
@@ -1363,8 +1380,8 @@ export default function Imitanciometria() {
       especialista_nome:
         exam.especialista_nome || currentUser?.name || clinicSettings?.especialista_nome || '',
       especialista_crm: currentUser?.crmCrfa || clinicSettings?.especialista_crfa || '',
-      equipment_nome: exam.equipment_nome || clinicSettings?.audiometro || '',
-      equipment_calibracao: selectedEquipment?.data_calibracao || clinicSettings?.calibracao || '',
+      equipment_nome: exam.equipment_nome || '',
+      equipment_calibracao: selectedEquipment?.data_calibracao || '',
       encaminhado_por: exam.encaminhado_por,
       observacoes: exam.observacoes,
       meatoscopia: {
@@ -1568,7 +1585,7 @@ export default function Imitanciometria() {
             <Select
               value={exam.equipment_id || '__none'}
               onValueChange={(v) => {
-                const eq = equipments.find((e) => e.id === v)
+                const eq = imitanciometros.find((e) => e.id === v)
                 setExam((prev) => ({
                   ...prev,
                   equipment_id: v === '__none' ? '' : v,
@@ -1582,7 +1599,7 @@ export default function Imitanciometria() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none">—</SelectItem>
-                {equipments.map((eq) => (
+                {imitanciometros.map((eq) => (
                   <SelectItem key={eq.id} value={eq.id}>
                     {eq.nome}
                   </SelectItem>

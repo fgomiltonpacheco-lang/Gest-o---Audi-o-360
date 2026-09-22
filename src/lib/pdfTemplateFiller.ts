@@ -723,7 +723,7 @@ export async function fillImitanciometriaTemplatePdf(
   const examDate = formatDate(d.data_exame) || formatDate(new Date().toISOString())
   const specialistName = d.especialista_nome || prof?.name || clinic?.especialista_nome || ''
   const specialistCrfa = (prof?.crmCrfa || clinic?.especialista_crfa || '').replace(/^crfa\s*/i, '')
-  const equipment = d.equipment_nome || clinic?.audiometro || 'Não informado'
+  const equipment = d.equipment_nome || ''
 
   // Coordenadas de preenchimento — valores padrão calibrados para um template
   // A4 (595 x 842 pt). Podem ser sobrescritas via `data.coordinates` para

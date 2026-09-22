@@ -1567,11 +1567,13 @@ export interface ClinicSettings {
 }
 
 // === Equipment ===
+export type EquipmentTipo = 'Audiômetro' | 'Imitanciômetro'
+
 export interface Equipment {
   id: string
   nome?: string
   name?: string
-  tipo?: string
+  tipo?: EquipmentTipo | string
   marca?: string
   modelo?: string
   serial?: string

@@ -378,17 +378,31 @@ export default function Audiometria() {
   }, [patient?.id, isNew])
 
   // ---------- Equipamentos (audiômetro) ----------
-  // Pré-seleciona automaticamente quando há apenas 1 equipamento cadastrado,
-  // ou sincroniza a data de calibração do equipamento selecionado.
+  // Filtra apenas equipamentos do tipo Audiômetro
+  const audiometros = useMemo(
+    () =>
+      equipments.filter(
+        (e) =>
+          (e.tipo || '').toLowerCase() === 'audiômetro' ||
+          (e.tipo || '').toLowerCase() === 'audiometro',
+      ),
+    [equipments],
+  )
+
   const selectedEquipment = useMemo(
-    () => equipments.find((e) => e.nome === exam.audiometer) || null,
-    [equipments, exam.audiometer],
+    () => audiometros.find((e) => e.nome === exam.audiometer) || null,
+    [audiometros, exam.audiometer],
   )
 
   useEffect(() => {
-    // Se ainda não há audiômetro definido e existe apenas 1 equipamento, pré-seleciona.
-    if (equipments.length === 1 && !selectedEquipment) {
-      const eq = equipments[0]
+    // Se ainda não há audiômetro definido e existem audiômetros cadastrados, pré-seleciona o mais recente
+    if (!exam.audiometer && audiometros.length > 0) {
+      const sorted = [...audiometros].sort((a, b) => {
+        const da = a.proxima_calibracao || a.data_calibracao || ''
+        const db = b.proxima_calibracao || b.data_calibracao || ''
+        return db.localeCompare(da)
+      })
+      const eq = sorted[0]
       setExam((prev) => ({
         ...prev,
         audiometer: eq.nome,
@@ -396,7 +410,7 @@ export default function Audiometria() {
       }))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [equipments])
+  }, [audiometros])
 
   const equipmentStatus = selectedEquipment
     ? getEquipmentStatus(selectedEquipment.proxima_calibracao)
@@ -849,11 +863,11 @@ export default function Audiometria() {
           <div className="flex flex-col sm:flex-row sm:items-end gap-3">
             <div className="flex-1">
               <Field label="Audiômetro (equipamento)">
-                {equipments.length === 0 ? (
+                {audiometros.length === 0 ? (
                   <Input
                     value={exam.audiometer || ''}
                     onChange={(e) => setField('audiometer', e.target.value)}
-                    placeholder="Nenhum equipamento cadastrado — digite o nome"
+                    placeholder="Nenhum audiômetro cadastrado — digite o nome"
                     disabled={readOnly}
                     readOnly={readOnly}
                     className="h-9 rounded-xl text-xs font-medium border-slate-300 bg-white"
@@ -862,7 +876,7 @@ export default function Audiometria() {
                   <Select
                     value={exam.audiometer || '__none'}
                     onValueChange={(v) => {
-                      const eq = equipments.find((e) => e.nome === v)
+                      const eq = audiometros.find((e) => e.nome === v)
                       setExam((prev) => ({
                         ...prev,
                         audiometer: v === '__none' ? '' : v,
@@ -876,7 +890,7 @@ export default function Audiometria() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none">—</SelectItem>
-                      {equipments.map((eq) => (
+                      {audiometros.map((eq) => (
                         <SelectItem key={eq.id} value={eq.nome}>
                           {eq.nome}
                         </SelectItem>
@@ -1637,7 +1651,7 @@ function ExamPreview({
   const tritoOeVal = oeTrito !== null ? `${oeTrito.toFixed(0)}` : '-'
 
   const convText = patientConvenio || 'Particular'
-  const audiometerText = exam.audiometer || DEFAULT_AUDIOMETER
+  const audiometerText = exam.audiometer || ''
   const rawCalib =
     exam.calibration ||
     clinicSettings?.calibracao ||
