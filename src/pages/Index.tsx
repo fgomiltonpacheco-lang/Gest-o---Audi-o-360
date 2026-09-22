@@ -215,7 +215,7 @@ export default function Index() {
     },
     {
       title: 'Receita do Mês',
-      value: formatCurrency(monthPaidInstallments > 0 ? monthPaidInstallments : 32450),
+      value: formatCurrency(monthPaidInstallments),
       subtitle: 'Parcelas e consultas pagas',
       icon: DollarSign,
       trend: '+14%',
