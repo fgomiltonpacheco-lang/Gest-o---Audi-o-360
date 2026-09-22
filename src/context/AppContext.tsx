@@ -2368,6 +2368,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // - email (tipo email): enviar vazio é rejeitado por validação; omitir quando ausente.
     // - responsible (tipo json): só enviar quando houver responsável; caso contrário omitir.
     const payload: Record<string, any> = {
+      clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
       name: newPatient.name,
       cpf: newPatient.cpf,
       birthDate: newPatient.birthDate,
@@ -2410,6 +2411,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // (status='aceito') para o novo paciente.
         pb.collection('consentimentos')
           .create({
+            clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
             paciente_id: rec.id,
             tipo_consentimento: 'dados_cadastrais',
             versao_termo: `v1-${todayStr()}`,
@@ -5090,6 +5092,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // versão do termo: hash simples da data atual + tamanho do texto
         const versao = `v1-${new Date().toISOString().slice(0, 10)}`
         const payload: Record<string, any> = {
+          clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
           paciente_id: pacienteId,
           tipo_consentimento: tipo,
           versao_termo: versao,
