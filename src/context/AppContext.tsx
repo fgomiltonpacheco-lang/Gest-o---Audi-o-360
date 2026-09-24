@@ -2673,6 +2673,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setClinicalRecords((prev) => ({ ...prev, [patientId]: updated }))
 
     const payload: any = {
+      clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
       patientId,
       patientName: pat?.name || '',
       mainComplaint: updated.mainComplaint,
@@ -2724,6 +2725,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     pb.collection('evolutions')
       .create({
+        clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
         patientId: evoData.patientId || '',
         patientName: '',
         date: evoData.date,
@@ -2765,6 +2767,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     pb.collection('audiometries')
       .create({
+        clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
         patientId: exam.patientId || '',
         patientName: exam.patientName,
         date: exam.date,
@@ -2815,6 +2818,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     pb.collection('tympanometries')
       .create({
+        clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
         patientId: exam.patientId || '',
         patientName: exam.patientName,
         date: exam.date,
@@ -2860,6 +2864,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     pb.collection('beras')
       .create({
+        clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
         patientId: exam.patientId || '',
         patientName: exam.patientName,
         date: exam.date,
@@ -2932,6 +2937,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     })
 
     const payload: any = {
+      clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
       patientId: aidData.patientId || '',
       patientName: aidData.patientName || '',
       brand: aidData.brand,
@@ -3014,6 +3020,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     pb.collection('maintenances')
       .create({
+        clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
         hearingAidId: aidId,
         hearingAidLabel: aid ? `${aid.brand} ${aid.model}` : '',
         date,
@@ -3054,6 +3061,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     pb.collection('adjustments')
       .create({
+        clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
         hearingAidId: aidId,
         hearingAidLabel: aid ? `${aid.brand} ${aid.model}` : '',
         date,
@@ -3084,6 +3092,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     pb.collection('cash_flow')
       .create({
+        clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
         date: movData.date,
         description: movData.description,
         type: movData.type,
@@ -3119,6 +3128,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     pb.collection('budgets')
       .create({
+        clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
         patientId: budgetData.patientId || '',
         patientName: budgetData.patientName,
         number: nextNum,
@@ -3392,6 +3402,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         pb.collection('inventory_movements')
           .create({
+            clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
             itemId: it.stockItemId,
             item_name: target.name,
             date: movDate,
@@ -3502,6 +3513,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         pb.collection('inventory_movements')
           .create({
+            clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
             itemId: it.stockItemId,
             item_name: target.name,
             date: movDate,
@@ -3662,6 +3674,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     pb.collection('commissions')
       .create({
+        clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
         professionalName: commData.professionalName,
         period: commData.period,
         salesCount: commData.salesCount,
@@ -3764,6 +3777,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // registrar movimento inicial
         try {
           const m: any = await pb.collection('inventory_movements').create({
+            clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
             itemId: realId,
             item_name: itemData.name,
             date: todayStr(),
@@ -3882,6 +3896,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newQty = target ? Number(target.currentQuantity) + quantity : quantity
     pb.collection('inventory_movements')
       .create({
+        clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
         itemId,
         item_name: target?.name || '',
         date: movDate,
@@ -3992,6 +4007,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // além de criar a movimentação de histórico.
     pb.collection('inventory_movements')
       .create({
+        clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
         itemId,
         item_name: target.name,
         date: movDate,
