@@ -3223,6 +3223,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Persistir venda e parcelas no PB
     pb.collection('sales')
       .create({
+        clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
         patientId: newSale.patientId || '',
         patientName: newSale.patientName,
         number: nextNum,
@@ -3254,6 +3255,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         for (const inst of tempInstallments) {
           try {
             const r: any = await pb.collection('installments').create({
+              clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
               saleId: realSaleId,
               patientId: inst.patientId || '',
               patientName: inst.patientName,
@@ -5315,6 +5317,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const vencStr = venc.toISOString().split('T')[0]
         try {
           const rec: any = await pb.collection('contas_receber').create({
+            clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
             venda_id: vendaId,
             venda_origem: origem,
             paciente_id: pacienteId,
@@ -5341,7 +5344,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
     },
-    [currentUser?.id],
+    [currentUser?.id, currentUser?.clinicaId],
   )
 
   const registrarRecebimento = useCallback(
@@ -5382,6 +5385,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         // Cria o recebimento (com itens extras + desconto, quando houver)
         await pb.collection('recebimentos').create({
+          clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
           conta_receber_id: contaId,
           valor,
           data_recebimento: data.data_recebimento,
@@ -5541,6 +5545,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           venc.setMonth(venc.getMonth() + (i - 1))
           const vencStr = venc.toISOString().split('T')[0]
           const rec: any = await pb.collection('contas_receber').create({
+            clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
             venda_id: conta.venda_id,
             venda_origem: conta.venda_origem,
             paciente_id: conta.paciente_id,
@@ -5578,7 +5583,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { success: false, message: describePbError(err) }
       }
     },
-    [contasReceber, currentUser?.id],
+    [contasReceber, currentUser?.id, currentUser?.clinicaId],
   )
 
   const cancelarConta = useCallback(
