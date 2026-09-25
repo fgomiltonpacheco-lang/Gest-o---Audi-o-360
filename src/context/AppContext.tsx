@@ -2350,10 +2350,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }
 
   // ---------- Pacientes Handlers ----------
+  const normalizePatientName = (rawName: string): string => {
+    const trimmed = rawName.trim().replace(/\s+/g, ' ')
+    if (!trimmed) return ''
+    const connectives = new Set(['de', 'da', 'do', 'dos', 'das', 'e'])
+    return trimmed
+      .split(' ')
+      .map((word, idx) => {
+        const lower = word.toLowerCase()
+        if (idx > 0 && connectives.has(lower)) {
+          return lower
+        }
+        return lower.charAt(0).toUpperCase() + lower.slice(1)
+      })
+      .join(' ')
+  }
+
   const addPatient = (patientData: Omit<Patient, 'id' | 'createdAt'>): Patient => {
+    const normalizedName = normalizePatientName(patientData.name || '')
     const tempId = `temp-${Date.now()}`
     const newPatient: Patient = {
       ...patientData,
+      name: normalizedName || patientData.name,
       id: tempId,
       createdAt: todayStr(),
       lastVisit: patientData.lastVisit || todayStr(),
@@ -2369,7 +2387,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // - responsible (tipo json): só enviar quando houver responsável; caso contrário omitir.
     const payload: Record<string, any> = {
       clinica_id: currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || '',
-      name: newPatient.name,
+      name: normalizePatientName(newPatient.name),
       cpf: newPatient.cpf,
       birthDate: newPatient.birthDate,
       gender: newPatient.gender,
@@ -2437,10 +2455,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }
 
   const updatePatient = (id: string, patientData: Partial<Patient>) => {
-    setPatients((prev) => prev.map((p) => (p.id === id ? { ...p, ...patientData } : p)))
-    const patch: any = { ...patientData }
+    const dataToApply = { ...patientData }
+    if (typeof dataToApply.name === 'string') {
+      dataToApply.name = normalizePatientName(dataToApply.name)
+    }
+    setPatients((prev) => prev.map((p) => (p.id === id ? { ...p, ...dataToApply } : p)))
+    const patch: any = { ...dataToApply }
     delete patch.id
     delete patch.createdAt
+    if (typeof patch.name === 'string') {
+      patch.name = normalizePatientName(patch.name)
+    }
     // Mesmas regras do addPatient: email vazio falha validação do tipo "email";
     // responsible deve ser enviado apenas quando houver dados.
     if ('email' in patch) {
