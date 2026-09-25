@@ -100,37 +100,8 @@ export function determineNotaFiscalType(sale: Sale | null): TipoNotaFiscal {
   let hasService = false
 
   for (const it of items) {
-    const t = (it.type || '').toLowerCase()
-    const cat = (it.category || '').toLowerCase()
-    const name = (it.name || '').toLowerCase()
-
-    const isProduct =
-      t.includes('produto') ||
-      t.includes('inventory') ||
-      t.includes('hearing_aid') ||
-      t.includes('aparelho') ||
-      cat.includes('produto') ||
-      cat.includes('estoque') ||
-      name.includes('aparelho') ||
-      name.includes('pilha') ||
-      name.includes('filtro') ||
-      name.includes('oliva') ||
-      name.includes('molde')
-
-    const isService =
-      t.includes('service') ||
-      t.includes('servico') ||
-      t.includes('procedimento') ||
-      t.includes('exame') ||
-      t.includes('consulta') ||
-      cat.includes('servico') ||
-      cat.includes('procedimento') ||
-      name.includes('audiometria') ||
-      name.includes('imitancio') ||
-      name.includes('consulta') ||
-      name.includes('atendimento') ||
-      name.includes('sessão') ||
-      name.includes('sessao')
+    const isProduct = isProductItem(it)
+    const isService = isServiceItem(it)
 
     if (isProduct) hasProduct = true
     if (isService) hasService = true
@@ -142,6 +113,50 @@ export function determineNotaFiscalType(sale: Sale | null): TipoNotaFiscal {
   if (hasProduct && hasService) return 'ambas'
   if (hasProduct) return 'nfe'
   return 'nfse'
+}
+
+/** Verifica se um item representa um produto físico */
+export function isProductItem(it: { type?: string; category?: string; name: string }): boolean {
+  const t = (it.type || '').toLowerCase()
+  const cat = (it.category || '').toLowerCase()
+  const name = (it.name || '').toLowerCase()
+
+  return (
+    t.includes('produto') ||
+    t.includes('inventory') ||
+    t.includes('hearing_aid') ||
+    t.includes('aparelho') ||
+    cat.includes('produto') ||
+    cat.includes('estoque') ||
+    name.includes('aparelho') ||
+    name.includes('pilha') ||
+    name.includes('filtro') ||
+    name.includes('oliva') ||
+    name.includes('molde')
+  )
+}
+
+/** Verifica se um item representa um serviço/procedimento */
+export function isServiceItem(it: { type?: string; category?: string; name: string }): boolean {
+  const t = (it.type || '').toLowerCase()
+  const cat = (it.category || '').toLowerCase()
+  const name = (it.name || '').toLowerCase()
+
+  return (
+    t.includes('service') ||
+    t.includes('servico') ||
+    t.includes('procedimento') ||
+    t.includes('exame') ||
+    t.includes('consulta') ||
+    cat.includes('servico') ||
+    cat.includes('procedimento') ||
+    name.includes('audiometria') ||
+    name.includes('imitancio') ||
+    name.includes('consulta') ||
+    name.includes('atendimento') ||
+    name.includes('sessão') ||
+    name.includes('sessao')
+  )
 }
 
 /**
@@ -251,12 +266,7 @@ export default function NfseEmitirModal({
               quantidade: it.quantity,
               valor_unitario: it.unitPrice,
               valor_total: it.totalPrice ?? it.quantity * it.unitPrice,
-              tipo:
-                (it.type || '').toLowerCase().includes('prod') ||
-                (it.type || '').toLowerCase().includes('inventory') ||
-                (it.type || '').toLowerCase().includes('aparelho')
-                  ? 'produto'
-                  : 'servico',
+              tipo: isProductItem(it) ? ('produto' as const) : ('servico' as const),
             }))
           : [
               {
@@ -264,43 +274,115 @@ export default function NfseEmitirModal({
                 quantidade: 1,
                 valor_unitario: valorServico,
                 valor_total: valorServico,
-                tipo: tipoNota === 'nfe' ? 'produto' : 'servico',
+                tipo: tipoNota === 'nfe' ? ('produto' as const) : ('servico' as const),
               },
             ]
 
-      // 3. Salva na coleção notas_fiscais com status 'pendente'
-      const hoje = new Date().toISOString().split('T')[0]
-      const rawNum = String(proximoNumero).padStart(9, '0')
-      const chaveGerada = `35${hoje.replace(/-/g, '').slice(2, 6)}00000000000155001000${rawNum}100000001`
+      const itensProdutos = itensFormatados.filter((it) => it.tipo === 'produto')
+      const itensServicos = itensFormatados.filter((it) => it.tipo === 'servico')
+      const isMista = itensProdutos.length > 0 && itensServicos.length > 0
 
-      // O campo paciente na coleção notas_fiscais é uma relation com a coleção 'patients'
+      const hoje = new Date().toISOString().split('T')[0]
       const pacienteRelationId = sale.patientId || ''
 
-      const payloadNotasFiscais: Record<string, any> = {
-        clinica_id: clinicaId,
-        numero: proximoNumero,
-        serie: '1',
-        data_emissao: hoje,
-        venda: sale.id,
-        tipo: tipoNota,
-        itens: itensFormatados,
-        valor_total: valorServico,
-        chave_acesso: chaveGerada,
-        status: 'pendente',
-        observacoes: observacao
-          ? `${observacao} | Tomador: ${tomadorNome}`
-          : `Tomador: ${tomadorNome}`,
-      }
-      if (pacienteRelationId) {
-        payloadNotasFiscais.paciente = pacienteRelationId
+      const buildChaveAcesso = (num: number) => {
+        const rawNum = String(num).padStart(9, '0')
+        return `35${hoje.replace(/-/g, '').slice(2, 6)}00000000000155001000${rawNum}100000001`
       }
 
-      let notaCriadaComSucesso = false
-      try {
-        await pb.collection('notas_fiscais').create(payloadNotasFiscais)
-        notaCriadaComSucesso = true
-      } catch (errNotas) {
-        console.error('Erro ao gravar registro na coleção notas_fiscais:', errNotas)
+      let chavePrincipal = ''
+      let numeroPrincipal = proximoNumero
+      let resultadoDetalhe = ''
+
+      // 3. Emissão: se tipoNota for 'ambas' numa venda mista, criar DOIS registros separados
+      if (tipoNota === 'ambas' && isMista) {
+        const numNfe = proximoNumero
+        const numNfse = proximoNumero + 1
+        const chaveNfe = buildChaveAcesso(numNfe)
+        const chaveNfse = buildChaveAcesso(numNfse)
+        chavePrincipal = chaveNfse
+        numeroPrincipal = numNfse
+
+        const totalProdutos = itensProdutos.reduce((acc, it) => acc + (it.valor_total || 0), 0)
+        const totalServicos = itensServicos.reduce((acc, it) => acc + (it.valor_total || 0), 0)
+
+        const payloadNfe: Record<string, any> = {
+          clinica_id: clinicaId,
+          numero: numNfe,
+          serie: '1',
+          data_emissao: hoje,
+          venda: sale.id,
+          tipo: 'nfe',
+          itens: itensProdutos,
+          valor_total: totalProdutos,
+          chave_acesso: chaveNfe,
+          status: 'pendente',
+          observacoes: observacao
+            ? `${observacao} | Tomador: ${tomadorNome} (NF-e de Produtos)`
+            : `Tomador: ${tomadorNome} (NF-e de Produtos)`,
+        }
+        if (pacienteRelationId) {
+          payloadNfe.paciente = pacienteRelationId
+        }
+
+        const payloadNfse: Record<string, any> = {
+          clinica_id: clinicaId,
+          numero: numNfse,
+          serie: '1',
+          data_emissao: hoje,
+          venda: sale.id,
+          tipo: 'nfse',
+          itens: itensServicos,
+          valor_total: totalServicos,
+          chave_acesso: chaveNfse,
+          status: 'pendente',
+          observacoes: observacao
+            ? `${observacao} | Tomador: ${tomadorNome} (NFS-e de Serviços)`
+            : `Tomador: ${tomadorNome} (NFS-e de Serviços)`,
+        }
+        if (pacienteRelationId) {
+          payloadNfse.paciente = pacienteRelationId
+        }
+
+        try {
+          await pb.collection('notas_fiscais').create(payloadNfe)
+          await pb.collection('notas_fiscais').create(payloadNfse)
+        } catch (errNotas) {
+          console.error('Erro ao gravar registros na coleção notas_fiscais:', errNotas)
+        }
+
+        resultadoDetalhe = `NF-e nº ${numNfe} (${formatCurrency(totalProdutos)}) + NFS-e nº ${numNfse} (${formatCurrency(totalServicos)}) registradas com status pendente.`
+      } else {
+        // Registro único para venda não-mista ou tipo específico selecionado
+        chavePrincipal = buildChaveAcesso(proximoNumero)
+        const payloadNotasFiscais: Record<string, any> = {
+          clinica_id: clinicaId,
+          numero: proximoNumero,
+          serie: '1',
+          data_emissao: hoje,
+          venda: sale.id,
+          tipo: tipoNota,
+          itens: itensFormatados,
+          valor_total: valorServico,
+          chave_acesso: chavePrincipal,
+          status: 'pendente',
+          observacoes: observacao
+            ? `${observacao} | Tomador: ${tomadorNome}`
+            : `Tomador: ${tomadorNome}`,
+        }
+        if (pacienteRelationId) {
+          payloadNotasFiscais.paciente = pacienteRelationId
+        }
+
+        try {
+          await pb.collection('notas_fiscais').create(payloadNotasFiscais)
+        } catch (errNotas) {
+          console.error('Erro ao gravar registro na coleção notas_fiscais:', errNotas)
+        }
+
+        const rotuloTipo =
+          tipoNota === 'nfe' ? 'NF-e' : tipoNota === 'nfse' ? 'NFS-e' : 'NF-e + NFS-e'
+        resultadoDetalhe = `${rotuloTipo} nº ${proximoNumero} registrada como pendente (sem integração externa ativa).`
       }
 
       // 4. Se a nota for NFS-e ou Ambas, também dispara a rotina de nfse (se houver API configurada ou para auditoria)
@@ -320,24 +402,21 @@ export default function NfseEmitirModal({
       }
 
       // 5. Atualiza o estado de resultado para feedback visual do usuário
-      const rotuloTipo =
-        tipoNota === 'nfe' ? 'NF-e' : tipoNota === 'nfse' ? 'NFS-e' : 'NF-e + NFS-e'
-
       if (recNfse && recNfse.status === 'autorizada') {
         setResultado({
           ok: true,
-          numeroNfse: recNfse.numero_nfse || String(proximoNumero),
+          numeroNfse: recNfse.numero_nfse || String(numeroPrincipal),
           codigoVerificacao: recNfse.codigo_verificacao,
           pdfUrl: recNfse.pdf_url,
           status: 'autorizada',
         })
       } else {
-        // Registrada como pendente (sem integração SEFAZ/prefeitura)
+        // Registrada(s) como pendente
         setResultado({
           ok: true,
-          numeroNfse: String(proximoNumero),
-          codigoVerificacao: chaveGerada.slice(-8),
-          erro: `${rotuloTipo} registrada como pendente (sem integração externa ativa).`,
+          numeroNfse: String(numeroPrincipal),
+          codigoVerificacao: chavePrincipal.slice(-8),
+          erro: resultadoDetalhe,
           status: 'pendente',
         })
       }
@@ -440,10 +519,10 @@ export default function NfseEmitirModal({
                 </>
               ) : (
                 <>
-                  <strong>NFS-e registrada como pendente.</strong>
+                  <strong>Nota Fiscal registrada como pendente.</strong>
                   <div>{resultado.erro}</div>
                   <div className="text-[11px] opacity-80">
-                    Configure a API da prefeitura nas Configurações para emissão automática.
+                    Os registros foram salvos no histórico financeiro do paciente.
                   </div>
                 </>
               )}
