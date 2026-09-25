@@ -31,10 +31,13 @@ import {
   ShoppingCart,
   RotateCcw,
   Wallet,
+  FileText,
+  Eye,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { CompareAudiometriesModal } from '@/components/CompareAudiometriesModal'
 import { usePrint } from '@/components/print/PrintProvider'
+import { NotaFiscalPrint } from '@/components/print/PrintDocuments'
 
 // Importação lazy dos componentes de impressão para que um erro de runtime
 // em PrintDocuments.tsx (ex.: durante a avaliação do módulo) não quebre a
@@ -70,6 +73,7 @@ import {
   ROTULO_CONSENTIMENTO,
   TEXTO_PADRAO_CONSENTIMENTO,
   TIPOS_CONSENTIMENTO,
+  NotaFiscal,
 } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
@@ -1394,9 +1398,10 @@ export default function Prontuario() {
               )}
             </TabsContent>
 
-            {/* 6. ABA FINANCEIRO - Interface de Lançamento no Atendimento */}
-            <TabsContent value="financeiro" className="space-y-5 pt-5">
+            {/* 6. ABA FINANCEIRO - Interface de Lançamento no Atendimento e Notas Fiscais */}
+            <TabsContent value="financeiro" className="space-y-6 pt-5">
               <FinanceiroAtendimentoSection patient={patient} />
+              <NotasFiscaisPacienteSection patient={patient} />
             </TabsContent>
           </Tabs>
         </div>
@@ -2579,6 +2584,225 @@ function TesteAparelhoSection({ patient }: { patient: Patient }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+/* ---------- Subcomponente: Listagem de Notas Fiscais do Paciente ---------- */
+function NotasFiscaisPacienteSection({ patient }: { patient: Patient }) {
+  const { clinicSettings } = useApp()
+  const { print } = usePrint()
+  const [notas, setNotas] = useState<NotaFiscal[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedNf, setSelectedNf] = useState<NotaFiscal | null>(null)
+
+  const loadNotas = useCallback(async () => {
+    if (!patient?.id) return
+    setLoading(true)
+    try {
+      const records = await pb.collection('notas_fiscais').getFullList<NotaFiscal>({
+        filter: `paciente = "${patient.id}"`,
+        sort: '-data_emissao,-numero',
+      })
+      setNotas(records)
+    } catch (err) {
+      console.error('Erro ao carregar notas fiscais do paciente:', err)
+      setNotas([])
+    } finally {
+      setLoading(false)
+    }
+  }, [patient?.id])
+
+  useEffect(() => {
+    loadNotas()
+  }, [loadNotas])
+
+  const handlePrintNota = (nf: NotaFiscal) => {
+    print({
+      title: `Nota Fiscal Nº ${String(nf.numero).padStart(9, '0')}`,
+      subtitle: `Série ${nf.serie || '1'} • Emissão: ${formatDate(nf.data_emissao)}`,
+      body: <NotaFiscalPrint notaFiscal={nf} patient={patient} clinicSettings={clinicSettings} />,
+    })
+  }
+
+  const getTipoBadge = (tipo: string) => {
+    const t = (tipo || '').toLowerCase()
+    if (t === 'nfe') {
+      return (
+        <Badge
+          variant="outline"
+          className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] font-bold"
+        >
+          NF-e
+        </Badge>
+      )
+    }
+    if (t === 'nfse') {
+      return (
+        <Badge
+          variant="outline"
+          className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold"
+        >
+          NFS-e
+        </Badge>
+      )
+    }
+    return (
+      <Badge
+        variant="outline"
+        className="bg-purple-50 text-purple-700 border-purple-200 text-[10px] font-bold"
+      >
+        NF-e + NFS-e
+      </Badge>
+    )
+  }
+
+  const getStatusBadge = (status: string) => {
+    const s = (status || '').toLowerCase()
+    if (s === 'emitida' || s === 'autorizada') {
+      return (
+        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px]">
+          {s === 'autorizada' ? 'Autorizada' : 'Emitida'}
+        </Badge>
+      )
+    }
+    if (s === 'cancelada') {
+      return <Badge className="bg-red-100 text-red-800 border-red-300 text-[10px]">Cancelada</Badge>
+    }
+    return (
+      <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-[10px]">Pendente</Badge>
+    )
+  }
+
+  return (
+    <div className="p-5 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+            <FileText className="w-4 h-4" />
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              Notas Fiscais Emitidas
+            </h4>
+            <p className="text-[11px] text-slate-500">
+              Histórico de documentos fiscais (NF-e / NFS-e) gerados para o paciente
+            </p>
+          </div>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={loadNotas}
+          className="h-8 px-2.5 text-xs text-slate-600 rounded-lg"
+          title="Atualizar lista de notas"
+        >
+          Atualizar
+        </Button>
+      </div>
+
+      <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
+        <table className="w-full text-left text-xs">
+          <thead>
+            <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold">
+              <th className="py-2.5 px-3.5">Número</th>
+              <th className="py-2.5 px-3.5 text-center">Tipo</th>
+              <th className="py-2.5 px-3.5">Data Emissão</th>
+              <th className="py-2.5 px-3.5 text-right">Valor Total</th>
+              <th className="py-2.5 px-3.5 text-center">Status</th>
+              <th className="py-2.5 px-3.5 text-right w-24">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200 bg-white">
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-slate-400">
+                  Carregando notas fiscais...
+                </td>
+              </tr>
+            ) : notas.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-slate-400">
+                  Nenhuma nota fiscal emitida para este paciente ainda.
+                </td>
+              </tr>
+            ) : (
+              notas.map((nf) => (
+                <tr key={nf.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 px-3.5 font-bold font-mono text-slate-900">
+                    #{String(nf.numero).padStart(6, '0')}
+                    <span className="text-[10px] text-slate-400 font-normal ml-1">
+                      (Série {nf.serie || '1'})
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-3.5 text-center">{getTipoBadge(nf.tipo)}</td>
+                  <td className="py-2.5 px-3.5 text-slate-700">{formatDate(nf.data_emissao)}</td>
+                  <td className="py-2.5 px-3.5 text-right font-bold font-mono text-slate-900">
+                    {formatCurrency(nf.valor_total || 0)}
+                  </td>
+                  <td className="py-2.5 px-3.5 text-center">{getStatusBadge(nf.status)}</td>
+                  <td className="py-2.5 px-3.5 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSelectedNf(nf)}
+                        className="h-7 w-7 p-0 text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50"
+                        title="Visualizar Nota Fiscal"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handlePrintNota(nf)}
+                        className="h-7 w-7 p-0 text-slate-600 hover:text-emerald-600 rounded-lg hover:bg-emerald-50"
+                        title="Imprimir Nota Fiscal"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Modal de Visualização da Nota Fiscal */}
+      {selectedNf && (
+        <Dialog open={!!selectedNf} onOpenChange={(o) => !o && setSelectedNf(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-100 p-6 rounded-2xl">
+            <DialogHeader className="bg-white p-4 rounded-xl border border-slate-200 mb-4 flex flex-row items-center justify-between">
+              <div>
+                <DialogTitle className="text-base font-bold text-slate-900">
+                  Visualização do Documento Fiscal #{String(selectedNf.numero).padStart(6, '0')}
+                </DialogTitle>
+                <p className="text-xs text-slate-500">
+                  Série {selectedNf.serie || '1'} • Emitido em {formatDate(selectedNf.data_emissao)}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => handlePrintNota(selectedNf)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold gap-1.5"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Imprimir / Salvar PDF
+              </Button>
+            </DialogHeader>
+
+            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+              <NotaFiscalPrint
+                notaFiscal={selectedNf}
+                patient={patient}
+                clinicSettings={clinicSettings}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

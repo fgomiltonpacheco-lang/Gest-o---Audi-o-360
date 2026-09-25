@@ -15,9 +15,11 @@ import {
   Percent,
   ChevronsUpDown,
   Check,
+  FileText,
 } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 import { useApp } from '@/context/AppContext'
+import NfseEmitirModal from '@/components/NfseEmitirModal'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -73,6 +75,7 @@ import {
   type ContaReceberStatus,
   type FormaRecebimento,
   type Recebimento,
+  type Sale,
 } from '@/types'
 type StatusFilter = 'all' | ContaReceberStatus
 
@@ -104,6 +107,8 @@ export default function ContasReceberPage() {
   const [cancelarOpen, setCancelarOpen] = useState(false)
   const [contaSelecionada, setContaSelecionada] = useState<ContaReceber | null>(null)
   const [recebimentos, setRecebimentos] = useState<Recebimento[]>([])
+  const [nfModalSale, setNfModalSale] = useState<Sale | null>(null)
+  const { sales } = useApp()
 
   // ---- Forms ----
   const [recValor, setRecValor] = useState('')
@@ -653,6 +658,34 @@ export default function ContasReceberPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          {st === 'recebido_total' && (
+                            <button
+                              onClick={() => {
+                                // Acha a venda vinculada ou constrói objeto de venda sintético
+                                const saleFound =
+                                  sales.find((s) => s.id === c.venda_id) ||
+                                  ({
+                                    id: c.venda_id || `conta-${c.id}`,
+                                    number: Number(c.venda_id?.replace(/\D/g, '')) || 1,
+                                    patientId: c.paciente_id || '',
+                                    patientName: c.cliente_nome || '',
+                                    date: c.data_recebimento || c.data_vencimento || todayStr(),
+                                    itemsDescription: c.descricao || 'Recebimento de conta',
+                                    totalValue: c.valor_recebido || c.valor_original,
+                                    paymentMethod: 'Parcelado',
+                                    installmentsCount: c.numero_parcelas || 1,
+                                    interestPercent: 0,
+                                    firstDueDate: c.data_vencimento,
+                                    status: 'Concluída',
+                                  } as Sale)
+                                setNfModalSale(saleFound)
+                              }}
+                              title="Emitir Nota Fiscal"
+                              className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </button>
+                          )}
                           {st !== 'recebido_total' &&
                             st !== 'cancelado' &&
                             st !== 'renegociado' && (
@@ -1334,6 +1367,13 @@ export default function ContasReceberPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Emissão de Nota Fiscal pós-recebimento */}
+      <NfseEmitirModal
+        sale={nfModalSale}
+        open={!!nfModalSale}
+        onOpenChange={(o) => !o && setNfModalSale(null)}
+      />
     </div>
   )
 }

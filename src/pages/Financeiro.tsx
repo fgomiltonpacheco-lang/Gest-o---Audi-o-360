@@ -53,6 +53,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import NfseEmitirModal from '@/components/NfseEmitirModal'
 
 export default function Financeiro() {
   const {
@@ -97,6 +98,9 @@ export default function Financeiro() {
   // Confirmação de Exclusão
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [budgetToDelete, setBudgetToDelete] = useState<Budget | null>(null)
+
+  // Emissão de Nota Fiscal pós-pagamento
+  const [nfModalSale, setNfModalSale] = useState<Sale | null>(null)
 
   // State: Novo Orçamento
   const [bPatientId, setBPatientId] = useState('')
@@ -588,17 +592,54 @@ export default function Financeiro() {
                           {formatDate(inst.paidDate)}
                         </td>
                         <td className="py-3.5 px-4 text-right">
-                          {inst.status !== 'Pago' && (
-                            <Button
-                              size="sm"
-                              onClick={() => payInstallment(inst.id)}
-                              className="h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs"
-                              title="Registrar Pagamento"
-                            >
-                              <Check className="w-3.5 h-3.5 mr-1" />
-                              Receber
-                            </Button>
-                          )}
+                          <div className="flex items-center justify-end gap-1.5">
+                            {inst.status !== 'Pago' ? (
+                              <Button
+                                size="sm"
+                                onClick={() => payInstallment(inst.id)}
+                                className="h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs"
+                                title="Registrar Pagamento"
+                              >
+                                <Check className="w-3.5 h-3.5 mr-1" />
+                                Receber
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  // Localiza a venda vinculada via inst.saleId ou inst.saleNumber
+                                  const saleFound =
+                                    sales.find(
+                                      (s) =>
+                                        s.id === inst.saleId ||
+                                        (inst.saleNumber &&
+                                          String(s.number) === String(inst.saleNumber)),
+                                    ) ||
+                                    ({
+                                      id: inst.saleId || `sale-${inst.id}`,
+                                      number: inst.saleNumber || 1,
+                                      patientId: inst.patientId,
+                                      patientName: inst.patientName,
+                                      date: inst.paidDate || todayStr,
+                                      itemsDescription: `Parcela ${inst.installmentNumber}/${inst.totalInstallments} - Venda #${inst.saleNumber}`,
+                                      totalValue: inst.value,
+                                      paymentMethod: 'Parcelado',
+                                      installmentsCount: inst.totalInstallments,
+                                      interestPercent: 0,
+                                      firstDueDate: inst.dueDate,
+                                      status: 'Concluída',
+                                    } as Sale)
+                                  setNfModalSale(saleFound)
+                                }}
+                                className="h-8 px-2 text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold rounded-lg flex items-center gap-1"
+                                title="Emitir Nota Fiscal para a venda vinculada"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                                Emitir NF
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     )
@@ -1368,6 +1409,13 @@ export default function Financeiro() {
             setBudgetToDelete(null)
           }
         }}
+      />
+
+      {/* Modal de Emissão de Nota Fiscal */}
+      <NfseEmitirModal
+        sale={nfModalSale}
+        open={!!nfModalSale}
+        onOpenChange={(o) => !o && setNfModalSale(null)}
       />
     </div>
   )

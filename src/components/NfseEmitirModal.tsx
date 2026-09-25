@@ -10,12 +10,20 @@ import {
   Calculator,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
+import pb from '@/lib/pocketbase/client'
 import { formatCurrency } from '@/lib/formatters'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -25,20 +33,131 @@ import {
 } from '@/components/ui/dialog'
 import type { Sale } from '@/types'
 
+export type TipoNotaFiscal = 'nfse' | 'nfe' | 'ambas'
+
 interface NfseEmitirModalProps {
   sale: Sale | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  tipoNota?: TipoNotaFiscal
+}
+
+/** Parse defensivo dos itens de uma venda (array ou JSON string) */
+export function parseSaleItemsDefensive(sale: Sale | null): Array<{
+  id?: string
+  name: string
+  quantity: number
+  unitPrice: number
+  totalPrice?: number
+  type?: string
+  category?: string
+}> {
+  if (!sale) return []
+  const raw = (sale as any).items
+  let list: any[] = []
+  if (Array.isArray(raw)) {
+    list = raw
+  } else if (typeof raw === 'string' && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) list = parsed
+    } catch {
+      list = []
+    }
+  }
+
+  if (list.length === 0 && sale.itemsDescription) {
+    return [
+      {
+        name: sale.itemsDescription,
+        quantity: 1,
+        unitPrice: sale.totalValue || 0,
+        totalPrice: sale.totalValue || 0,
+        type: 'service',
+      },
+    ]
+  }
+
+  return list.map((it: any) => ({
+    id: it.id || it.productId || it.procedureId,
+    name: it.name || it.description || it.procedureName || 'Item da Venda',
+    quantity: Number(it.quantity) || 1,
+    unitPrice: Number(it.unitPrice ?? it.price ?? it.value ?? 0),
+    totalPrice:
+      Number(it.totalPrice ?? it.total) ||
+      (Number(it.quantity) || 1) * Number(it.unitPrice ?? it.price ?? it.value ?? 0),
+    type: it.type || it.category || '',
+    category: it.category || '',
+  }))
+}
+
+/** Determina automaticamente o tipo de nota a partir dos itens */
+export function determineNotaFiscalType(sale: Sale | null): TipoNotaFiscal {
+  const items = parseSaleItemsDefensive(sale)
+  if (items.length === 0) return 'nfse'
+
+  let hasProduct = false
+  let hasService = false
+
+  for (const it of items) {
+    const t = (it.type || '').toLowerCase()
+    const cat = (it.category || '').toLowerCase()
+    const name = (it.name || '').toLowerCase()
+
+    const isProduct =
+      t.includes('produto') ||
+      t.includes('inventory') ||
+      t.includes('hearing_aid') ||
+      t.includes('aparelho') ||
+      cat.includes('produto') ||
+      cat.includes('estoque') ||
+      name.includes('aparelho') ||
+      name.includes('pilha') ||
+      name.includes('filtro') ||
+      name.includes('oliva') ||
+      name.includes('molde')
+
+    const isService =
+      t.includes('service') ||
+      t.includes('servico') ||
+      t.includes('procedimento') ||
+      t.includes('exame') ||
+      t.includes('consulta') ||
+      cat.includes('servico') ||
+      cat.includes('procedimento') ||
+      name.includes('audiometria') ||
+      name.includes('imitancio') ||
+      name.includes('consulta') ||
+      name.includes('atendimento') ||
+      name.includes('sessão') ||
+      name.includes('sessao')
+
+    if (isProduct) hasProduct = true
+    if (isService) hasService = true
+    if (!isProduct && !isService) {
+      hasService = true
+    }
+  }
+
+  if (hasProduct && hasService) return 'ambas'
+  if (hasProduct) return 'nfe'
+  return 'nfse'
 }
 
 /**
- * Modal de emissão de NFS-e para vendas PDV. Reutiliza a config B2B
- * (nfse_b2b_config) e a biblioteca nfse-api. Funciona mesmo sem a API
- * da prefeitura configurada (registra como pendente / erro para auditoria).
+ * Modal de emissão de NF (NFS-e / NF-e / Ambas) para vendas PDV e recebimentos.
+ * Determina o tipo automaticamente pelos itens e persiste o registro na
+ * coleção `notas_fiscais` com status 'pendente' e clinica_id obrigatório.
  */
-export default function NfseEmitirModal({ sale, open, onOpenChange }: NfseEmitirModalProps) {
-  const { patients, nfseB2BConfig, emitirNfseVenda, nfseEmitidas } = useApp()
+export default function NfseEmitirModal({
+  sale,
+  open,
+  onOpenChange,
+  tipoNota: tipoNotaProp,
+}: NfseEmitirModalProps) {
+  const { currentUser, patients, nfseB2BConfig, emitirNfseVenda, nfseEmitidas } = useApp()
 
+  const [tipoNota, setTipoNota] = useState<TipoNotaFiscal>(tipoNotaProp || 'nfse')
   const [tomadorNome, setTomadorNome] = useState('')
   const [tomadorCpfCnpj, setTomadorCpfCnpj] = useState('')
   const [aliquota, setAliquota] = useState('3')
@@ -61,10 +180,16 @@ export default function NfseEmitirModal({ sale, open, onOpenChange }: NfseEmitir
     setTomadorNome(paciente?.name || sale.patientName || 'CONSUMIDOR FINAL')
     setTomadorCpfCnpj(paciente?.cpf || '')
     setAliquota(String(nfseB2BConfig?.aliquota_iss_padrao ?? 3))
+
+    // Determinação automática de tipo caso não tenha vindo forçado por prop
+    const autoTipo = tipoNotaProp || determineNotaFiscalType(sale)
+    setTipoNota(autoTipo)
+
     // Discriminação automática a partir dos itens da venda
+    const parsed = parseSaleItemsDefensive(sale)
     const descItens =
-      Array.isArray(sale.items) && sale.items.length > 0
-        ? sale.items.map((it) => `${it.quantity}x ${it.name}`).join(', ')
+      parsed.length > 0
+        ? parsed.map((it) => `${it.quantity}x ${it.name}`).join(', ')
         : sale.itemsDescription || `Venda #${sale.number}`
     setDiscriminacao(
       nfseB2BConfig?.discriminacao_padrao
@@ -74,7 +199,7 @@ export default function NfseEmitirModal({ sale, open, onOpenChange }: NfseEmitir
     setObservacao('')
     setResultado(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sale?.id])
+  }, [sale?.id, tipoNotaProp])
 
   const valorServico = sale?.totalValue || 0
   const aliquotaNum = Number(aliquota) || 0
@@ -98,39 +223,130 @@ export default function NfseEmitirModal({ sale, open, onOpenChange }: NfseEmitir
     if (!tomadorNome.trim()) return
     setLoading(true)
     setResultado(null)
+
+    // clinica_id obrigatório do projeto
+    const clinicaId = currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || ''
+
     try {
-      const rec = await emitirNfseVenda(sale.id, {
-        tomadorNome: tomadorNome.trim(),
-        tomadorCpfCnpj: tomadorCpfCnpj.trim(),
-        discriminacao: discriminacao.trim(),
-        aliquotaIss: aliquotaNum,
-        observacao: observacao.trim(),
-      })
-      if (rec) {
-        if (rec.status === 'autorizada') {
-          setResultado({
-            ok: true,
-            numeroNfse: rec.numero_nfse,
-            codigoVerificacao: rec.codigo_verificacao,
-            pdfUrl: rec.pdf_url,
-            status: rec.status,
-          })
-        } else if (rec.status === 'erro') {
-          setResultado({ ok: false, erro: rec.erro_mensagem, status: rec.status })
-        } else {
-          // pendente
-          setResultado({
-            ok: true,
-            numeroNfse: rec.numero_nfse,
-            codigoVerificacao: rec.codigo_verificacao,
-            pdfUrl: rec.pdf_url,
-            erro: rec.erro_mensagem,
-            status: rec.status,
-          })
+      // 1. Gera próximo número sequencial da coleção notas_fiscais
+      let proximoNumero = 1
+      try {
+        const lastRecords = await pb.collection('notas_fiscais').getList(1, 1, {
+          sort: '-numero',
+          fields: 'numero',
+        })
+        if (lastRecords.items.length > 0 && lastRecords.items[0].numero) {
+          proximoNumero = Number(lastRecords.items[0].numero) + 1
         }
-      } else {
-        setResultado({ ok: false, erro: 'Não foi possível emitir a NFS-e.' })
+      } catch (err) {
+        console.warn('Não foi possível obter último número de notas_fiscais:', err)
       }
+
+      // 2. Prepara os itens formatados
+      const parsedItens = parseSaleItemsDefensive(sale)
+      const itensFormatados =
+        parsedItens.length > 0
+          ? parsedItens.map((it) => ({
+              descricao: it.name,
+              quantidade: it.quantity,
+              valor_unitario: it.unitPrice,
+              valor_total: it.totalPrice ?? it.quantity * it.unitPrice,
+              tipo:
+                (it.type || '').toLowerCase().includes('prod') ||
+                (it.type || '').toLowerCase().includes('inventory') ||
+                (it.type || '').toLowerCase().includes('aparelho')
+                  ? 'produto'
+                  : 'servico',
+            }))
+          : [
+              {
+                descricao: discriminacao || `Venda #${sale.number}`,
+                quantidade: 1,
+                valor_unitario: valorServico,
+                valor_total: valorServico,
+                tipo: tipoNota === 'nfe' ? 'produto' : 'servico',
+              },
+            ]
+
+      // 3. Salva na coleção notas_fiscais com status 'pendente'
+      const hoje = new Date().toISOString().split('T')[0]
+      const rawNum = String(proximoNumero).padStart(9, '0')
+      const chaveGerada = `35${hoje.replace(/-/g, '').slice(2, 6)}00000000000155001000${rawNum}100000001`
+
+      // O campo paciente na coleção notas_fiscais é uma relation com a coleção 'patients'
+      const pacienteRelationId = sale.patientId || ''
+
+      const payloadNotasFiscais: Record<string, any> = {
+        clinica_id: clinicaId,
+        numero: proximoNumero,
+        serie: '1',
+        data_emissao: hoje,
+        venda: sale.id,
+        tipo: tipoNota,
+        itens: itensFormatados,
+        valor_total: valorServico,
+        chave_acesso: chaveGerada,
+        status: 'pendente',
+        observacoes: observacao
+          ? `${observacao} | Tomador: ${tomadorNome}`
+          : `Tomador: ${tomadorNome}`,
+      }
+      if (pacienteRelationId) {
+        payloadNotasFiscais.paciente = pacienteRelationId
+      }
+
+      let notaCriadaComSucesso = false
+      try {
+        await pb.collection('notas_fiscais').create(payloadNotasFiscais)
+        notaCriadaComSucesso = true
+      } catch (errNotas) {
+        console.error('Erro ao gravar registro na coleção notas_fiscais:', errNotas)
+      }
+
+      // 4. Se a nota for NFS-e ou Ambas, também dispara a rotina de nfse (se houver API configurada ou para auditoria)
+      let recNfse: any = null
+      if (tipoNota === 'nfse' || tipoNota === 'ambas') {
+        try {
+          recNfse = await emitirNfseVenda(sale.id, {
+            tomadorNome: tomadorNome.trim(),
+            tomadorCpfCnpj: tomadorCpfCnpj.trim(),
+            discriminacao: discriminacao.trim(),
+            aliquotaIss: aliquotaNum,
+            observacao: observacao.trim(),
+          })
+        } catch (errNfse) {
+          console.warn('Aviso: falha na rotina secundária de NFS-e:', errNfse)
+        }
+      }
+
+      // 5. Atualiza o estado de resultado para feedback visual do usuário
+      const rotuloTipo =
+        tipoNota === 'nfe' ? 'NF-e' : tipoNota === 'nfse' ? 'NFS-e' : 'NF-e + NFS-e'
+
+      if (recNfse && recNfse.status === 'autorizada') {
+        setResultado({
+          ok: true,
+          numeroNfse: recNfse.numero_nfse || String(proximoNumero),
+          codigoVerificacao: recNfse.codigo_verificacao,
+          pdfUrl: recNfse.pdf_url,
+          status: 'autorizada',
+        })
+      } else {
+        // Registrada como pendente (sem integração SEFAZ/prefeitura)
+        setResultado({
+          ok: true,
+          numeroNfse: String(proximoNumero),
+          codigoVerificacao: chaveGerada.slice(-8),
+          erro: `${rotuloTipo} registrada como pendente (sem integração externa ativa).`,
+          status: 'pendente',
+        })
+      }
+    } catch (err: any) {
+      console.error('Erro geral ao emitir nota fiscal:', err)
+      setResultado({
+        ok: false,
+        erro: err?.message || 'Não foi possível registrar a nota fiscal.',
+      })
     } finally {
       setLoading(false)
     }
@@ -147,9 +363,27 @@ export default function NfseEmitirModal({ sale, open, onOpenChange }: NfseEmitir
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
         <DialogHeader className="border-b border-slate-100 pb-3">
-          <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-indigo-600" />
-            Emitir NFS-e — Venda #{sale?.number}
+          <DialogTitle className="text-lg font-bold text-slate-900 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-indigo-600" />
+              <span>Emitir Nota Fiscal — Venda #{sale?.number}</span>
+            </div>
+            <Badge
+              variant="outline"
+              className={
+                tipoNota === 'nfe'
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : tipoNota === 'nfse'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-purple-50 text-purple-700 border-purple-200'
+              }
+            >
+              {tipoNota === 'nfe'
+                ? 'NF-e (Produtos)'
+                : tipoNota === 'nfse'
+                  ? 'NFS-e (Serviços)'
+                  : 'Ambas (Produtos + Serviços)'}
+            </Badge>
           </DialogTitle>
         </DialogHeader>
 
@@ -218,10 +452,34 @@ export default function NfseEmitirModal({ sale, open, onOpenChange }: NfseEmitir
         )}
 
         <div className="space-y-4 pt-1 text-sm">
+          {/* Seletor do Tipo de Nota */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <Label className="text-xs font-bold text-slate-700 block">
+                  Tipo de Documento Fiscal
+                </Label>
+                <p className="text-[11px] text-slate-500">
+                  Identificado automaticamente pelos itens da venda (ajuste se necessário)
+                </p>
+              </div>
+              <Select value={tipoNota} onValueChange={(v: TipoNotaFiscal) => setTipoNota(v)}>
+                <SelectTrigger className="w-full sm:w-56 h-9 rounded-lg text-xs bg-white font-medium">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nfse">NFS-e (Serviços)</SelectItem>
+                  <SelectItem value="nfe">NF-e (Produtos)</SelectItem>
+                  <SelectItem value="ambas">Ambas (Produtos + Serviços)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {/* Prestador */}
           <div>
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-              <Building2 className="w-3.5 h-3.5" /> Prestador
+              <Building2 className="w-3.5 h-3.5" /> Prestador / Emitente
             </div>
             <div className="grid grid-cols-3 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
               <div>
@@ -246,7 +504,8 @@ export default function NfseEmitirModal({ sale, open, onOpenChange }: NfseEmitir
             {!apiConfigurada && (
               <p className="text-[11px] text-amber-600 mt-1 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" />
-                API da prefeitura não configurada. A NFS-e será registrada como pendente.
+                Sem integração direta ativa. O documento será registrado como pendente na base
+                local.
               </p>
             )}
           </div>
@@ -367,7 +626,7 @@ export default function NfseEmitirModal({ sale, open, onOpenChange }: NfseEmitir
                 </>
               ) : (
                 <>
-                  <FileText className="w-3.5 h-3.5 mr-1.5" /> Emitir NFS-e
+                  <FileText className="w-3.5 h-3.5 mr-1.5" /> Emitir Nota Fiscal
                 </>
               )}
             </Button>
