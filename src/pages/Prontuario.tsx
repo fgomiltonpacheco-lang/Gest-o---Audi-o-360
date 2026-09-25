@@ -2843,6 +2843,8 @@ function FinanceiroAtendimentoSection({ patient }: { patient: Patient }) {
     )
   }, [appointments, patient.id, today])
 
+  const isFinalizado = todayAppointment?.status === 'Realizado'
+
   // Lista de itens do atendimento
   const [items, setItems] = React.useState<AppointmentProcedureItem[]>([])
 
@@ -3151,160 +3153,254 @@ function FinanceiroAtendimentoSection({ patient }: { patient: Patient }) {
         </div>
       )}
 
-      {/* Formulário de Lançamento */}
-      <div className="p-5 rounded-2xl border border-slate-200 bg-white shadow-sm space-y-4">
-        <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-          <Plus className="w-4 h-4 text-teal-600" />
-          Lançamento de Procedimentos e Produtos
-        </h4>
-
-        <form onSubmit={handleAddItem} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-          {/* Busca / Seleção de Item */}
-          <div className="md:col-span-9 space-y-1">
-            <Label className="text-xs font-semibold text-slate-700">
-              Selecionar Procedimento (Serviços/Exames) ou Item de Estoque (Produtos)
-            </Label>
-            <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-              <SelectTrigger className="h-10 rounded-xl text-xs border-slate-300">
-                <SelectValue
-                  placeholder={
-                    loadingCatalog
-                      ? 'Carregando catálogo...'
-                      : 'Selecione um procedimento ou produto...'
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
-                <div className="p-2 border-b border-slate-100">
-                  <Input
-                    placeholder="Filtrar itens..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-8 text-xs rounded-lg"
-                  />
-                </div>
-                {filteredCatalog.length === 0 ? (
-                  <div className="p-3 text-center text-xs text-slate-400">
-                    Nenhum item encontrado
-                  </div>
-                ) : (
-                  filteredCatalog.map((item) => (
-                    <SelectItem key={item.id} value={item.id} className="text-xs">
-                      <div className="flex items-center justify-between w-full gap-4">
-                        <span className="font-medium text-slate-800">
-                          {item.type === 'inventory' ? '📦 ' : '🩺 '}
-                          {item.name}
-                        </span>
-                        <span className="font-bold text-teal-700 shrink-0">
-                          {formatCurrency(item.price)}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+      {isFinalizado ? (
+        /* Modo Somente Leitura (Atendimento já Finalizado) */
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/80 flex items-center gap-3 text-xs text-emerald-900">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <div>
+              <p className="font-bold text-emerald-950">
+                Atendimento já finalizado e enviado para cobrança
+              </p>
+              <p className="text-[11px] text-emerald-800">
+                Os itens e o valor total abaixo foram registrados e enviados para o módulo
+                financeiro.
+              </p>
+            </div>
           </div>
 
-          {/* Botão Adicionar */}
-          <div className="md:col-span-3">
-            <Button
-              type="submit"
-              disabled={!selectedItemId}
-              className="w-full h-10 bg-teal-500 hover:bg-teal-600 text-white font-semibold text-xs rounded-xl shadow-sm flex items-center justify-center gap-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              Adicionar Item
-            </Button>
-          </div>
-        </form>
+          <div className="p-5 rounded-2xl border border-slate-200 bg-white shadow-sm space-y-4">
+            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <Receipt className="w-4 h-4 text-emerald-600" />
+              Itens do Atendimento (Histórico)
+            </h4>
 
-        {/* Tabela compacta dos itens do atendimento atual */}
-        <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold">
-                <th className="py-2.5 px-3.5">Item / Procedimento</th>
-                <th className="py-2.5 px-3.5 text-center">Plano</th>
-                <th className="py-2.5 px-3.5 text-right">Valor Unitário</th>
-                <th className="py-2.5 px-3.5 text-center">Qtd</th>
-                <th className="py-2.5 px-3.5 text-right">Subtotal</th>
-                <th className="py-2.5 px-3.5 text-center w-12">Ação</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 bg-white">
-              {items.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400 text-xs">
-                    Nenhum procedimento ou produto adicionado a este atendimento ainda.
-                  </td>
-                </tr>
-              ) : (
-                items.map((item, index) => (
-                  <tr
-                    key={`${item.procedureId}-${index}`}
-                    className="hover:bg-slate-50 transition-colors"
-                  >
-                    <td className="py-2.5 px-3.5 font-semibold text-slate-800">
-                      {item.procedureName}
-                    </td>
-                    <td className="py-2.5 px-3.5 text-center">
-                      <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-700">
-                        {item.planType || patient.planType || 'Particular'}
-                      </Badge>
-                    </td>
-                    <td className="py-2.5 px-3.5 text-right text-slate-600 font-mono">
-                      {formatCurrency(item.value)}
-                    </td>
-                    <td className="py-2.5 px-3.5 text-center font-medium text-slate-700">1</td>
-                    <td className="py-2.5 px-3.5 text-right font-bold text-slate-900 font-mono">
-                      {formatCurrency(item.value)}
-                    </td>
-                    <td className="py-2.5 px-3.5 text-center">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleRemoveItem(index)}
-                        className="h-7 w-7 p-0 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+            {/* Tabela de itens em modo somente leitura (sem coluna de ação de remoção) */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold">
+                    <th className="py-2.5 px-3.5">Item / Procedimento</th>
+                    <th className="py-2.5 px-3.5 text-center">Plano</th>
+                    <th className="py-2.5 px-3.5 text-right">Valor Unitário</th>
+                    <th className="py-2.5 px-3.5 text-center">Qtd</th>
+                    <th className="py-2.5 px-3.5 text-right">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {items.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">
+                        Nenhum procedimento ou produto vinculado a este atendimento.
+                      </td>
+                    </tr>
+                  ) : (
+                    items.map((item, index) => (
+                      <tr
+                        key={`${item.procedureId}-${index}`}
+                        className="hover:bg-slate-50 transition-colors"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                        <td className="py-2.5 px-3.5 font-semibold text-slate-800">
+                          {item.procedureName}
+                        </td>
+                        <td className="py-2.5 px-3.5 text-center">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] bg-slate-50 text-slate-700"
+                          >
+                            {item.planType || patient.planType || 'Particular'}
+                          </Badge>
+                        </td>
+                        <td className="py-2.5 px-3.5 text-right text-slate-600 font-mono">
+                          {formatCurrency(item.value)}
+                        </td>
+                        <td className="py-2.5 px-3.5 text-center font-medium text-slate-700">1</td>
+                        <td className="py-2.5 px-3.5 text-right font-bold text-slate-900 font-mono">
+                          {formatCurrency(item.value)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-emerald-50/80 border-t-2 border-emerald-200 text-slate-900 font-extrabold">
+                    <td
+                      colSpan={4}
+                      className="py-3 px-3.5 text-right text-xs uppercase tracking-wider text-emerald-950"
+                    >
+                      Valor Total do Atendimento:
+                    </td>
+                    <td className="py-3 px-3.5 text-right text-sm text-emerald-800 font-mono">
+                      {formatCurrency(totalValue)}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-            <tfoot>
-              <tr className="bg-teal-50/80 border-t-2 border-teal-200 text-slate-900 font-extrabold">
-                <td
-                  colSpan={4}
-                  className="py-3 px-3.5 text-right text-xs uppercase tracking-wider text-teal-900"
-                >
-                  Valor Total do Atendimento:
-                </td>
-                <td className="py-3 px-3.5 text-right text-sm text-teal-800 font-mono">
-                  {formatCurrency(totalValue)}
-                </td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
+                </tfoot>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Formulário de Lançamento (quando atendimento não foi finalizado) */
+        <>
+          <div className="p-5 rounded-2xl border border-slate-200 bg-white shadow-sm space-y-4">
+            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <Plus className="w-4 h-4 text-teal-600" />
+              Lançamento de Procedimentos e Produtos
+            </h4>
 
-      {/* Forma de Pagamento */}
+            <form
+              onSubmit={handleAddItem}
+              className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end"
+            >
+              {/* Busca / Seleção de Item */}
+              <div className="md:col-span-9 space-y-1">
+                <Label className="text-xs font-semibold text-slate-700">
+                  Selecionar Procedimento (Serviços/Exames) ou Item de Estoque (Produtos)
+                </Label>
+                <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                  <SelectTrigger className="h-10 rounded-xl text-xs border-slate-300">
+                    <SelectValue
+                      placeholder={
+                        loadingCatalog
+                          ? 'Carregando catálogo...'
+                          : 'Selecione um procedimento ou produto...'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    <div className="p-2 border-b border-slate-100">
+                      <Input
+                        placeholder="Filtrar itens..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="h-8 text-xs rounded-lg"
+                      />
+                    </div>
+                    {filteredCatalog.length === 0 ? (
+                      <div className="p-3 text-center text-xs text-slate-400">
+                        Nenhum item encontrado
+                      </div>
+                    ) : (
+                      filteredCatalog.map((item) => (
+                        <SelectItem key={item.id} value={item.id} className="text-xs">
+                          <div className="flex items-center justify-between w-full gap-4">
+                            <span className="font-medium text-slate-800">
+                              {item.type === 'inventory' ? '📦 ' : '🩺 '}
+                              {item.name}
+                            </span>
+                            <span className="font-bold text-teal-700 shrink-0">
+                              {formatCurrency(item.price)}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
 
-      {/* Botão Finalizar Atendimento */}
-      <div className="flex items-center justify-end pt-2">
-        <Button
-          onClick={handleFinalizarAtendimento}
-          disabled={saving || items.length === 0}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl h-11 px-6 shadow-md transition-all flex items-center gap-2"
-        >
-          <CheckCircle2 className="w-4 h-4" />
-          Finalizar Atendimento e Enviar para Cobrança ({formatCurrency(totalValue)})
-        </Button>
-      </div>
+              {/* Botão Adicionar */}
+              <div className="md:col-span-3">
+                <Button
+                  type="submit"
+                  disabled={!selectedItemId}
+                  className="w-full h-10 bg-teal-500 hover:bg-teal-600 text-white font-semibold text-xs rounded-xl shadow-sm flex items-center justify-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  Adicionar Item
+                </Button>
+              </div>
+            </form>
+
+            {/* Tabela compacta dos itens do atendimento atual */}
+            <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold">
+                    <th className="py-2.5 px-3.5">Item / Procedimento</th>
+                    <th className="py-2.5 px-3.5 text-center">Plano</th>
+                    <th className="py-2.5 px-3.5 text-right">Valor Unitário</th>
+                    <th className="py-2.5 px-3.5 text-center">Qtd</th>
+                    <th className="py-2.5 px-3.5 text-right">Subtotal</th>
+                    <th className="py-2.5 px-3.5 text-center w-12">Ação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {items.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-slate-400 text-xs">
+                        Nenhum procedimento ou produto adicionado a este atendimento ainda.
+                      </td>
+                    </tr>
+                  ) : (
+                    items.map((item, index) => (
+                      <tr
+                        key={`${item.procedureId}-${index}`}
+                        className="hover:bg-slate-50 transition-colors"
+                      >
+                        <td className="py-2.5 px-3.5 font-semibold text-slate-800">
+                          {item.procedureName}
+                        </td>
+                        <td className="py-2.5 px-3.5 text-center">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] bg-slate-50 text-slate-700"
+                          >
+                            {item.planType || patient.planType || 'Particular'}
+                          </Badge>
+                        </td>
+                        <td className="py-2.5 px-3.5 text-right text-slate-600 font-mono">
+                          {formatCurrency(item.value)}
+                        </td>
+                        <td className="py-2.5 px-3.5 text-center font-medium text-slate-700">1</td>
+                        <td className="py-2.5 px-3.5 text-right font-bold text-slate-900 font-mono">
+                          {formatCurrency(item.value)}
+                        </td>
+                        <td className="py-2.5 px-3.5 text-center">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRemoveItem(index)}
+                            className="h-7 w-7 p-0 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-teal-50/80 border-t-2 border-teal-200 text-slate-900 font-extrabold">
+                    <td
+                      colSpan={4}
+                      className="py-3 px-3.5 text-right text-xs uppercase tracking-wider text-teal-900"
+                    >
+                      Valor Total do Atendimento:
+                    </td>
+                    <td className="py-3 px-3.5 text-right text-sm text-teal-800 font-mono">
+                      {formatCurrency(totalValue)}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          {/* Botão Finalizar Atendimento */}
+          <div className="flex items-center justify-end pt-2">
+            <Button
+              onClick={handleFinalizarAtendimento}
+              disabled={saving || items.length === 0}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl h-11 px-6 shadow-md transition-all flex items-center gap-2"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Finalizar Atendimento e Enviar para Cobrança ({formatCurrency(totalValue)})
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
