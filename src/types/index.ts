@@ -2130,3 +2130,51 @@ export const PAGE_SIZES: Record<string, { label: string; largura: number; altura
   Oficio: { label: 'Ofício (216 × 356 mm)', largura: 216, altura: 356 },
 }
 export type PageSize = keyof typeof PAGE_SIZES
+
+// === Integrações do Sistema (NF-e, NFS-e, WhatsApp, BTG Pactual) ===
+export type NfeAmbiente = 'homologacao' | 'producao'
+export type NfseProvedor = 'betha' | 'simpliss' | 'ginfes' | 'padrao_abrasf' | 'outro'
+export type WhatsAppProvedor = 'meta' | 'zapi' | 'evolution' | 'outro'
+
+export interface IntegracoesConfig {
+  id?: string
+  clinica_id: string
+  // NF-e
+  nfe_ativo: boolean
+  nfe_certificado_a1?: string
+  nfe_senha_certificado?: string
+  nfe_ambiente: NfeAmbiente
+  // NFS-e
+  nfse_ativo: boolean
+  nfse_municipio: string
+  nfse_provedor: NfseProvedor
+  nfse_usuario_credenciais?: string
+  nfse_senha_credenciais?: string
+  // WhatsApp
+  whatsapp_ativo: boolean
+  whatsapp_provedor: WhatsAppProvedor
+  whatsapp_token?: string
+  whatsapp_numero: string
+  // BTG Pactual
+  btg_ativo: boolean
+  btg_api_key?: string
+  btg_certificado?: string
+  btg_conta: string
+  created?: string
+  updated?: string
+}
+
+export type IntegracaoTipo = 'nfe' | 'nfse' | 'whatsapp' | 'btg'
+export type IntegracaoLogStatus = 'sucesso' | 'erro' | 'pendente'
+
+export interface IntegracaoLog {
+  id: string
+  clinica_id: string
+  tipo: IntegracaoTipo
+  acao: string
+  status: IntegracaoLogStatus
+  mensagem: string
+  payload_json?: Record<string, unknown> | null
+  created: string
+  updated?: string
+}

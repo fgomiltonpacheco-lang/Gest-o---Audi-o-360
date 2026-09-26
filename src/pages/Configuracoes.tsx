@@ -64,6 +64,8 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Switch } from '@/components/ui/switch'
 import { TwoFactorSetup } from '@/components/TwoFactorSetup'
 import { CalibracaoTemplate, type TipoExameCalibracao } from '@/components/CalibracaoTemplate'
+import { IntegracoesTab } from '@/components/IntegracoesTab'
+import { SlidersHorizontal } from 'lucide-react'
 
 // ============================================================
 // Tipos e constantes
@@ -985,6 +987,15 @@ export default function Configuracoes() {
             <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
             Segurança
           </TabsTrigger>
+          {(currentUser?.role === 'admin' || currentUser?.isSuperAdmin) && (
+            <TabsTrigger
+              value="integracoes"
+              className="rounded-lg text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm px-4 py-2"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" />
+              Integrações
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* ============ ABA: DADOS DA CLÍNICA ============ */}
@@ -2584,6 +2595,15 @@ export default function Configuracoes() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ============ ABA: INTEGRAÇÕES ============ */}
+        {(currentUser?.role === 'admin' || currentUser?.isSuperAdmin) && (
+          <TabsContent value="integracoes" className="mt-4">
+            <IntegracoesTab
+              clinicaId={currentUser?.clinicaId || (pb.authStore as any)?.model?.clinica_id || ''}
+            />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Modal: Adicionar bloqueio */}

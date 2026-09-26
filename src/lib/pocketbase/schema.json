@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-25T20:35:16.261Z",
+  "generatedAt": "2026-09-26T02:23:42.693Z",
   "collections": [
     {
       "name": "users",
@@ -6470,6 +6470,215 @@
         "CREATE INDEX idx_pagamentos_saas_clinica ON pagamentos_saas (clinica_id)",
         "CREATE INDEX idx_pagamentos_saas_status ON pagamentos_saas (status)",
         "CREATE INDEX idx_pagamentos_saas_vencimento ON pagamentos_saas (data_vencimento)"
+      ]
+    },
+    {
+      "name": "integracoes",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (clinica_id = @request.auth.clinica_id || @request.auth.is_super_admin = true)",
+        "view": "@request.auth.id != '' && (clinica_id = @request.auth.clinica_id || @request.auth.is_super_admin = true)",
+        "create": "@request.auth.id != '' && (clinica_id = @request.auth.clinica_id || @request.auth.is_super_admin = true)",
+        "update": "@request.auth.id != '' && (clinica_id = @request.auth.clinica_id || @request.auth.is_super_admin = true)",
+        "delete": "@request.auth.id != '' && (clinica_id = @request.auth.clinica_id || @request.auth.is_super_admin = true)"
+      },
+      "fields": [
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "nfe_ativo",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "nfe_certificado_a1",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "nfe_senha_certificado",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "nfe_ambiente",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["homologacao", "producao"]
+        },
+        {
+          "name": "nfse_ativo",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "nfse_municipio",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "nfse_provedor",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["betha", "simpliss", "ginfes", "padrao_abrasf", "outro"]
+        },
+        {
+          "name": "nfse_usuario_credenciais",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "nfse_senha_credenciais",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "whatsapp_ativo",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "whatsapp_provedor",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["meta", "zapi", "evolution", "outro"]
+        },
+        {
+          "name": "whatsapp_token",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "whatsapp_numero",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "btg_ativo",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "btg_api_key",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "btg_certificado",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "btg_conta",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_integracoes_clinica_id ON integracoes (clinica_id)"]
+    },
+    {
+      "name": "integracao_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (clinica_id = @request.auth.clinica_id || @request.auth.is_super_admin = true)",
+        "view": "@request.auth.id != '' && (clinica_id = @request.auth.clinica_id || @request.auth.is_super_admin = true)",
+        "create": "@request.auth.id != '' && (clinica_id = @request.auth.clinica_id || @request.auth.is_super_admin = true)",
+        "update": "@request.auth.id != '' && (clinica_id = @request.auth.clinica_id || @request.auth.is_super_admin = true)",
+        "delete": "@request.auth.id != '' && (clinica_id = @request.auth.clinica_id || @request.auth.is_super_admin = true)"
+      },
+      "fields": [
+        {
+          "name": "clinica_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "tipo",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["nfe", "nfse", "whatsapp", "btg"]
+        },
+        {
+          "name": "acao",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["sucesso", "erro", "pendente"]
+        },
+        {
+          "name": "mensagem",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "payload_json",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_integracao_logs_clinica_id ON integracao_logs (clinica_id)",
+        "CREATE INDEX idx_integracao_logs_tipo ON integracao_logs (tipo)",
+        "CREATE INDEX idx_integracao_logs_status ON integracao_logs (status)"
       ]
     }
   ]
